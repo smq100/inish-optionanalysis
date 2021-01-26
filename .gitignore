@@ -1,0 +1,20 @@
+# Output directories
+__pycache__
+
+# Other directories
+venv
+*._*
+.ropeproject
+.ipynb_checkpoints
+
+# Other file types
+*.code-workspace
+*.sqlite*
+*.pyc
+*.DS_Store
+*.json
+*.ini
+*.txt
+*.log
+*.pickle
+*.session.*
