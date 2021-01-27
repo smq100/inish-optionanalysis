@@ -5,22 +5,23 @@ from random import gauss
 
 import numpy as np
 
-from base import OptionPricingBase
-
-logging.basicConfig(format='%(level_name)s: %(message)s', level=logging.DEBUG)
+from base import PricingBase
 
 
-class AmericanOptionPricing(OptionPricingBase):
+class AmericanPricing(PricingBase):
     '''
     This class uses Monte-Carlo simulation to calculate prices for American Call and Put Options.
 
     TODO: Will create a separate class to calculate prices using Binomial Trees
     '''
+
     SIMULATION_COUNT = 100000  # Number of Simulations to be performed for Brownian motion
 
     def __init__(self, ticker, expiry_date, strike, dividend=0.0):
-        super(AmericanOptionPricing, self).__init__(ticker, expiry_date, strike, dividend=dividend)
-        logging.info('American Option Pricing. Initializing variables')
+        super().__init__(ticker, expiry_date, strike, dividend=dividend)
+
+        logging.basicConfig(format='%(level_name)s: %(message)s', level=logging.INFO)
+        logging.info('American Option Pricing. Initializing')
 
         # Get/Calculate all the required underlying parameters, ex. Volatility, Risk-free rate, etc.
         self.initialize_variables()
@@ -37,7 +38,9 @@ class AmericanOptionPricing(OptionPricingBase):
         expected_price = self.spot_price * np.exp(
             (self.risk_free_rate - 0.5 * self.volatility ** 2) * self.time_to_maturity +
             self.volatility * np.sqrt(self.time_to_maturity) * gauss(0.0, 1.0))
-        logging.debug('expected price %f', expected_price)
+
+        logging.debug('Expected price %f', expected_price)
+
         return expected_price
 
     def _call_payoff(self, expected_price):
@@ -72,6 +75,7 @@ class AmericanOptionPricing(OptionPricingBase):
             expected_asset_price = self._generate_asset_price()
             call_payoffs.append(self._call_payoff(expected_asset_price))
             put_payoffs.append(self._put_payoff(expected_asset_price))
+
         return call_payoffs, put_payoffs
 
     def calculate_option_prices(self):
@@ -88,14 +92,16 @@ class AmericanOptionPricing(OptionPricingBase):
         discount_factor = np.exp(-1 * self.risk_free_rate * self.time_to_maturity)
         call_price = discount_factor * (sum(call_payoffs) / len(call_payoffs))
         put_price = discount_factor * (sum(put_payoffs) / len(put_payoffs))
-        logging.info('### Call Price calculated at %f ', call_price)
-        logging.info('### Put Price calculated at %f ', put_price)
+
+        logging.info('Calculated value for American Call Option is $%.2f ', call_price)
+        logging.info('Calculated value for American Put Option is $%.2f ', put_price)
+
         return call_price, put_price
 
 
 if __name__ == '__main__':
     # pricer = AmericanOptionPricing('AAPL', datetime.datetime(2019, 1, 19), 190, dividend=0.0157)
-    pricer = AmericanOptionPricing('TSLA', datetime.datetime(2018, 8, 31), 300)
+    pricer = AmericanPricing('AAPL', datetime.datetime(2021, 3, 5), 145)
     call, put = pricer.calculate_option_prices()
     parity = pricer.is_call_put_parity_maintained(call, put)
-    print('Parity = %s' % parity)
+    logging.info('Parity = %s', parity)

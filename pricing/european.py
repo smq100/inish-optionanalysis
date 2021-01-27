@@ -5,12 +5,10 @@ import logging
 import numpy as np
 import scipy.stats as stats
 
-from base import OptionPricingBase
-
-logging.basicConfig(format='%(level_name)s: %(message)s', level=logging.DEBUG)
+from base import PricingBase
 
 
-class EuropeanOptionPricing(OptionPricingBase):
+class EuropeanPricing(PricingBase):
     '''
     This class uses the classic Black-Scholes method to calculate prices for European Call and Put options
 
@@ -19,8 +17,10 @@ class EuropeanOptionPricing(OptionPricingBase):
     '''
 
     def __init__(self, ticker, expiry_date, strike, dividend=0.0):
-        super(EuropeanOptionPricing, self).__init__(ticker, expiry_date, strike, dividend=dividend)
-        logging.info('European Option Pricing. Initializing variables')
+        super().__init__(ticker, expiry_date, strike, dividend=dividend)
+
+        logging.basicConfig(format='%(level_name)s: %(message)s', level=logging.INFO)
+        logging.info('European Option Pricing. Initializing')
 
         # Get/Calculate all the required underlying parameters, ex. Volatility, Risk-free rate, etc.
         self.initialize_variables()
@@ -35,7 +35,9 @@ class EuropeanOptionPricing(OptionPricingBase):
         d_1 = (np.log(self.spot_price / self.strike_price) +
               (self.risk_free_rate - self.dividend + 0.5 * self.volatility ** 2) * self.time_to_maturity) / \
              (self.volatility * np.sqrt(self.time_to_maturity))
+
         logging.debug('Calculated value for d1 = %f', d_1)
+
         return d_1
 
     def _calculate_d2(self):
@@ -47,7 +49,9 @@ class EuropeanOptionPricing(OptionPricingBase):
         d_2 = (np.log(self.spot_price / self.strike_price) +
               (self.risk_free_rate - self.dividend - 0.5 * self.volatility ** 2) * self.time_to_maturity) / \
              (self.volatility * np.sqrt(self.time_to_maturity))
+
         logging.debug('Calculated value for d2 = %f', d_2)
+
         return d_2
 
     def calculate_option_prices(self):
@@ -63,18 +67,20 @@ class EuropeanOptionPricing(OptionPricingBase):
         call = ((self.spot_price * np.exp(-1 * self.dividend * self.time_to_maturity)) * stats.norm.cdf(d_1, 0.0, 1.0) -
                 (self.strike_price * np.exp(-1 * self.risk_free_rate * self.time_to_maturity) *
                  stats.norm.cdf(d_2, 0.0, 1.0)))
-        logging.info('##### Calculated value for European Call Option is %f ', call)
         put = (self.strike_price * np.exp(-1 * self.risk_free_rate * self.time_to_maturity) *
                stats.norm.cdf(-1 * d_2, 0.0, 1.0) - (
                        self.spot_price * np.exp(-1 * self.dividend * self.time_to_maturity)) *
                stats.norm.cdf(-1 * d_1, 0.0, 1.0))
-        logging.info('##### Calculated value for European Put Option is %f ', put)
+
+        logging.info('Calculated value for European Call Option is $%.2f ', call)
+        logging.info('Calculated value for European Put Option is $%.2f ', put)
+
         return call, put
 
 
 if __name__ == '__main__':
     # pricer = EuropeanOptionPricing('AAPL', datetime.datetime(2020, 6, 19), 190, dividend=0.0157)
-    pricer = EuropeanOptionPricing('TSLA', datetime.datetime(2021, 8, 31), 300)
+    pricer = EuropeanPricing('AAPL', datetime.datetime(2021, 3, 5), 145)
     call_price, put_price = pricer.calculate_option_prices()
     parity = pricer.is_call_put_parity_maintained(call_price, put_price)
-    print('Parity = %s' % parity)
+    logging.info('Parity = %s', parity)
