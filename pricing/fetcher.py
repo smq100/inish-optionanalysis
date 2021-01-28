@@ -8,6 +8,7 @@ import pandas as pd
 from pandas.tseries.offsets import BDay
 from pandas_datareader import data
 
+
 logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
 config = configparser.ConfigParser()
@@ -34,6 +35,7 @@ def get_ranged_data(ticker, start, end=None, use_quandl=True):
             if not dframe.empty:
                 logging.info('Successfully fetched data')
                 break
+
     return dframe
 
 
@@ -51,6 +53,7 @@ def get_data(ticker, use_quandl=True):
             if not dframe.empty:
                 logging.info('Successfully fetched data')
                 break
+
     return dframe
 
 
@@ -65,6 +68,7 @@ def get_treasury_rate(ticker=None):
     if dframe.empty:
         logging.error('Unable to get Treasury Rates from Quandl. Please check connection')
         raise IOError('Unable to get Treasury Rate from Quandl')
+
     return dframe['Value'][0]
 
 
@@ -77,6 +81,7 @@ def get_spx_prices(start_date=None):
     if dframe.empty:
         logging.error('Unable to get SNP 500 Index from Web. Please check connection')
         raise IOError('Unable to get Treasury Rate from Web')
+
     return dframe
 
 

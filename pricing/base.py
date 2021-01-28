@@ -12,11 +12,11 @@ from pandas.tseries.offsets import BDay
 
 from fetcher import get_ranged_data, get_treasury_rate
 
-logging.basicConfig(format='%(level_name)s: %(message)s', level=logging.INFO)
+LOG_LEVEL = logging.INFO
 
 
-class PricingBase(object):
-    ''' Base quandl'''
+class PricingBase():
+    ''' TODO '''
 
     LOOK_BACK_WINDOW = 252
 
@@ -37,8 +37,15 @@ class PricingBase(object):
         self.risk_free_rate = None  # We will fetch current 3-month Treasury rate from the web
         self.spot_price = None
         self.dividend = dividend or 0.0
+        self.cost_call = 0.0
+        self.cost_put = 0.0
         self.__underlying_asset_data = pd.DataFrame()
         self.__start_date = datetime.datetime.today() - BDay(self.LOOK_BACK_WINDOW)  # How far we need to go to get historical prices
+
+        # Convert expiry time to midnight
+        self.expiry = self.expiry.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        logging.basicConfig(format='%(level_name)s: %(message)s', level=LOG_LEVEL)
 
     def initialize_variables(self):
         '''
@@ -51,15 +58,6 @@ class PricingBase(object):
         self._set_spot_price()
 
         logging.debug('Initializing variables completed')
-
-    def _set_risk_free_rate(self):
-        '''
-        Fetch 3-month Treasury Bill Rate from the web. Please check module stock_analyzer.data_fetcher for details
-
-        :return: <void>
-        '''
-        self.risk_free_rate = get_treasury_rate()  # / 100
-        logging.info('Risk Free Rate = %d', self.risk_free_rate)
 
     def override_historical_start_date(self, hist_start_date):
         '''
@@ -77,13 +75,14 @@ class PricingBase(object):
 
         :return: <void>
         '''
-        logging.info('TICKER = %s ', self.ticker)
-        logging.info('STRIKE = %.2f ', self.strike_price)
-        logging.info('DIVIDEND = %.2f ', self.dividend)
-        logging.info('VOLATILITY = %.2f ', self.volatility)
-        logging.info('TIME TO MATURITY = %.1f ', self.time_to_maturity*365)
-        logging.info('RISK FREE RATE = %f ', self.risk_free_rate)
-        logging.info('SPOT PRICE = %.2f ', self.spot_price)
+        logging.info('TICKER = %s', self.ticker)
+        logging.info('STRIKE = %.2f', self.strike_price)
+        logging.info('DIVIDEND = %.2f', self.dividend)
+        logging.info('VOLATILITY = %.2f', self.volatility)
+        logging.info('EXPIRY = %s', self.expiry)
+        logging.info('TIME TO MATURITY = %.1f', self.time_to_maturity*365)
+        logging.info('RISK FREE RATE = %f', self.risk_free_rate)
+        logging.info('SPOT PRICE = %.2f', self.spot_price)
 
     def is_call_put_parity_maintained(self, call_price, put_price):
         ''' Verify is the Put-Call Pairty is maintained by the two option prices calculated by us.
@@ -100,9 +99,22 @@ class PricingBase(object):
 
         return bool(round(lhs) == round(rhs))
 
-    def calculate_option_prices(self):
+    def calculate_prices(self, time_to_maturity=0):
         ''' TODO '''
         raise NotImplementedError('Subclasses need to implement this function')
+
+    def generate_profit_table(self, call_put, price):
+        ''' TODO '''
+        raise NotImplementedError('Subclasses need to implement this function')
+
+    def _set_risk_free_rate(self):
+        '''
+        Fetch 3-month Treasury Bill Rate from the web. Please check module stock_analyzer.data_fetcher for details
+
+        :return: <void>
+        '''
+        self.risk_free_rate = get_treasury_rate()  # / 100?
+        logging.info('Risk Free Rate = %d', self.risk_free_rate)
 
     def _set_time_to_maturity(self):
         '''
@@ -115,8 +127,7 @@ class PricingBase(object):
             logging.error('Expiry/Maturity Date is in the past. Please check')
             raise ValueError('Expiry/Maturity Date is in the past. Please check')
 
-        self.time_to_maturity = (
-            self.expiry - datetime.datetime.today()).days / 365.0
+        self.time_to_maturity = (self.expiry - datetime.datetime.today()).days / 365.0
 
         logging.info('Setting Time To Maturity to %d days as Expiry/Maturity Date provided is %s ', self.time_to_maturity, self.expiry)
 
@@ -161,6 +172,6 @@ class PricingBase(object):
 
 
 if __name__ == '__main__':
-    pricer = PricingBase('AAPL', datetime.datetime(2021, 9, 20), 190)
+    pricer = PricingBase('AAPL', datetime.datetime(2021, 3, 5), 145)
     pricer.initialize_variables()
     pricer.log_parameters()
