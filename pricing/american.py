@@ -27,7 +27,7 @@ class AmericanPricing(PricingBase):
         self.initialize_variables()
         self.log_parameters()
 
-    def calculate_prices(self, time_to_maturity=0):
+    def calculate_prices(self, spot_price=-1.0, time_to_maturity=-1.0):
         ''' Calculate present-value of of expected payoffs and their average becomes the price of the respective option.
         Calculations are performed based on below equations:
 

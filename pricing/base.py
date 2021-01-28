@@ -99,7 +99,7 @@ class PricingBase():
 
         return bool(round(lhs) == round(rhs))
 
-    def calculate_prices(self, time_to_maturity=0):
+    def calculate_prices(self, spot_price=-1.0, time_to_maturity=-1.0):
         ''' TODO '''
         raise NotImplementedError('Subclasses need to implement this function')
 
