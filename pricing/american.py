@@ -5,10 +5,10 @@ from random import gauss
 
 import numpy as np
 
-from base import PricingBase, LOG_LEVEL
+from base import BasePricing, LOG_LEVEL
 
 
-class AmericanPricing(PricingBase):
+class AmericanPricing(BasePricing):
     '''
     This class uses Monte-Carlo simulation to calculate prices for American Call and Put Options.
 
@@ -101,11 +101,3 @@ class AmericanPricing(PricingBase):
             put_payoffs.append(self._put_payoff(expected_asset_price))
 
         return call_payoffs, put_payoffs
-
-
-if __name__ == '__main__':
-    # pricer = AmericanOptionPricing('AAPL', datetime.datetime(2019, 1, 19), 190, dividend=0.0157)
-    pricer = AmericanPricing('AAPL', datetime.date(2021, 3, 5), 145)
-    call, put = pricer.calculate_prices()
-    parity = pricer.is_call_put_parity_maintained(call, put)
-    logging.info('Parity = %s', parity)

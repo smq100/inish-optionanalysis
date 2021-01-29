@@ -6,10 +6,10 @@ import numpy as np
 import pandas as pd
 import scipy.stats as stats
 
-from base import PricingBase, LOG_LEVEL
+from base import BasePricing, LOG_LEVEL
 
 
-class EuropeanPricing(PricingBase):
+class EuropeanPricing(BasePricing):
     '''
     This class uses the classic Black-Scholes method to calculate prices for European Call and Put options
 
@@ -118,10 +118,8 @@ class EuropeanPricing(PricingBase):
                     day = datetime.datetime.strptime(item, '%Y-%m-%d %H:%M:%S').date()
                     col_index[index] = str(day)
 
-                # Finally, create the Pandas dataframe
+                # Finally, create the Pandas dataframe and reverse the row order
                 dframe = pd.DataFrame(table, index=row_index, columns=col_index)
-
-                # Reverse the row order
                 dframe = dframe.iloc[::-1]
 
         return dframe
@@ -172,14 +170,3 @@ class EuropeanPricing(PricingBase):
         logging.debug('Calculated value for d2 = %f', d_2)
 
         return d_2
-
-
-if __name__ == '__main__':
-    pricer = EuropeanPricing('AAPL', datetime.datetime(2021, 2, 12), 145)
-    call_price, put_price = pricer.calculate_prices()
-
-    parity = pricer.is_call_put_parity_maintained(call_price, put_price)
-    logging.info('Parity = %s', parity)
-
-    df = pricer.generate_value_table('call')
-    print(df)

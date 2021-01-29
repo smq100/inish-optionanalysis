@@ -12,10 +12,10 @@ from pandas.tseries.offsets import BDay
 
 from fetcher import get_ranged_data, get_treasury_rate
 
-LOG_LEVEL = logging.INFO
+LOG_LEVEL = logging.WARNING
 
 
-class PricingBase():
+class BasePricing():
     ''' TODO '''
 
     LOOK_BACK_WINDOW = 252
@@ -44,6 +44,9 @@ class PricingBase():
 
         # Convert expiry time to midnight
         self.expiry = self.expiry.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # Initialize
+        self.initialize_variables()
 
         logging.basicConfig(format='%(level_name)s: %(message)s', level=LOG_LEVEL)
 
@@ -161,9 +164,3 @@ class PricingBase():
         '''
         self._get_underlying_asset_data()
         self.spot_price = self.__underlying_asset_data['Close'][-1]
-
-
-if __name__ == '__main__':
-    pricer = PricingBase('AAPL', datetime.datetime(2021, 3, 5), 145)
-    pricer.initialize_variables()
-    pricer.log_parameters()

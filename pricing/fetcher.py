@@ -8,8 +8,7 @@ import pandas as pd
 from pandas.tseries.offsets import BDay
 from pandas_datareader import data
 
-
-logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
+logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.WARNING)
 
 config = configparser.ConfigParser()
 config.read('config.ini')
