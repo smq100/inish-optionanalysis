@@ -116,7 +116,7 @@ class EuropeanPricing(BasePricing):
                 # Strip the time from the datetime string
                 for index, item in enumerate(col_index):
                     day = datetime.datetime.strptime(item, '%Y-%m-%d %H:%M:%S').date()
-                    col_index[index] = str(day)
+                    col_index[index] = f'{str(day.month)}-{str(day.day)}'
 
                 # Finally, create the Pandas dataframe and reverse the row order
                 dframe = pd.DataFrame(table, index=row_index, columns=col_index)
