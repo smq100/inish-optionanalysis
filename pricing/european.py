@@ -93,7 +93,7 @@ class EuropeanPricing(BasePricing):
                         col_index.append(str(today))
 
                 # Remove last item (days_to_maturity == 0)
-                col_index.pop()
+                # col_index.pop()
 
                 # Calculate cost of option every day till expiry
                 for spot in range(int(self.strike_price) - 10, int(self.strike_price) + 11, 1):

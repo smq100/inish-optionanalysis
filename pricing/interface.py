@@ -25,6 +25,7 @@ class Interface():
                 call_price, put_price = self.pricer.calculate_prices()
                 self.table_value = self.pricer.generate_value_table(self.legs[0]['call_put'])
                 self.table_profit = self.pricer.generate_profit_table(call_price, self.table_value)
+                self.plot_profit()
 
     def main_menu(self):
         '''Displays opening menu'''
@@ -51,13 +52,13 @@ class Interface():
             selection = input('Please select: ')
 
             if selection == '1':
-                pass
+                self.enter_symbol()
             elif selection == '2':
-                pass
+                self.enter_strategy()
             elif selection == '3':
-                pass
+                self.enter_expiry()
             elif selection == '4':
-                pass
+                self.enter_strike()
             elif selection == '5':
                 self.calculate()
             elif selection == '6':
@@ -69,36 +70,92 @@ class Interface():
             else:
                 print('Unknown operation selected')
 
+    def reset(self):
+        '''TODO'''
+        self.symbol = []
+        self.legs = []
+
     def set_symbol(self, ticker, volatility=-1, dividend=0.0):
         '''TODO'''
         self.symbol = {'ticker':ticker, 'volitility':volatility, 'dividend':dividend}
-
-    def clear_legs(self):
-        '''TODO'''
-        self.legs = []
 
     def add_leg(self, quantity, call_put, long_short, strike, expiry_date):
         '''TODO'''
         self.legs.append({'quantity':quantity, 'call_put':call_put, 'long_short':long_short, 'strike': strike, 'expiry': expiry_date})
 
+    def enter_symbol(self):
+        '''TODO'''
+        selection = input('Please enter symbol: ').upper()
+        self.set_symbol(selection)
+        self.write_all()
+
+    def enter_strategy(self):
+        '''TODO'''
+        self.write_all()
+
+    def enter_expiry(self):
+        '''TODO'''
+        self.write_all()
+
+    def enter_strike(self):
+        '''TODO'''
+        selection = input('Please enter a strike price: ')
+        self.legs[0]['strike'] = float(selection)
+        self.write_all()
+
+    def write_all(self):
+        '''TODO'''
+        print(_delimeter('Configuration', True))
+        output = \
+            f'Strategy:{self.strategy}, '\
+            f'Method:{self.method}'
+        print(output)
+        output = \
+            f'Symbol:{self.symbol["ticker"]}, '\
+            f'Volitility:{self.symbol["volitility"]}, '\
+            f'Dividend:{self.symbol["dividend"]}'
+        print(output)
+        output = \
+            f'Quantity:{self.legs[0]["quantity"]}, '\
+            f'C-P:{self.legs[0]["call_put"]}, '\
+            f'L-S:{self.legs[0]["long_short"]}, '\
+            f'Strike:${self.legs[0]["strike"]:.2f}, '\
+            f'Expiry:{str(self.legs[0]["expiry"])[:10]}'
+        print(output)
+        print(_delimeter(''))
+
     def plot_value(self):
         '''TODO'''
-        print('\n***** Value Table *****')
+        self.write_all()
         print(self.table_value)
 
     def plot_profit(self):
         '''TODO'''
-        print('\n***** Profit Table *****')
+        self.write_all()
         print(self.table_profit)
 
     def _validate(self):
         '''TODO'''
         return True
 
+def _delimeter(message, creturn=False):
+    '''Common delimeter to bracket output'''
+    if creturn:
+        output = '\n'
+    else:
+        output = ''
+
+    if len(message) > 0:
+        output += f'***** {message} *****'
+    else:
+        output += '*****'
+
+    return output
+
 if __name__ == '__main__':
     ui = Interface()
-    ui.clear_legs()
+    ui.reset()
     ui.set_symbol('AAPL')
-    ui.add_leg(1, 'call', 'long', 145.0, datetime.datetime(2021, 2, 12))
+    ui.add_leg(1, 'call', 'long', 130.0, datetime.datetime(2021, 2, 12))
 
     ui.main_menu()
