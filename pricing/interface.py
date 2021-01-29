@@ -95,8 +95,36 @@ class Interface():
 
     def enter_symbol(self):
         '''TODO'''
-        selection = input('Please enter symbol: ').upper()
-        self.set_symbol(selection)
+        ticker = input('Please enter symbol: ').upper()
+        vol = -1.0
+        div = 0.0
+
+        menu_items = {
+            '1': 'Specify Volitility',
+            '2': 'Specify Dividend',
+            '3': 'Back'
+        }
+
+        while True:
+            print('\nSelect Option')
+            print('-------------------------')
+
+            option = menu_items.keys()
+            for entry in option:
+                print(f'{entry})\t{menu_items[entry]}')
+
+            selection = input('Please select: ')
+
+            if selection == '1':
+                pass
+            elif selection == '2':
+                pass
+            elif selection == '3':
+                break
+            else:
+                print('Unknown operation selected')
+
+        self.set_symbol(ticker, vol, div)
         self.write_all()
 
 
