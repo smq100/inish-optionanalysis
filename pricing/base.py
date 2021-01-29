@@ -103,7 +103,7 @@ class PricingBase():
         ''' TODO '''
         raise NotImplementedError('Subclasses need to implement this function')
 
-    def generate_profit_table(self, call_put, price):
+    def generate_value_table(self, call_put, price):
         ''' TODO '''
         raise NotImplementedError('Subclasses need to implement this function')
 

@@ -36,8 +36,8 @@ class EuropeanPricing(PricingBase):
         :return: <float>, <float> Calculated price of Call & Put options
         '''
 
-        # if spot_price <= 0.0:
-        spot_price = self.spot_price
+        if spot_price <= 0.0:
+            spot_price = self.spot_price
 
         if time_to_maturity <= 0.0:
             time_to_maturity = self.time_to_maturity
@@ -60,12 +60,12 @@ class EuropeanPricing(PricingBase):
 
         return self.cost_call, self.cost_put
 
-    def generate_profit_table(self, call_put, price):
+    def generate_value_table(self, call_put, price):
         ''' TODO '''
 
-        table = []
         valid = False
         type_call = True
+        dframe = pd.DataFrame()
 
         # Ensure prices have been calculated prior
         if call_put.upper() == 'CALL':
@@ -79,14 +79,14 @@ class EuropeanPricing(PricingBase):
         if valid:
             cols = int(self.time_to_maturity * 365)
             if cols > 1:
-                today = datetime.datetime.today()
-                today = today.replace(hour=0, minute=0, second=0, microsecond=0)
-                price = []
+                row = []
                 table = []
                 col_index = []
                 row_index = []
 
                 # Create list of dates to be used as the df columns
+                today = datetime.datetime.today()
+                today = today.replace(hour=0, minute=0, second=0, microsecond=0)
                 while today < self.expiry:
                     today += datetime.timedelta(days=1)
                     if today.isoweekday() <= 5:
@@ -96,12 +96,11 @@ class EuropeanPricing(PricingBase):
                 col_index.pop()
 
                 # Calculate cost of option every day till expiry
-                for spot in range(int(self.strike_price) - 5, int(self.strike_price) + 6, 1):
-                    row_index.append(spot)
-                    price = []
+                for spot in range(int(self.strike_price) - 10, int(self.strike_price) + 11, 1):
+                    row = []
                     for item in col_index:
                         maturity_date = datetime.datetime.strptime(item, '%Y-%m-%d %H:%M:%S')
-                        time_to_maturity = (self.expiry - maturity_date)
+                        time_to_maturity = self.expiry - maturity_date
                         decimaldays_to_maturity = time_to_maturity.days / 365
                         self.calculate_prices(spot_price=spot, time_to_maturity=decimaldays_to_maturity)
 
@@ -109,15 +108,22 @@ class EuropeanPricing(PricingBase):
                             value = self.cost_call
                         else:
                             value = self.cost_put
+                        row.append(value)
 
-                        price.append(value)
+                    row_index.append(spot)
+                    table.append(row)
 
-                    table.append(price)
+                # Create the Pandas dataframe
+                for index, item in enumerate(col_index):
+                    day = datetime.datetime.strptime(item, '%Y-%m-%d %H:%M:%S').date()
+                    col_index[index] = str(day)
 
-                dframe=pd.DataFrame(table, index=row_index, columns=col_index)
-                print(dframe)
+                dframe = pd.DataFrame(table, index=row_index, columns=col_index)
 
-        return table
+                # Reverse the row order
+                dframe = dframe.iloc[::-1]
+
+        return dframe
 
 
     def _calculate_d1(self, spot_price=-1.0, time_to_maturity=-1.0):
@@ -126,8 +132,8 @@ class EuropeanPricing(PricingBase):
                 https://en.wikipedia.org/wiki/Black%E2%80%93Scholes_model
         :return: <float>
         '''
-        # if spot_price <= 0.0:
-        spot_price = self.spot_price
+        if spot_price <= 0.0:
+            spot_price = self.spot_price
 
         if time_to_maturity <= 0.0:
             time_to_maturity = self.time_to_maturity
@@ -146,8 +152,8 @@ class EuropeanPricing(PricingBase):
                 https://en.wikipedia.org/wiki/Black%E2%80%93Scholes_model
         :return: <float>
         '''
-        # if spot_price <= 0.0:
-        spot_price = self.spot_price
+        if spot_price <= 0.0:
+            spot_price = self.spot_price
 
         if time_to_maturity <= 0.0:
             time_to_maturity = self.time_to_maturity
@@ -168,5 +174,5 @@ if __name__ == '__main__':
     parity = pricer.is_call_put_parity_maintained(call_price, put_price)
     logging.info('Parity = %s', parity)
 
-    t = pricer.generate_profit_table('call', call_price)
-    # print(t)
+    df = pricer.generate_value_table('call', call_price)
+    print(df)

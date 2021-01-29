@@ -48,7 +48,7 @@ class AmericanPricing(PricingBase):
 
         return self.cost_call, self.cost_put
 
-    def generate_profit_table(self, call_put, price):
+    def generate_value_table(self, call_put, price):
         ''' TODO '''
 
     def _generate_asset_price(self):
