@@ -111,6 +111,7 @@ class BasePricing():
         self.risk_free_rate = get_treasury_rate()  # / 100?
         logging.info('Risk Free Rate = %d', self.risk_free_rate)
 
+
     def _set_time_to_maturity(self):
         '''
         Calculate TimeToMaturity in Years. It is calculated in terms of years using below formula,
@@ -125,6 +126,7 @@ class BasePricing():
         self.time_to_maturity = (self.expiry - datetime.datetime.today()).days / 365.0
 
         logging.info('Setting Time To Maturity to %d days as Expiry/Maturity Date provided is %s ', self.time_to_maturity, self.expiry)
+
 
     def _get_underlying_asset_data(self):
         '''
@@ -141,6 +143,7 @@ class BasePricing():
                 logging.error('Unable to get historical stock data')
                 raise IOError(f'Unable to get historical stock data for {self.ticker}!')
 
+
     def _set_volatility(self):
         '''
         Using historical prices of the underlying asset, calculate volatility.
@@ -156,6 +159,7 @@ class BasePricing():
         logging.info('Annualized Volatility calculated is {:f} '.format(std))
 
         self.volatility = std
+
 
     def _set_spot_price(self):
         '''

@@ -55,8 +55,8 @@ class EuropeanPricing(BasePricing):
                (spot_price * np.exp(-1 * self.dividend * time_to_maturity)) *
                stats.norm.cdf(-1 * d_1, 0.0, 1.0))
 
-        # logging.info('Calculated value for European Call Option is $%.2f ', self.cost_call)
-        # logging.info('Calculated value for European Put Option is $%.2f ', self.cost_put)
+        logging.info('Calculated value for European Call Option is $%.2f ', self.cost_call)
+        logging.info('Calculated value for European Put Option is $%.2f ', self.cost_put)
 
         return self.cost_call, self.cost_put
 
@@ -87,13 +87,11 @@ class EuropeanPricing(BasePricing):
                 # Create list of dates to be used as the df columns
                 today = datetime.datetime.today()
                 today = today.replace(hour=0, minute=0, second=0, microsecond=0)
+                col_index.append(str(today))
                 while today < self.expiry:
                     today += datetime.timedelta(days=1)
                     if today.isoweekday() <= 5:
                         col_index.append(str(today))
-
-                # Remove last item (days_to_maturity == 0)
-                # col_index.pop()
 
                 # Calculate cost of option every day till expiry
                 for spot in range(int(self.strike_price) - 10, int(self.strike_price) + 11, 1):
@@ -150,6 +148,7 @@ class EuropeanPricing(BasePricing):
         logging.debug('Calculated value for d1 = %f', d_1)
 
         return d_1
+
 
     def _calculate_d2(self, spot_price=-1.0, time_to_maturity=-1.0):
         ''' Famous d2 variable from Black-Scholes model calculated as shown in:

@@ -12,20 +12,26 @@ class Interface():
         self.strategy = 'long_call'
         self.method = 'black-scholes'
         self.pricer = None
+        self.price_call = 0
+        self.price_put = 0
         self.table_value = pd.DataFrame()
         self.table_profit = pd.DataFrame()
 
         pd.options.display.float_format = '{:,.2f}'.format
+
 
     def calculate(self):
         '''TODO'''
         if self._validate():
             if self.method == 'black-scholes':
                 self.pricer = EuropeanPricing(self.symbol['ticker'], self.legs[0]['expiry'], self.legs[0]['strike'])
-                call_price, put_price = self.pricer.calculate_prices()
+                self.price_call, self.price_put = self.pricer.calculate_prices()
+
+                price = self.price_call if self.legs[0]['call_put'] == 'call' else self.price_call
                 self.table_value = self.pricer.generate_value_table(self.legs[0]['call_put'])
-                self.table_profit = self.pricer.generate_profit_table(call_price, self.table_value)
-                self.plot_profit()
+                self.table_profit = self.pricer.generate_profit_table(price, self.table_value)
+                self.plot_value()
+
 
     def main_menu(self):
         '''Displays opening menu'''
@@ -43,7 +49,7 @@ class Interface():
 
         while True:
             print('\nSelect Option')
-            print('---------------------')
+            print('-------------------------')
 
             option = menu_items.keys()
             for entry in option:
@@ -70,18 +76,22 @@ class Interface():
             else:
                 print('Unknown operation selected')
 
+
     def reset(self):
         '''TODO'''
         self.symbol = []
         self.legs = []
 
+
     def set_symbol(self, ticker, volatility=-1, dividend=0.0):
         '''TODO'''
         self.symbol = {'ticker':ticker, 'volitility':volatility, 'dividend':dividend}
 
+
     def add_leg(self, quantity, call_put, long_short, strike, expiry_date):
         '''TODO'''
         self.legs.append({'quantity':quantity, 'call_put':call_put, 'long_short':long_short, 'strike': strike, 'expiry': expiry_date})
+
 
     def enter_symbol(self):
         '''TODO'''
@@ -89,54 +99,64 @@ class Interface():
         self.set_symbol(selection)
         self.write_all()
 
+
     def enter_strategy(self):
         '''TODO'''
         self.write_all()
+
 
     def enter_expiry(self):
         '''TODO'''
         self.write_all()
 
+
     def enter_strike(self):
         '''TODO'''
         selection = input('Please enter a strike price: ')
-        self.legs[0]['strike'] = float(selection)
-        self.write_all()
+        if selection.isnumeric():
+            self.legs[0]['strike'] = float(selection)
+            self.write_all()
+        else:
+            print('\n*** Error: Please enter a numeric value')
+
 
     def write_all(self):
         '''TODO'''
+        price = self.price_call if self.legs[0]['call_put'] == 'call' else self.price_call
+
         print(_delimeter('Configuration', True))
         output = \
-            f'Strategy:{self.strategy}, '\
-            f'Method:{self.method}'
+            f'Strategy:{self.strategy}, Method:{self.method}'
         print(output)
         output = \
-            f'Symbol:{self.symbol["ticker"]}, '\
-            f'Volitility:{self.symbol["volitility"]}, '\
-            f'Dividend:{self.symbol["dividend"]}'
+            f'{self.legs[0]["quantity"]} '\
+            f'{self.symbol["ticker"]} '\
+            f'{str(self.legs[0]["expiry"])[:10]} '\
+            f'{self.legs[0]["long_short"]} '\
+            f'{self.legs[0]["call_put"]} '\
+            f'@${self.legs[0]["strike"]:.2f} = '\
+            f'${price:.2f}\n'
         print(output)
-        output = \
-            f'Quantity:{self.legs[0]["quantity"]}, '\
-            f'C-P:{self.legs[0]["call_put"]}, '\
-            f'L-S:{self.legs[0]["long_short"]}, '\
-            f'Strike:${self.legs[0]["strike"]:.2f}, '\
-            f'Expiry:{str(self.legs[0]["expiry"])[:10]}'
-        print(output)
-        print(_delimeter(''))
+
 
     def plot_value(self):
         '''TODO'''
         self.write_all()
+        print(_delimeter('Value', True))
         print(self.table_value)
+
 
     def plot_profit(self):
         '''TODO'''
         self.write_all()
+        print(_delimeter('Profit', True))
         print(self.table_profit)
+
 
     def _validate(self):
         '''TODO'''
         return True
+
 
 def _delimeter(message, creturn=False):
     '''Common delimeter to bracket output'''
@@ -151,6 +171,7 @@ def _delimeter(message, creturn=False):
         output += '*****'
 
     return output
+
 
 if __name__ == '__main__':
     ui = Interface()
