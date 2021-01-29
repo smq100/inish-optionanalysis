@@ -99,14 +99,6 @@ class PricingBase():
 
         return bool(round(lhs) == round(rhs))
 
-    def calculate_prices(self, spot_price=-1.0, time_to_maturity=-1.0):
-        ''' TODO '''
-        raise NotImplementedError('Subclasses need to implement this function')
-
-    def generate_value_table(self, call_put, price):
-        ''' TODO '''
-        raise NotImplementedError('Subclasses need to implement this function')
-
     def _set_risk_free_rate(self):
         '''
         Fetch 3-month Treasury Bill Rate from the web. Please check module stock_analyzer.data_fetcher for details

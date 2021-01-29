@@ -60,7 +60,7 @@ class EuropeanPricing(PricingBase):
 
         return self.cost_call, self.cost_put
 
-    def generate_value_table(self, call_put, price):
+    def generate_value_table(self, call_put):
         ''' TODO '''
 
         valid = False
@@ -113,15 +113,22 @@ class EuropeanPricing(PricingBase):
                     row_index.append(spot)
                     table.append(row)
 
-                # Create the Pandas dataframe
+                # Strip the time from the datetime string
                 for index, item in enumerate(col_index):
                     day = datetime.datetime.strptime(item, '%Y-%m-%d %H:%M:%S').date()
                     col_index[index] = str(day)
 
+                # Finally, create the Pandas dataframe
                 dframe = pd.DataFrame(table, index=row_index, columns=col_index)
 
                 # Reverse the row order
                 dframe = dframe.iloc[::-1]
+
+        return dframe
+
+    def generate_profit_table(self, price, table):
+        ''' TODO '''
+        dframe = table - price
 
         return dframe
 
@@ -174,5 +181,5 @@ if __name__ == '__main__':
     parity = pricer.is_call_put_parity_maintained(call_price, put_price)
     logging.info('Parity = %s', parity)
 
-    df = pricer.generate_value_table('call', call_price)
+    df = pricer.generate_value_table('call')
     print(df)
