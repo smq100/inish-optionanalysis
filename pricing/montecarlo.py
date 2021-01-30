@@ -5,7 +5,7 @@ from random import gauss
 
 import numpy as np
 
-from base import BasePricing, LOG_LEVEL
+from methodbase import BasePricing, LOG_LEVEL
 
 
 class AmericanPricing(BasePricing):
@@ -21,7 +21,7 @@ class AmericanPricing(BasePricing):
         super().__init__(ticker, expiry_date, strike, dividend=dividend)
 
         logging.basicConfig(format='%(level_name)s: %(message)s', level=LOG_LEVEL)
-        logging.info('American Option Pricing. Initializing...')
+        logging.info('American Option Pricing: Initializing...')
 
         # Get/Calculate all the required underlying parameters, ex. Volatility, Risk-free rate, etc.
         self.initialize_variables()

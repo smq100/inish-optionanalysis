@@ -1,36 +1,24 @@
 ''' TODO '''
 import datetime
+
 import pandas as pd
-from european import EuropeanPricing
+
+from strategy import Strategy
 
 
 class Interface():
     '''TODO'''
     def __init__(self):
-        self.symbol = []
-        self.legs = []
-        self.strategy = 'long_call'
-        self.method = 'black-scholes'
-        self.pricer = None
-        self.price_call = 0
-        self.price_put = 0
-        self.table_value = pd.DataFrame()
-        self.table_profit = pd.DataFrame()
+        self.strategy = Strategy()
+        date = datetime.datetime(2021, 2, 12)
+        self.leg = {'quantity': 1, 'call_put': 'call', 'long_short': 'long', 'strike': 100, 'expiry': date}
 
         pd.options.display.float_format = '{:,.2f}'.format
 
 
     def calculate(self):
         '''TODO'''
-        if self._validate():
-            if self.method == 'black-scholes':
-                self.pricer = EuropeanPricing(self.symbol['ticker'], self.legs[0]['expiry'], self.legs[0]['strike'])
-                self.price_call, self.price_put = self.pricer.calculate_prices()
-
-                price = self.price_call if self.legs[0]['call_put'] == 'call' else self.price_call
-                self.table_value = self.pricer.generate_value_table(self.legs[0]['call_put'])
-                self.table_profit = self.pricer.generate_profit_table(price, self.table_value)
-                self.plot_value()
+        self.strategy.calculate()
 
 
     def main_menu(self):
@@ -39,12 +27,11 @@ class Interface():
         menu_items = {
             '1': 'Specify Symbol',
             '2': 'Specify Strategy',
-            '3': 'Specify Expiry',
-            '4': 'Specify Strike',
-            '5': 'Calculate',
-            '6': 'Plot Value',
-            '7': 'Plot Profit',
-            '8': 'Exit'
+            '3': 'Configure Leg',
+            '4': 'Calculate',
+            '5': 'Plot Value',
+            '6': 'Plot Profit',
+            '7': 'Exit'
         }
 
         while True:
@@ -62,16 +49,14 @@ class Interface():
             elif selection == '2':
                 self.enter_strategy()
             elif selection == '3':
-                self.enter_expiry()
+                self.enter_leg()
             elif selection == '4':
-                self.enter_strike()
-            elif selection == '5':
                 self.calculate()
-            elif selection == '6':
+            elif selection == '5':
                 self.plot_value()
-            elif selection == '7':
+            elif selection == '6':
                 self.plot_profit()
-            elif selection == '8':
+            elif selection == '7':
                 break
             else:
                 print('Unknown operation selected')
@@ -79,18 +64,7 @@ class Interface():
 
     def reset(self):
         '''TODO'''
-        self.symbol = []
-        self.legs = []
-
-
-    def set_symbol(self, ticker, volatility=-1, dividend=0.0):
-        '''TODO'''
-        self.symbol = {'ticker':ticker, 'volitility':volatility, 'dividend':dividend}
-
-
-    def add_leg(self, quantity, call_put, long_short, strike, expiry_date):
-        '''TODO'''
-        self.legs.append({'quantity':quantity, 'call_put':call_put, 'long_short':long_short, 'strike': strike, 'expiry': expiry_date})
+        self.strategy.reset()
 
 
     def enter_symbol(self):
@@ -124,7 +98,7 @@ class Interface():
             else:
                 print('Unknown operation selected')
 
-        self.set_symbol(ticker, vol, div)
+        self.strategy.set_symbol(ticker, vol, div)
         self.write_all()
 
 
@@ -133,37 +107,84 @@ class Interface():
         self.write_all()
 
 
-    def enter_expiry(self):
+    def enter_leg(self):
         '''TODO'''
-        self.write_all()
 
+        menu_items = {
+            '1': 'Quantity',
+            '2': 'Call/Put',
+            '3': 'Long/Short',
+            '4': 'Strike',
+            '5': 'Expiration',
+            '6': 'Done',
+        }
 
-    def enter_strike(self):
-        '''TODO'''
-        selection = input('Please enter a strike price: ')
-        if selection.isnumeric():
-            self.legs[0]['strike'] = float(selection)
-            self.write_all()
-        else:
-            print('\n*** Error: Please enter a numeric value')
+        while True:
+            print('\nSpecify Leg')
+            print('-------------------------')
+
+            option = menu_items.keys()
+            for entry in option:
+                print(f'{entry})\t{menu_items[entry]}')
+
+            selection = input('Please select: ')
+
+            if selection == '1':
+                choice = input('Enter Quantity: ')
+                if choice.isnumeric():
+                    self.leg['quantity'] = int(choice)
+                else:
+                    print('Invalid option')
+            elif selection == '2':
+                choice = input('Call (c) or Put (p): ')
+                if 'c' in choice:
+                    self.leg['call_put'] = 'call'
+                elif 'p' in choice:
+                    self.leg['call_put'] = 'put'
+                else:
+                    print('Invalid option')
+            elif selection == '3':
+                choice = input('Long (l) or Short (s): ')
+                if 'l' in choice:
+                    self.leg['long_short'] = 'long'
+                elif 's' in choice:
+                    self.leg['long_short'] = 'short'
+                else:
+                    print('Invalid option')
+            elif selection == '4':
+                choice = input('Enter Strike: ')
+                if choice.isnumeric():
+                    self.leg['strike'] = float(choice)
+                else:
+                    print('Invalid option')
+            elif selection == '5':
+                pass
+            elif selection == '6':
+                choice = input('Add Leg (1) or Cancel (2): ')
+                if '1' in choice:
+                    self.strategy.add_leg(self.leg['quantity'], self.leg['call_put'], self.leg['long_short'], self.leg['strike'], self.leg['expiry'])
+                    break
+                elif '2' in choice:
+                    break
+                else:
+                    print('Invalid option')
+            else:
+                print('Unknown operation selected')
 
 
     def write_all(self):
         '''TODO'''
-        price = self.price_call if self.legs[0]['call_put'] == 'call' else self.price_call
-
         print(_delimeter('Configuration', True))
         output = \
-            f'Strategy:{self.strategy}, Method:{self.method}'
+            f'Strategy:{self.strategy}, Method:{self.strategy.method}'
         print(output)
         output = \
-            f'{self.legs[0]["quantity"]} '\
-            f'{self.symbol["ticker"]} '\
-            f'{str(self.legs[0]["expiry"])[:10]} '\
-            f'{self.legs[0]["long_short"]} '\
-            f'{self.legs[0]["call_put"]} '\
-            f'@${self.legs[0]["strike"]:.2f} = '\
-            f'${price:.2f}\n'
+            f'{self.leg["quantity"]} '\
+            f'{self.strategy.symbol["ticker"]} '\
+            f'{str(self.leg["expiry"])[:10]} '\
+            f'{self.leg["long_short"]} '\
+            f'{self.leg["call_put"]} '\
+            f'@${self.leg["strike"]:.2f} = \n'
         print(output)
 
 
@@ -171,15 +192,14 @@ class Interface():
         '''TODO'''
         self.write_all()
         print(_delimeter('Value', True))
-        print(self.table_value)
+        print('TBD')
 
 
     def plot_profit(self):
         '''TODO'''
         self.write_all()
         print(_delimeter('Profit', True))
-        print(self.table_profit)
-
+        print('TBD')
 
     def _validate(self):
         '''TODO'''
@@ -203,8 +223,4 @@ def _delimeter(message, creturn=False):
 
 if __name__ == '__main__':
     ui = Interface()
-    ui.reset()
-    ui.set_symbol('AAPL')
-    ui.add_leg(1, 'call', 'long', 130.0, datetime.datetime(2021, 2, 12))
-
     ui.main_menu()
