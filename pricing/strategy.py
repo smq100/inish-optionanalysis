@@ -8,13 +8,11 @@ from blackscholes import BlackScholes
 class Strategy:
     '''TODO'''
     def __init__(self):
-        self.symbol = {'ticker':'AAPL', 'volitility':-1, 'dividend':0.0}
+        self.symbol = {'ticker':'AAPL', 'volitility':-1.0, 'dividend':0.0}
         self.legs = []
         self.pricer = None
         self.strategy = 'long_call'
         self.method = 'black-scholes'
-        self.price_call = 0.0
-        self.price_put = 0.0
         self.table_value = None
         self.table_profit = None
 
@@ -31,22 +29,36 @@ class Strategy:
 
     def add_leg(self, quantity, call_put, long_short, strike, expiry):
         '''TODO'''
+        expiry += datetime.timedelta(days=1)
         self.legs.append({'quantity':quantity, 'call_put':call_put, 'long_short':long_short, 'strike': strike, 'expiry': expiry})
 
-    def calculate(self):
+
+    def calculate_leg(self):
         '''TODO'''
         if self._validate():
             self.pricer = BlackScholes(self.symbol['ticker'], self.legs[0]['expiry'], self.legs[0]['strike'])
-            self.price_call, self.price_put = self.pricer.calculate_prices()
+            price_call, price_put = self.pricer.calculate_prices()
 
-            price = self.price_call if self.legs[0]['call_put'] == 'call' else self.price_call
+            if self.legs[0]['call_put'] == 'call':
+                price = self.legs[0]['price'] = price_call
+            else:
+                price = self.legs[0]['price'] = price_put
+
             self.table_value = self.generate_value_table(self.legs[0]['call_put'])
             self.table_profit = self.generate_profit_table(self.table_value, price)
 
+        return price
 
-    def calculate_prices(self, spot_price=-1.0, time_to_maturity=-1.0):
+
+    def recalculate_price(self, spot_price=-1.0, time_to_maturity=-1.0):
         '''TODO'''
-        self.pricer.calculate_prices(spot_price, time_to_maturity)
+        if self.pricer is None:
+            call = put = 0.0
+        else:
+            # print(f'${spot_price:.2f}, {time_to_maturity:.1f}')
+            call, put = self.pricer.calculate_prices(spot_price, time_to_maturity)
+
+        return call, put
 
 
     def generate_value_table(self, call_put):
@@ -57,13 +69,13 @@ class Strategy:
         dframe = pd.DataFrame()
 
         # Ensure prices have been calculated prior
-        if call_put.upper() == 'CALL':
-            if self.price_call > 0.0:
-                valid = True
+        if self.legs[0]['price'] <= 0.0:
+            pass
+        elif call_put.upper() == 'CALL':
+            valid = True
         elif call_put.upper() == 'PUT':
-            if self.price_put > 0.0:
-                type_call = False
-                valid = True
+            type_call = False
+            valid = True
 
         if valid:
             cols = int(self.pricer.time_to_maturity * 365)
@@ -79,8 +91,7 @@ class Strategy:
                 col_index.append(str(today))
                 while today < self.pricer.expiry:
                     today += datetime.timedelta(days=1)
-                    if today.isoweekday() <= 5:
-                        col_index.append(str(today))
+                    col_index.append(str(today))
 
                 # Calculate cost of option every day till expiry
                 for spot in range(int(self.pricer.strike_price) - 10, int(self.pricer.strike_price) + 11, 1):
@@ -88,14 +99,15 @@ class Strategy:
                     for item in col_index:
                         maturity_date = datetime.datetime.strptime(item, '%Y-%m-%d %H:%M:%S')
                         time_to_maturity = self.pricer.expiry - maturity_date
-                        decimaldays_to_maturity = time_to_maturity.days / 365
-                        self.calculate_prices(spot_price=spot, time_to_maturity=decimaldays_to_maturity)
+                        decimaldays_to_maturity = time_to_maturity.days / 365.0
+                        if decimaldays_to_maturity < 0.0003:
+                            decimaldays_to_maturity = 0.0003
+                        price_call, price_put = self.recalculate_price(spot_price=spot, time_to_maturity=decimaldays_to_maturity)
 
                         if type_call:
-                            value = self.pricer.cost_call
+                            row.append(price_call)
                         else:
-                            value = self.pricer.cost_put
-                        row.append(value)
+                            row.append(price_put)
 
                     row_index.append(spot)
                     table.append(row)
@@ -105,7 +117,7 @@ class Strategy:
                     day = datetime.datetime.strptime(item, '%Y-%m-%d %H:%M:%S').date()
                     col_index[index] = f'{str(day.strftime("%b"))}-{str(day.day)}'
 
-                # Finally, create the Pandas dataframe and reverse the row order
+                # Finally, create the Pandas dataframe then reverse the row order
                 dframe = pd.DataFrame(table, index=row_index, columns=col_index)
                 dframe = dframe.iloc[::-1]
 
@@ -114,7 +126,7 @@ class Strategy:
     def generate_profit_table(self, table, price):
         ''' TODO '''
         dframe = table - price
-        dframe = dframe.applymap(lambda x: x if x >= -price else 0.0)
+        dframe = dframe.applymap(lambda x: x if x > -price else -price)
 
         return dframe
 

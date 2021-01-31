@@ -11,8 +11,6 @@ class BlackScholes(BasePricing):
     '''
     This class uses the classic Black-Scholes method to calculate prices for European Call and Put options
 
-    I have made an attempt to include dividends in the calcultion of these options. However, still need to perform
-    some testing.
     '''
 
     def __init__(self, ticker, expiry_date, strike, dividend=0.0):
