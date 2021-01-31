@@ -4,17 +4,19 @@ import datetime
 import pandas as pd
 
 from strategy import Strategy
+import utils
 
 
 class Interface():
     '''TODO'''
+
     def __init__(self):
         self.strategy = Strategy()
+
         date = datetime.datetime(2021, 2, 12)
-        self.leg = {'quantity': 1, 'call_put': 'call', 'long_short': 'long', 'strike': 140, 'expiry': date}
+        self.leg = {'quantity': 1, 'call_put': 'call', 'long_short': 'long', 'strike': 130, 'expiry': date}
 
         pd.options.display.float_format = '{:,.2f}'.format
-
 
     def main_menu(self):
         '''Displays opening menu'''
@@ -45,6 +47,7 @@ class Interface():
                 self.enter_strategy()
             elif selection == '3':
                 self.enter_leg()
+                self.strategy.write_leg(0)
             elif selection == '4':
                 self.calculate()
                 self.write_all()
@@ -57,16 +60,13 @@ class Interface():
             else:
                 print('Unknown operation selected')
 
-
     def calculate(self):
         '''TODO'''
         self.strategy.calculate_leg()
 
-
     def reset(self):
         '''TODO'''
         self.strategy.reset()
-
 
     def enter_symbol(self):
         '''TODO'''
@@ -102,11 +102,9 @@ class Interface():
         self.strategy.set_symbol(ticker, vol, div)
         self.write_all()
 
-
     def enter_strategy(self):
         '''TODO'''
         self.write_all()
-
 
     def enter_leg(self):
         '''TODO'''
@@ -122,7 +120,7 @@ class Interface():
         }
 
         while True:
-            self.write_leg()
+            self.strategy.write_leg(0)
             print('\nSpecify Leg')
             print('-------------------------')
 
@@ -163,7 +161,8 @@ class Interface():
             elif selection == '5':
                 pass
             elif selection == '6':
-                self.strategy.add_leg(self.leg['quantity'], self.leg['call_put'], self.leg['long_short'], self.leg['strike'], self.leg['expiry'])
+                self.strategy.add_leg(self.leg['quantity'], self.leg['call_put'],
+                                      self.leg['long_short'], self.leg['strike'], self.leg['expiry'])
                 break
             elif selection == '7':
                 break
@@ -171,22 +170,11 @@ class Interface():
                 print('Unknown operation selected')
 
 
-    def write_leg(self):
-        '''TODO'''
-        print(_delimeter('Leg Configuration', True))
-        output = \
-            f'{self.leg["quantity"]}, '\
-            f'{self.leg["long_short"]} '\
-            f'{self.leg["call_put"]} '\
-            f'@${self.leg["strike"]:.2f} for '\
-            f'{str(self.leg["expiry"])[:10]}\n'
-        print(output)
-
     def write_all(self):
         '''TODO'''
-        print(_delimeter('Configuration', True))
+        print(utils.delimeter('Configuration', True))
         output = \
-            f'Strategy:{self.strategy.strategy}, Method:{self.strategy.method}'
+            f'Strategy:{self.strategy.strategy}, Method:{self.strategy.pricing_method}'
         print(output)
         output = \
             f'{self.leg["quantity"]} '\
@@ -198,38 +186,21 @@ class Interface():
             f'${self.strategy.legs[0]["price"]:.2f}\n'
         print(output)
 
-
     def plot_value(self):
         '''TODO'''
         self.write_all()
-        print(_delimeter('Value', True))
+        print(utils.delimeter('Value', True))
         print(self.strategy.table_value)
-
 
     def plot_profit(self):
         '''TODO'''
         self.write_all()
-        print(_delimeter('Profit', True))
+        print(utils.delimeter('Profit', True))
         print(self.strategy.table_profit)
 
     def _validate(self):
         '''TODO'''
         return True
-
-
-def _delimeter(message, creturn=False):
-    '''Common delimeter to bracket output'''
-    if creturn:
-        output = '\n'
-    else:
-        output = ''
-
-    if len(message) > 0:
-        output += f'***** {message} *****'
-    else:
-        output += '*****'
-
-    return output
 
 
 if __name__ == '__main__':

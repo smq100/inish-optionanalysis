@@ -3,6 +3,8 @@
 Based on https://github.com/shashank-khanna/Option-Pricing
 '''
 
+import abc
+from abc import ABC
 import datetime
 import logging
 
@@ -15,7 +17,7 @@ from fetcher import get_ranged_data, get_treasury_rate
 LOG_LEVEL = logging.WARNING
 
 
-class BasePricing():
+class BasePricing(ABC):
     ''' TODO '''
 
     LOOK_BACK_WINDOW = 252
@@ -49,6 +51,10 @@ class BasePricing():
         self.initialize_variables()
 
         logging.basicConfig(format='%(level_name)s: %(message)s', level=LOG_LEVEL)
+
+    @abc.abstractmethod
+    def calculate_prices(self, spot_price=-1.0, time_to_maturity=-1.0):
+        '''TODO'''
 
     def initialize_variables(self):
         '''
