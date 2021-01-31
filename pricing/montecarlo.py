@@ -1,5 +1,4 @@
 '''American Pricing Class'''
-import datetime
 import logging
 from random import gauss
 
@@ -8,7 +7,7 @@ import numpy as np
 from methodbase import BasePricing, LOG_LEVEL
 
 
-class AmericanPricing(BasePricing):
+class MonteCarlo(BasePricing):
     '''
     This class uses Monte-Carlo simulation to calculate prices for American Call and Put Options.
 
@@ -26,6 +25,7 @@ class AmericanPricing(BasePricing):
         # Get/Calculate all the required underlying parameters, ex. Volatility, Risk-free rate, etc.
         self.initialize_variables()
         self.log_parameters()
+
 
     def calculate_prices(self, spot_price=-1.0, time_to_maturity=-1.0):
         ''' Calculate present-value of of expected payoffs and their average becomes the price of the respective option.
@@ -48,8 +48,6 @@ class AmericanPricing(BasePricing):
 
         return self.cost_call, self.cost_put
 
-    def generate_value_table(self, call_put, price):
-        ''' TODO '''
 
     def _generate_asset_price(self):
         ''' Calculate predicted Asset Price at the time of Option Expiry date.
@@ -67,6 +65,7 @@ class AmericanPricing(BasePricing):
 
         return expected_price
 
+
     def _call_payoff(self, expected_price):
         ''' Calculate payoff of the call option at Option Expiry Date assuming the asset price
         is equal to expected price. This calculation is based on below equation:
@@ -78,6 +77,7 @@ class AmericanPricing(BasePricing):
         '''
         return max(0, expected_price - self.strike_price)
 
+
     def _put_payoff(self, expected_price):
         ''' Calculate payoff of the put option at Option Expiry Date assuming the asset price
         is equal to expected price. This calculation is based on below equation:
@@ -88,6 +88,7 @@ class AmericanPricing(BasePricing):
         :return: <float> payoff
         '''
         return max(0, self.strike_price - expected_price)
+
 
     def _generate_simulations(self):
         ''' Perform Brownian motion simulation to get the Call & Put option payouts on Expiry Date

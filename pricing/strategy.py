@@ -4,6 +4,7 @@ import datetime
 import pandas as pd
 
 from blackscholes import BlackScholes
+from montecarlo import MonteCarlo
 import utils
 
 class Leg:
@@ -17,19 +18,19 @@ class Leg:
         self.price = 0.0
 
         if expiry is None:
-            self.expiry = datetime.datetime.today() + datetime.timedelta(days=15)
+            self.expiry = datetime.datetime.today() + datetime.timedelta(days=10)
         else:
             self.expiry = expiry
 
 class Strategy:
     '''TODO'''
 
-    def __init__(self):
+    def __init__(self, strategy='long_call', pricing_method='black-scholes'):
         self.symbol = {'ticker': 'AAPL', 'volitility': -1.0, 'dividend': 0.0}
         self.legs = []
         self.pricer = None
-        self.strategy = 'long_call'
-        self.pricing_method = 'black-scholes'
+        self.strategy = strategy
+        self.pricing_method = pricing_method
         self.table_value = None
         self.table_profit = None
 
@@ -50,10 +51,17 @@ class Strategy:
         leg = Leg(quantity, call_put, long_short, strike, expiry)
         self.legs.append(leg)
 
-    def calculate_leg(self):
+    def calculate_leg(self, pricing_method=None):
         '''TODO'''
+
+        if pricing_method is not None:
+            self.pricing_method = pricing_method
+
         if self._validate():
-            self.pricer = BlackScholes(self.symbol['ticker'], self.legs[0].expiry, self.legs[0].strike)
+            if self.pricing_method == 'monte-carlo':
+                self.pricer = MonteCarlo(self.symbol['ticker'], self.legs[0].expiry, self.legs[0].strike)
+            else:
+                self.pricer = BlackScholes(self.symbol['ticker'], self.legs[0].expiry, self.legs[0].strike)
 
             price_call, price_put = self.pricer.calculate_prices()
 
@@ -67,26 +75,15 @@ class Strategy:
 
         return price
 
-    def write_leg(self, leg):
-        '''TODO'''
-        if leg < len(self.legs):
-            print(utils.delimeter('Leg Configuration', True))
-            output = \
-                f'{self.legs[leg].quantity}, '\
-                f'{self.legs[leg].long_short} '\
-                f'{self.legs[leg].call_put} '\
-                f'@${self.legs[leg].strike:.2f} for '\
-                f'{str(self.legs[leg].expiry)[:10]}\n'
-            print(output)
 
-    def recalculate_price(self, spot_price=-1.0, time_to_maturity=-1.0):
+    def recalculate_leg(self, spot_price, time_to_maturity):
         '''TODO'''
         if self.pricer is None:
             call = put = 0.0
         else:
-            # print(f'${spot_price:.2f}, {time_to_maturity:.1f}')
-            call, put = self.pricer.calculate_prices(
-                spot_price, time_to_maturity)
+            call, put = self.pricer.calculate_prices(spot_price, time_to_maturity)
+
+        # print(f'${spot_price:.2f}, {time_to_maturity*365:.1f}, ${call:.2f}')
 
         return call, put
 
@@ -116,8 +113,7 @@ class Strategy:
 
                 # Create list of dates to be used as the df columns
                 today = datetime.datetime.today()
-                today = today.replace(
-                    hour=0, minute=0, second=0, microsecond=0)
+                today = today.replace(hour=0, minute=0, second=0, microsecond=0)
                 col_index.append(str(today))
                 while today < self.pricer.expiry:
                     today += datetime.timedelta(days=1)
@@ -136,8 +132,7 @@ class Strategy:
                         if decimaldays_to_maturity < 0.0003:
                             decimaldays_to_maturity = 0.0001
 
-                        price_call, price_put = self.recalculate_price(
-                            spot_price=spot, time_to_maturity=decimaldays_to_maturity)
+                        price_call, price_put = self.recalculate_leg(spot_price=spot, time_to_maturity=decimaldays_to_maturity)
 
                         if type_call:
                             row.append(price_call)
@@ -168,6 +163,27 @@ class Strategy:
 
         return dframe
 
+
+    def write_leg(self, leg):
+        '''TODO'''
+        if leg < len(self.legs):
+            print(utils.delimeter(f'Leg {leg+1}/{len(self.legs)} Configuration', True))
+            output = \
+                f'{self.legs[leg].quantity}, '\
+                f'{self.legs[leg].long_short} '\
+                f'{self.legs[leg].call_put} '\
+                f'@${self.legs[leg].strike:.2f} for '\
+                f'{str(self.legs[leg].expiry)[:10]}\n'
+            print(output)
+
+
     def _validate(self):
         '''TODO'''
-        return True
+        if self.pricing_method == 'black-scholes':
+            valid = True
+        elif self.pricing_method == 'monte-carlo':
+            valid = True
+        else:
+            valid = False
+
+        return valid
