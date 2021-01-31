@@ -18,7 +18,7 @@ class Leg:
         self.price = 0.0
 
         if expiry is None:
-            self.expiry = datetime.datetime.today() + datetime.timedelta(days=10)
+            self.expiry = datetime.datetime.today() + datetime.timedelta(days=5)
         else:
             self.expiry = expiry
 
@@ -120,7 +120,7 @@ class Strategy:
                     col_index.append(str(today))
 
                 # Calculate cost of option every day till expiry
-                for spot in range(int(self.pricer.strike_price) - 10, int(self.pricer.strike_price) + 11, 1):
+                for spot in range(int(self.pricer.strike_price) - 5, int(self.pricer.strike_price) + 6, 1):
                     row = []
                     for item in col_index:
                         maturity_date = datetime.datetime.strptime(
