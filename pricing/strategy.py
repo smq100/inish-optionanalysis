@@ -6,6 +6,20 @@ import pandas as pd
 from blackscholes import BlackScholes
 import utils
 
+class Leg:
+    '''TODO'''
+
+    def __init__(self, quantity=1, call_put='call', long_short='long', strike=100.0, expiry=None):
+        self.quantity = quantity
+        self.call_put = call_put
+        self.long_short = long_short
+        self.strike = strike
+        self.price = 0.0
+
+        if expiry is None:
+            self.expiry = datetime.datetime.today() + datetime.timedelta(days=15)
+        else:
+            self.expiry = expiry
 
 class Strategy:
     '''TODO'''
@@ -26,31 +40,30 @@ class Strategy:
 
     def set_symbol(self, ticker, volatility=-1.0, dividend=0.0):
         '''TODO'''
-        self.symbol = {'ticker': ticker,
-                       'volitility': volatility, 'dividend': dividend}
+        self.symbol = {'ticker': ticker, 'volitility': volatility, 'dividend': dividend}
 
     def add_leg(self, quantity, call_put, long_short, strike, expiry):
         '''TODO'''
+        # Add one day to act as expiry value
         expiry += datetime.timedelta(days=1)
-        self.legs.append({'quantity': quantity, 'call_put': call_put,
-                          'long_short': long_short, 'strike': strike, 'expiry': expiry})
+
+        leg = Leg(quantity, call_put, long_short, strike, expiry)
+        self.legs.append(leg)
 
     def calculate_leg(self):
         '''TODO'''
         if self._validate():
-            self.pricer = BlackScholes(
-                self.symbol['ticker'], self.legs[0]['expiry'], self.legs[0]['strike'])
+            self.pricer = BlackScholes(self.symbol['ticker'], self.legs[0].expiry, self.legs[0].strike)
+
             price_call, price_put = self.pricer.calculate_prices()
 
-            if self.legs[0]['call_put'] == 'call':
-                price = self.legs[0]['price'] = price_call
+            if self.legs[0].call_put == 'call':
+                price = self.legs[0].price = price_call
             else:
-                price = self.legs[0]['price'] = price_put
+                price = self.legs[0].price = price_put
 
-            self.table_value = self.generate_value_table(
-                self.legs[0]['call_put'])
-            self.table_profit = self.generate_profit_table(
-                self.table_value, price)
+            self.table_value = self.generate_value_table(self.legs[0].call_put)
+            self.table_profit = self.generate_profit_table(self.table_value, price)
 
         return price
 
@@ -59,11 +72,11 @@ class Strategy:
         if leg < len(self.legs):
             print(utils.delimeter('Leg Configuration', True))
             output = \
-                f'{self.legs[leg]["quantity"]}, '\
-                f'{self.legs[leg]["long_short"]} '\
-                f'{self.legs[leg]["call_put"]} '\
-                f'@${self.legs[leg]["strike"]:.2f} for '\
-                f'{str(self.legs[leg]["expiry"])[:10]}\n'
+                f'{self.legs[leg].quantity}, '\
+                f'{self.legs[leg].long_short} '\
+                f'{self.legs[leg].call_put} '\
+                f'@${self.legs[leg].strike:.2f} for '\
+                f'{str(self.legs[leg].expiry)[:10]}\n'
             print(output)
 
     def recalculate_price(self, spot_price=-1.0, time_to_maturity=-1.0):
@@ -85,7 +98,7 @@ class Strategy:
         dframe = pd.DataFrame()
 
         # Ensure prices have been calculated prior
-        if self.legs[0]['price'] <= 0.0:
+        if self.legs[0].price <= 0.0:
             pass
         elif call_put.upper() == 'CALL':
             valid = True

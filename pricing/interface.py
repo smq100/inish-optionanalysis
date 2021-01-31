@@ -183,7 +183,7 @@ class Interface():
             f'{self.leg["long_short"]} '\
             f'{self.leg["call_put"]} '\
             f'@${self.leg["strike"]:.2f} = '\
-            f'${self.strategy.legs[0]["price"]:.2f}\n'
+            f'${self.strategy.legs[0].price:.2f}\n'
         print(output)
 
     def plot_value(self):
