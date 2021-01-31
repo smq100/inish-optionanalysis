@@ -5,7 +5,6 @@ import pandas as pd
 
 from blackscholes import BlackScholes
 from montecarlo import MonteCarlo
-import utils
 
 class Leg:
     '''TODO'''
@@ -18,7 +17,7 @@ class Leg:
         self.price = 0.0
 
         if expiry is None:
-            self.expiry = datetime.datetime.today() + datetime.timedelta(days=5)
+            self.expiry = datetime.datetime.today() + datetime.timedelta(days=10)
         else:
             self.expiry = expiry
 
@@ -50,6 +49,8 @@ class Strategy:
 
         leg = Leg(quantity, call_put, long_short, strike, expiry)
         self.legs.append(leg)
+
+        return len(self.legs)
 
     def calculate_leg(self, pricing_method=None):
         '''TODO'''
@@ -120,7 +121,7 @@ class Strategy:
                     col_index.append(str(today))
 
                 # Calculate cost of option every day till expiry
-                for spot in range(int(self.pricer.strike_price) - 5, int(self.pricer.strike_price) + 6, 1):
+                for spot in range(int(self.pricer.strike_price) - 10, int(self.pricer.strike_price) + 11, 1):
                     row = []
                     for item in col_index:
                         maturity_date = datetime.datetime.strptime(
@@ -162,19 +163,6 @@ class Strategy:
         dframe = dframe.applymap(lambda x: x if x > -price else -price)
 
         return dframe
-
-
-    def write_leg(self, leg):
-        '''TODO'''
-        if leg < len(self.legs):
-            print(utils.delimeter(f'Leg {leg+1}/{len(self.legs)} Configuration', True))
-            output = \
-                f'{self.legs[leg].quantity}, '\
-                f'{self.legs[leg].long_short} '\
-                f'{self.legs[leg].call_put} '\
-                f'${self.legs[leg].strike:.2f} for '\
-                f'{str(self.legs[leg].expiry)[:10]}\n'
-            print(output)
 
 
     def _validate(self):
