@@ -229,18 +229,15 @@ class Interface():
 
     def write_all(self):
         '''TODO'''
-        print(utils.delimeter('Configuration', True))
-        output = \
-            f'Strategy:{self.strategy.strategy}, Method:{self.strategy.pricing_method}'
-        print(output)
+        print(utils.delimeter('Product', True))
         output = \
             f'{self.leg.quantity} '\
             f'{self.strategy.symbol["ticker"]} '\
             f'{str(self.leg.expiry)[:10]} '\
+            f'${self.leg.strike:.2f} '\
             f'{self.leg.long_short} '\
             f'{self.leg.call_put} '\
-            f'@${self.leg.strike:.2f} = '\
-            f'${self.strategy.legs[0].price:.2f}\n'
+            f'= ${self.strategy.legs[0].price:.2f} ({self.strategy.pricing_method})\n'
         print(output)
 
     def plot_value(self):

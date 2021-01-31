@@ -37,7 +37,11 @@ class MonteCarlo(BasePricing):
 
         :return: <float>, <float> Calculated price of Call & Put options
         '''
-        call_payoffs, put_payoffs = self._generate_simulations()
+
+        if spot_price <= 0.0:
+            spot_price = self.spot_price
+
+        call_payoffs, put_payoffs = self._generate_simulations(spot_price)
         discount_factor = np.exp(-1 * self.risk_free_rate * self.time_to_maturity)
 
         self.cost_call = discount_factor * (sum(call_payoffs) / len(call_payoffs))
@@ -49,7 +53,7 @@ class MonteCarlo(BasePricing):
         return self.cost_call, self.cost_put
 
 
-    def _generate_asset_price(self):
+    def _generate_asset_price(self, spot_price):
         ''' Calculate predicted Asset Price at the time of Option Expiry date.
         It used a random variable based on Gaus model and then calculate price using the below equation.
 
@@ -57,7 +61,7 @@ class MonteCarlo(BasePricing):
 
         :return: <float> Expected Asset Price
         '''
-        expected_price = self.spot_price * np.exp(
+        expected_price = spot_price * np.exp(
             (self.risk_free_rate - 0.5 * self.volatility ** 2) * self.time_to_maturity +
             self.volatility * np.sqrt(self.time_to_maturity) * gauss(0.0, 1.0))
 
@@ -90,14 +94,14 @@ class MonteCarlo(BasePricing):
         return max(0, self.strike_price - expected_price)
 
 
-    def _generate_simulations(self):
+    def _generate_simulations(self, spot_price):
         ''' Perform Brownian motion simulation to get the Call & Put option payouts on Expiry Date
 
         :return: <list of call-option payoffs>, <list of put-option payoffs>
         '''
         call_payoffs, put_payoffs = [], []
         for _ in range(self.SIMULATION_COUNT):
-            expected_asset_price = self._generate_asset_price()
+            expected_asset_price = self._generate_asset_price(spot_price)
             call_payoffs.append(self._call_payoff(expected_asset_price))
             put_payoffs.append(self._put_payoff(expected_asset_price))
 

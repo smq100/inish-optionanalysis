@@ -172,7 +172,7 @@ class Strategy:
                 f'{self.legs[leg].quantity}, '\
                 f'{self.legs[leg].long_short} '\
                 f'{self.legs[leg].call_put} '\
-                f'@${self.legs[leg].strike:.2f} for '\
+                f'${self.legs[leg].strike:.2f} for '\
                 f'{str(self.legs[leg].expiry)[:10]}\n'
             print(output)
 
