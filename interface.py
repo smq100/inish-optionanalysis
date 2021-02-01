@@ -21,12 +21,11 @@ class Interface():
             '1': 'Specify Symbol',
             '2': 'Specify Strategy',
             '3': 'Add Leg',
-            '4': 'Calculate Leg',
-            '5': 'Calculate Stategy',
-            '6': 'Plot Value',
-            '7': 'Plot Profit',
-            '8': 'Change Pricing Method',
-            '9': 'Exit'
+            '4': 'Plot Value',
+            '5': 'Analyze Stategy',
+            '6': 'Re-Calculate Leg',
+            '7': 'Change Pricing Method',
+            '8': 'Exit'
         }
 
         while True:
@@ -46,21 +45,37 @@ class Interface():
             elif selection == '2':
                 self.enter_strategy()
             elif selection == '3':
-                self.enter_leg()
+                leg = self.enter_leg()
+                if leg > 0:
+                    self.calculate(leg-1)
+                    self.plot_value(leg-1)
             elif selection == '4':
-                leg = 1
-                if len(self.strategy.legs) > 1:
+                if len(self.strategy.legs) < 1:
+                    print('No legs configured')
+                elif len(self.strategy.legs) > 1:
                     leg = input('Enter Leg: ')
-                self.calculate(int(leg)-1)
+                    self.plot_value(int(leg)-1)
+                else:
+                    self.plot_value(0)
             elif selection == '5':
-                self.calculate(-1)
+                if len(self.strategy.legs) < 1:
+                    print('No legs configured')
+                elif len(self.strategy.legs) > 1:
+                    leg = input('Enter Leg: ')
+                    self.plot_profit(int(leg)-1)
+                else:
+                    self.plot_profit(0)
             elif selection == '6':
-                self.plot_value(0)
+                if len(self.strategy.legs) < 1:
+                    print('No legs configured')
+                elif len(self.strategy.legs) > 1:
+                    leg = input('Enter Leg: ')
+                    self.calculate(int(leg)-1)
+                else:
+                    self.calculate(0)
             elif selection == '7':
-                self.plot_profit(0)
-            elif selection == '8':
                 self.enter_method()
-            elif selection == '9':
+            elif selection == '8':
                 break
             else:
                 print('Unknown operation selected')
@@ -110,7 +125,6 @@ class Interface():
             else:
                 print('Unknown operation selected')
 
-        self.strategy.reset()
         self.strategy.set_symbol(ticker, vol, div)
 
 
@@ -163,7 +177,7 @@ class Interface():
             print('\nSpecify Leg')
             print('-------------------------')
 
-            leg = 0
+            leg = -1
 
             option = menu_items.keys()
             for entry in option:
@@ -248,11 +262,20 @@ class Interface():
         print(u.delimeter(f'Value ({self.strategy.pricing_method})', True) + '\n')
         print(self.strategy.legs[leg].table_value)
 
-
     def plot_profit(self, leg):
         '''TODO'''
-        print(u.delimeter(f'Profit ({self.strategy.pricing_method})', True) + '\n')
-        print(self.strategy.legs[leg].table_profit)
+        if len(self.strategy.legs) < 1:
+            print('No legs configured')
+        elif leg < 0:
+            for index in range(0, len(self.strategy.legs), 1):
+                # Recursive call to output each leg
+                self.plot_profit(index)
+        elif leg < len(self.strategy.legs):
+            print(u.delimeter(f'Profit', True) + '\n')
+            price = self.strategy.legs[leg].price
+            dframe = self.strategy.legs[leg].table_value - price
+            dframe = dframe.applymap(lambda x: x if x > -price else -price)
+            print(dframe)
 
 
     def write_legs(self, leg=-1, delimeter=True):
@@ -277,7 +300,7 @@ class Interface():
 
             if self.strategy.legs[leg].price > 0.0:
                 output += f' = ${self.strategy.legs[leg].price:.2f}'
-                output += f' (v={self.strategy.pricer.volatility*100:.1f}%)'
+                output += f' (${self.strategy.legs[leg].spot:.2f}@{self.strategy.pricer.volatility*100:.1f}%)'
 
             print(output)
         else:

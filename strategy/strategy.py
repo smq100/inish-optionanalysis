@@ -18,8 +18,8 @@ class Leg:
         self.long_short = long_short
         self.strike = strike
         self.price = 0.0
+        self.spot = 0.0
         self.table_value = None
-        self.table_profit = None
 
         if expiry is None:
             self.expiry = datetime.datetime.today() + datetime.timedelta(days=10)
@@ -36,7 +36,6 @@ class Strategy:
         self.strategy = strategy
         self.pricing_method = pricing_method
         self.table_value = None
-        self.table_profit = None
 
         logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
         logging.info('Initializing Strategy ...')
@@ -48,6 +47,7 @@ class Strategy:
 
     def set_symbol(self, ticker, volatility=-1.0, dividend=0.0):
         '''TODO'''
+        self.reset()
         self.symbol = {'ticker': ticker, 'volitility': volatility, 'dividend': dividend}
 
     def add_leg(self, quantity, call_put, long_short, strike, expiry):
@@ -74,6 +74,7 @@ class Strategy:
                 self.pricer = BlackScholes(self.symbol['ticker'], self.legs[leg].expiry, self.legs[leg].strike)
 
             price_call, price_put = self.pricer.calculate_prices()
+            self.legs[leg].spot = self.pricer.spot_price
 
             if self.legs[leg].call_put == 'call':
                 price = self.legs[leg].price = price_call
@@ -83,7 +84,6 @@ class Strategy:
             logging.info('Option price = ${:.2f} '.format(price))
 
             self.legs[leg].table_value = self.generate_value_table(self.legs[leg].call_put, leg)
-            self.legs[leg].table_profit = self.generate_profit_table(self.legs[leg].table_value, price)
 
         return price
 
@@ -165,13 +165,6 @@ class Strategy:
                 dframe = pd.DataFrame(
                     table, index=row_index, columns=col_index)
                 dframe = dframe.iloc[::-1]
-
-        return dframe
-
-    def generate_profit_table(self, table, price):
-        ''' TODO '''
-        dframe = table - price
-        dframe = dframe.applymap(lambda x: x if x > -price else -price)
 
         return dframe
 
