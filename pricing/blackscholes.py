@@ -44,12 +44,12 @@ class BlackScholes(BasePricing):
         self.cost_call = ((spot_price * np.exp(-1 * self.dividend * time_to_maturity)) *
                 stats.norm.cdf(d_1, 0.0, 1.0) -
                 (self.strike_price * np.exp(-1 * self.risk_free_rate * time_to_maturity) *
-                 stats.norm.cdf(d_2, 0.0, 1.0)))
+                stats.norm.cdf(d_2, 0.0, 1.0)))
 
         self.cost_put = (self.strike_price * np.exp(-1 * self.risk_free_rate * time_to_maturity) *
-               stats.norm.cdf(-1 * d_2, 0.0, 1.0) -
-               (spot_price * np.exp(-1 * self.dividend * time_to_maturity)) *
-               stats.norm.cdf(-1 * d_1, 0.0, 1.0))
+                stats.norm.cdf(-1 * d_2, 0.0, 1.0) -
+                (spot_price * np.exp(-1 * self.dividend * time_to_maturity)) *
+                stats.norm.cdf(-1 * d_1, 0.0, 1.0))
 
         logging.info('Calculated value for Black-Scholes Call Option is $%.2f ', self.cost_call)
         logging.info('Calculated value for Black-Scholes Put Option is $%.2f ', self.cost_put)

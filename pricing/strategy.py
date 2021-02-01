@@ -9,12 +9,14 @@ from montecarlo import MonteCarlo
 class Leg:
     '''TODO'''
 
-    def __init__(self, quantity=1, call_put='call', long_short='long', strike=100.0, expiry=None):
+    def __init__(self, quantity=1, call_put='call', long_short='long', strike=130.0, expiry=None):
         self.quantity = quantity
         self.call_put = call_put
         self.long_short = long_short
         self.strike = strike
         self.price = 0.0
+        self.table_value = None
+        self.table_profit = None
 
         if expiry is None:
             self.expiry = datetime.datetime.today() + datetime.timedelta(days=10)
@@ -52,27 +54,28 @@ class Strategy:
 
         return len(self.legs)
 
-    def calculate_leg(self, pricing_method=None):
+    def calculate_leg(self, leg, pricing_method=None):
         '''TODO'''
 
         if pricing_method is not None:
             self.pricing_method = pricing_method
+        price = 0.0
 
-        if self._validate():
+        if self._validate(leg):
             if self.pricing_method == 'monte-carlo':
-                self.pricer = MonteCarlo(self.symbol['ticker'], self.legs[0].expiry, self.legs[0].strike)
+                self.pricer = MonteCarlo(self.symbol['ticker'], self.legs[leg].expiry, self.legs[leg].strike)
             else:
-                self.pricer = BlackScholes(self.symbol['ticker'], self.legs[0].expiry, self.legs[0].strike)
+                self.pricer = BlackScholes(self.symbol['ticker'], self.legs[leg].expiry, self.legs[leg].strike)
 
             price_call, price_put = self.pricer.calculate_prices()
 
-            if self.legs[0].call_put == 'call':
-                price = self.legs[0].price = price_call
+            if self.legs[leg].call_put == 'call':
+                price = self.legs[leg].price = price_call
             else:
-                price = self.legs[0].price = price_put
+                price = self.legs[leg].price = price_put
 
-            self.table_value = self.generate_value_table(self.legs[0].call_put)
-            self.table_profit = self.generate_profit_table(self.table_value, price)
+            self.legs[leg].table_value = self.generate_value_table(self.legs[leg].call_put, leg)
+            self.legs[leg].table_profit = self.generate_profit_table(self.legs[leg].table_value, price)
 
         return price
 
@@ -88,7 +91,7 @@ class Strategy:
 
         return call, put
 
-    def generate_value_table(self, call_put):
+    def generate_value_table(self, call_put, leg):
         ''' TODO '''
 
         valid = False
@@ -96,7 +99,7 @@ class Strategy:
         dframe = pd.DataFrame()
 
         # Ensure prices have been calculated prior
-        if self.legs[0].price <= 0.0:
+        if self.legs[leg].price <= 0.0:
             pass
         elif call_put.upper() == 'CALL':
             valid = True
@@ -165,11 +168,20 @@ class Strategy:
         return dframe
 
 
-    def _validate(self):
+    def _validate(self, leg):
         '''TODO'''
+        # Check for valid method
         if self.pricing_method == 'black-scholes':
             valid = True
         elif self.pricing_method == 'monte-carlo':
+            valid = True
+        else:
+            valid = False
+
+        # Check for correct leg index
+        if not valid:
+            pass
+        elif leg < len(self.legs):
             valid = True
         else:
             valid = False

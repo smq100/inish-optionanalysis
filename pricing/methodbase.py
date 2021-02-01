@@ -44,7 +44,7 @@ class BasePricing(ABC):
         self.__underlying_asset_data = pd.DataFrame()
         self.__start_date = datetime.datetime.today() - BDay(self.LOOK_BACK_WINDOW)  # How far we need to go to get historical prices
 
-        # Convert expiry time to midnight
+        # Convert time to midnight
         self.expiry = self.expiry.replace(hour=0, minute=0, second=0, microsecond=0)
 
         # Initialize
@@ -61,10 +61,10 @@ class BasePricing(ABC):
         Initialize all the required parameters for Option pricing
         :return:
         '''
-        self._set_risk_free_rate()
-        self._set_time_to_maturity()
-        self._set_volatility()
-        self._set_spot_price()
+        self._calc_risk_free_rate()
+        self._calc_time_to_maturity()
+        self._calc_volatility()
+        self._calc_spot_price()
 
         logging.debug('Initializing variables completed')
 
@@ -108,7 +108,7 @@ class BasePricing(ABC):
 
         return bool(round(lhs) == round(rhs))
 
-    def _set_risk_free_rate(self):
+    def _calc_risk_free_rate(self):
         '''
         Fetch 3-month Treasury Bill Rate from the web. Please check module stock_analyzer.data_fetcher for details
 
@@ -118,7 +118,7 @@ class BasePricing(ABC):
         logging.info('Risk Free Rate = %d', self.risk_free_rate)
 
 
-    def _set_time_to_maturity(self):
+    def _calc_time_to_maturity(self):
         '''
         Calculate TimeToMaturity in Years. It is calculated in terms of years using below formula,
 
@@ -134,7 +134,7 @@ class BasePricing(ABC):
         logging.info('Setting Time To Maturity to %d days as Expiry/Maturity Date provided is %s ', self.time_to_maturity, self.expiry)
 
 
-    def _get_underlying_asset_data(self):
+    def _calc_underlying_asset_data(self):
         '''
         Scan through the web to get historical prices of the underlying asset.
         Please check module stock_analyzer.data_fetcher for details
@@ -150,12 +150,12 @@ class BasePricing(ABC):
                 raise IOError(f'Unable to get historical stock data for {self.ticker}!')
 
 
-    def _set_volatility(self):
+    def _calc_volatility(self):
         '''
         Using historical prices of the underlying asset, calculate volatility.
         :return:
         '''
-        self._get_underlying_asset_data()
+        self._calc_underlying_asset_data()
         self.__underlying_asset_data.reset_index(inplace=True)
         self.__underlying_asset_data.set_index('Date', inplace=True)
         self.__underlying_asset_data['log_returns'] = np.log(self.__underlying_asset_data['Close'] / self.__underlying_asset_data['Close'].shift(1))
@@ -167,10 +167,10 @@ class BasePricing(ABC):
         self.volatility = std
 
 
-    def _set_spot_price(self):
+    def _calc_spot_price(self):
         '''
         Get latest price of the underlying asset.
         :return:
         '''
-        self._get_underlying_asset_data()
+        self._calc_underlying_asset_data()
         self.spot_price = self.__underlying_asset_data['Close'][-1]

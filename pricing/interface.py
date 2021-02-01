@@ -20,15 +20,18 @@ class Interface():
         menu_items = {
             '1': 'Specify Symbol',
             '2': 'Specify Strategy',
-            '3': 'Configure Leg',
-            '4': 'Calculate',
-            '5': 'Plot Value',
-            '6': 'Plot Profit',
-            '7': 'Change Pricing Method',
-            '8': 'Exit'
+            '3': 'Add Leg',
+            '4': 'Calculate Leg',
+            '5': 'Calculate Stategy',
+            '6': 'Plot Value',
+            '7': 'Plot Profit',
+            '8': 'Change Pricing Method',
+            '9': 'Exit'
         }
 
         while True:
+            self.write_leg(-1)
+
             print('\nSelect Option')
             print('-------------------------')
 
@@ -43,27 +46,32 @@ class Interface():
             elif selection == '2':
                 self.enter_strategy()
             elif selection == '3':
-                leg = self.enter_leg()
-                if leg > 0:
-                    self.write_leg(-1)
+                self.enter_leg()
             elif selection == '4':
-                self.calculate()
-                self.write_all()
+                leg = 0
+                if len(self.strategy.legs) > 1:
+                    leg = input('Enter Leg: ')
+                self.calculate(int(leg)-1)
             elif selection == '5':
-                self.plot_value()
+                self.calculate(-1)
             elif selection == '6':
-                self.plot_profit()
+                self.plot_value(0)
             elif selection == '7':
-                self.enter_method()
+                self.plot_profit(0)
             elif selection == '8':
+                self.enter_method()
+            elif selection == '9':
                 break
             else:
                 print('Unknown operation selected')
 
 
-    def calculate(self):
+    def calculate(self, leg):
         '''TODO'''
-        self.strategy.calculate_leg()
+        if leg < 0:
+            pass
+        else:
+            self.strategy.calculate_leg(leg)
 
 
     def reset(self):
@@ -103,7 +111,6 @@ class Interface():
                 print('Unknown operation selected')
 
         self.strategy.set_symbol(ticker, vol, div)
-        self.write_all()
 
 
     def enter_strategy(self):
@@ -116,7 +123,6 @@ class Interface():
         }
 
         while True:
-            self.write_leg(-1)
             print('\nSelect Strategy')
             print('---------------------')
 
@@ -215,7 +221,6 @@ class Interface():
         }
 
         while True:
-            self.write_leg(-1)
             print('\nSpecify Method')
             print('-------------------------')
 
@@ -237,71 +242,46 @@ class Interface():
             print('Unknown method selected')
 
 
-    def plot_value(self):
+    def plot_value(self, leg):
         '''TODO'''
         print(utils.delimeter(f'Value ({self.strategy.pricing_method})', True) + '\n')
-        self.write_info(False)
-        print(self.strategy.table_value)
+        print(self.strategy.legs[leg].table_value)
 
 
-    def plot_profit(self):
+    def plot_profit(self, leg):
         '''TODO'''
         print(utils.delimeter(f'Profit ({self.strategy.pricing_method})', True) + '\n')
-        self.write_info(True)
-        print(self.strategy.table_profit)
+        print(self.strategy.legs[leg].table_profit)
 
 
     def write_leg(self, leg, delimeter=True):
         '''TODO'''
         if delimeter:
-            print(utils.delimeter('Strategy Legs', True))
+            print(utils.delimeter('Current Strategy', True))
 
-        if leg < 0:
-            for leg_index in range(0, len(self.strategy.legs), 1):
-                self.write_leg(leg_index, False)
+        if len(self.strategy.legs) < 1:
+            print('No legs configured')
+        elif leg < 0:
+            for index in range(0, len(self.strategy.legs), 1):
+                # Recursive call to output each leg
+                self.write_leg(index, False)
         elif leg < len(self.strategy.legs):
-            output = f'{leg}: '\
-                f'{self.strategy.legs[leg].quantity}, '\
+            output = f'{leg+1}: '\
+                f'{self.strategy.legs[leg].quantity} '\
+                f'{self.strategy.symbol["ticker"]:4s} '\
                 f'{self.strategy.legs[leg].long_short:5s} '\
                 f'{self.strategy.legs[leg].call_put:5s} '\
                 f'${self.strategy.legs[leg].strike:.2f} for '\
                 f'{str(self.strategy.legs[leg].expiry)[:10]}'
+
+            if self.strategy.legs[leg].price > 0.0:
+                output += f' = ${self.strategy.legs[leg].price:.2f}'
+                output += f' (v={self.strategy.pricer.volatility*100:.1f}%)'
+
             print(output)
         else:
-            print('No legs configured')
+            print('Invalid leg')
 
-    def write_all(self, delimiter=True):
-        '''TODO'''
-        if delimiter:
-            print(utils.delimeter('Product', True))
-
-        output = \
-            f'{self.leg.quantity} '\
-            f'{self.strategy.symbol["ticker"]} '\
-            f'{str(self.leg.expiry)[:10]} '\
-            f'${self.leg.strike:.2f} '\
-            f'{self.leg.long_short} '\
-            f'{self.leg.call_put} '\
-            f'= ${self.strategy.legs[0].price:.2f} ({self.strategy.pricing_method})\n'
-        print(output)
-
-    def write_info(self, delimiter=True):
-        '''TODO'''
-        if delimiter:
-            print(utils.delimeter('Product', True))
-
-        output = \
-            f'{self.leg.quantity} '\
-            f'{self.strategy.symbol["ticker"]} '\
-            f'{str(self.leg.expiry)[:10]} '\
-            f'${self.leg.strike:.2f} '\
-            f'{self.leg.long_short} '\
-            f'{self.leg.call_put} '\
-            f'= ${self.strategy.legs[0].price:.2f} ({self.strategy.pricing_method})'
-        print(output)
-
-        output = f'Volatility: {self.strategy.pricer.volatility*100:.1f}%\n'
-        print(output)
 
     def _validate(self):
         '''TODO'''
