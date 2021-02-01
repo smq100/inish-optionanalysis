@@ -1,4 +1,4 @@
-''' Option Pricing Base Class
+''' Abstract Option Pricing Base Class
 
 Based on https://github.com/shashank-khanna/Option-Pricing
 '''
@@ -13,7 +13,7 @@ import pandas as pd
 from pandas.tseries.offsets import BDay
 
 from .fetcher import get_ranged_data, get_treasury_rate
-from . import utils as u
+from utils import utils as u
 
 
 class BasePricing(ABC):

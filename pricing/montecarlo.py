@@ -6,7 +6,7 @@ from random import gauss
 import numpy as np
 
 from .pricingbase import BasePricing
-from . import utils as u
+from utils import utils as u
 
 
 class MonteCarlo(BasePricing):

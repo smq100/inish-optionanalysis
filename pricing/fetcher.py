@@ -8,7 +8,7 @@ import pandas as pd
 from pandas.tseries.offsets import BDay
 from pandas_datareader import data
 
-from . import utils as u
+from utils import utils as u
 
 logging.basicConfig(format='%(levelname)s: %(message)s', level=u.LOG_LEVEL)
 

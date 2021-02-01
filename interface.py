@@ -1,8 +1,8 @@
 ''' TODO '''
 import pandas as pd
 
-import pricing.utils as u
-from pricing.strategy import Strategy, Leg
+from utils import utils as u
+from strategy.strategy import Strategy, Leg
 
 
 class Interface():

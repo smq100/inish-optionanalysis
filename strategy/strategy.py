@@ -4,9 +4,9 @@ import logging
 
 import pandas as pd
 
-from .blackscholes import BlackScholes
-from .montecarlo import MonteCarlo
-from . import utils as u
+from pricing.blackscholes import BlackScholes
+from pricing.montecarlo import MonteCarlo
+from utils import utils as u
 
 
 class Leg:

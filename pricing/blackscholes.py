@@ -6,7 +6,7 @@ import numpy as np
 import scipy.stats as stats
 
 from .pricingbase import BasePricing
-from . import utils as u
+from utils import utils as u
 
 
 class BlackScholes(BasePricing):
