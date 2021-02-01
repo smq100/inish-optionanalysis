@@ -99,6 +99,13 @@ class Strategy:
 
         return call, put
 
+    def analyze_strategy(self):
+        price = self.legs[0].price
+        dframe = self.legs[0].table_value - price
+        dframe = dframe.applymap(lambda x: x if x > -price else -price)
+
+        return dframe
+
     def generate_value_table(self, call_put, leg):
         ''' TODO '''
 

@@ -58,13 +58,7 @@ class Interface():
                 else:
                     self.plot_value(0)
             elif selection == '5':
-                if len(self.strategy.legs) < 1:
-                    print('No legs configured')
-                elif len(self.strategy.legs) > 1:
-                    leg = input('Enter Leg: ')
-                    self.plot_profit(int(leg)-1)
-                else:
-                    self.plot_profit(0)
+                self.analyze_strategy()
             elif selection == '6':
                 if len(self.strategy.legs) < 1:
                     print('No legs configured')
@@ -132,9 +126,10 @@ class Interface():
         '''TODO'''
 
         menu_items = {
-            '1': 'Long Call',
-            '2': 'Short Call',
-            '3': 'Cancel',
+            '1': 'Call',
+            '2': 'Put',
+            '2': 'vertical',
+            '3': 'Vancel',
         }
 
         while True:
@@ -148,12 +143,15 @@ class Interface():
             selection = input('Please select: ')
 
             if selection == '1':
-                self.strategy.strategy = 'long_call'
+                self.strategy.strategy = 'call'
                 break
             if selection == '2':
-                self.strategy.strategy = 'short_call'
+                self.strategy.strategy = 'put'
                 break
             if selection == '3':
+                self.strategy.strategy = 'vertical'
+                break
+            if selection == '4':
                 break
 
             print('Unknown strategy selected')
@@ -262,20 +260,10 @@ class Interface():
         print(u.delimeter(f'Value ({self.strategy.pricing_method})', True) + '\n')
         print(self.strategy.legs[leg].table_value)
 
-    def plot_profit(self, leg):
+    def analyze_strategy(self):
         '''TODO'''
-        if len(self.strategy.legs) < 1:
-            print('No legs configured')
-        elif leg < 0:
-            for index in range(0, len(self.strategy.legs), 1):
-                # Recursive call to output each leg
-                self.plot_profit(index)
-        elif leg < len(self.strategy.legs):
-            print(u.delimeter(f'Profit', True) + '\n')
-            price = self.strategy.legs[leg].price
-            dframe = self.strategy.legs[leg].table_value - price
-            dframe = dframe.applymap(lambda x: x if x > -price else -price)
-            print(dframe)
+        dframe = self.strategy.analyze_strategy()
+        print(dframe)
 
 
     def write_legs(self, leg=-1, delimeter=True):
