@@ -1,8 +1,8 @@
 ''' TODO '''
 import pandas as pd
 
-from strategy import Strategy, Leg
-import utils
+import pricing.utils as u
+from pricing.strategy import Strategy, Leg
 
 
 class Interface():
@@ -30,7 +30,7 @@ class Interface():
         }
 
         while True:
-            self.write_leg(-1)
+            self.write_legs()
 
             print('\nSelect Option')
             print('-------------------------')
@@ -48,7 +48,7 @@ class Interface():
             elif selection == '3':
                 self.enter_leg()
             elif selection == '4':
-                leg = 0
+                leg = 1
                 if len(self.strategy.legs) > 1:
                     leg = input('Enter Leg: ')
                 self.calculate(int(leg)-1)
@@ -158,7 +158,7 @@ class Interface():
         }
 
         while True:
-            self.write_leg(-1)
+            self.write_legs()
             print('\nSpecify Leg')
             print('-------------------------')
 
@@ -244,27 +244,27 @@ class Interface():
 
     def plot_value(self, leg):
         '''TODO'''
-        print(utils.delimeter(f'Value ({self.strategy.pricing_method})', True) + '\n')
+        print(u.delimeter(f'Value ({self.strategy.pricing_method})', True) + '\n')
         print(self.strategy.legs[leg].table_value)
 
 
     def plot_profit(self, leg):
         '''TODO'''
-        print(utils.delimeter(f'Profit ({self.strategy.pricing_method})', True) + '\n')
+        print(u.delimeter(f'Profit ({self.strategy.pricing_method})', True) + '\n')
         print(self.strategy.legs[leg].table_profit)
 
 
-    def write_leg(self, leg, delimeter=True):
+    def write_legs(self, leg=-1, delimeter=True):
         '''TODO'''
         if delimeter:
-            print(utils.delimeter('Current Strategy', True))
+            print(u.delimeter('Current Strategy', True))
 
         if len(self.strategy.legs) < 1:
             print('No legs configured')
         elif leg < 0:
             for index in range(0, len(self.strategy.legs), 1):
                 # Recursive call to output each leg
-                self.write_leg(index, False)
+                self.write_legs(index, False)
         elif leg < len(self.strategy.legs):
             output = f'{leg+1}: '\
                 f'{self.strategy.legs[leg].quantity} '\

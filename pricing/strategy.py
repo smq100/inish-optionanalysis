@@ -3,8 +3,8 @@ import datetime
 
 import pandas as pd
 
-from blackscholes import BlackScholes
-from montecarlo import MonteCarlo
+from .blackscholes import BlackScholes
+from .montecarlo import MonteCarlo
 
 class Leg:
     '''TODO'''

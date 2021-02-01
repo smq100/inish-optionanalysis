@@ -4,7 +4,7 @@ import logging
 import numpy as np
 import scipy.stats as stats
 
-from methodbase import BasePricing, LOG_LEVEL
+from .methodbase import BasePricing, LOG_LEVEL
 
 
 class BlackScholes(BasePricing):

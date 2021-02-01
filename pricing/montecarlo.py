@@ -4,7 +4,7 @@ from random import gauss
 
 import numpy as np
 
-from methodbase import BasePricing, LOG_LEVEL
+from .methodbase import BasePricing, LOG_LEVEL
 
 
 class MonteCarlo(BasePricing):

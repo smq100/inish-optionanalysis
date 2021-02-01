@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 from pandas.tseries.offsets import BDay
 
-from fetcher import get_ranged_data, get_treasury_rate
+from .fetcher import get_ranged_data, get_treasury_rate
 
 LOG_LEVEL = logging.WARNING
 
