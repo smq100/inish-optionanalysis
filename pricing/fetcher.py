@@ -8,7 +8,9 @@ import pandas as pd
 from pandas.tseries.offsets import BDay
 from pandas_datareader import data
 
-logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.WARNING)
+from . import utils as u
+
+logging.basicConfig(format='%(levelname)s: %(message)s', level=u.LOG_LEVEL)
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -85,10 +87,13 @@ def get_spx_prices(start_date=None):
 
 
 if __name__ == '__main__':
-    d_f = get_ranged_data('AAPL', datetime.datetime(2020, 1, 1), use_quandl=True)
-    # d_f = get_data('SPX', datetime.datetime(2017, 1, 1), use_quandl=False)
-    # d_f = get_data('AAPL')
-    print(d_f.tail())
+    start_ = datetime.datetime.today() + datetime.timedelta(days=-10)
+    end_ = datetime.datetime.today() + datetime.timedelta(days=-5)
+    # d_f = get_ranged_data('AAPL', start1_, end1_, use_quandl=True)
     # print(d_f.tail())
-    # rate = get_treasury_rate()
-    # print type(rate), rate
+
+    d_f = get_data('WMT', use_quandl=True)
+    print(d_f.tail())
+
+    rate1 = get_treasury_rate()
+    print (rate1)

@@ -13,8 +13,7 @@ import pandas as pd
 from pandas.tseries.offsets import BDay
 
 from .fetcher import get_ranged_data, get_treasury_rate
-
-LOG_LEVEL = logging.WARNING
+from . import utils as u
 
 
 class BasePricing(ABC):
@@ -50,7 +49,7 @@ class BasePricing(ABC):
         # Initialize
         self.initialize_variables()
 
-        logging.basicConfig(format='%(level_name)s: %(message)s', level=LOG_LEVEL)
+        logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
 
     @abc.abstractmethod
     def calculate_prices(self, spot_price=-1.0, time_to_maturity=-1.0):

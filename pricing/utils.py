@@ -1,4 +1,9 @@
 '''TODO'''
+import logging
+
+
+LOG_LEVEL = logging.WARNING
+
 
 def delimeter(message, creturn=False):
     '''Common delimeter to bracket output'''

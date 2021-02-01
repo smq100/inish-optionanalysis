@@ -1,10 +1,12 @@
 '''European Pricing Class'''
 import logging
+import datetime
 
 import numpy as np
 import scipy.stats as stats
 
-from .methodbase import BasePricing, LOG_LEVEL
+from .pricingbase import BasePricing
+from . import utils as u
 
 
 class BlackScholes(BasePricing):
@@ -16,8 +18,8 @@ class BlackScholes(BasePricing):
     def __init__(self, ticker, expiry_date, strike, dividend=0.0):
         super().__init__(ticker, expiry_date, strike, dividend=dividend)
 
-        logging.basicConfig(format='%(level_name)s: %(message)s', level=LOG_LEVEL)
-        logging.info('Black-Scholes Option Pricing: Initializing...')
+        logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
+        logging.info('Initializing Black-Scholes pricing...')
 
         # Get/Calculate all the required underlying parameters, ex. Volatility, Risk-free rate, etc.
         self.initialize_variables()
@@ -96,3 +98,7 @@ class BlackScholes(BasePricing):
         logging.debug('Calculated value for d2 = %f', d_2)
 
         return d_2
+
+if __name__ == '__main__':
+    pricer_ = BlackScholes('TSLA', datetime.datetime(2021, 8, 31), 1000)
+    call_price, put_price = pricer_.calculate_prices()

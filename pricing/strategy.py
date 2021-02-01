@@ -1,10 +1,13 @@
 '''TODO'''
 import datetime
+import logging
 
 import pandas as pd
 
 from .blackscholes import BlackScholes
 from .montecarlo import MonteCarlo
+from . import utils as u
+
 
 class Leg:
     '''TODO'''
@@ -34,6 +37,9 @@ class Strategy:
         self.pricing_method = pricing_method
         self.table_value = None
         self.table_profit = None
+
+        logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
+        logging.info('Initializing Strategy ...')
 
     def reset(self):
         '''TODO'''
@@ -73,6 +79,8 @@ class Strategy:
                 price = self.legs[leg].price = price_call
             else:
                 price = self.legs[leg].price = price_put
+
+            logging.info('Option price = ${:.2f} '.format(price))
 
             self.legs[leg].table_value = self.generate_value_table(self.legs[leg].call_put, leg)
             self.legs[leg].table_profit = self.generate_profit_table(self.legs[leg].table_value, price)
@@ -187,3 +195,12 @@ class Strategy:
             valid = False
 
         return valid
+
+if __name__ == '__main__':
+    pd.options.display.float_format = '{:,.2f}'.format
+
+    strategy_ = Strategy()
+    leg_ = Leg()
+    strategy_.add_leg(leg_.quantity, leg_.call_put, leg_.long_short, leg_.strike, leg_.expiry)
+    strategy_.calculate_leg(0)
+    print(strategy_.legs[0].table_value)

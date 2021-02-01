@@ -1,10 +1,12 @@
 '''American Pricing Class'''
 import logging
+import datetime
 from random import gauss
 
 import numpy as np
 
-from .methodbase import BasePricing, LOG_LEVEL
+from .pricingbase import BasePricing
+from . import utils as u
 
 
 class MonteCarlo(BasePricing):
@@ -19,8 +21,8 @@ class MonteCarlo(BasePricing):
     def __init__(self, ticker, expiry_date, strike, dividend=0.0):
         super().__init__(ticker, expiry_date, strike, dividend=dividend)
 
-        logging.basicConfig(format='%(level_name)s: %(message)s', level=LOG_LEVEL)
-        logging.info('American Option Pricing: Initializing...')
+        logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
+        logging.info('Initializing Monte Carlo pricing...')
 
         # Get/Calculate all the required underlying parameters, ex. Volatility, Risk-free rate, etc.
         self.initialize_variables()
@@ -65,8 +67,6 @@ class MonteCarlo(BasePricing):
             (self.risk_free_rate - 0.5 * self.volatility ** 2) * self.time_to_maturity +
             self.volatility * np.sqrt(self.time_to_maturity) * gauss(0.0, 1.0))
 
-        logging.debug('Expected price %f', expected_price)
-
         return expected_price
 
 
@@ -106,3 +106,7 @@ class MonteCarlo(BasePricing):
             put_payoffs.append(self._put_payoff(expected_asset_price))
 
         return call_payoffs, put_payoffs
+
+if __name__ == '__main__':
+    pricer_ = MonteCarlo('TSLA', datetime.datetime(2021, 8, 31), 1000)
+    call_price, put_price = pricer_.calculate_prices()

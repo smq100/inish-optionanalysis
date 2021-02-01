@@ -110,6 +110,7 @@ class Interface():
             else:
                 print('Unknown operation selected')
 
+        self.strategy.reset()
         self.strategy.set_symbol(ticker, vol, div)
 
 
