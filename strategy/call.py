@@ -25,8 +25,9 @@ class Call(Strategy):
             price = self.legs[0].price
             dframe = self.legs[0].table_value - price
             dframe = dframe.applymap(lambda x: x if x > -price else -price)
+            self.analysis.table_value = dframe
 
-        return dframe, legs
+        return legs
 
     def _calc_price_min_max_step(self):
         if len(self.legs) <= 0:

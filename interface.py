@@ -44,7 +44,7 @@ class Interface():
             '4': 'Add Leg',
             '5': 'Calculate Leg',
             '6': 'Plot Leg Value',
-            '7': 'Change Pricing Method',
+            '7': 'Options',
             '8': 'Exit'
         }
 
@@ -85,7 +85,7 @@ class Interface():
                 else:
                     self.plot_value(0)
             elif selection == '7':
-                self.enter_method()
+                self.enter_options()
             elif selection == '8':
                 break
             else:
@@ -240,6 +240,29 @@ class Interface():
 
         return leg
 
+    def enter_options(self):
+        '''TODO'''
+
+        menu_items = {
+            '1': 'Pricing Method',
+            '2': 'Cancel',
+        }
+
+        while True:
+            print('\nSpecify Option')
+            print('-------------------------')
+
+            option = menu_items.keys()
+            for entry in option:
+                print(f'{entry})\t{menu_items[entry]}')
+
+            selection = input('Please select: ')
+
+            if selection == '1':
+                self.enter_method()
+            elif selection == '2':
+                break
+
 
     def enter_method(self):
         '''TODO'''
@@ -274,12 +297,12 @@ class Interface():
 
     def analyze_strategy(self):
         '''TODO'''
-        dframe, legs = self.strategy.analyze()
-        if dframe is not None:
+        legs = self.strategy.analyze()
+        if legs > 0:
             print(u.delimeter(f'Strategy Analysis: {self.strategy}', True) + '\n')
             # self.write_legs(legs-1)
             # print('')
-            print(dframe)
+            print(self.strategy.analysis.table_value)
         else:
             print('No option legs configured')
 

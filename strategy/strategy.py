@@ -26,6 +26,13 @@ class Symbol:
         return output
 
 
+class Analysis:
+    '''TODO'''
+
+    def __init__(self):
+        self.table_value = None
+
+
 class Leg:
     '''TODO'''
 
@@ -62,12 +69,12 @@ class Strategy(ABC):
     '''TODO'''
 
     def __init__(self, name, pricing_method):
+        self.analysis = Analysis()
         self.symbol = {'ticker': 'AAPL', 'volatility': -1.0, 'dividend': 0.0}
         self.legs = []
         self.pricer = None
         self.name = name
         self.pricing_method = pricing_method
-        self.table_value = None
 
         logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
         logging.info('Initializing Strategy ...')
@@ -149,37 +156,8 @@ class Strategy(ABC):
 
     @abc.abstractmethod
     def analyze(self):
-        dframe = None
-        legs = 0
+        ''' TODO '''
 
-        if len(self.legs) <= 0:
-            pass
-        elif self.strategy == 'call':
-            self.calculate_leg(0)
-
-            legs = 1
-            price = self.legs[0].price
-            dframe = self.legs[0].table_value - price
-            dframe = dframe.applymap(lambda x: x if x > -price else -price)
-        elif self.strategy == 'put':
-            self.calculate_leg(0)
-
-            legs = 1
-            price = self.legs[0].price
-            dframe = self.legs[0].table_value - price
-            dframe = dframe.applymap(lambda x: x if x > -price else -price)
-        elif self.strategy == 'vertical':
-            if len(self.legs) == 2:
-                legs = 2
-                self.calculate_leg(0)
-                self.calculate_leg(1)
-
-                if self.legs[0].long_short == 'long':
-                    dframe = self.legs[0].table_value - self.legs[1].table_value
-                else:
-                    dframe = self.legs[1].table_value - self.legs[0].table_value
-
-        return dframe, legs
 
     def generate_value_table(self, leg):
         ''' TODO '''
@@ -242,18 +220,7 @@ class Strategy(ABC):
 
     @abc.abstractmethod
     def _calc_price_min_max_step(self):
-        min_ = max_ = step_ = 0
-
-        if self.strategy == 'call':
-            min_ = int(self.legs[0].strike) - 10
-            max_ = int(self.legs[0].strike) + 11
-            step_ = 1
-        elif self.strategy == 'vertical':
-            min_ = int(min([self.legs[0].strike, self.legs[1].strike])) - 10
-            max_ = int(max([self.legs[0].strike, self.legs[1].strike])) + 11
-            step_ = 1
-
-        return min_, max_, step_
+        ''' TODO '''
 
     def _validate(self, leg):
         '''TODO'''

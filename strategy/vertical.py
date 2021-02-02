@@ -28,7 +28,9 @@ class Vertical(Strategy):
             else:
                 dframe = self.legs[1].table_value - self.legs[0].table_value
 
-        return dframe, legs
+            self.analysis.table_value = dframe
+
+        return legs
 
     def _calc_price_min_max_step(self):
         if len(self.legs) <= 0:
