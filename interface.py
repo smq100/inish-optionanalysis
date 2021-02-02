@@ -2,7 +2,6 @@
 import sys, os, json
 
 import pandas as pd
-import argparse
 
 from utils import utils as u
 from strategy.strategy import Leg
@@ -113,7 +112,7 @@ class Interface():
         div = 0.0
 
         menu_items = {
-            '1': 'Specify Volitility',
+            '1': 'Specify Volatility',
             '2': 'Specify Dividend',
             '3': 'Back'
         }
@@ -277,7 +276,7 @@ class Interface():
         '''TODO'''
         dframe, legs = self.strategy.analyze()
         if dframe is not None:
-            print(u.delimeter(f'Strategy Analysis ({self.strategy.name})', True) + '\n')
+            print(u.delimeter(f'Strategy Analysis: {self.strategy}', True) + '\n')
             # self.write_legs(legs-1)
             # print('')
             print(dframe)
@@ -287,7 +286,7 @@ class Interface():
 
     def plot_value(self, leg):
         '''TODO'''
-        print(u.delimeter(f'Value ({self.strategy.pricing_method})', True) + '\n')
+        print(u.delimeter(f'Value: {self.strategy.legs[leg].symbol}', True) + '\n')
         # self.write_legs(leg)
         # print('')
         print(self.strategy.legs[leg].table_value)
@@ -305,18 +304,7 @@ class Interface():
                 # Recursive call to output each leg
                 self.write_legs(index, False)
         elif leg < len(self.strategy.legs):
-            output = f'{leg+1}: '\
-                f'{self.strategy.legs[leg].quantity} '\
-                f'{self.strategy.symbol["ticker"]:4s} '\
-                f'{self.strategy.legs[leg].long_short:5s} '\
-                f'{self.strategy.legs[leg].call_put:5s} '\
-                f'${self.strategy.legs[leg].strike:.2f} for '\
-                f'{str(self.strategy.legs[leg].expiry)[:10]}'
-
-            if self.strategy.legs[leg].price > 0.0:
-                output += f' = ${self.strategy.legs[leg].price:.2f}'
-                output += f' (${self.strategy.legs[leg].spot:.2f}@{self.strategy.pricer.volatility*100:.1f}%)'
-
+            output = f'{leg+1}: {self.strategy.legs[leg]}'
             print(output)
         else:
             print('Invalid leg')
@@ -369,10 +357,12 @@ class Interface():
 
 
 if __name__ == '__main__':
+    import argparse
+
     parser = argparse.ArgumentParser(description='Option Strategy Analyzer')
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-s', '--strategy', help='Preload a strategy', required=False, choices=['call', 'put', 'vertical'])
     group.add_argument('-x', '--execute', help='Execute a script', required=False)
     args = parser.parse_args()
 
-    ui = Interface(load=args.strategy, script=args.execute)
+    Interface(load=args.strategy, script=args.execute)

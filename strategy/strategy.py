@@ -10,17 +10,32 @@ from pricing.blackscholes import BlackScholes
 from pricing.montecarlo import MonteCarlo
 from utils import utils as u
 
+class Symbol:
+    '''TODO'''
+
+    def __init__(self, ticker, dividend=0.0, volatility=-1.0):
+        self.ticker = ticker
+        self.dividend = dividend
+        self.volatility = volatility
+        self.spot = 0.0
+
+
+    def __str__(self):
+        output = f'{self.ticker}@${self.spot:.2f}/{self.volatility*100:.1f}%'
+
+        return output
+
 
 class Leg:
     '''TODO'''
 
     def __init__(self, quantity=1, call_put='call', long_short='long', strike=130.0, expiry=None):
+        self.symbol = Symbol('AAPL')
         self.quantity = quantity
         self.call_put = call_put
         self.long_short = long_short
         self.strike = strike
         self.price = 0.0
-        self.spot = 0.0
         self.table_value = None
 
         if expiry is None:
@@ -28,11 +43,26 @@ class Leg:
         else:
             self.expiry = expiry
 
+    def __str__(self):
+        output = \
+            f'{self.quantity} '\
+            f'{self.symbol.ticker}@${self.symbol.spot:.2f} '\
+            f'{self.long_short:5s} '\
+            f'{self.call_put:5s} '\
+            f'${self.strike:.2f} for '\
+            f'{str(self.expiry)[:10]}'
+
+        if self.price > 0.0:
+            output += f' = ${self.price:.2f}'
+
+        return output
+
+
 class Strategy(ABC):
     '''TODO'''
 
     def __init__(self, name, pricing_method):
-        self.symbol = {'ticker': 'AAPL', 'volitility': -1.0, 'dividend': 0.0}
+        self.symbol = {'ticker': 'AAPL', 'volatility': -1.0, 'dividend': 0.0}
         self.legs = []
         self.pricer = None
         self.name = name
@@ -42,23 +72,38 @@ class Strategy(ABC):
         logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
         logging.info('Initializing Strategy ...')
 
+    def __str__(self):
+        output = \
+            f'{self.name} '\
+            f'({self.pricing_method})'
+
+        return output
+
+
     def reset(self):
         '''TODO'''
         self.symbol = []
         self.legs = []
 
-    def set_symbol(self, ticker, volatility=-1.0, dividend=0.0):
+    def set_symbol(self, ticker, volatility=0.3, dividend=0.0):
         '''TODO'''
         self.reset()
-        self.symbol = {'ticker': ticker, 'volitility': volatility, 'dividend': dividend}
+        self.symbol = {'ticker': ticker, 'volatility': volatility, 'dividend': dividend}
 
     def add_leg(self, quantity, call_put, long_short, strike, expiry):
         '''TODO'''
-        # Add one day to act as expiry value
-        expiry += datetime.timedelta(days=1)
 
-        leg = Leg(quantity, call_put, long_short, strike, expiry)
-        self.legs.append(leg)
+        # Add the leg if a symbol is specified
+        if len(self.symbol['ticker']) > 0:
+            # Add one day to act as expiry value
+            expiry += datetime.timedelta(days=1)
+
+            leg = Leg(quantity, call_put, long_short, strike, expiry)
+            leg.symbol.ticker = self.symbol['ticker']
+            leg.symbol.volatility = self.symbol['volatility']
+            leg.symbol.dividend = self.symbol['dividend']
+
+            self.legs.append(leg)
 
         return len(self.legs)
 
@@ -71,12 +116,13 @@ class Strategy(ABC):
 
         if self._validate(leg):
             if self.pricing_method == 'monte-carlo':
-                self.pricer = MonteCarlo(self.symbol['ticker'], self.legs[leg].expiry, self.legs[leg].strike)
+                self.pricer = MonteCarlo(self.legs[leg].symbol.ticker, self.legs[leg].expiry, self.legs[leg].strike)
             else:
-                self.pricer = BlackScholes(self.symbol['ticker'], self.legs[leg].expiry, self.legs[leg].strike)
+                self.pricer = BlackScholes(self.legs[leg].symbol.ticker, self.legs[leg].expiry, self.legs[leg].strike)
 
             price_call, price_put = self.pricer.calculate_prices()
-            self.legs[leg].spot = self.pricer.spot_price
+            self.legs[leg].symbol.spot = self.pricer.spot_price
+            self.legs[leg].symbol.volatility = self.pricer.volatility
 
             if self.legs[leg].call_put == 'call':
                 price = self.legs[leg].price = price_call
