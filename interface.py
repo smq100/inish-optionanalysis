@@ -1,5 +1,6 @@
 ''' TODO '''
 import sys, os, json
+import datetime
 
 import pandas as pd
 
@@ -65,17 +66,16 @@ class Interface():
             elif selection == '2':
                 self.enter_strategy()
             elif selection == '3':
-                self.analyze_strategy()
+                self.analyze()
+                self.plot_analysis()
             elif selection == '4':
                 leg = self.enter_leg()
             elif selection == '5':
                 if len(self.strategy.legs) < 1:
                     print('No legs configured')
-                elif len(self.strategy.legs) > 1:
+                elif len(self.strategy.legs) >= 1:
                     leg = input('Enter Leg: ')
                     self.calculate(int(leg)-1)
-                else:
-                    self.calculate(0)
             elif selection == '6':
                 if len(self.strategy.legs) < 1:
                     print('No legs configured')
@@ -98,6 +98,85 @@ class Interface():
             pass
         else:
             self.strategy.calculate_leg(leg)
+
+
+    def analyze(self):
+        '''TODO'''
+        self.strategy.analyze()
+
+
+    def plot_analysis(self):
+        '''TODO'''
+        legs = self.strategy.analyze()
+
+        if legs > 0:
+            print(u.delimeter(f'Analysis: {self.strategy}', True) + '\n')
+
+            table = self.strategy.analysis.table
+            rows, cols = table.shape
+
+            if rows > 50:
+                rows = 50
+            else:
+                rows = -1
+
+            if cols > 20:
+                cols = 20
+            else:
+                cols = -1
+
+            # We need to compress the table
+            if rows > 0 or cols > 0:
+                table = self.strategy.analysis.compress_table(rows, cols)
+
+            print(table)
+        else:
+            print('No option legs configured')
+
+
+    def plot_value(self, leg):
+        '''TODO'''
+
+        if leg < len(self.strategy.legs):
+            print(u.delimeter(f'Value: {self.strategy.legs[leg].symbol}', True) + '\n')
+
+            table = self.strategy.legs[leg].table
+            rows, cols = table.shape
+
+            if rows > 50:
+                rows = 50
+            else:
+                rows = -1
+
+            if cols > 20:
+                cols = 20
+            else:
+                cols = -1
+
+            # We need to compress the table
+            if rows > 0 or cols > 0:
+                table = self.strategy.legs[leg].compress_table(rows, cols)
+
+            print(table)
+        else:
+            print('Invalid leg')
+
+    def write_legs(self, leg=-1, delimeter=True):
+        '''TODO'''
+        if delimeter:
+            print(u.delimeter('Option Leg Values', True))
+
+        if len(self.strategy.legs) < 1:
+            print('No legs configured')
+        elif leg < 0:
+            for index in range(0, len(self.strategy.legs), 1):
+                # Recursive call to output each leg
+                self.write_legs(index, False)
+        elif leg < len(self.strategy.legs):
+            output = f'{leg+1}: {self.strategy.legs[leg]}'
+            print(output)
+        else:
+            print('Invalid leg')
 
 
     def reset(self):
@@ -295,44 +374,9 @@ class Interface():
             print('Unknown method selected')
 
 
-    def analyze_strategy(self):
-        '''TODO'''
-        legs = self.strategy.analyze()
-        if legs > 0:
-            print(u.delimeter(f'Strategy Analysis: {self.strategy}', True) + '\n')
-            # self.write_legs(legs-1)
-            # print('')
-            print(self.strategy.analysis.table_value)
-        else:
-            print('No option legs configured')
-
-
-    def plot_value(self, leg):
-        '''TODO'''
-        print(u.delimeter(f'Value: {self.strategy.legs[leg].symbol}', True) + '\n')
-        # self.write_legs(leg)
-        # print('')
-        print(self.strategy.legs[leg].table_value)
-
-
-    def write_legs(self, leg=-1, delimeter=True):
-        '''TODO'''
-        if delimeter:
-            print(u.delimeter('Option Leg Values', True))
-
-        if len(self.strategy.legs) < 1:
-            print('No legs configured')
-        elif leg < 0:
-            for index in range(0, len(self.strategy.legs), 1):
-                # Recursive call to output each leg
-                self.write_legs(index, False)
-        elif leg < len(self.strategy.legs):
-            output = f'{leg+1}: {self.strategy.legs[leg]}'
-            print(output)
-        else:
-            print('Invalid leg')
-
     def _load_strategy(self, load):
+        self.leg.expiry = datetime.datetime(year=2021, month=3, day=19)
+
         if load.lower() == 'call':
             self.strategy = Call()
 
@@ -342,7 +386,8 @@ class Interface():
             self.leg.strike = 130.0
             self.strategy.add_leg(self.leg.quantity, self.leg.call_put, self.leg.long_short, self.leg.strike, self.leg.expiry)
 
-            self.analyze_strategy()
+            self.analyze()
+            self.plot_analysis()
         elif load.lower() == 'put':
             self.strategy = Put()
 
@@ -352,21 +397,23 @@ class Interface():
             self.leg.strike = 130.0
             self.strategy.add_leg(self.leg.quantity, self.leg.call_put, self.leg.long_short, self.leg.strike, self.leg.expiry)
 
-            self.analyze_strategy()
+            self.analyze()
+            self.plot_analysis()
         elif load.lower() == 'vertical':
             self.strategy = Vertical()
 
             self.leg.quantity = 1
-            self.leg.call_put = 'call'
+            self.leg.call_put = 'put'
             self.leg.long_short = 'long'
-            self.leg.strike = 130.0
-            self.strategy.add_leg(self.leg.quantity, self.leg.call_put, self.leg.long_short, self.leg.strike, self.leg.expiry)
-
-            self.leg.long_short = 'short'
             self.leg.strike = 135.0
             self.strategy.add_leg(self.leg.quantity, self.leg.call_put, self.leg.long_short, self.leg.strike, self.leg.expiry)
 
-            self.analyze_strategy()
+            self.leg.long_short = 'short'
+            self.leg.strike = 140.0
+            self.strategy.add_leg(self.leg.quantity, self.leg.call_put, self.leg.long_short, self.leg.strike, self.leg.expiry)
+
+            self.analyze()
+            self.plot_analysis()
         else:
             self._print_error('Unknown argument')
 

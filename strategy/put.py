@@ -23,9 +23,9 @@ class Put(Strategy):
 
             legs = 1
             price = self.legs[0].price
-            dframe = self.legs[0].table_value - price
+            dframe = self.legs[0].table - price
             dframe = dframe.applymap(lambda x: x if x > -price else -price)
-            self.analysis.table_value = dframe
+            self.analysis.table = dframe
 
         return legs
 

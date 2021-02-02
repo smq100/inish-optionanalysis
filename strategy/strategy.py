@@ -2,6 +2,7 @@
 import abc
 from abc import ABC
 import datetime
+import math
 import logging
 
 import pandas as pd
@@ -30,7 +31,35 @@ class Analysis:
     '''TODO'''
 
     def __init__(self):
-        self.table_value = None
+        self.table = None
+
+
+    def __str__(self):
+        output = f'{self.table}'
+        print(output)
+
+
+    def compress_table(self, rows, cols):
+        ''' TODO '''
+
+        if self.table is not None:
+            table = self.table
+            srows, scols = table.shape
+
+            if cols > 0 and cols < scols:
+                # thin out cols
+                step = int(math.ceil(scols/cols)+1)
+                end = table[table.columns[-2::]]        # Save the last two rows
+                table = table[table.columns[:-2:step]]  # Thin the table (less the last two rows)
+                table = pd.concat([table, end], axis=1) # Add back the last two rows
+
+            if rows > 0 and rows < srows:
+                # Thin out rows
+                step = int(math.ceil(srows/rows))
+                print(rows, srows, step)
+                table = table.iloc[::step]
+
+        return table
 
 
 class Leg:
@@ -43,7 +72,8 @@ class Leg:
         self.long_short = long_short
         self.strike = strike
         self.price = 0.0
-        self.table_value = None
+        self.time_to_maturity = 0
+        self.table = None
 
         if expiry is None:
             self.expiry = datetime.datetime.today() + datetime.timedelta(days=10)
@@ -64,6 +94,27 @@ class Leg:
 
         return output
 
+    def compress_table(self, rows, cols):
+        ''' TODO '''
+
+        table = self.table
+        srows, scols = table.shape
+
+        if cols > 0 and cols < scols:
+            # thin out cols
+            step = int(math.ceil(scols/cols)+1)
+            end = table[table.columns[-2::]]        # Save the last two rows
+            table = table[table.columns[:-2:step]]  # Thin the table (less the last two rows)
+            table = pd.concat([table, end], axis=1) # Add back the last two rows
+
+        if rows > 0 and rows < srows:
+            # Thin out rows
+            step = int(math.ceil(srows/rows))
+            print(rows, srows, step)
+            table = table.iloc[::step]
+
+        return table
+
 
 class Strategy(ABC):
     '''TODO'''
@@ -79,6 +130,7 @@ class Strategy(ABC):
         logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
         logging.info('Initializing Strategy ...')
 
+
     def __str__(self):
         output = \
             f'{self.name} '\
@@ -92,10 +144,12 @@ class Strategy(ABC):
         self.symbol = []
         self.legs = []
 
+
     def set_symbol(self, ticker, volatility=0.3, dividend=0.0):
         '''TODO'''
         self.reset()
         self.symbol = {'ticker': ticker, 'volatility': volatility, 'dividend': dividend}
+
 
     def add_leg(self, quantity, call_put, long_short, strike, expiry):
         '''TODO'''
@@ -114,6 +168,7 @@ class Strategy(ABC):
 
         return len(self.legs)
 
+
     def calculate_leg(self, leg, pricing_method=None):
         '''TODO'''
 
@@ -130,6 +185,7 @@ class Strategy(ABC):
             price_call, price_put = self.pricer.calculate_prices()
             self.legs[leg].symbol.spot = self.pricer.spot_price
             self.legs[leg].symbol.volatility = self.pricer.volatility
+            self.legs[leg].time_to_maturity = self.pricer.time_to_maturity
 
             if self.legs[leg].call_put == 'call':
                 price = self.legs[leg].price = price_call
@@ -138,7 +194,7 @@ class Strategy(ABC):
 
             logging.info('Option price = ${:.2f} '.format(price))
 
-            self.legs[leg].table_value = self.generate_value_table(leg)
+            self.legs[leg].table = self.generate_value_table(leg)
 
         return price
 
@@ -150,9 +206,8 @@ class Strategy(ABC):
         else:
             call, put = self.pricer.calculate_prices(spot_price, time_to_maturity)
 
-        # print(f'${spot_price:.2f}, {time_to_maturity*365:.1f}, ${call:.2f}')
-
         return call, put
+
 
     @abc.abstractmethod
     def analyze(self):
@@ -165,7 +220,7 @@ class Strategy(ABC):
         dframe = pd.DataFrame()
 
         if self.legs[leg].price > 0.0:
-            cols = int(self.pricer.time_to_maturity * 365)
+            cols, step = self._calc_date_cols_step(leg)
             if cols > 1:
                 row = []
                 table = []
@@ -175,9 +230,10 @@ class Strategy(ABC):
                 # Create list of dates to be used as the df columns
                 today = datetime.datetime.today()
                 today = today.replace(hour=0, minute=0, second=0, microsecond=0)
+
                 col_index.append(str(today))
-                while today < self.pricer.expiry:
-                    today += datetime.timedelta(days=1)
+                while today < self.legs[leg].expiry:
+                    today += datetime.timedelta(days=step)
                     col_index.append(str(today))
 
                 # Calculate cost of option every day till expiry
@@ -185,9 +241,8 @@ class Strategy(ABC):
                 for spot in range(min_, max_, step_):
                     row = []
                     for item in col_index:
-                        maturity_date = datetime.datetime.strptime(
-                            item, '%Y-%m-%d %H:%M:%S')
-                        time_to_maturity = self.pricer.expiry - maturity_date
+                        maturity_date = datetime.datetime.strptime(item, '%Y-%m-%d %H:%M:%S')
+                        time_to_maturity = self.legs[leg].expiry - maturity_date
                         decimaldays_to_maturity = time_to_maturity.days / 365.0
 
                         # Compensate for zero delta days to provide small fraction of day
@@ -218,9 +273,19 @@ class Strategy(ABC):
 
         return dframe
 
+
     @abc.abstractmethod
     def _calc_price_min_max_step(self):
         ''' TODO '''
+
+
+    def _calc_date_cols_step(self, leg):
+        ''' TODO '''
+
+        cols = int(math.ceil(self.legs[leg].time_to_maturity * 365))
+        step = 1
+
+        return cols, step
 
     def _validate(self, leg):
         '''TODO'''
@@ -249,4 +314,4 @@ if __name__ == '__main__':
     leg_ = Leg()
     strategy_.add_leg(leg_.quantity, leg_.call_put, leg_.long_short, leg_.strike, leg_.expiry)
     strategy_.calculate_leg(0)
-    print(strategy_.legs[0].table_value)
+    print(strategy_.legs[0].table)

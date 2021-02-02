@@ -24,11 +24,11 @@ class Vertical(Strategy):
             self.calculate_leg(1)
 
             if self.legs[0].long_short == 'long':
-                dframe = self.legs[0].table_value - self.legs[1].table_value
+                dframe = self.legs[0].table - self.legs[1].table
             else:
-                dframe = self.legs[1].table_value - self.legs[0].table_value
+                dframe = self.legs[1].table - self.legs[0].table
 
-            self.analysis.table_value = dframe
+            self.analysis.table = dframe
 
         return legs
 
