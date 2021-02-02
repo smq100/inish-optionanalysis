@@ -9,10 +9,10 @@ from strategy.strategy import Strategy
 
 class Vertical(Strategy):
     '''TODO'''
-    def __init__(self, strategy='vertical', pricing_method='black-scholes'):
-        super().__init__(strategy, pricing_method)
+    def __init__(self, name='vertical', pricing_method='black-scholes'):
+        super().__init__(name, pricing_method)
 
-    def analyze_strategy(self):
+    def analyze(self):
         dframe = None
         legs = 0
 

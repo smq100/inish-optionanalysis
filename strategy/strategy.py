@@ -31,11 +31,11 @@ class Leg:
 class Strategy(ABC):
     '''TODO'''
 
-    def __init__(self, strategy, pricing_method):
+    def __init__(self, name, pricing_method):
         self.symbol = {'ticker': 'AAPL', 'volitility': -1.0, 'dividend': 0.0}
         self.legs = []
         self.pricer = None
-        self.strategy = strategy
+        self.name = name
         self.pricing_method = pricing_method
         self.table_value = None
 
@@ -102,7 +102,7 @@ class Strategy(ABC):
         return call, put
 
     @abc.abstractmethod
-    def analyze_strategy(self):
+    def analyze(self):
         dframe = None
         legs = 0
 

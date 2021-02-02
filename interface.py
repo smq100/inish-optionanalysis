@@ -132,8 +132,8 @@ class Interface():
         menu_items = {
             '1': 'Call',
             '2': 'Put',
-            '2': 'Vertical',
-            '3': 'Cancel',
+            '3': 'Vertical',
+            '4': 'Cancel',
         }
 
         while True:
@@ -147,13 +147,13 @@ class Interface():
             selection = input('Please select: ')
 
             if selection == '1':
-                self.strategy.strategy = 'call'
+                self.strategy = Call()
                 break
             if selection == '2':
-                self.strategy.strategy = 'put'
+                self.strategy = Put()
                 break
             if selection == '3':
-                self.strategy.strategy = 'vertical'
+                self.strategy = Vertical()
                 break
             if selection == '4':
                 break
@@ -261,9 +261,9 @@ class Interface():
 
     def analyze_strategy(self):
         '''TODO'''
-        dframe, legs = self.strategy.analyze_strategy()
+        dframe, legs = self.strategy.analyze()
         if dframe is not None:
-            print(u.delimeter(f'Strategy Analysis ({self.strategy.strategy})', True) + '\n')
+            print(u.delimeter(f'Strategy Analysis ({self.strategy.name})', True) + '\n')
             # self.write_legs(legs-1)
             # print('')
             print(dframe)
