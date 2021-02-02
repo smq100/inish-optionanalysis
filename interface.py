@@ -1,6 +1,8 @@
 ''' TODO '''
-import sys
+import sys, os, json
+
 import pandas as pd
+import argparse
 
 from utils import utils as u
 from strategy.strategy import Leg
@@ -11,15 +13,27 @@ from strategy.vertical import Vertical
 class Interface():
     '''TODO'''
 
-    def __init__(self, args=None):
+    def __init__(self, load=None, script=None):
         self.leg = Leg()
 
         pd.options.display.float_format = '{:,.2f}'.format
 
-        if len(args) > 0:
-            self._script(args)
+        if load is not None:
+            self._load_strategy(load)
+            self.main_menu()
+        elif script is not None:
+            if os.path.exists(script):
+                try:
+                    with open(script) as file_:
+                        data = json.load(file_)
+                        print(data)
+                except:
+                    self._print_error('File read error')
+            else:
+                self._print_error(f'File "{script}" not found')
         else:
             self.strategy = Call()
+            self.main_menu()
 
     def main_menu(self):
         '''Displays opening menu'''
@@ -307,8 +321,8 @@ class Interface():
         else:
             print('Invalid leg')
 
-    def _script(self, args):
-        if args[0].lower() == 'c':
+    def _load_strategy(self, load):
+        if load.lower() == 'call':
             self.strategy = Call()
 
             self.leg.quantity = 1
@@ -318,9 +332,7 @@ class Interface():
             self.strategy.add_leg(self.leg.quantity, self.leg.call_put, self.leg.long_short, self.leg.strike, self.leg.expiry)
 
             self.analyze_strategy()
-
-            self.main_menu()
-        elif args[0].lower() == 'p':
+        elif load.lower() == 'put':
             self.strategy = Put()
 
             self.leg.quantity = 1
@@ -330,9 +342,7 @@ class Interface():
             self.strategy.add_leg(self.leg.quantity, self.leg.call_put, self.leg.long_short, self.leg.strike, self.leg.expiry)
 
             self.analyze_strategy()
-
-            self.main_menu()
-        elif args[0].lower() == 'v':
+        elif load.lower() == 'vertical':
             self.strategy = Vertical()
 
             self.leg.quantity = 1
@@ -346,20 +356,23 @@ class Interface():
             self.strategy.add_leg(self.leg.quantity, self.leg.call_put, self.leg.long_short, self.leg.strike, self.leg.expiry)
 
             self.analyze_strategy()
-
-            self.main_menu()
         else:
-            print('Error: Unknown argument')
+            self._print_error('Unknown argument')
 
 
     def _validate(self):
         '''TODO'''
         return True
 
+    def _print_error(self, message):
+        print(f'Error: {message}')
+
 
 if __name__ == '__main__':
-    args = sys.argv[1:]
-    ui = Interface(args=args)
+    parser = argparse.ArgumentParser(description='Option Strategy Analyzer')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-s', '--strategy', help='Preload a strategy', required=False, choices=['call', 'put', 'vertical'])
+    group.add_argument('-x', '--execute', help='Execute a script', required=False)
+    args = parser.parse_args()
 
-    if len(args) == 0:
-        ui.main_menu()
+    ui = Interface(load=args.strategy, script=args.execute)
