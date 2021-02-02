@@ -3,20 +3,23 @@ import sys
 import pandas as pd
 
 from utils import utils as u
-from strategy.strategy import Strategy, Leg
-
+from strategy.strategy import Leg
+from strategy.call import Call
+from strategy.put import Put
+from strategy.vertical import Vertical
 
 class Interface():
     '''TODO'''
 
     def __init__(self, args=None):
-        self.strategy = Strategy()
         self.leg = Leg()
 
         pd.options.display.float_format = '{:,.2f}'.format
 
-        if args is not None:
+        if len(args) > 0:
             self._script(args)
+        else:
+            self.strategy = Call()
 
     def main_menu(self):
         '''Displays opening menu'''
@@ -306,7 +309,7 @@ class Interface():
 
     def _script(self, args):
         if args[0].lower() == 'c':
-            self.strategy.strategy = 'call'
+            self.strategy = Call()
 
             self.leg.quantity = 1
             self.leg.call_put = 'call'
@@ -317,8 +320,20 @@ class Interface():
             self.analyze_strategy()
 
             self.main_menu()
+        elif args[0].lower() == 'p':
+            self.strategy = Put()
+
+            self.leg.quantity = 1
+            self.leg.call_put = 'put'
+            self.leg.long_short = 'long'
+            self.leg.strike = 130.0
+            self.strategy.add_leg(self.leg.quantity, self.leg.call_put, self.leg.long_short, self.leg.strike, self.leg.expiry)
+
+            self.analyze_strategy()
+
+            self.main_menu()
         elif args[0].lower() == 'v':
-            self.strategy.strategy = 'vertical'
+            self.strategy = Vertical()
 
             self.leg.quantity = 1
             self.leg.call_put = 'call'
@@ -346,5 +361,5 @@ if __name__ == '__main__':
     args = sys.argv[1:]
     ui = Interface(args=args)
 
-    if args is None:
+    if len(args) == 0:
         ui.main_menu()

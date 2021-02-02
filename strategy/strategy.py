@@ -1,4 +1,6 @@
 '''TODO'''
+import abc
+from abc import ABC
 import datetime
 import logging
 
@@ -26,10 +28,10 @@ class Leg:
         else:
             self.expiry = expiry
 
-class Strategy:
+class Strategy(ABC):
     '''TODO'''
 
-    def __init__(self, strategy='call', pricing_method='black-scholes'):
+    def __init__(self, strategy, pricing_method):
         self.symbol = {'ticker': 'AAPL', 'volitility': -1.0, 'dividend': 0.0}
         self.legs = []
         self.pricer = None
@@ -99,6 +101,7 @@ class Strategy:
 
         return call, put
 
+    @abc.abstractmethod
     def analyze_strategy(self):
         dframe = None
         legs = 0
@@ -191,6 +194,7 @@ class Strategy:
 
         return dframe
 
+    @abc.abstractmethod
     def _calc_price_min_max_step(self):
         min_ = max_ = step_ = 0
 
