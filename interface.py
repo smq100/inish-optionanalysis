@@ -1,4 +1,5 @@
 ''' TODO '''
+import sys
 import pandas as pd
 
 from utils import utils as u
@@ -8,11 +9,14 @@ from strategy.strategy import Strategy, Leg
 class Interface():
     '''TODO'''
 
-    def __init__(self):
+    def __init__(self, args=None):
         self.strategy = Strategy()
         self.leg = Leg()
 
         pd.options.display.float_format = '{:,.2f}'.format
+
+        if args is not None:
+            self._script(args)
 
     def main_menu(self):
         '''Displays opening menu'''
@@ -20,10 +24,10 @@ class Interface():
         menu_items = {
             '1': 'Specify Symbol',
             '2': 'Specify Strategy',
-            '3': 'Add Leg',
-            '4': 'Plot Value',
-            '5': 'Analyze Stategy',
-            '6': 'Re-Calculate Leg',
+            '3': 'Analyze Stategy',
+            '4': 'Add Leg',
+            '5': 'Calculate Leg',
+            '6': 'Plot Leg Value',
             '7': 'Change Pricing Method',
             '8': 'Exit'
         }
@@ -45,21 +49,10 @@ class Interface():
             elif selection == '2':
                 self.enter_strategy()
             elif selection == '3':
-                leg = self.enter_leg()
-                if leg > 0:
-                    self.calculate(leg-1)
-                    self.plot_value(leg-1)
-            elif selection == '4':
-                if len(self.strategy.legs) < 1:
-                    print('No legs configured')
-                elif len(self.strategy.legs) > 1:
-                    leg = input('Enter Leg: ')
-                    self.plot_value(int(leg)-1)
-                else:
-                    self.plot_value(0)
-            elif selection == '5':
                 self.analyze_strategy()
-            elif selection == '6':
+            elif selection == '4':
+                leg = self.enter_leg()
+            elif selection == '5':
                 if len(self.strategy.legs) < 1:
                     print('No legs configured')
                 elif len(self.strategy.legs) > 1:
@@ -67,6 +60,14 @@ class Interface():
                     self.calculate(int(leg)-1)
                 else:
                     self.calculate(0)
+            elif selection == '6':
+                if len(self.strategy.legs) < 1:
+                    print('No legs configured')
+                elif len(self.strategy.legs) > 1:
+                    leg = input('Enter Leg: ')
+                    self.plot_value(int(leg)-1)
+                else:
+                    self.plot_value(0)
             elif selection == '7':
                 self.enter_method()
             elif selection == '8':
@@ -128,8 +129,8 @@ class Interface():
         menu_items = {
             '1': 'Call',
             '2': 'Put',
-            '2': 'vertical',
-            '3': 'Vancel',
+            '2': 'Vertical',
+            '3': 'Cancel',
         }
 
         while True:
@@ -163,7 +164,7 @@ class Interface():
         menu_items = {
             '1': 'Quantity',
             '2': 'Call/Put',
-            '3': 'Long/Short',
+            '3': 'Buy/Write',
             '4': 'Strike',
             '5': 'Expiration',
             '6': 'Add Leg',
@@ -198,7 +199,7 @@ class Interface():
                 else:
                     print('Invalid option')
             elif selection == '3':
-                choice = input('Long (l) or Short (s): ')
+                choice = input('Buy (b) or Write (w): ')
                 if 'l' in choice:
                     self.leg.long_short = 'long'
                 elif 's' in choice:
@@ -255,21 +256,30 @@ class Interface():
             print('Unknown method selected')
 
 
+    def analyze_strategy(self):
+        '''TODO'''
+        dframe, legs = self.strategy.analyze_strategy()
+        if dframe is not None:
+            print(u.delimeter(f'Strategy Analysis ({self.strategy.strategy})', True) + '\n')
+            # self.write_legs(legs-1)
+            # print('')
+            print(dframe)
+        else:
+            print('No option legs configured')
+
+
     def plot_value(self, leg):
         '''TODO'''
         print(u.delimeter(f'Value ({self.strategy.pricing_method})', True) + '\n')
+        # self.write_legs(leg)
+        # print('')
         print(self.strategy.legs[leg].table_value)
-
-    def analyze_strategy(self):
-        '''TODO'''
-        dframe = self.strategy.analyze_strategy()
-        print(dframe)
 
 
     def write_legs(self, leg=-1, delimeter=True):
         '''TODO'''
         if delimeter:
-            print(u.delimeter('Current Strategy', True))
+            print(u.delimeter('Option Leg Values', True))
 
         if len(self.strategy.legs) < 1:
             print('No legs configured')
@@ -294,6 +304,38 @@ class Interface():
         else:
             print('Invalid leg')
 
+    def _script(self, args):
+        if args[0].lower() == 'c':
+            self.strategy.strategy = 'call'
+
+            self.leg.quantity = 1
+            self.leg.call_put = 'call'
+            self.leg.long_short = 'long'
+            self.leg.strike = 130.0
+            self.strategy.add_leg(self.leg.quantity, self.leg.call_put, self.leg.long_short, self.leg.strike, self.leg.expiry)
+
+            self.analyze_strategy()
+
+            self.main_menu()
+        elif args[0].lower() == 'v':
+            self.strategy.strategy = 'vertical'
+
+            self.leg.quantity = 1
+            self.leg.call_put = 'call'
+            self.leg.long_short = 'long'
+            self.leg.strike = 130.0
+            self.strategy.add_leg(self.leg.quantity, self.leg.call_put, self.leg.long_short, self.leg.strike, self.leg.expiry)
+
+            self.leg.long_short = 'short'
+            self.leg.strike = 135.0
+            self.strategy.add_leg(self.leg.quantity, self.leg.call_put, self.leg.long_short, self.leg.strike, self.leg.expiry)
+
+            self.analyze_strategy()
+
+            self.main_menu()
+        else:
+            print('Error: Unknown argument')
+
 
     def _validate(self):
         '''TODO'''
@@ -301,5 +343,8 @@ class Interface():
 
 
 if __name__ == '__main__':
-    ui = Interface()
-    ui.main_menu()
+    args = sys.argv[1:]
+    ui = Interface(args=args)
+
+    if args is None:
+        ui.main_menu()

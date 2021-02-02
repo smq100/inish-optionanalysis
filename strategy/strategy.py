@@ -29,7 +29,7 @@ class Leg:
 class Strategy:
     '''TODO'''
 
-    def __init__(self, strategy='long_call', pricing_method='black-scholes'):
+    def __init__(self, strategy='call', pricing_method='black-scholes'):
         self.symbol = {'ticker': 'AAPL', 'volitility': -1.0, 'dividend': 0.0}
         self.legs = []
         self.pricer = None
@@ -83,7 +83,7 @@ class Strategy:
 
             logging.info('Option price = ${:.2f} '.format(price))
 
-            self.legs[leg].table_value = self.generate_value_table(self.legs[leg].call_put, leg)
+            self.legs[leg].table_value = self.generate_value_table(leg)
 
         return price
 
@@ -100,29 +100,44 @@ class Strategy:
         return call, put
 
     def analyze_strategy(self):
-        price = self.legs[0].price
-        dframe = self.legs[0].table_value - price
-        dframe = dframe.applymap(lambda x: x if x > -price else -price)
+        dframe = None
+        legs = 0
 
-        return dframe
+        if len(self.legs) <= 0:
+            pass
+        elif self.strategy == 'call':
+            self.calculate_leg(0)
 
-    def generate_value_table(self, call_put, leg):
+            legs = 1
+            price = self.legs[0].price
+            dframe = self.legs[0].table_value - price
+            dframe = dframe.applymap(lambda x: x if x > -price else -price)
+        elif self.strategy == 'put':
+            self.calculate_leg(0)
+
+            legs = 1
+            price = self.legs[0].price
+            dframe = self.legs[0].table_value - price
+            dframe = dframe.applymap(lambda x: x if x > -price else -price)
+        elif self.strategy == 'vertical':
+            if len(self.legs) == 2:
+                legs = 2
+                self.calculate_leg(0)
+                self.calculate_leg(1)
+
+                if self.legs[0].long_short == 'long':
+                    dframe = self.legs[0].table_value - self.legs[1].table_value
+                else:
+                    dframe = self.legs[1].table_value - self.legs[0].table_value
+
+        return dframe, legs
+
+    def generate_value_table(self, leg):
         ''' TODO '''
 
-        valid = False
-        type_call = True
         dframe = pd.DataFrame()
 
-        # Ensure prices have been calculated prior
-        if self.legs[leg].price <= 0.0:
-            pass
-        elif call_put.upper() == 'CALL':
-            valid = True
-        elif call_put.upper() == 'PUT':
-            type_call = False
-            valid = True
-
-        if valid:
+        if self.legs[leg].price > 0.0:
             cols = int(self.pricer.time_to_maturity * 365)
             if cols > 1:
                 row = []
@@ -139,7 +154,8 @@ class Strategy:
                     col_index.append(str(today))
 
                 # Calculate cost of option every day till expiry
-                for spot in range(int(self.pricer.strike_price) - 10, int(self.pricer.strike_price) + 11, 1):
+                min_, max_, step_ = self._calc_price_min_max_step()
+                for spot in range(min_, max_, step_):
                     row = []
                     for item in col_index:
                         maturity_date = datetime.datetime.strptime(
@@ -153,7 +169,7 @@ class Strategy:
 
                         price_call, price_put = self.recalculate_leg(spot_price=spot, time_to_maturity=decimaldays_to_maturity)
 
-                        if type_call:
+                        if self.legs[leg].call_put == 'call':
                             row.append(price_call)
                         else:
                             row.append(price_put)
@@ -175,6 +191,19 @@ class Strategy:
 
         return dframe
 
+    def _calc_price_min_max_step(self):
+        min_ = max_ = step_ = 0
+
+        if self.strategy == 'call':
+            min_ = int(self.legs[0].strike) - 10
+            max_ = int(self.legs[0].strike) + 11
+            step_ = 1
+        elif self.strategy == 'vertical':
+            min_ = int(min([self.legs[0].strike, self.legs[1].strike])) - 10
+            max_ = int(max([self.legs[0].strike, self.legs[1].strike])) + 11
+            step_ = 1
+
+        return min_, max_, step_
 
     def _validate(self, leg):
         '''TODO'''
