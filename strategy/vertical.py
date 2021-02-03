@@ -12,6 +12,11 @@ class Vertical(Strategy):
     def __init__(self, name='vertical'):
         super().__init__(name)
 
+
+    def __str__(self):
+        return f'{self.name} {self.credit_debit} spread'
+
+
     def analyze(self):
         dframe = None
         legs = 0
@@ -24,8 +29,18 @@ class Vertical(Strategy):
             self.legs[1].calculate()
 
             if self.legs[0].long_short == 'long':
+                if self.legs[0].price > self.legs[1].price:
+                    self.credit_debit = 'debit'
+                else:
+                    self.credit_debit = 'credit'
+
                 dframe = self.legs[0].table - self.legs[1].table
             else:
+                if self.legs[0].price > self.legs[1].price:
+                    self.credit_debit = 'credit'
+                else:
+                    self.credit_debit = 'debit'
+
                 dframe = self.legs[1].table - self.legs[0].table
 
             self.analysis.table = dframe

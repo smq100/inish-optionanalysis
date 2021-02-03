@@ -17,13 +17,13 @@ class Interface():
     '''TODO'''
 
     def __init__(self, load=None, script=None):
-        self.leg = Leg(None)
+        self.leg = Leg(None, '')
 
         pd.options.display.float_format = '{:,.2f}'.format
 
         if load is not None:
-            self._load_strategy(load)
-            self.main_menu()
+            if self._load_strategy(load):
+                self.main_menu()
         elif script is not None:
             if os.path.exists(script):
                 try:
@@ -42,8 +42,8 @@ class Interface():
         '''Displays opening menu'''
 
         menu_items = {
-            '1': f'Specify Symbol ({self.strategy.symbol["ticker"]})',
-            '2': f'Specify Strategy ({self.strategy.name})',
+            '1': f'Specify Symbol ({self.strategy.symbol.ticker})',
+            '2': f'Specify Strategy ({self.strategy})',
             '3': 'Analyze Stategy',
             '4': 'Add Leg',
             '5': 'Calculate Leg',
@@ -115,7 +115,7 @@ class Interface():
         legs = self.strategy.analyze()
 
         if legs > 0:
-            print(u.delimeter(f'Analysis: {self.strategy.name.title()}', True) + '\n')
+            print(u.delimeter(f'Analysis: {str(self.strategy).title()}', True) + '\n')
 
             table = self.strategy.analysis.table
             rows, cols = table.shape
@@ -382,6 +382,7 @@ class Interface():
     def _load_strategy(self, load):
         self.leg.expiry = datetime.datetime(year=2021, month=3, day=19)
 
+        loaded = True
         if load.lower() == 'call':
             self.strategy = Call()
 
@@ -420,7 +421,10 @@ class Interface():
             self.analyze()
             self.plot_analysis()
         else:
+            loaded = False
             self._print_error('Unknown argument')
+
+        return loaded
 
 
     def _validate(self):

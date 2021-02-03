@@ -15,45 +15,42 @@ class Strategy(ABC):
     '''TODO'''
 
     def __init__(self, name):
-        self.symbol = {'ticker': 'AAPL', 'volatility': -1.0, 'dividend': 0.0}
+        self.name = name
+        self.symbol = Symbol('AAPL')
         self.analysis = Analysis()
         self.legs = []
-        self.name = name
+        self.credit_debit = 'unknown'
 
         logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
         logging.info('Initializing Strategy ...')
 
-
     def __str__(self):
-        output = f'{self.name}'
-
-        return output
+        return 'None'
 
 
     def reset(self):
         '''TODO'''
-        self.symbol = []
+        self.symbol = None
         self.legs = []
 
 
-    def set_symbol(self, ticker, volatility=0.3, dividend=0.0):
+    def set_symbol(self, ticker, volatility=-1.0, dividend=0.0):
         '''TODO'''
         self.reset()
-        self.symbol = {'ticker': ticker, 'volatility': volatility, 'dividend': dividend}
+        self.symbol = Symbol(ticker, volatility, dividend)
 
 
     def add_leg(self, quantity, call_put, long_short, strike, expiry):
         '''TODO'''
 
         # Add the leg if a symbol is specified
-        if len(self.symbol['ticker']) > 0:
+        if self.symbol is not None:
             # Add one day to act as expiry value
             expiry += datetime.timedelta(days=1)
 
-            leg = Leg(self, quantity, call_put, long_short, strike, expiry)
-            leg.symbol.ticker = self.symbol['ticker']
-            leg.symbol.volatility = self.symbol['volatility']
-            leg.symbol.dividend = self.symbol['dividend']
+            leg = Leg(self, self.symbol.ticker, quantity, call_put, long_short, strike, expiry)
+            leg.symbol.volatility = self.symbol.volatility
+            leg.symbol.dividend = self.symbol.dividend
 
             self.legs.append(leg)
 
@@ -73,12 +70,13 @@ class Strategy(ABC):
 class Leg:
     '''TODO'''
 
-    def __init__(self, strategy, quantity=1, call_put='call', long_short='long', strike=130.0, expiry=None):
+    def __init__(self, strategy, ticker, quantity=1, call_put='call', long_short='long', strike=130.0, expiry=None):
         self.strategy = strategy
-        self.symbol = Symbol('AAPL')
         self.quantity = quantity
         self.call_put = call_put
         self.long_short = long_short
+
+        self.symbol = Symbol(ticker)
         self.strike = strike
         self.price = 0.0
         self.time_to_maturity = 0
@@ -204,6 +202,7 @@ class Leg:
                 dframe = dframe.iloc[::-1]
 
         return dframe
+
 
     def compress_table(self, rows, cols):
         ''' TODO '''

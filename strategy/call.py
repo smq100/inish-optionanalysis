@@ -12,6 +12,10 @@ class Call(Strategy):
     def __init__(self, name='call'):
         super().__init__(name)
 
+    def __str__(self):
+        return f'{self.name}'
+
+
     def analyze(self):
         dframe = None
         legs = 0
@@ -20,6 +24,11 @@ class Call(Strategy):
             pass
         else:
             self.legs[0].calculate()
+
+            if self.legs[0].long_short == 'long':
+                self.credit_debit = 'debit'
+            else:
+                self.credit_debit = 'credit'
 
             legs = 1
             price = self.legs[0].price
