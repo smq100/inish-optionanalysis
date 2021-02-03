@@ -14,9 +14,9 @@ from utils import utils as u
 class Strategy(ABC):
     '''TODO'''
 
-    def __init__(self, name):
-        self.name = name
-        self.symbol = Symbol('AAPL')
+    def __init__(self, symbol=''):
+        self.name = ''
+        self.symbol = Symbol(symbol)
         self.analysis = Analysis()
         self.legs = []
         self.credit_debit = 'unknown'
@@ -28,38 +28,45 @@ class Strategy(ABC):
         return 'None'
 
 
-    def reset(self):
-        '''TODO'''
-        self.symbol = None
-        self.legs = []
-
-
     def set_symbol(self, ticker, volatility=-1.0, dividend=0.0):
         '''TODO'''
-        self.reset()
+
         self.symbol = Symbol(ticker, volatility, dividend)
+        self.reset()
+
+        for leg in self.legs:
+            leg.modify_symbol(ticker, volatility, dividend)
 
 
-    def add_leg(self, quantity, call_put, long_short, strike, expiry):
+    def reset(self):
         '''TODO'''
 
-        # Add the leg if a symbol is specified
-        if self.symbol is not None:
-            # Add one day to act as expiry value
-            expiry += datetime.timedelta(days=1)
-
-            leg = Leg(self, self.symbol.ticker, quantity, call_put, long_short, strike, expiry)
-            leg.symbol.volatility = self.symbol.volatility
-            leg.symbol.dividend = self.symbol.dividend
-
-            self.legs.append(leg)
-
-        return len(self.legs)
+        # Clear the analysis
+        self.analysis = Analysis()
 
 
     @abc.abstractmethod
     def analyze(self):
         ''' TODO '''
+
+
+    def add_leg(self, quantity, call_put, long_short, strike, expiry=None):
+        '''TODO'''
+
+        # Add the leg if a symbol is specified
+        if expiry is None:
+            expiry = datetime.datetime.today() + datetime.timedelta(days=10)
+
+        # Add one day to act as expiry value
+        expiry += datetime.timedelta(days=1)
+
+        leg = Leg(self, self.symbol.ticker, quantity, call_put, long_short, strike, expiry)
+        leg.symbol.volatility = self.symbol.volatility
+        leg.symbol.dividend = self.symbol.dividend
+
+        self.legs.append(leg)
+
+        return len(self.legs)
 
 
     @abc.abstractmethod
@@ -102,6 +109,29 @@ class Leg:
             output += f' = ${self.price:.2f}'
 
         return output
+
+    def modify_symbol(self, ticker, volatility=-1.0, dividend=0.0):
+        self.symbol = Symbol(ticker, volatility, dividend)
+        self.reset()
+
+    def modify_values(self, quantity, call_put, long_short, strike, expiry=None):
+        self.quantity = quantity
+        self.call_put = call_put
+        self.long_short = long_short
+
+        if expiry is None:
+            self.expiry = datetime.datetime.today() + datetime.timedelta(days=10)
+        else:
+            self.expiry = expiry
+
+        # Clear any calculated data and reacalculate
+        self.strategy.reset()
+        self.reset()
+
+    def reset(self):
+        self.table = None
+        self.pricer = None
+        self.calculate()
 
     def calculate(self, pricing_method='black-scholes'):
         '''TODO'''
@@ -237,13 +267,19 @@ class Leg:
 
     def _validate(self):
         '''TODO'''
+
+        valid = False
+
+        if (len(self.symbol.ticker) > 0):
+            valid = True
+
         # Check for valid method
-        if self.pricing_method == 'black-scholes':
+        if not valid:
+            pass
+        elif self.pricing_method == 'black-scholes':
             valid = True
         elif self.pricing_method == 'monte-carlo':
             valid = True
-        else:
-            valid = False
 
         return valid
 

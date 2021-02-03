@@ -1,4 +1,5 @@
 '''TODO'''
+
 import datetime
 import logging
 
@@ -9,8 +10,15 @@ from strategy.strategy import Strategy
 
 class Call(Strategy):
     '''TODO'''
-    def __init__(self, name='call'):
-        super().__init__(name)
+    def __init__(self, symbol=''):
+        super().__init__(symbol)
+
+        self.name = 'call'
+        self.add_leg(1, 'call', 'long', 100.0)
+
+        if symbol:
+            self.legs[0].calculate()
+
 
     def __str__(self):
         return f'{self.name}'

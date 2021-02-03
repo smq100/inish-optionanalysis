@@ -1,4 +1,5 @@
 '''TODO'''
+
 import datetime
 import logging
 
@@ -9,8 +10,16 @@ from strategy.strategy import Strategy
 
 class Vertical(Strategy):
     '''TODO'''
-    def __init__(self, name='vertical'):
-        super().__init__(name)
+    def __init__(self, symbol=''):
+        super().__init__(symbol)
+
+        self.name = 'vertical'
+        self.add_leg(1, 'call', 'long', 100.0)
+        self.add_leg(1, 'call', 'short', 105.0)
+
+        if symbol:
+            self.legs[0].calculate()
+            self.legs[1].calculate()
 
 
     def __str__(self):

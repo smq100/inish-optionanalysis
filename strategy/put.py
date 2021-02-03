@@ -1,4 +1,5 @@
 '''TODO'''
+
 import datetime
 import logging
 
@@ -9,8 +10,14 @@ from strategy.strategy import Strategy
 
 class Put(Strategy):
     '''TODO'''
-    def __init__(self, name='put'):
-        super().__init__(name)
+    def __init__(self, symbol=''):
+        super().__init__(symbol)
+
+        self.name = 'put'
+        self.add_leg(1, 'put', 'long', 100.0)
+
+        if symbol:
+            self.legs[0].calculate()
 
 
     def __str__(self):
