@@ -42,7 +42,7 @@ class Interface():
 
         while True:
             menu_items = {
-                '1': f'Specify Symbol ({self.strategy.symbol.ticker})',
+                '1': f'Specify Symbol ({self.strategy.ticker})',
                 '2': f'Specify Strategy ({self.strategy})',
                 '3': 'Analyze Stategy',
                 '4': 'Modify Leg',
@@ -66,18 +66,20 @@ class Interface():
             if selection == '1':
                 self.enter_symbol()
             elif selection == '2':
-                self.enter_strategy()
+                if self.enter_strategy():
+                    self.calculate()
             elif selection == '3':
                 self.analyze()
-                self.plot_analysis()
             elif selection == '4':
                 if len(self.strategy.legs) < 1:
                     print('No legs configured')
                 elif len(self.strategy.legs) > 1:
                     leg = input('Enter Leg: ')
-                    self.modify_leg(int(leg)-1)
+                    if self.modify_leg(int(leg)-1) > 0:
+                        self.calculate(leg)
                 else:
-                    self.modify_leg(0)
+                    if self.modify_leg(0):
+                        self.calculate(0)
             elif selection == '5':
                 if len(self.strategy.legs) < 1:
                     print('No legs configured')
@@ -113,6 +115,7 @@ class Interface():
     def analyze(self):
         '''TODO'''
         self.strategy.analyze()
+        self.plot_analysis()
 
 
     def plot_analysis(self):
@@ -134,11 +137,12 @@ class Interface():
             else:
                 cols = -1
 
-            # We need to compress the table
+            # See if we need to compress the table
             if rows > 0 or cols > 0:
                 table = self.strategy.analysis.compress_table(rows, cols)
 
             print(table)
+            print(self.strategy.analysis)
         else:
             self._print_error('No option legs configured')
 
@@ -237,6 +241,7 @@ class Interface():
             '4': 'Cancel',
         }
 
+        modified = False
         while True:
             print('\nSelect Strategy')
             print('---------------------')
@@ -248,19 +253,23 @@ class Interface():
             selection = input('Please select: ')
 
             if selection == '1':
-                self.strategy = Call()
+                self.strategy = Call(self.strategy.ticker)
+                modified = True
                 break
             if selection == '2':
-                self.strategy = Put()
+                self.strategy = Put(self.strategy.ticker)
+                modified = True
                 break
             if selection == '3':
-                self.strategy = Vertical()
+                self.strategy = Vertical(self.strategy.ticker)
+                modified = True
                 break
             if selection == '4':
                 break
 
             self._print_error('Unknown strategy selected')
 
+        return modified
 
     def modify_leg(self, leg):
         '''TODO'''
@@ -271,22 +280,23 @@ class Interface():
         strike = self.strategy.legs[leg].strike
         expiry = self.strategy.legs[leg].expiry
 
-        menu_items = {
-            '1': f'Quantity ({quantity})',
-            '2': f'Call/Put ({call_put})',
-            '3': f'Long/Short ({long_short})',
-            '4': f'Strike (${strike:.2f})',
-            '5': f'Expiration ({expiry:%Y/%m/%d})',
-            '6': 'Modify',
-            '7': 'Cancel',
-        }
+        changed = False
 
         while True:
+            menu_items = {
+                '1': f'Quantity ({quantity})',
+                '2': f'Call/Put ({call_put})',
+                '3': f'Long/Short ({long_short})',
+                '4': f'Strike (${strike:.2f})',
+                '5': f'Expiration ({expiry:%Y/%m/%d})',
+                '6': 'Done',
+                '7': 'Cancel',
+            }
+
             self.write_legs()
+
             print('\nSpecify Leg')
             print('-------------------------')
-
-            leg = -1
 
             option = menu_items.keys()
             for entry in option:
@@ -310,9 +320,9 @@ class Interface():
                     print('Invalid option')
             elif selection == '3':
                 choice = input('Buy (b) or Write (w): ')
-                if 'l' in choice:
+                if 'b' in choice:
                     long_short = 'long'
-                elif 's' in choice:
+                elif 'w' in choice:
                     long_short = 'short'
                 else:
                     print('Invalid option')
@@ -325,14 +335,14 @@ class Interface():
             elif selection == '5':
                 pass
             elif selection == '6':
-                leg = self.strategy.legs[leg].modify_leg(quantity, call_put, long_short, strike, expiry)
+                changed = self.strategy.legs[leg].modify_values(quantity, call_put, long_short, strike, expiry)
                 break
             elif selection == '7':
                 break
             else:
                 self._print_error('Unknown operation selected')
 
-        return leg
+        return changed
 
     def enter_options(self):
         '''TODO'''
@@ -393,10 +403,13 @@ class Interface():
         loaded = True
         if load.lower() == 'call':
             self.strategy = Call('AAPL')
+            self.analyze()
         elif load.lower() == 'put':
             self.strategy = Put('AAPL')
+            self.analyze()
         elif load.lower() == 'vertical':
             self.strategy = Vertical('AAPL')
+            self.analyze()
         else:
             loaded = False
             self._print_error('Unknown argument')

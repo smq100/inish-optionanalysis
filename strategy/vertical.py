@@ -5,21 +5,17 @@ import logging
 
 import pandas as pd
 
-from strategy.strategy import Strategy
+from strategy.strategy import Strategy, Analysis
 
 
 class Vertical(Strategy):
     '''TODO'''
-    def __init__(self, symbol=''):
-        super().__init__(symbol)
+    def __init__(self, ticker=''):
+        super().__init__(ticker)
 
         self.name = 'vertical'
         self.add_leg(1, 'call', 'long', 100.0)
         self.add_leg(1, 'call', 'short', 105.0)
-
-        if symbol:
-            self.legs[0].calculate()
-            self.legs[1].calculate()
 
 
     def __str__(self):
@@ -30,25 +26,23 @@ class Vertical(Strategy):
         dframe = None
         legs = 0
 
-        if len(self.legs) <= 0:
-            pass
-        else:
+        if len(self.legs) > 0:
             legs = 2
             self.legs[0].calculate()
             self.legs[1].calculate()
 
             if self.legs[0].long_short == 'long':
                 if self.legs[0].price > self.legs[1].price:
-                    self.credit_debit = 'debit'
+                    self.analysis.credit_debit = 'debit'
                 else:
-                    self.credit_debit = 'credit'
+                    self.analysis.credit_debit = 'credit'
 
                 dframe = self.legs[0].table - self.legs[1].table
             else:
                 if self.legs[0].price > self.legs[1].price:
-                    self.credit_debit = 'credit'
+                    self.analysis.credit_debit = 'credit'
                 else:
-                    self.credit_debit = 'debit'
+                    self.analysis.credit_debit = 'debit'
 
                 dframe = self.legs[1].table - self.legs[0].table
 

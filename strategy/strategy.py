@@ -14,28 +14,34 @@ from utils import utils as u
 class Strategy(ABC):
     '''TODO'''
 
-    def __init__(self, symbol=''):
+    def __init__(self, ticker=''):
         self.name = ''
-        self.symbol = Symbol(symbol)
+        self.ticker = ticker
         self.analysis = Analysis()
         self.legs = []
-        self.credit_debit = 'unknown'
 
         logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
         logging.info('Initializing Strategy ...')
 
     def __str__(self):
-        return 'None'
+        return 'Strategy base class'
 
 
     def set_symbol(self, ticker, volatility=-1.0, dividend=0.0):
         '''TODO'''
 
-        self.symbol = Symbol(ticker, volatility, dividend)
+        self.ticker = ticker
         self.reset()
 
         for leg in self.legs:
             leg.modify_symbol(ticker, volatility, dividend)
+
+
+    def calculate(self):
+        '''TODO'''
+
+        for leg in self.legs:
+            leg.calculate()
 
 
     def reset(self):
@@ -60,10 +66,7 @@ class Strategy(ABC):
         # Add one day to act as expiry value
         expiry += datetime.timedelta(days=1)
 
-        leg = Leg(self, self.symbol.ticker, quantity, call_put, long_short, strike, expiry)
-        leg.symbol.volatility = self.symbol.volatility
-        leg.symbol.dividend = self.symbol.dividend
-
+        leg = Leg(self, self.ticker, quantity, call_put, long_short, strike, expiry)
         self.legs.append(leg)
 
         return len(self.legs)
@@ -97,16 +100,16 @@ class Leg:
             self.expiry = expiry
 
     def __str__(self):
-        output = \
-            f'{self.quantity} '\
+        if self.price > 0.0:
+            output = f'{self.quantity} '\
             f'{self.symbol.ticker}@${self.symbol.spot:.2f} '\
             f'{self.long_short:5s} '\
             f'{self.call_put:5s} '\
             f'${self.strike:.2f} for '\
-            f'{str(self.expiry)[:10]}'
-
-        if self.price > 0.0:
-            output += f' = ${self.price:.2f}'
+            f'{str(self.expiry)[:10]}'\
+            f' = ${self.price:.2f}'
+        else:
+            output = f'{self.symbol.ticker} leg not yet calculated'
 
         return output
 
@@ -118,6 +121,7 @@ class Leg:
         self.quantity = quantity
         self.call_put = call_put
         self.long_short = long_short
+        self.strike = strike
 
         if expiry is None:
             self.expiry = datetime.datetime.today() + datetime.timedelta(days=10)
@@ -127,6 +131,8 @@ class Leg:
         # Clear any calculated data and reacalculate
         self.strategy.reset()
         self.reset()
+
+        return True
 
     def reset(self):
         self.table = None
@@ -284,32 +290,38 @@ class Leg:
         return valid
 
 
-class Symbol:
-    '''TODO'''
-
-    def __init__(self, ticker, dividend=0.0, volatility=-1.0):
-        self.ticker = ticker
-        self.dividend = dividend
-        self.volatility = volatility
-        self.spot = 0.0
-
-
-    def __str__(self):
-        output = f'{self.ticker}@${self.spot:.2f}/{self.volatility*100:.1f}%'
-
-        return output
-
-
 class Analysis:
     '''TODO'''
 
     def __init__(self):
         self.table = None
+        self.credit_debit = ''
+        self.sentiment = ''
+        self.max_gain = 0.0
+        self.max_loss = 0.0
 
 
     def __str__(self):
-        output = f'{self.table}'
-        print(output)
+        if self.credit_debit:
+            if self.max_gain >= 0.0:
+                gain = f'${self.max_gain:.2f}'
+            else:
+                gain = 'Unlimited'
+
+            if self.max_loss >= 0.0:
+                loss = f'${self.max_loss:.2f}'
+            else:
+                loss = 'Unlimited'
+
+            output = \
+                f'\nType:      {self.credit_debit.title()}\n'\
+                f'Sentiment: {self.sentiment.title()}\n'\
+                f'Max Gain:  {gain}\n'\
+                f'Max Loss:  {loss}'
+        else:
+            output = 'Not yet analyzed'
+
+        return output
 
 
     def compress_table(self, rows, cols):
@@ -332,6 +344,22 @@ class Analysis:
                 table = table.iloc[::step]
 
         return table
+
+
+class Symbol:
+    '''TODO'''
+
+    def __init__(self, ticker, dividend=0.0, volatility=-1.0):
+        self.ticker = ticker
+        self.dividend = dividend
+        self.volatility = volatility
+        self.spot = 0.0
+
+
+    def __str__(self):
+        output = f'{self.ticker}@${self.spot:.2f}/{self.volatility*100:.1f}%'
+
+        return output
 
 
 if __name__ == '__main__':
