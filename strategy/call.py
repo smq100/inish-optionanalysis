@@ -9,8 +9,8 @@ from strategy.strategy import Strategy
 
 class Call(Strategy):
     '''TODO'''
-    def __init__(self, name='call', pricing_method='black-scholes'):
-        super().__init__(name, pricing_method)
+    def __init__(self, name='call'):
+        super().__init__(name)
 
     def analyze(self):
         dframe = None
@@ -19,7 +19,7 @@ class Call(Strategy):
         if len(self.legs) <= 0:
             pass
         else:
-            self.calculate_leg(0)
+            self.legs[0].calculate()
 
             legs = 1
             price = self.legs[0].price

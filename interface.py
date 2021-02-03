@@ -10,11 +10,14 @@ from strategy.call import Call
 from strategy.put import Put
 from strategy.vertical import Vertical
 
+MAX_ROWS = 50
+MAX_COLS = 18
+
 class Interface():
     '''TODO'''
 
     def __init__(self, load=None, script=None):
-        self.leg = Leg()
+        self.leg = Leg(None)
 
         pd.options.display.float_format = '{:,.2f}'.format
 
@@ -39,8 +42,8 @@ class Interface():
         '''Displays opening menu'''
 
         menu_items = {
-            '1': 'Specify Symbol',
-            '2': 'Specify Strategy',
+            '1': f'Specify Symbol ({self.strategy.symbol["ticker"]})',
+            '2': f'Specify Strategy ({self.strategy.name})',
             '3': 'Analyze Stategy',
             '4': 'Add Leg',
             '5': 'Calculate Leg',
@@ -73,9 +76,11 @@ class Interface():
             elif selection == '5':
                 if len(self.strategy.legs) < 1:
                     print('No legs configured')
-                elif len(self.strategy.legs) >= 1:
+                elif len(self.strategy.legs) > 1:
                     leg = input('Enter Leg: ')
                     self.calculate(int(leg)-1)
+                else:
+                    self.calculate(0)
             elif selection == '6':
                 if len(self.strategy.legs) < 1:
                     print('No legs configured')
@@ -97,7 +102,7 @@ class Interface():
         if leg < 0:
             pass
         else:
-            self.strategy.calculate_leg(leg)
+            self.strategy.legs[leg].calculate()
 
 
     def analyze(self):
@@ -110,18 +115,18 @@ class Interface():
         legs = self.strategy.analyze()
 
         if legs > 0:
-            print(u.delimeter(f'Analysis: {self.strategy}', True) + '\n')
+            print(u.delimeter(f'Analysis: {self.strategy.name.title()}', True) + '\n')
 
             table = self.strategy.analysis.table
             rows, cols = table.shape
 
-            if rows > 50:
-                rows = 50
+            if rows > MAX_ROWS:
+                rows = MAX_ROWS
             else:
                 rows = -1
 
-            if cols > 20:
-                cols = 20
+            if cols > MAX_COLS:
+                cols = MAX_COLS
             else:
                 cols = -1
 
@@ -143,13 +148,13 @@ class Interface():
             table = self.strategy.legs[leg].table
             rows, cols = table.shape
 
-            if rows > 50:
-                rows = 50
+            if rows > MAX_ROWS:
+                rows = MAX_ROWS
             else:
                 rows = -1
 
-            if cols > 20:
-                cols = 20
+            if cols > MAX_COLS:
+                cols = MAX_COLS
             else:
                 cols = -1
 
@@ -257,11 +262,11 @@ class Interface():
         '''TODO'''
 
         menu_items = {
-            '1': 'Quantity',
-            '2': 'Call/Put',
-            '3': 'Buy/Write',
-            '4': 'Strike',
-            '5': 'Expiration',
+            '1': f'Quantity ({self.leg.quantity})',
+            '2': f'Call/Put ({self.leg.call_put})',
+            '3': f'Long/Short ({self.leg.long_short})',
+            '4': f'Strike (${self.leg.strike:.2f})',
+            '5': f'Expiration ({self.leg.expiry:%Y/%m/%d})',
             '6': 'Add Leg',
             '7': 'Cancel',
         }

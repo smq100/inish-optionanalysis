@@ -9,8 +9,8 @@ from strategy.strategy import Strategy
 
 class Vertical(Strategy):
     '''TODO'''
-    def __init__(self, name='vertical', pricing_method='black-scholes'):
-        super().__init__(name, pricing_method)
+    def __init__(self, name='vertical'):
+        super().__init__(name)
 
     def analyze(self):
         dframe = None
@@ -20,8 +20,8 @@ class Vertical(Strategy):
             pass
         else:
             legs = 2
-            self.calculate_leg(0)
-            self.calculate_leg(1)
+            self.legs[0].calculate()
+            self.legs[1].calculate()
 
             if self.legs[0].long_short == 'long':
                 dframe = self.legs[0].table - self.legs[1].table
