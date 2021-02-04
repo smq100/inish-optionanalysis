@@ -10,7 +10,7 @@ from strategy.strategy import Strategy, Analysis
 
 class Vertical(Strategy):
     '''TODO'''
-    def __init__(self, ticker=''):
+    def __init__(self, ticker='IBM', direction='long'):
         super().__init__(ticker)
 
         self.name = 'vertical'

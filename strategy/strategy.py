@@ -14,7 +14,7 @@ from utils import utils as u
 class Strategy(ABC):
     '''TODO'''
 
-    def __init__(self, ticker=''):
+    def __init__(self, ticker='IBM', direction='long'):
         self.name = ''
         self.ticker = ticker
         self.analysis = Analysis()

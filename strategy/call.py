@@ -10,11 +10,11 @@ from strategy.strategy import Strategy, Analysis
 
 class Call(Strategy):
     '''TODO'''
-    def __init__(self, ticker=''):
+    def __init__(self, ticker='IBM', direction='long'):
         super().__init__(ticker)
 
         self.name = 'call'
-        self.add_leg(1, 'call', 'long', 100.0)
+        self.add_leg(1, 'call', direction, 130.0)
 
 
     def __str__(self):
@@ -54,10 +54,13 @@ class Call(Strategy):
         else:
             self.analysis.credit_debit = 'credit'
 
-        legs = 1
         price = self.legs[0].price
-        dframe = self.legs[0].table - price
-        dframe = dframe.applymap(lambda x: x if x > -price else -price)
+
+        if self.legs[0].long_short == 'long':
+            dframe = self.legs[0].table - price
+        else:
+            dframe = self.legs[0].table
+            dframe = dframe.applymap(lambda x: (price - x) if x < price else -(x - price))
 
         return dframe
 

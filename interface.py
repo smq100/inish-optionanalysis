@@ -17,11 +17,11 @@ MAX_COLS = 18
 class Interface():
     '''TODO'''
 
-    def __init__(self, load=None, script=None):
+    def __init__(self, strategy=None, direction=None, script=None):
         pd.options.display.float_format = '{:,.2f}'.format
 
-        if load is not None:
-            if self._load_strategy(load):
+        if strategy is not None:
+            if self._load_strategy(strategy, direction):
                 self.main_menu()
         elif script is not None:
             if os.path.exists(script):
@@ -278,7 +278,7 @@ class Interface():
             menu_items = {
                 '1': f'Quantity ({quantity})',
                 '2': f'Call/Put ({call_put})',
-                '3': f'Long/Short ({long_short})',
+                '3': f'Buy/Write ({long_short})',
                 '4': f'Strike (${strike:.2f})',
                 '5': f'Expiration ({expiry:%Y/%m/%d})',
                 '6': 'Done',
@@ -392,19 +392,19 @@ class Interface():
             self._print_error('Unknown method selected')
 
 
-    def _load_strategy(self, load):
+    def _load_strategy(self, strategy, direction):
         modified = False
-        if load.lower() == 'call':
+        if strategy.lower() == 'call':
             modified = True
-            self.strategy = Call('AAPL')
+            self.strategy = Call('AAPL', direction)
             self.analyze()
-        elif load.lower() == 'put':
+        elif strategy.lower() == 'put':
             modified = True
-            self.strategy = Put('AAPL')
+            self.strategy = Put('AAPL', direction)
             self.analyze()
-        elif load.lower() == 'vertical':
+        elif strategy.lower() == 'vertical':
             modified = True
-            self.strategy = Vertical('AAPL')
+            self.strategy = Vertical('AAPL', direction)
             self.analyze()
         else:
             self._print_error('Unknown argument')
@@ -423,10 +423,23 @@ class Interface():
 if __name__ == '__main__':
     import argparse
 
+    # create the top-level parser
     parser = argparse.ArgumentParser(description='Option Strategy Analyzer')
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument('-s', '--strategy', help='Preload a strategy', required=False, choices=['call', 'put', 'vertical'])
-    group.add_argument('-x', '--execute', help='Execute a script', required=False)
-    args = parser.parse_args()
 
-    Interface(load=args.strategy, script=args.execute)
+    subparser = parser.add_subparsers(help='Specify a command')
+
+    # create the parser for the "command_1" command
+    parser_a = subparser.add_parser('load', help='Loads a strategy and direction')
+    parser_a.add_argument('-s', '--strategy', help='Load and analyze strategy', required=False, choices=['call', 'put', 'vertical'], default='call')
+    parser_a.add_argument('-d', '--direction', help='Specify the direction', required=False, choices=['long', 'short'], default='long')
+
+    # create the parser for the "command_2" command
+    parser_b = subparser.add_parser('execute', help='Executes a JSON command script')
+    parser_b.add_argument('-f', '--script', help='Specify a script', required=False, default='script.json')
+
+    command = vars(parser.parse_args())
+
+    if 'strategy' in command.keys():
+        Interface(strategy=command['strategy'], direction=command['direction'])
+    else:
+        Interface(script=command['script'])
