@@ -11,11 +11,11 @@ from utils import utils as u
 
 class Put(Strategy):
     '''TODO'''
-    def __init__(self, ticker='IBM', direction='long'):
+    def __init__(self, ticker, direction='long'):
         super().__init__(ticker)
 
         self.name = 'put'
-        self.add_leg(1, 'put', direction, 130.0)
+        self.add_leg(1, 'put', direction, self._initial_spot)
 
 
     def __str__(self):

@@ -148,7 +148,7 @@ class Interface():
         '''TODO'''
 
         if len(self.strategy.legs) > 0:
-            print(u.delimeter(f'Analysis: {self.strategy.ticker} {str(self.strategy).title()}', True) + '\n')
+            print(u.delimeter(f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].symbol.short_name}) {str(self.strategy).title()}', True) + '\n')
 
             table = self.strategy.analysis.table
             rows, cols = table.shape

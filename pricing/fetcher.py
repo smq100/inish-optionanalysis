@@ -4,6 +4,7 @@ import logging
 import configparser
 
 import quandl
+import yfinance as yf
 import pandas as pd
 from pandas.tseries.offsets import BDay
 from pandas_datareader import data
@@ -17,6 +18,9 @@ config.read('config.ini')
 quandl.ApiConfig.api_key = config['DEFAULT']['APIKEY']
 
 SOURCES = ['yahoo', 'morningstar']
+
+def get_company_info(ticker):
+    return yf.Ticker(ticker)
 
 def validate_ticker(ticker):
     '''Perform quick check to see if a ticker is valid'''

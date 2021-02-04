@@ -10,12 +10,12 @@ from strategy.strategy import Strategy, Analysis
 
 class Vertical(Strategy):
     '''TODO'''
-    def __init__(self, ticker='IBM', direction='long'):
+    def __init__(self, ticker, direction='long'):
         super().__init__(ticker)
 
         self.name = 'vertical'
-        self.add_leg(1, 'call', 'long', 100.0)
-        self.add_leg(1, 'call', 'short', 105.0)
+        self.add_leg(1, 'call', 'long', self._initial_spot)
+        self.add_leg(1, 'call', 'short', self._initial_spot + 2.0)
 
 
     def __str__(self):

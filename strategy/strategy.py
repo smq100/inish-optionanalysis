@@ -16,7 +16,7 @@ from utils import utils as u
 class Strategy(ABC):
     '''TODO'''
 
-    def __init__(self, ticker='IBM', direction='long'):
+    def __init__(self, ticker, direction='long'):
         self.name = ''
         self.ticker = ticker
         self.analysis = Analysis()
@@ -194,6 +194,7 @@ class Leg:
             self.symbol.spot = self.pricer.spot_price
             self.symbol.volatility = self.pricer.volatility
             self.time_to_maturity = self.pricer.time_to_maturity
+            self.symbol.short_name = self.pricer.short_name
 
             if self.call_put == 'call':
                 price = self.price = price_call
@@ -395,6 +396,7 @@ class Symbol:
         self.dividend = dividend
         self.volatility = volatility
         self.spot = 0.0
+        self.short_name = 'unknown'
 
 
     def __str__(self):

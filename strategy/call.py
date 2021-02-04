@@ -11,7 +11,7 @@ from utils import utils as u
 
 class Call(Strategy):
     '''TODO'''
-    def __init__(self, ticker='IBM', direction='long'):
+    def __init__(self, ticker, direction='long'):
         super().__init__(ticker)
 
         self.name = 'call'

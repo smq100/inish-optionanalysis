@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from pandas.tseries.offsets import BDay
 
-from .fetcher import validate_ticker, get_ranged_data, get_treasury_rate
+from .fetcher import validate_ticker, get_ranged_data, get_treasury_rate, get_company_info
 from utils import utils as u
 
 
@@ -32,6 +32,7 @@ class BasePricing(ABC):
         :param dividend: <float> If the underlying asset is paying dividend to stock-holders.
         '''
         self.ticker = ticker
+        self.short_name = 'unknown'
         self.expiry = expiry
         self.strike_price = strike
         self.volatility = None  # We will calculate this based on historical asset prices
@@ -64,6 +65,8 @@ class BasePricing(ABC):
         Initialize all the required parameters for Option pricing
         :return:
         '''
+
+        self.short_name = get_company_info(self.ticker).info['shortName']
         self._calc_risk_free_rate()
         self._calc_time_to_maturity()
         self._calc_volatility()
