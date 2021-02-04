@@ -46,7 +46,7 @@ class Interface():
                 '2': f'Specify Strategy ({self.strategy})',
                 '3': 'Analyze Stategy',
                 '4': 'Modify Leg',
-                '5': 'Calculate Leg',
+                '5': 'Calculate Values',
                 '6': 'Plot Leg Values',
                 '7': 'Options',
                 '8': 'Exit'
@@ -67,33 +67,31 @@ class Interface():
                 self.enter_symbol()
             elif selection == '2':
                 if self.enter_strategy():
-                    self.calculate()
+                    self.strategy.calculate()
             elif selection == '3':
                 self.analyze()
             elif selection == '4':
                 if len(self.strategy.legs) < 1:
                     print('No legs configured')
                 elif len(self.strategy.legs) > 1:
-                    leg = input('Enter Leg: ')
-                    if self.modify_leg(int(leg)-1) > 0:
-                        self.calculate(leg)
+                    leg = int(input('Enter Leg: ')) - 1
+                    if self.modify_leg(leg) > 0:
+                        self.strategy.calculate()
+                        self.plot_value(leg)
                 else:
                     if self.modify_leg(0):
-                        self.calculate(0)
+                        self.strategy.calculate()
+                        self.plot_value(0)
             elif selection == '5':
-                if len(self.strategy.legs) < 1:
-                    print('No legs configured')
-                elif len(self.strategy.legs) > 1:
-                    leg = input('Enter Leg: ')
-                    self.calculate(int(leg)-1)
-                else:
-                    self.calculate(0)
+                if len(self.strategy.legs) > 0:
+                    self.strategy.calculate()
+                    self.plot_value(0)
             elif selection == '6':
                 if len(self.strategy.legs) < 1:
                     print('No legs configured')
                 elif len(self.strategy.legs) > 1:
-                    leg = input('Enter Leg: ')
-                    self.plot_value(int(leg)-1)
+                    leg = int(input('Enter Leg: ')) - 1
+                    self.plot_value(leg)
                 else:
                     self.plot_value(0)
             elif selection == '7':
@@ -104,47 +102,11 @@ class Interface():
                 self._print_error('Unknown operation selected')
 
 
-    def calculate(self, leg):
-        '''TODO'''
-        if leg < 0:
-            pass
-        else:
-            self.strategy.legs[leg].calculate()
-
 
     def analyze(self):
         '''TODO'''
         self.strategy.analyze()
         self.plot_analysis()
-
-
-    def plot_analysis(self):
-        '''TODO'''
-
-        if len(self.strategy.legs) > 0:
-            print(u.delimeter(f'Analysis: {str(self.strategy).title()}', True) + '\n')
-
-            table = self.strategy.analysis.table
-            rows, cols = table.shape
-
-            if rows > MAX_ROWS:
-                rows = MAX_ROWS
-            else:
-                rows = -1
-
-            if cols > MAX_COLS:
-                cols = MAX_COLS
-            else:
-                cols = -1
-
-            # See if we need to compress the table
-            if rows > 0 or cols > 0:
-                table = self.strategy.analysis.compress_table(rows, cols)
-
-            print(table)
-            print(self.strategy.analysis)
-        else:
-            self._print_error('No option legs configured')
 
 
     def plot_value(self, leg):
@@ -173,6 +135,36 @@ class Interface():
             print(table)
         else:
             self._print_error('Invalid leg')
+
+
+    def plot_analysis(self):
+        '''TODO'''
+
+        if len(self.strategy.legs) > 0:
+            print(u.delimeter(f'Analysis: {self.strategy.ticker} {str(self.strategy).title()}', True) + '\n')
+
+            table = self.strategy.analysis.table
+            rows, cols = table.shape
+
+            if rows > MAX_ROWS:
+                rows = MAX_ROWS
+            else:
+                rows = -1
+
+            if cols > MAX_COLS:
+                cols = MAX_COLS
+            else:
+                cols = -1
+
+            # See if we need to compress the table
+            if rows > 0 or cols > 0:
+                table = self.strategy.analysis.compress_table(rows, cols)
+
+            print(table)
+            print(self.strategy.analysis)
+        else:
+            self._print_error('No option legs configured')
+
 
     def write_legs(self, leg=-1, delimeter=True):
         '''TODO'''
@@ -307,7 +299,7 @@ class Interface():
             if selection == '1':
                 choice = input('Enter Quantity: ')
                 if choice.isnumeric():
-                    squantity = int(choice)
+                    quantity = int(choice)
                 else:
                     print('Invalid option')
             elif selection == '2':
@@ -377,6 +369,7 @@ class Interface():
             '3': 'Cancel',
         }
 
+        modified = True
         while True:
             print('\nSpecify Method')
             print('-------------------------')
@@ -400,21 +393,23 @@ class Interface():
 
 
     def _load_strategy(self, load):
-        loaded = True
+        modified = False
         if load.lower() == 'call':
+            modified = True
             self.strategy = Call('AAPL')
             self.analyze()
         elif load.lower() == 'put':
+            modified = True
             self.strategy = Put('AAPL')
             self.analyze()
         elif load.lower() == 'vertical':
+            modified = True
             self.strategy = Vertical('AAPL')
             self.analyze()
         else:
-            loaded = False
             self._print_error('Unknown argument')
 
-        return loaded
+        return modified
 
 
     def _validate(self):

@@ -28,15 +28,25 @@ class Call(Strategy):
         if len(self.legs) > 0:
             self.legs[0].calculate()
 
-            # *** Generate profit table
+            # Calculate net debit or credit
+            self.analysis.amount = self.legs[0].price * self.legs[0].quantity
+
+            # Generate profit table
             self.analysis.table = self._generate_profit_table()
 
-            # *** Calculate min max
+            # Calculate min max
             self.analysis.max_gain, self.analysis.max_loss = self._calc_max_gain_loss()
+
+            # Calculate breakeven
+            if self.legs[0].long_short == 'long':
+                self.analysis.breakeven = self.legs[0].strike + self.analysis.amount
+            else:
+                self.analysis.breakeven = self.legs[0].strike - self.analysis.amount
 
             legs = 1
 
         return legs
+
 
     def _generate_profit_table(self):
         if self.legs[0].long_short == 'long':

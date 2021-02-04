@@ -107,7 +107,10 @@ class Leg:
             f'{self.call_put:5s} '\
             f'${self.strike:.2f} for '\
             f'{str(self.expiry)[:10]}'\
-            f' = ${self.price:.2f}'
+            f' = ${self.price*self.quantity:.2f}'
+
+            if self.quantity > 1:
+                output += f' (${self.price:.2f} each)'
         else:
             output = f'{self.symbol.ticker} leg not yet calculated'
 
@@ -213,7 +216,7 @@ class Leg:
 
                         # Compensate for zero delta days to provide small fraction of day
                         if decimaldays_to_maturity < 0.0003:
-                            decimaldays_to_maturity = 0.0001
+                            decimaldays_to_maturity = 0.00001
 
                         price_call, price_put = self.recalculate(spot_price=spot, time_to_maturity=decimaldays_to_maturity)
 
@@ -297,12 +300,14 @@ class Analysis:
         self.table = None
         self.credit_debit = ''
         self.sentiment = ''
+        self.amount = 0.0
         self.max_gain = 0.0
         self.max_loss = 0.0
+        self.breakeven = 0.0
 
 
     def __str__(self):
-        if self.credit_debit:
+        if self.table is not None:
             if self.max_gain >= 0.0:
                 gain = f'${self.max_gain:.2f}'
             else:
@@ -313,11 +318,13 @@ class Analysis:
             else:
                 loss = 'Unlimited'
 
-            output = \
-                f'\nType:      {self.credit_debit.title()}\n'\
+            output = '\n'\
+                f'Type:      {self.credit_debit.title()}\n'\
                 f'Sentiment: {self.sentiment.title()}\n'\
+                f'Amount:    ${self.amount:.2f} {self.credit_debit}\n'\
                 f'Max Gain:  {gain}\n'\
-                f'Max Loss:  {loss}'
+                f'Max Loss:  {loss}\n'\
+                f'Breakeven: ${self.breakeven:.2f} at expiry\n'
         else:
             output = 'Not yet analyzed'
 

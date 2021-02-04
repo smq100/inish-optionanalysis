@@ -28,11 +28,20 @@ class Put(Strategy):
         if len(self.legs) > 0:
             self.legs[0].calculate()
 
-            # *** Generate profit table
+            # Calculate net debit or credit
+            self.analysis.amount = self.legs[0].price * self.legs[0].quantity
+
+            # Generate profit table
             self.analysis.table = self._generate_profit_table()
 
-            # *** Calculate min max
+            # Calculate min max
             self.analysis.max_gain, self.analysis.max_loss = self._calc_max_gain_loss()
+
+            # Calculate breakeven
+            if self.legs[0].long_short == 'long':
+                self.analysis.breakeven = self.legs[0].strike - self.analysis.amount
+            else:
+                self.analysis.breakeven = self.legs[0].strike + self.analysis.amount
 
             legs = 1
 
@@ -56,12 +65,12 @@ class Put(Strategy):
     def _calc_max_gain_loss(self):
         if self.legs[0].long_short == 'long':
             self.analysis.sentiment = 'bearish'
-            max_gain = self.legs[0].symbol.spot - self.legs[0].price
+            max_gain = self.legs[0].strike - self.legs[0].symbol.spot - self.legs[0].price
             max_loss = self.legs[0].price
         else:
             self.analysis.sentiment = 'bullish'
             max_gain = self.legs[0].price
-            max_loss = self.legs[0].symbol.spot - self.legs[0].price
+            max_loss = self.legs[0].strike - self.legs[0].symbol.spot - self.legs[0].price
 
         return max_gain, max_loss
 
