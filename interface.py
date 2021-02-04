@@ -39,6 +39,7 @@ class Interface():
             self.strategy = Call(ticker)
             self.main_menu()
 
+
     def main_menu(self):
         '''Displays opening menu'''
 
@@ -103,12 +104,14 @@ class Interface():
             else:
                 u.print_error('Unknown operation selected')
 
+
     def calculate(self):
         try:
             self.strategy.calculate()
             return True
         except:
             return False
+
 
     def analyze(self):
         '''TODO'''
@@ -123,23 +126,26 @@ class Interface():
             print(u.delimeter(f'Value: {self.strategy.legs[leg].symbol}', True) + '\n')
 
             table = self.strategy.legs[leg].table
-            rows, cols = table.shape
+            if table is not None:
+                rows, cols = table.shape
 
-            if rows > MAX_ROWS:
-                rows = MAX_ROWS
+                if rows > MAX_ROWS:
+                    rows = MAX_ROWS
+                else:
+                    rows = -1
+
+                if cols > MAX_COLS:
+                    cols = MAX_COLS
+                else:
+                    cols = -1
+
+                # We need to compress the table
+                if rows > 0 or cols > 0:
+                    table = self.strategy.legs[leg].compress_table(rows, cols)
+
+                print(table)
             else:
-                rows = -1
-
-            if cols > MAX_COLS:
-                cols = MAX_COLS
-            else:
-                cols = -1
-
-            # We need to compress the table
-            if rows > 0 or cols > 0:
-                table = self.strategy.legs[leg].compress_table(rows, cols)
-
-            print(table)
+                u.print_error('No table')
         else:
             u.print_error('Invalid leg')
 
@@ -151,24 +157,27 @@ class Interface():
             print(u.delimeter(f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].symbol.short_name}) {str(self.strategy).title()}', True) + '\n')
 
             table = self.strategy.analysis.table
-            rows, cols = table.shape
+            if table is not None:
+                rows, cols = table.shape
 
-            if rows > MAX_ROWS:
-                rows = MAX_ROWS
+                if rows > MAX_ROWS:
+                    rows = MAX_ROWS
+                else:
+                    rows = -1
+
+                if cols > MAX_COLS:
+                    cols = MAX_COLS
+                else:
+                    cols = -1
+
+                # See if we need to compress the table
+                if rows > 0 or cols > 0:
+                    table = self.strategy.analysis.compress_table(rows, cols)
+
+                print(table)
+                print(self.strategy.analysis)
             else:
-                rows = -1
-
-            if cols > MAX_COLS:
-                cols = MAX_COLS
-            else:
-                cols = -1
-
-            # See if we need to compress the table
-            if rows > 0 or cols > 0:
-                table = self.strategy.analysis.compress_table(rows, cols)
-
-            print(table)
-            print(self.strategy.analysis)
+                u.print_error('No table')
         else:
             u.print_error('No option legs configured')
 
@@ -271,6 +280,7 @@ class Interface():
 
         return modified
 
+
     def modify_leg(self, leg):
         '''TODO'''
 
@@ -343,6 +353,7 @@ class Interface():
                 u.print_error('Unknown operation selected')
 
         return changed
+
 
     def enter_options(self):
         '''TODO'''
@@ -451,5 +462,7 @@ if __name__ == '__main__':
 
     if 'strategy' in command.keys():
         Interface(ticker=command['ticker'], strategy=command['strategy'], direction=command['direction'])
+    elif 'script' in command.keys():
+        Interface('FB', script=command['script'])
     else:
-        Interface(script=command['script'])
+        Interface('MSFT')

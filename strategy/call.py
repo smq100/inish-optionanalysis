@@ -15,7 +15,7 @@ class Call(Strategy):
         super().__init__(ticker)
 
         self.name = 'call'
-        self.add_leg(1, 'call', direction, self._initial_spot)
+        self.add_leg(1, 'call', direction, self.initial_spot)
 
 
     def __str__(self):
@@ -33,10 +33,10 @@ class Call(Strategy):
             self.analysis.amount = self.legs[0].price * self.legs[0].quantity
 
             # Generate profit table
-            self.analysis.table = self._generate_profit_table()
+            self.analysis.table = self.generate_profit_table()
 
             # Calculate min max
-            self.analysis.max_gain, self.analysis.max_loss = self._calc_max_gain_loss()
+            self.analysis.max_gain, self.analysis.max_loss = self.calc_max_gain_loss()
 
             # Calculate breakeven
             if self.legs[0].long_short == 'long':
@@ -49,7 +49,7 @@ class Call(Strategy):
         return legs
 
 
-    def _generate_profit_table(self):
+    def generate_profit_table(self):
         if self.legs[0].long_short == 'long':
             self.analysis.credit_debit = 'debit'
         else:
@@ -68,7 +68,7 @@ class Call(Strategy):
         return dframe
 
 
-    def _calc_max_gain_loss(self):
+    def calc_max_gain_loss(self):
         if self.legs[0].long_short == 'long':
             self.analysis.sentiment = 'bullish'
             max_gain = -1.0
@@ -79,14 +79,3 @@ class Call(Strategy):
             max_loss = -1.0
 
         return max_gain, max_loss
-
-
-    def _calc_price_min_max_step(self):
-        if len(self.legs) <= 0:
-            min_ = max_ = step_ = 0
-        else:
-            min_ = int(min(self.legs[0].strike, self.legs[0].symbol.spot)) - 10
-            max_ = int(max(self.legs[0].strike, self.legs[0].symbol.spot)) + 11
-            step_ = 1
-
-        return min_, max_, step_

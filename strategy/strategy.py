@@ -21,32 +21,16 @@ class Strategy(ABC):
         self.ticker = ticker
         self.analysis = Analysis()
         self.legs = []
-        self._initial_spot = 50.0
+        self.initial_spot = 50.0
 
         logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
         logging.info('Initializing Strategy ...')
 
-        self._initial_spot = self.get_current_spot(ticker)
+        self.initial_spot = self.get_current_spot(ticker)
 
 
     def __str__(self):
         return 'Strategy base class'
-
-
-    def set_symbol(self, ticker, volatility=-1.0, dividend=0.0):
-        '''TODO'''
-
-        success = True
-        for leg in self.legs:
-            if not leg.modify_symbol(ticker, volatility, dividend):
-                success = False
-                break
-
-        if success:
-            self.ticker = ticker
-            self.reset()
-
-        return success
 
 
     def calculate(self):
@@ -56,16 +40,16 @@ class Strategy(ABC):
             leg.calculate()
 
 
+    @abc.abstractmethod
+    def analyze(self):
+        ''' TODO '''
+
+
     def reset(self):
         '''TODO'''
 
         # Clear the analysis
         self.analysis = Analysis()
-
-
-    @abc.abstractmethod
-    def analyze(self):
-        ''' TODO '''
 
 
     def add_leg(self, quantity, call_put, long_short, strike, expiry=None):
@@ -84,17 +68,56 @@ class Strategy(ABC):
         return len(self.legs)
 
 
+    def set_symbol(self, ticker, volatility=-1.0, dividend=0.0):
+        '''TODO'''
+
+        success = True
+        for leg in self.legs:
+            if not leg.modify_symbol(ticker, volatility, dividend):
+                success = False
+                break
+
+        if success:
+            self.ticker = ticker
+            self.reset()
+
+        return success
+
+
     def get_current_spot(self, ticker):
+        '''TODO'''
+
         expiry = datetime.datetime.today() + datetime.timedelta(days=10)
-        pricer = MonteCarlo(ticker, expiry, self._initial_spot)
+        pricer = MonteCarlo(ticker, expiry, self.initial_spot)
         spot = math.ceil(pricer.spot_price)
 
         return spot
 
 
     @abc.abstractmethod
-    def _calc_price_min_max_step(self):
-        ''' TODO '''
+    def generate_profit_table(self):
+        '''TODO'''
+
+
+    @abc.abstractmethod
+    def calc_max_gain_loss(self):
+        '''TODO'''
+
+
+    def calc_price_min_max_step(self):
+        '''TODO'''
+
+        min_ = max_ = step_ = 0
+
+        if len(self.legs) > 0:
+            min_ = int(min(self.legs[0].strike, self.legs[0].symbol.spot)) - 10
+            max_ = int(max(self.legs[0].strike, self.legs[0].symbol.spot)) + 11
+
+            if min_ < 0:
+                min_ = 0
+            step_ = 1
+
+        return min_, max_, step_
 
 
 class Leg:
@@ -137,6 +160,8 @@ class Leg:
         return output
 
     def modify_symbol(self, ticker, volatility=-1.0, dividend=0.0):
+        '''TODO'''
+
         symbol = self.symbol
         strike = self.strike
 
@@ -155,6 +180,8 @@ class Leg:
 
 
     def modify_values(self, quantity, call_put, long_short, strike, expiry=None):
+        '''TODO'''
+
         self.quantity = quantity
         self.call_put = call_put
         self.long_short = long_short
@@ -172,6 +199,8 @@ class Leg:
         return True
 
     def reset(self):
+        '''TODO'''
+
         self.table = None
         self.pricer = None
         self.calculate()
@@ -184,7 +213,7 @@ class Leg:
 
         price = 0.0
 
-        if self._validate():
+        if self.validate():
             if self.pricing_method == 'monte-carlo':
                 self.pricer = MonteCarlo(self.symbol.ticker, self.expiry, self.strike)
             else:
@@ -210,6 +239,7 @@ class Leg:
 
     def recalculate(self, spot_price, time_to_maturity):
         '''TODO'''
+
         call = put = 0.0
 
         if self.pricer is not None:
@@ -224,7 +254,7 @@ class Leg:
         dframe = pd.DataFrame()
 
         if self.price > 0.0:
-            cols, step = self._calc_date_cols_step()
+            cols, step = self.calc_date_cols_step()
             if cols > 1:
                 row = []
                 table = []
@@ -241,7 +271,7 @@ class Leg:
                     col_index.append(str(today))
 
                 # Calculate cost of option every day till expiry
-                min_, max_, step_ = self.strategy._calc_price_min_max_step()
+                min_, max_, step_ = self.strategy.calc_price_min_max_step()
                 for spot in range(min_, max_, step_):
                     row = []
                     for item in col_index:
@@ -300,7 +330,7 @@ class Leg:
         return table
 
 
-    def _calc_date_cols_step(self):
+    def calc_date_cols_step(self):
         ''' TODO '''
 
         cols = int(math.ceil(self.time_to_maturity * 365))
@@ -309,7 +339,7 @@ class Leg:
         return cols, step
 
 
-    def _validate(self):
+    def validate(self):
         '''TODO'''
 
         valid = False

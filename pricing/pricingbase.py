@@ -22,6 +22,7 @@ class BasePricing(ABC):
 
     LOOK_BACK_WINDOW = 252
 
+
     def __init__(self, ticker, expiry, strike, dividend=0.0):
         '''
 
@@ -52,13 +53,15 @@ class BasePricing(ABC):
         if validate_ticker(ticker):
             self.initialize_variables()
         else:
-            raise IOError('Invalid ticker')
+            raise IOError('Problem fetching ticker information')
 
         logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
+
 
     @abc.abstractmethod
     def calculate_prices(self, spot_price=-1.0, time_to_maturity=-1.0):
         '''TODO'''
+
 
     def initialize_variables(self):
         '''
@@ -74,6 +77,7 @@ class BasePricing(ABC):
 
         logging.debug('Initializing variables completed')
 
+
     def override_historical_start_date(self, hist_start_date):
         '''
         If we want to change the look_back window for historical prices (used for volatility calculations),
@@ -83,6 +87,7 @@ class BasePricing(ABC):
         :return: <void>
         '''
         self.__start_date = hist_start_date
+
 
     def log_parameters(self):
         '''
@@ -99,6 +104,7 @@ class BasePricing(ABC):
         logging.info('RISK FREE RATE = %f', self.risk_free_rate)
         logging.info('SPOT PRICE = %.2f', self.spot_price)
 
+
     def is_call_put_parity_maintained(self, call_price, put_price):
         ''' Verify is the Put-Call Pairty is maintained by the two option prices calculated by us.
 
@@ -113,6 +119,7 @@ class BasePricing(ABC):
         logging.info('Put-Call Parity RHS = %f', rhs)
 
         return bool(round(lhs) == round(rhs))
+
 
     def _calc_risk_free_rate(self):
         '''

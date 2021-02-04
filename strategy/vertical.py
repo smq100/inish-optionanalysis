@@ -10,12 +10,13 @@ from strategy.strategy import Strategy, Analysis
 
 class Vertical(Strategy):
     '''TODO'''
+
     def __init__(self, ticker, direction='long'):
         super().__init__(ticker)
 
         self.name = 'vertical'
-        self.add_leg(1, 'call', 'long', self._initial_spot)
-        self.add_leg(1, 'call', 'short', self._initial_spot + 2.0)
+        self.add_leg(1, 'call', 'long', self.initial_spot)
+        self.add_leg(1, 'call', 'short', self.initial_spot + 2.0)
 
 
     def __str__(self):
@@ -50,7 +51,11 @@ class Vertical(Strategy):
 
         return legs
 
-    def _calc_price_min_max_step(self):
+
+    def generate_profit_table(self):
+        return None
+
+    def calc_price_min_max_step(self):
         if len(self.legs) <= 0:
             min_ = max_ = step_ = 0
         else:
@@ -59,3 +64,7 @@ class Vertical(Strategy):
             step_ = 1
 
         return min_, max_, step_
+
+
+    def calc_max_gain_loss(self):
+        pass

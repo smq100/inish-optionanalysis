@@ -20,10 +20,13 @@ quandl.ApiConfig.api_key = config['DEFAULT']['APIKEY']
 SOURCES = ['yahoo', 'morningstar']
 
 def get_company_info(ticker):
+    '''TODO'''
+
     return yf.Ticker(ticker)
 
 def validate_ticker(ticker):
     '''Perform quick check to see if a ticker is valid'''
+
     start = datetime.datetime.today() - datetime.timedelta(days=3)
 
     try:
@@ -35,6 +38,7 @@ def validate_ticker(ticker):
 
 def get_ranged_data(ticker, start, end=None, use_quandl=True):
     ''' TODO '''
+
     dframe = pd.DataFrame()
 
     if not end:
@@ -56,6 +60,7 @@ def get_ranged_data(ticker, start, end=None, use_quandl=True):
 
 def get_data(ticker, use_quandl=True):
     ''' TODO '''
+
     dframe = pd.DataFrame()
     if use_quandl:
         logging.info('Fetching data for Ticker=%s from Source=Quandl', ticker)
@@ -74,6 +79,7 @@ def get_data(ticker, use_quandl=True):
 
 def get_treasury_rate(ticker=None):
     ''' TODO '''
+
     dframe = pd.DataFrame()
     if not ticker:
         ticker = 'DTB3'  # Default to 3-Month Treasury Rate
@@ -89,6 +95,7 @@ def get_treasury_rate(ticker=None):
 
 def get_spx_prices(start_date=None):
     ''' TODO '''
+
     if not start_date:
         start_date = datetime.datetime(2017, 1, 1)
     dframe = pd.DataFrame()
