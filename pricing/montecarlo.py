@@ -18,14 +18,13 @@ class MonteCarlo(BasePricing):
 
     SIMULATION_COUNT = 100000  # Number of Simulations to be performed for Brownian motion
 
-    def __init__(self, ticker, expiry_date, strike, dividend=0.0):
-        super().__init__(ticker, expiry_date, strike, dividend=dividend)
+    def __init__(self, ticker, expiry, strike, dividend=0.0):
+        super().__init__(ticker, expiry, strike, dividend=dividend)
 
         logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
         logging.info('Initializing Monte Carlo pricing...')
 
         # Get/Calculate all the required underlying parameters, ex. Volatility, Risk-free rate, etc.
-        self.initialize_variables()
         self.log_parameters()
 
 

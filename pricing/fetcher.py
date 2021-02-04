@@ -18,6 +18,16 @@ quandl.ApiConfig.api_key = config['DEFAULT']['APIKEY']
 
 SOURCES = ['yahoo', 'morningstar']
 
+def validate_ticker(ticker):
+    '''Perform quick check to see if a ticker is valid'''
+    start = datetime.datetime.today() - datetime.timedelta(days=3)
+
+    try:
+        data.DataReader(ticker, 'yahoo', start, None)
+        return True
+    except:
+        return False
+
 
 def get_ranged_data(ticker, start, end=None, use_quandl=True):
     ''' TODO '''
@@ -30,9 +40,9 @@ def get_ranged_data(ticker, start, end=None, use_quandl=True):
         dframe = quandl.get('WIKI/' + ticker, start_date=start, end_date=end)
     else:
         for source in SOURCES:
-            logging.info(
-                'Fetching data for Ticker=%s from Source=%s', ticker, source)
+            logging.info('Fetching data for Ticker=%s from Source=%s', ticker, source)
             dframe = data.DataReader(ticker, source, start, end)
+
             if not dframe.empty:
                 logging.info('Successfully fetched data')
                 break
@@ -96,4 +106,4 @@ if __name__ == '__main__':
     print(d_f.tail())
 
     rate1 = get_treasury_rate()
-    print (rate1)
+    print(rate1)

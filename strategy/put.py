@@ -6,6 +6,7 @@ import logging
 import pandas as pd
 
 from strategy.strategy import Strategy, Analysis
+from utils import utils as u
 
 
 class Put(Strategy):
@@ -54,10 +55,16 @@ class Put(Strategy):
         else:
             self.analysis.credit_debit = 'credit'
 
-        legs = 1
         price = self.legs[0].price
-        dframe = self.legs[0].table - price
-        dframe = dframe.applymap(lambda x: x if x > -price else -price)
+
+        if self.legs[0].long_short == 'long':
+            dframe = self.legs[0].table - price
+            dframe = dframe.applymap(lambda x: x if x > -price else -price)
+        else:
+            dframe = self.legs[0].table
+            dframe = dframe.applymap(lambda x: (price - x) if x < price else -(x - price))
+
+        dframe.style.applymap(lambda x: 'color:red' if x is not str and x < 0 else 'color:black')
 
         return dframe
 
@@ -65,12 +72,12 @@ class Put(Strategy):
     def _calc_max_gain_loss(self):
         if self.legs[0].long_short == 'long':
             self.analysis.sentiment = 'bearish'
-            max_gain = self.legs[0].strike - self.legs[0].symbol.spot - self.legs[0].price
+            max_gain = self.legs[0].strike - self.legs[0].price
             max_loss = self.legs[0].price
         else:
             self.analysis.sentiment = 'bullish'
             max_gain = self.legs[0].price
-            max_loss = self.legs[0].strike - self.legs[0].symbol.spot - self.legs[0].price
+            max_loss = self.legs[0].strike - self.legs[0].price
 
         return max_gain, max_loss
 
@@ -79,8 +86,8 @@ class Put(Strategy):
         if len(self.legs) <= 0:
             min_ = max_ = step_ = 0
         else:
-            min_ = int(self.legs[0].strike) - 10
-            max_ = int(self.legs[0].strike) + 11
+            min_ = int(min(self.legs[0].strike, self.legs[0].symbol.spot)) - 10
+            max_ = int(max(self.legs[0].strike, self.legs[0].symbol.spot)) + 11
             step_ = 1
 
         return min_, max_, step_

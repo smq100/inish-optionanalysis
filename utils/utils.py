@@ -1,6 +1,8 @@
 '''TODO'''
 import logging
 
+import numpy as np
+
 
 LOG_LEVEL = logging.WARNING
 
@@ -18,3 +20,6 @@ def delimeter(message, creturn=False):
         output += '*****'
 
     return output
+
+def print_error(message, creturn=False):
+    print(delimeter(f'Error: {message}', creturn))

@@ -15,14 +15,13 @@ class BlackScholes(BasePricing):
 
     '''
 
-    def __init__(self, ticker, expiry_date, strike, dividend=0.0):
-        super().__init__(ticker, expiry_date, strike, dividend=dividend)
+    def __init__(self, ticker, expiry, strike, dividend=0.0):
+        super().__init__(ticker, expiry, strike, dividend=dividend)
 
         logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
         logging.info('Initializing Black-Scholes pricing...')
 
         # Get/Calculate all the required underlying parameters, ex. Volatility, Risk-free rate, etc.
-        self.initialize_variables()
         self.log_parameters()
 
     def calculate_prices(self, spot_price=-1.0, time_to_maturity=-1.0):

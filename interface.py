@@ -5,11 +5,11 @@ import datetime
 
 import pandas as pd
 
-from utils import utils as u
 from strategy.strategy import Leg
 from strategy.call import Call
 from strategy.put import Put
 from strategy.vertical import Vertical
+from utils import utils as u
 
 MAX_ROWS = 50
 MAX_COLS = 18
@@ -17,11 +17,13 @@ MAX_COLS = 18
 class Interface():
     '''TODO'''
 
-    def __init__(self, strategy=None, direction=None, script=None):
+    def __init__(self, ticker, strategy=None, direction=None, script=None):
         pd.options.display.float_format = '{:,.2f}'.format
 
+        ticker = ticker.upper()
+
         if strategy is not None:
-            if self._load_strategy(strategy, direction):
+            if self._load_strategy(ticker, strategy, direction):
                 self.main_menu()
         elif script is not None:
             if os.path.exists(script):
@@ -30,11 +32,11 @@ class Interface():
                         data = json.load(file_)
                         print(data)
                 except:
-                    self._print_error('File read error')
+                    u.print_error('File read error')
             else:
-                self._print_error(f'File "{script}" not found')
+                u.print_error(f'File "{script}" not found')
         else:
-            self.strategy = Call('AAPL')
+            self.strategy = Call(ticker)
             self.main_menu()
 
     def main_menu(self):
@@ -67,7 +69,7 @@ class Interface():
                 self.enter_symbol()
             elif selection == '2':
                 if self.enter_strategy():
-                    self.strategy.calculate()
+                    self.calculate()
             elif selection == '3':
                 self.analyze()
             elif selection == '4':
@@ -76,16 +78,16 @@ class Interface():
                 elif len(self.strategy.legs) > 1:
                     leg = int(input('Enter Leg: ')) - 1
                     if self.modify_leg(leg) > 0:
-                        self.strategy.calculate()
-                        self.plot_value(leg)
+                        if self.calculate():
+                            self.plot_value(leg)
                 else:
                     if self.modify_leg(0):
-                        self.strategy.calculate()
-                        self.plot_value(0)
+                        if self.calculate():
+                            self.plot_value(0)
             elif selection == '5':
                 if len(self.strategy.legs) > 0:
-                    self.strategy.calculate()
-                    self.plot_value(0)
+                    if self.calculate():
+                        self.plot_value(0)
             elif selection == '6':
                 if len(self.strategy.legs) < 1:
                     print('No legs configured')
@@ -99,9 +101,14 @@ class Interface():
             elif selection == '8':
                 break
             else:
-                self._print_error('Unknown operation selected')
+                u.print_error('Unknown operation selected')
 
-
+    def calculate(self):
+        try:
+            self.strategy.calculate()
+            return True
+        except:
+            return False
 
     def analyze(self):
         '''TODO'''
@@ -134,7 +141,7 @@ class Interface():
 
             print(table)
         else:
-            self._print_error('Invalid leg')
+            u.print_error('Invalid leg')
 
 
     def plot_analysis(self):
@@ -163,7 +170,7 @@ class Interface():
             print(table)
             print(self.strategy.analysis)
         else:
-            self._print_error('No option legs configured')
+            u.print_error('No option legs configured')
 
 
     def write_legs(self, leg=-1, delimeter=True):
@@ -181,7 +188,7 @@ class Interface():
             output = f'{leg+1}: {self.strategy.legs[leg]}'
             print(output)
         else:
-            self._print_error('Invalid leg')
+            u.print_error('Invalid leg')
 
 
     def reset(self):
@@ -191,6 +198,7 @@ class Interface():
 
     def enter_symbol(self):
         '''TODO'''
+        success = True
         ticker = input('Please enter symbol: ').upper()
         vol = -1.0
         div = 0.0
@@ -218,9 +226,9 @@ class Interface():
             elif selection == '3':
                 break
             else:
-                self._print_error('Unknown operation selected')
+                u.print_error('Unknown operation selected')
 
-        self.strategy.set_symbol(ticker, vol, div)
+        return self.strategy.set_symbol(ticker, vol, div)
 
 
     def enter_strategy(self):
@@ -259,7 +267,7 @@ class Interface():
             if selection == '4':
                 break
 
-            self._print_error('Unknown strategy selected')
+            u.print_error('Unknown strategy selected')
 
         return modified
 
@@ -332,7 +340,7 @@ class Interface():
             elif selection == '7':
                 break
             else:
-                self._print_error('Unknown operation selected')
+                u.print_error('Unknown operation selected')
 
         return changed
 
@@ -389,25 +397,30 @@ class Interface():
             if selection == '3':
                 break
 
-            self._print_error('Unknown method selected')
+            u.print_error('Unknown method selected')
 
 
-    def _load_strategy(self, strategy, direction):
+    def _load_strategy(self, ticker, strategy, direction):
         modified = False
-        if strategy.lower() == 'call':
-            modified = True
-            self.strategy = Call('AAPL', direction)
-            self.analyze()
-        elif strategy.lower() == 'put':
-            modified = True
-            self.strategy = Put('AAPL', direction)
-            self.analyze()
-        elif strategy.lower() == 'vertical':
-            modified = True
-            self.strategy = Vertical('AAPL', direction)
-            self.analyze()
-        else:
-            self._print_error('Unknown argument')
+
+        try:
+            if strategy.lower() == 'call':
+                modified = True
+                self.strategy = Call(ticker, direction)
+                self.analyze()
+            elif strategy.lower() == 'put':
+                modified = True
+                self.strategy = Put(ticker, direction)
+                self.analyze()
+            elif strategy.lower() == 'vertical':
+                modified = True
+                self.strategy = Vertical(ticker, direction)
+                self.analyze()
+            else:
+                u.print_error('Unknown argument')
+        except:
+            u.print_error(sys.exc_info()[1], True)
+            return False
 
         return modified
 
@@ -416,30 +429,27 @@ class Interface():
         '''TODO'''
         return True
 
-    def _print_error(self, message):
-        print(f'Error: {message}')
-
 
 if __name__ == '__main__':
     import argparse
 
-    # create the top-level parser
+    # Create the top-level parser
     parser = argparse.ArgumentParser(description='Option Strategy Analyzer')
-
     subparser = parser.add_subparsers(help='Specify a command')
 
-    # create the parser for the "command_1" command
+    # Create the parser for the "load" command
     parser_a = subparser.add_parser('load', help='Loads a strategy and direction')
+    parser_a.add_argument('-t', '--ticker', help='Specify the ticker symbol', required=False, default='IBM')
     parser_a.add_argument('-s', '--strategy', help='Load and analyze strategy', required=False, choices=['call', 'put', 'vertical'], default='call')
     parser_a.add_argument('-d', '--direction', help='Specify the direction', required=False, choices=['long', 'short'], default='long')
 
-    # create the parser for the "command_2" command
+    # Create the parser for the "execute" command
     parser_b = subparser.add_parser('execute', help='Executes a JSON command script')
     parser_b.add_argument('-f', '--script', help='Specify a script', required=False, default='script.json')
 
     command = vars(parser.parse_args())
 
     if 'strategy' in command.keys():
-        Interface(strategy=command['strategy'], direction=command['direction'])
+        Interface(ticker=command['ticker'], strategy=command['strategy'], direction=command['direction'])
     else:
         Interface(script=command['script'])

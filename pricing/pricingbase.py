@@ -3,6 +3,7 @@
 Based on https://github.com/shashank-khanna/Option-Pricing
 '''
 
+import sys
 import abc
 from abc import ABC
 import datetime
@@ -12,7 +13,7 @@ import numpy as np
 import pandas as pd
 from pandas.tseries.offsets import BDay
 
-from .fetcher import get_ranged_data, get_treasury_rate
+from .fetcher import validate_ticker, get_ranged_data, get_treasury_rate
 from utils import utils as u
 
 
@@ -21,7 +22,7 @@ class BasePricing(ABC):
 
     LOOK_BACK_WINDOW = 252
 
-    def __init__(self, ticker, expiry_date, strike, dividend=0.0):
+    def __init__(self, ticker, expiry, strike, dividend=0.0):
         '''
 
         :param ticker: Ticker of the Underlying Stock asset, ex. 'AAPL', 'TSLA', 'GOOGL', etc.
@@ -31,7 +32,7 @@ class BasePricing(ABC):
         :param dividend: <float> If the underlying asset is paying dividend to stock-holders.
         '''
         self.ticker = ticker
-        self.expiry = expiry_date
+        self.expiry = expiry
         self.strike_price = strike
         self.volatility = None  # We will calculate this based on historical asset prices
         self.time_to_maturity = None  # Calculated from expiry date of the option
@@ -47,7 +48,10 @@ class BasePricing(ABC):
         self.expiry = self.expiry.replace(hour=0, minute=0, second=0, microsecond=0)
 
         # Initialize
-        self.initialize_variables()
+        if validate_ticker(ticker):
+            self.initialize_variables()
+        else:
+            raise IOError('Invalid ticker')
 
         logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
 

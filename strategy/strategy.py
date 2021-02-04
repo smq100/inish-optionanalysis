@@ -1,4 +1,6 @@
 '''TODO'''
+
+import sys
 import abc
 from abc import ABC
 import datetime
@@ -19,9 +21,13 @@ class Strategy(ABC):
         self.ticker = ticker
         self.analysis = Analysis()
         self.legs = []
+        self._initial_spot = 50.0
 
         logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
         logging.info('Initializing Strategy ...')
+
+        self._initial_spot = self.get_current_spot(ticker)
+
 
     def __str__(self):
         return 'Strategy base class'
@@ -30,11 +36,17 @@ class Strategy(ABC):
     def set_symbol(self, ticker, volatility=-1.0, dividend=0.0):
         '''TODO'''
 
-        self.ticker = ticker
-        self.reset()
-
+        success = True
         for leg in self.legs:
-            leg.modify_symbol(ticker, volatility, dividend)
+            if not leg.modify_symbol(ticker, volatility, dividend):
+                success = False
+                break
+
+        if success:
+            self.ticker = ticker
+            self.reset()
+
+        return success
 
 
     def calculate(self):
@@ -61,7 +73,7 @@ class Strategy(ABC):
 
         # Add the leg if a symbol is specified
         if expiry is None:
-            expiry = datetime.datetime.today() + datetime.timedelta(days=10)
+            expiry = datetime.datetime.today() + datetime.timedelta(days=14)
 
         # Add one day to act as expiry value
         expiry += datetime.timedelta(days=1)
@@ -70,6 +82,14 @@ class Strategy(ABC):
         self.legs.append(leg)
 
         return len(self.legs)
+
+
+    def get_current_spot(self, ticker):
+        expiry = datetime.datetime.today() + datetime.timedelta(days=10)
+        pricer = MonteCarlo(ticker, expiry, self._initial_spot)
+        spot = math.ceil(pricer.spot_price)
+
+        return spot
 
 
     @abc.abstractmethod
@@ -117,8 +137,22 @@ class Leg:
         return output
 
     def modify_symbol(self, ticker, volatility=-1.0, dividend=0.0):
+        symbol = self.symbol
+        strike = self.strike
+
         self.symbol = Symbol(ticker, volatility, dividend)
-        self.reset()
+
+        try:
+            # Reset strike to spot value
+            self.strike = self.strategy.get_current_spot(ticker)
+            self.reset()
+            return True
+        except:
+            self.symbol = symbol
+            self.strike = strike
+            u.print_error(sys.exc_info()[1])
+            return False
+
 
     def modify_values(self, quantity, call_put, long_short, strike, expiry=None):
         self.quantity = quantity

@@ -6,6 +6,7 @@ import logging
 import pandas as pd
 
 from strategy.strategy import Strategy, Analysis
+from utils import utils as u
 
 
 class Call(Strategy):
@@ -14,7 +15,7 @@ class Call(Strategy):
         super().__init__(ticker)
 
         self.name = 'call'
-        self.add_leg(1, 'call', direction, 130.0)
+        self.add_leg(1, 'call', direction, self._initial_spot)
 
 
     def __str__(self):
@@ -62,6 +63,8 @@ class Call(Strategy):
             dframe = self.legs[0].table
             dframe = dframe.applymap(lambda x: (price - x) if x < price else -(x - price))
 
+        dframe.style.applymap(lambda x: 'color:red' if x is not str and x < 0 else 'color:black')
+
         return dframe
 
 
@@ -82,8 +85,8 @@ class Call(Strategy):
         if len(self.legs) <= 0:
             min_ = max_ = step_ = 0
         else:
-            min_ = int(self.legs[0].strike) - 10
-            max_ = int(self.legs[0].strike) + 11
+            min_ = int(min(self.legs[0].strike, self.legs[0].symbol.spot)) - 10
+            max_ = int(max(self.legs[0].strike, self.legs[0].symbol.spot)) + 11
             step_ = 1
 
         return min_, max_, step_
