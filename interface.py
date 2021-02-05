@@ -17,7 +17,7 @@ MAX_COLS = 18
 class Interface():
     '''TODO'''
 
-    def __init__(self, ticker, strategy=None, direction=None, script=None, exit=False):
+    def __init__(self, ticker, strategy, direction, script=None, exit=False):
         pd.options.display.float_format = '{:,.2f}'.format
 
         ticker = ticker.upper()
@@ -38,7 +38,7 @@ class Interface():
                 u.print_error(f'File "{script}" not found')
         else:
             if not exit:
-                self.strategy = Call(ticker)
+                self.strategy = Call(ticker, strategy, direction)
                 self.main_menu()
             else:
                 u.print_error('Nothing to do')
@@ -266,15 +266,15 @@ class Interface():
             selection = input('Please select: ')
 
             if selection == '1':
-                self.strategy = Call(self.strategy.ticker)
+                self.strategy = Call(self.strategy.ticker, 'call', 'long')
                 modified = True
                 break
             if selection == '2':
-                self.strategy = Put(self.strategy.ticker)
+                self.strategy = Put(self.strategy.ticker, 'put', 'long')
                 modified = True
                 break
             if selection == '3':
-                self.strategy = Vertical(self.strategy.ticker)
+                self.strategy = Vertical(self.strategy.ticker, 'call', 'long')
                 modified = True
                 break
             if selection == '4':
@@ -421,15 +421,19 @@ class Interface():
         # try:
         if strategy.lower() == 'call':
             modified = True
-            self.strategy = Call(ticker, direction)
+            self.strategy = Call(ticker, 'call', direction)
             self.analyze()
         elif strategy.lower() == 'put':
             modified = True
-            self.strategy = Put(ticker, direction)
+            self.strategy = Put(ticker, 'put', direction)
             self.analyze()
-        elif strategy.lower() == 'vertical':
+        elif strategy.lower() == 'vertc':
             modified = True
-            self.strategy = Vertical(ticker, direction)
+            self.strategy = Vertical(ticker, 'call', direction)
+            self.analyze()
+        elif strategy.lower() == 'vertp':
+            modified = True
+            self.strategy = Vertical(ticker, 'put', direction)
             self.analyze()
         else:
             u.print_error('Unknown argument')
@@ -450,14 +454,14 @@ if __name__ == '__main__':
 
     # Create the top-level parser
     parser = argparse.ArgumentParser(description='Option Strategy Analyzer')
-    subparser = parser.add_subparsers(help='Specify a command')
+    subparser = parser.add_subparsers(help='Specify the desired command')
 
     parser.add_argument('-x', '--exit', help='Exit after running running analysis', action='store_true', required=False, default=False)
 
     # Create the parser for the "load" command
     parser_a = subparser.add_parser('load', help='Loads a strategy and direction')
     parser_a.add_argument('-t', '--ticker', help='Specify the ticker symbol', required=False, default='IBM')
-    parser_a.add_argument('-s', '--strategy', help='Load and analyze strategy', required=False, choices=['call', 'put', 'vertical'], default='call')
+    parser_a.add_argument('-s', '--strategy', help='Load and analyze strategy', required=False, choices=['call', 'put', 'vertc', 'vertp'], default='call')
     parser_a.add_argument('-d', '--direction', help='Specify the direction', required=False, choices=['long', 'short'], default='long')
 
     # Create the parser for the "execute" command
@@ -469,6 +473,6 @@ if __name__ == '__main__':
     if 'strategy' in command.keys():
         Interface(ticker=command['ticker'], strategy=command['strategy'], direction=command['direction'], exit=command['exit'])
     elif 'script' in command.keys():
-        Interface('FB', script=command['script'], exit=command['exit'])
+        Interface('FB', 'call', 'long', script=command['script'], exit=command['exit'])
     else:
-        Interface('MSFT', exit=command['exit'])
+        Interface('MSFT', 'call', 'long', exit=command['exit'])

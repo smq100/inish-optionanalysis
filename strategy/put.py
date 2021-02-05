@@ -12,23 +12,28 @@ from utils import utils as u
 class Put(Strategy):
     '''TODO'''
 
-    def __init__(self, ticker, direction='long'):
-        super().__init__(ticker)
+    def __init__(self, ticker, product, direction):
+        product = 'put'
+        super().__init__(ticker, product, direction)
 
         self.name = 'put'
-        self.add_leg(1, 'put', direction, self.initial_spot)
+        self.add_leg(1, product, direction, self.initial_spot)
 
 
     def __str__(self):
-        return f'{self.legs[0].long_short} {self.name}'
+        return f'{self.direction} {self.name}'
 
 
     def analyze(self):
         dframe = None
-        legs = 0
 
         if self._validate():
             self.legs[0].calculate()
+
+            if self.direction == 'long':
+                self.analysis.credit_debit = 'debit'
+            else:
+                self.analysis.credit_debit = 'credit'
 
             # Calculate net debit or credit
             self.analysis.amount = self.legs[0].price * self.legs[0].quantity
@@ -40,25 +45,16 @@ class Put(Strategy):
             self.analysis.max_gain, self.analysis.max_loss = self.calc_max_gain_loss()
 
             # Calculate breakeven
-            if self.legs[0].long_short == 'long':
+            if self.direction == 'long':
                 self.analysis.breakeven = self.legs[0].strike - self.analysis.amount
             else:
                 self.analysis.breakeven = self.legs[0].strike + self.analysis.amount
 
-            legs = 1
-
-        return legs
-
 
     def generate_profit_table(self):
-        if self.legs[0].long_short == 'long':
-            self.analysis.credit_debit = 'debit'
-        else:
-            self.analysis.credit_debit = 'credit'
-
         price = self.legs[0].price
 
-        if self.legs[0].long_short == 'long':
+        if self.direction == 'long':
             dframe = self.legs[0].table - price
             dframe = dframe.applymap(lambda x: x if x > -price else -price)
         else:
@@ -71,7 +67,7 @@ class Put(Strategy):
 
 
     def calc_max_gain_loss(self):
-        if self.legs[0].long_short == 'long':
+        if self.direction == 'long':
             self.analysis.sentiment = 'bearish'
             max_gain = self.legs[0].strike - self.legs[0].price
             max_loss = self.legs[0].price

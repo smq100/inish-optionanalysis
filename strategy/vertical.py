@@ -6,73 +6,95 @@ import logging
 import pandas as pd
 
 from strategy.strategy import Strategy, Analysis
+from utils import utils as u
 
 
 class Vertical(Strategy):
     '''TODO'''
 
-    def __init__(self, ticker, direction='long'):
-        super().__init__(ticker)
+    def __init__(self, ticker, product, direction):
+        super().__init__(ticker, product, direction)
 
         self.name = 'vertical'
-        self.add_leg(1, 'call', 'long', self.initial_spot)
-        self.add_leg(1, 'call', 'short', self.initial_spot + 2.0)
 
+        # Add legs (long leg is first)
+        if product == 'call':
+            if direction == 'long':
+                self.add_leg(1, product, 'long', self.initial_spot)
+                self.add_leg(1, product, 'short', self.initial_spot + 2.0)
+            else:
+                self.add_leg(1, product, 'long', self.initial_spot + 2.0)
+                self.add_leg(1, product, 'short', self.initial_spot)
+        else:
+            if direction == 'long':
+                self.add_leg(1, product, 'long', self.initial_spot + 2.0)
+                self.add_leg(1, product, 'short', self.initial_spot)
+            else:
+                self.add_leg(1, product, 'long', self.initial_spot)
+                self.add_leg(1, product, 'short', self.initial_spot + 2.0)
 
     def __str__(self):
-        return f'{self.name} {self.credit_debit} spread'
+        return f'{self.name} {self.product} {self.analysis.credit_debit} spread'
 
 
     def analyze(self):
-        dframe = None
-        legs = 0
+        ''' Analyze the stratwgy (Important: Assumes the long leg is the index-0 leg)'''
 
         if self._validate():
             self.legs[0].calculate()
             self.legs[1].calculate()
 
-            # Calculate net debit or credit
-            self.analysis.amount = self.legs[0].price * self.legs[0].quantity
-            self.analysis.amount = self.legs[1].price * self.legs[1].quantity
-
-
-            if self.legs[0].long_short == 'long':
-                if self.legs[0].price > self.legs[1].price:
-                    self.analysis.credit_debit = 'debit'
-                else:
-                    self.analysis.credit_debit = 'credit'
-
-                dframe = self.legs[0].table - self.legs[1].table
+            if self.direction == 'long':
+                self.analysis.credit_debit = 'debit'
             else:
-                if self.legs[0].price > self.legs[1].price:
-                    self.analysis.credit_debit = 'credit'
-                else:
-                    self.analysis.credit_debit = 'debit'
+                self.analysis.credit_debit = 'credit'
 
-                # Combine the results of the legs
-                dframe = self.legs[1].table - self.legs[0].table
+            # Calculate net debit or credit
+            self.analysis.amount = self.legs[1].price * self.legs[1].quantity
+            self.analysis.amount -= (self.legs[0].price * self.legs[0].quantity)
 
-            self.analysis.table = dframe
+            # Generate profit table
+            self.analysis.table = self.generate_profit_table()
+
+            # Calculate min max
+            self.analysis.max_gain, self.analysis.max_loss = self.calc_max_gain_loss()
+
+            # Calculate breakeven
+            self.analysis.breakeven = -1.0
 
 
     def generate_profit_table(self):
-        return None
+        # Create net-value table
 
-    def calc_price_min_max_step(self):
-        if len(self.legs) <= 0:
-            min_ = max_ = step_ = 0
-        else:
-            min_ = int(min([self.legs[0].strike, self.legs[1].strike])) - 10
-            max_ = int(max([self.legs[0].strike, self.legs[1].strike])) + 11
-            step_ = 1
+        dframe = self.legs[0].table - self.legs[1].table + self.analysis.amount
 
-        return min_, max_, step_
+        dframe.style.applymap(lambda x: 'color:red' if x is not str and x < 0 else 'color:black')
+
+        return dframe
 
 
     def calc_max_gain_loss(self):
-        pass
+        gain = loss = 0.0
+
+        if self.direction == 'long':
+            gain = abs(self.legs[0].strike - self.legs[1].strike)
+            loss = abs(self.analysis.amount)
+
+            if self.product == 'call':
+                self.analysis.sentiment = 'bullish'
+            else:
+                self.analysis.sentiment = 'bearish'
+        else:
+            gain = abs(self.analysis.amount)
+            loss = abs(self.legs[0].strike - self.legs[1].strike)
+
+            if self.product == 'call':
+                self.analysis.sentiment = 'bearish'
+            else:
+                self.analysis.sentiment = 'bullish'
+
+        return gain, loss
+
 
     def _validate(self):
-        '''TODO'''
-
         return len(self.legs) > 1

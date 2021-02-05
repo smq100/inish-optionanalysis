@@ -16,17 +16,19 @@ from utils import utils as u
 class Strategy(ABC):
     '''TODO'''
 
-    def __init__(self, ticker, direction='long'):
+    def __init__(self, ticker, product, direction):
         self.name = ''
         self.ticker = ticker
+        self.product = product
+        self.direction = direction
         self.analysis = Analysis()
         self.legs = []
-        self.initial_spot = 50.0
+        self.initial_spot = 0.0
 
         logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
         logging.info('Initializing Strategy ...')
 
-        self.initial_spot = self.get_current_spot(ticker)
+        self.initial_spot = self.get_current_spot(ticker, True)
 
 
     def __str__(self):
@@ -84,12 +86,16 @@ class Strategy(ABC):
         return success
 
 
-    def get_current_spot(self, ticker):
+    def get_current_spot(self, ticker, roundup=False):
         '''TODO'''
 
         expiry = datetime.datetime.today() + datetime.timedelta(days=10)
         pricer = MonteCarlo(ticker, expiry, self.initial_spot)
-        spot = math.ceil(pricer.spot_price)
+
+        if roundup:
+            spot = math.ceil(pricer.spot_price)
+        else:
+            spot = pricer.spot_price
 
         return spot
 
@@ -104,7 +110,7 @@ class Strategy(ABC):
         '''TODO'''
 
 
-    def calc_price_min_max_step(self):
+    def _calc_price_min_max_step(self):
         '''TODO'''
 
         min_ = max_ = step_ = 0
@@ -121,6 +127,7 @@ class Strategy(ABC):
                 min_ = step_
 
         return min_, max_, step_
+
 
     def _validate(self):
         '''TODO'''
@@ -210,7 +217,7 @@ class Leg:
 
         try:
             # Reset strike to spot value
-            self.strike = self.strategy.get_current_spot(ticker)
+            self.strike = self.strategy.get_current_spot(ticker, True)
             self.reset()
             return True
         except:
@@ -264,7 +271,7 @@ class Leg:
         dframe = pd.DataFrame()
 
         if self.price > 0.0:
-            cols, step = self.calc_date_cols_step()
+            cols, step = self._calc_date_step()
             if cols > 1:
                 row = []
                 table = []
@@ -281,7 +288,7 @@ class Leg:
                     col_index.append(str(today))
 
                 # Calculate cost of option every day till expiry
-                min_, max_, step_ = self.strategy.calc_price_min_max_step()
+                min_, max_, step_ = self.strategy._calc_price_min_max_step()
                 for spot in range(int(math.ceil(min_*40)), int(math.ceil(max_*40)), int(math.ceil(step_*40))):
                     spot /= 40.0
                     row = []
@@ -304,7 +311,18 @@ class Leg:
                     table.append(row)
 
                     # Create row index
-                    if spot > 200.0: spot = round(spot, 0)
+                    if spot > 500.0:
+                        spot = u.mround(spot, 10.0)
+                    elif spot > 100.0:
+                        spot = u.mround(spot, 1.00)
+                    elif spot > 50.0:
+                        spot = u.mround(spot, 0.50)
+                    elif spot > 20.0:
+                        spot = u.mround(spot, 0.10)
+                    else:
+                        spot = u.mround(spot, 0.01)
+
+
                     row_index.append(spot)
 
                 # Strip the time from the datetime string
@@ -338,13 +356,12 @@ class Leg:
         if rows > 0 and rows < srows:
             # Thin out rows
             step = int(math.ceil(srows/rows))
-            print(rows, srows, step)
             table = table.iloc[::step]
 
         return table
 
 
-    def calc_date_cols_step(self):
+    def _calc_date_step(self):
         ''' TODO '''
 
         cols = int(math.ceil(self.time_to_maturity * 365))
@@ -400,7 +417,7 @@ class Analysis:
             output = '\n'\
                 f'Type:      {self.credit_debit.title()}\n'\
                 f'Sentiment: {self.sentiment.title()}\n'\
-                f'Amount:    ${self.amount:.2f} {self.credit_debit}\n'\
+                f'Amount:    ${abs(self.amount):.2f} {self.credit_debit}\n'\
                 f'Max Gain:  {gain}\n'\
                 f'Max Loss:  {loss}\n'\
                 f'Breakeven: ${self.breakeven:.2f} at expiry\n'
