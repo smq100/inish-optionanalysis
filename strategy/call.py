@@ -45,10 +45,7 @@ class Call(Strategy):
             self.analysis.max_gain, self.analysis.max_loss = self.calc_max_gain_loss()
 
             # Calculate breakeven
-            if self.direction == 'long':
-                self.analysis.breakeven = self.legs[0].strike + self.analysis.amount
-            else:
-                self.analysis.breakeven = self.legs[0].strike - self.analysis.amount
+            self.analysis.breakeven = self.calc_breakeven()
 
 
     def generate_profit_table(self):
@@ -76,3 +73,11 @@ class Call(Strategy):
             max_loss = -1.0
 
         return max_gain, max_loss
+
+    def calc_breakeven(self):
+        if self.direction == 'long':
+            breakeven = self.legs[0].strike + self.analysis.amount
+        else:
+            breakeven = self.legs[0].strike - self.analysis.amount
+
+        return breakeven

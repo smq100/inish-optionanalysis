@@ -120,6 +120,7 @@ class Interface():
     def analyze(self):
         '''TODO'''
         self.strategy.analyze()
+        self.write_legs()
         self.plot_analysis()
 
 

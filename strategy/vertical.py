@@ -60,7 +60,7 @@ class Vertical(Strategy):
             self.analysis.max_gain, self.analysis.max_loss = self.calc_max_gain_loss()
 
             # Calculate breakeven
-            self.analysis.breakeven = -1.0
+            self.analysis.breakeven = self.calc_breakeven()
 
 
     def generate_profit_table(self):
@@ -94,6 +94,25 @@ class Vertical(Strategy):
                 self.analysis.sentiment = 'bullish'
 
         return gain, loss
+
+
+    def calc_breakeven(self):
+        if self.analysis.credit_debit == 'debit':
+            if self.product == 'call':
+                print('1')
+                breakeven = self.legs[1].strike + self.analysis.amount
+            else:
+                print('2')
+                breakeven = self.legs[1].strike + self.analysis.amount
+        else:
+            if self.product == 'call':
+                print('3')
+                breakeven = self.legs[1].strike - self.analysis.amount
+            else:
+                print('4')
+                breakeven = self.legs[1].strike - self.analysis.amount
+
+        return breakeven
 
 
     def _validate(self):

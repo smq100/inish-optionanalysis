@@ -110,6 +110,10 @@ class Strategy(ABC):
         '''TODO'''
 
 
+    @abc.abstractmethod
+    def calc_breakeven(self):
+        '''TODO'''
+
     def _calc_price_min_max_step(self):
         '''TODO'''
 
@@ -464,14 +468,3 @@ class Symbol:
         output = f'{self.ticker}@${self.spot:.2f}/{self.volatility*100:.1f}%'
 
         return output
-
-
-if __name__ == '__main__':
-    pd.options.display.float_format = '{:,.2f}'.format
-
-    strategy_ = Strategy()
-    leg_ = Leg()
-
-    strategy_.add_leg(leg_.quantity, leg_.call_put, leg_.long_short, leg_.strike, leg_.expiry)
-    strategy_.legs[0].calculate()
-    print(strategy_.legs[0].table)
