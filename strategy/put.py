@@ -27,7 +27,7 @@ class Put(Strategy):
         dframe = None
         legs = 0
 
-        if len(self.legs) > 0:
+        if self._validate():
             self.legs[0].calculate()
 
             # Calculate net debit or credit

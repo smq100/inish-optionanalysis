@@ -27,10 +27,14 @@ class Vertical(Strategy):
         dframe = None
         legs = 0
 
-        if len(self.legs) > 0:
-            legs = 2
+        if self._validate():
             self.legs[0].calculate()
             self.legs[1].calculate()
+
+            # Calculate net debit or credit
+            self.analysis.amount = self.legs[0].price * self.legs[0].quantity
+            self.analysis.amount = self.legs[1].price * self.legs[1].quantity
+
 
             if self.legs[0].long_short == 'long':
                 if self.legs[0].price > self.legs[1].price:
@@ -45,11 +49,10 @@ class Vertical(Strategy):
                 else:
                     self.analysis.credit_debit = 'debit'
 
+                # Combine the results of the legs
                 dframe = self.legs[1].table - self.legs[0].table
 
             self.analysis.table = dframe
-
-        return legs
 
 
     def generate_profit_table(self):
@@ -68,3 +71,8 @@ class Vertical(Strategy):
 
     def calc_max_gain_loss(self):
         pass
+
+    def _validate(self):
+        '''TODO'''
+
+        return len(self.legs) > 1

@@ -11,6 +11,7 @@ from utils import utils as u
 
 class Call(Strategy):
     '''TODO'''
+
     def __init__(self, ticker, direction='long'):
         super().__init__(ticker)
 
@@ -26,7 +27,7 @@ class Call(Strategy):
         dframe = None
         legs = 0
 
-        if len(self.legs) > 0:
+        if self._validate():
             self.legs[0].calculate()
 
             # Calculate net debit or credit

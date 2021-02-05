@@ -21,5 +21,10 @@ def delimeter(message, creturn=False):
 
     return output
 
+def mround(n, precision):
+    val = int(n / precision + 0.5) * precision
+    if val < 0.01: val = 0.01
+    return val
+
 def print_error(message, creturn=False):
     print(delimeter(f'Error: {message}', creturn))

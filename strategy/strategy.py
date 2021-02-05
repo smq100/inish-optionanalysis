@@ -110,14 +110,22 @@ class Strategy(ABC):
         min_ = max_ = step_ = 0
 
         if len(self.legs) > 0:
-            min_ = int(min(self.legs[0].strike, self.legs[0].symbol.spot)) - 10
-            max_ = int(max(self.legs[0].strike, self.legs[0].symbol.spot)) + 11
+            percent = 0.20
+            min_ = self.legs[0].symbol.spot * (1 - percent)
+            max_ = self.legs[0].symbol.spot * (1 + percent)
 
-            if min_ < 0:
-                min_ = 0
-            step_ = 1
+            step_ = (max_ - min_) / 40.0
+            step_ = u.mround(step_, step_ / 10.0)
+
+            if min_ < step_:
+                min_ = step_
 
         return min_, max_, step_
+
+    def _validate(self):
+        '''TODO'''
+
+        return len(self.legs) > 0
 
 
 class Leg:
@@ -158,6 +166,39 @@ class Leg:
             output = f'{self.symbol.ticker} leg not yet calculated'
 
         return output
+
+
+    def calculate(self, pricing_method='black-scholes'):
+        '''TODO'''
+
+        if pricing_method is not None:
+            self.pricing_method = pricing_method
+
+        price = 0.0
+
+        if self._validate():
+            if self.pricing_method == 'monte-carlo':
+                self.pricer = MonteCarlo(self.symbol.ticker, self.expiry, self.strike)
+            else:
+                self.pricer = BlackScholes(self.symbol.ticker, self.expiry, self.strike)
+
+            price_call, price_put = self.pricer.calculate_prices()
+            self.symbol.spot = self.pricer.spot_price
+            self.symbol.volatility = self.pricer.volatility
+            self.time_to_maturity = self.pricer.time_to_maturity
+            self.symbol.short_name = self.pricer.short_name
+
+            if self.call_put == 'call':
+                price = self.price = price_call
+            else:
+                price = self.price = price_put
+
+            logging.info('Option price = ${:.2f} '.format(price))
+
+            self.table = self.generate_value_table()
+
+        return price
+
 
     def modify_symbol(self, ticker, volatility=-1.0, dividend=0.0):
         '''TODO'''
@@ -205,37 +246,6 @@ class Leg:
         self.pricer = None
         self.calculate()
 
-    def calculate(self, pricing_method='black-scholes'):
-        '''TODO'''
-
-        if pricing_method is not None:
-            self.pricing_method = pricing_method
-
-        price = 0.0
-
-        if self.validate():
-            if self.pricing_method == 'monte-carlo':
-                self.pricer = MonteCarlo(self.symbol.ticker, self.expiry, self.strike)
-            else:
-                self.pricer = BlackScholes(self.symbol.ticker, self.expiry, self.strike)
-
-            price_call, price_put = self.pricer.calculate_prices()
-            self.symbol.spot = self.pricer.spot_price
-            self.symbol.volatility = self.pricer.volatility
-            self.time_to_maturity = self.pricer.time_to_maturity
-            self.symbol.short_name = self.pricer.short_name
-
-            if self.call_put == 'call':
-                price = self.price = price_call
-            else:
-                price = self.price = price_put
-
-            logging.info('Option price = ${:.2f} '.format(price))
-
-            self.table = self.generate_value_table()
-
-        return price
-
 
     def recalculate(self, spot_price, time_to_maturity):
         '''TODO'''
@@ -272,7 +282,8 @@ class Leg:
 
                 # Calculate cost of option every day till expiry
                 min_, max_, step_ = self.strategy.calc_price_min_max_step()
-                for spot in range(min_, max_, step_):
+                for spot in range(int(math.ceil(min_*40)), int(math.ceil(max_*40)), int(math.ceil(step_*40))):
+                    spot /= 40.0
                     row = []
                     for item in col_index:
                         maturity_date = datetime.datetime.strptime(item, '%Y-%m-%d %H:%M:%S')
@@ -290,8 +301,11 @@ class Leg:
                         else:
                             row.append(price_put)
 
-                    row_index.append(spot)
                     table.append(row)
+
+                    # Create row index
+                    if spot > 200.0: spot = round(spot, 0)
+                    row_index.append(spot)
 
                 # Strip the time from the datetime string
                 for index, item in enumerate(col_index):
@@ -339,12 +353,12 @@ class Leg:
         return cols, step
 
 
-    def validate(self):
+    def _validate(self):
         '''TODO'''
 
         valid = False
 
-        if (len(self.symbol.ticker) > 0):
+        if self.symbol.ticker:
             valid = True
 
         # Check for valid method

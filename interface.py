@@ -17,14 +17,15 @@ MAX_COLS = 18
 class Interface():
     '''TODO'''
 
-    def __init__(self, ticker, strategy=None, direction=None, script=None):
+    def __init__(self, ticker, strategy=None, direction=None, script=None, exit=False):
         pd.options.display.float_format = '{:,.2f}'.format
 
         ticker = ticker.upper()
 
         if strategy is not None:
             if self._load_strategy(ticker, strategy, direction):
-                self.main_menu()
+                if not exit:
+                    self.main_menu()
         elif script is not None:
             if os.path.exists(script):
                 try:
@@ -36,8 +37,11 @@ class Interface():
             else:
                 u.print_error(f'File "{script}" not found')
         else:
-            self.strategy = Call(ticker)
-            self.main_menu()
+            if not exit:
+                self.strategy = Call(ticker)
+                self.main_menu()
+            else:
+                u.print_error('Nothing to do')
 
 
     def main_menu(self):
@@ -414,24 +418,24 @@ class Interface():
     def _load_strategy(self, ticker, strategy, direction):
         modified = False
 
-        try:
-            if strategy.lower() == 'call':
-                modified = True
-                self.strategy = Call(ticker, direction)
-                self.analyze()
-            elif strategy.lower() == 'put':
-                modified = True
-                self.strategy = Put(ticker, direction)
-                self.analyze()
-            elif strategy.lower() == 'vertical':
-                modified = True
-                self.strategy = Vertical(ticker, direction)
-                self.analyze()
-            else:
-                u.print_error('Unknown argument')
-        except:
-            u.print_error(sys.exc_info()[1], True)
-            return False
+        # try:
+        if strategy.lower() == 'call':
+            modified = True
+            self.strategy = Call(ticker, direction)
+            self.analyze()
+        elif strategy.lower() == 'put':
+            modified = True
+            self.strategy = Put(ticker, direction)
+            self.analyze()
+        elif strategy.lower() == 'vertical':
+            modified = True
+            self.strategy = Vertical(ticker, direction)
+            self.analyze()
+        else:
+            u.print_error('Unknown argument')
+        # except:
+        #     u.print_error(sys.exc_info()[1], True)
+        #     return False
 
         return modified
 
@@ -448,6 +452,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Option Strategy Analyzer')
     subparser = parser.add_subparsers(help='Specify a command')
 
+    parser.add_argument('-x', '--exit', help='Exit after running running analysis', action='store_true', required=False, default=False)
+
     # Create the parser for the "load" command
     parser_a = subparser.add_parser('load', help='Loads a strategy and direction')
     parser_a.add_argument('-t', '--ticker', help='Specify the ticker symbol', required=False, default='IBM')
@@ -461,8 +467,8 @@ if __name__ == '__main__':
     command = vars(parser.parse_args())
 
     if 'strategy' in command.keys():
-        Interface(ticker=command['ticker'], strategy=command['strategy'], direction=command['direction'])
+        Interface(ticker=command['ticker'], strategy=command['strategy'], direction=command['direction'], exit=command['exit'])
     elif 'script' in command.keys():
-        Interface('FB', script=command['script'])
+        Interface('FB', script=command['script'], exit=command['exit'])
     else:
-        Interface('MSFT')
+        Interface('MSFT', exit=command['exit'])

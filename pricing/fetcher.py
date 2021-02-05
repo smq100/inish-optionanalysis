@@ -24,6 +24,7 @@ def get_company_info(ticker):
 
     return yf.Ticker(ticker)
 
+
 def validate_ticker(ticker):
     '''Perform quick check to see if a ticker is valid'''
 
