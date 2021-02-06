@@ -22,6 +22,7 @@ class Interface():
         pd.options.display.float_format = '{:,.2f}'.format
 
         ticker = ticker.upper()
+        self.chain = Chain(ticker)
 
         if auto is not None:
             if self._load_strategy(ticker, auto, direction):
@@ -63,7 +64,7 @@ class Interface():
 
             self.write_legs()
 
-            print('\nSelect Option')
+            print('\nSelect Operation')
             print('-------------------------')
 
             option = menu_items.keys()
@@ -73,9 +74,9 @@ class Interface():
             selection = input('Please select: ')
 
             if selection == '1':
-                self.enter_symbol()
+                self.select_symbol()
             elif selection == '2':
-                self.enter_strategy()
+                self.select_strategy()
             elif selection == '3':
                 if len(self.strategy.legs) > 0:
                     if self.calculate():
@@ -103,9 +104,9 @@ class Interface():
                 else:
                     self.plot_value(0)
             elif selection == '7':
-                self.enter_chains()
+                self.select_chain_operation()
             elif selection == '8':
-                self.enter_settings()
+                self.select_settings()
             elif selection == '9':
                 break
             else:
@@ -213,7 +214,7 @@ class Interface():
         self.strategy.reset()
 
 
-    def enter_symbol(self):
+    def select_symbol(self):
         '''TODO'''
         success = True
         ticker = input('Please enter symbol: ').upper()
@@ -248,7 +249,7 @@ class Interface():
         return self.strategy.set_symbol(ticker, vol, div)
 
 
-    def enter_strategy(self):
+    def select_strategy(self):
         '''TODO'''
 
         menu_items = {
@@ -260,7 +261,7 @@ class Interface():
 
         modified = False
         while True:
-            print('\nSelect Strategy')
+            print('\nSelect strategy')
             print('---------------------')
 
             option = menu_items.keys()
@@ -313,7 +314,7 @@ class Interface():
 
             self.write_legs()
 
-            print('\nSpecify Leg')
+            print('\nSelect leg')
             print('-------------------------')
 
             option = menu_items.keys()
@@ -363,22 +364,19 @@ class Interface():
         return changed
 
 
-    def enter_chains(self):
-        chain = Chain(self.strategy.ticker)
-        exp = chain.get()
-        print(exp)
-
-
-    def enter_settings(self):
-        '''TODO'''
-
-        menu_items = {
-            '1': 'Pricing Method',
-            '2': 'Cancel',
-        }
-
+    def select_chain_operation(self):
         while True:
-            print('\nSpecify Option')
+            if self.chain.expire is not None:
+                expiry = self.chain.expire
+            else:
+                expiry = 'None selected'
+
+            menu_items = {
+                '1': f'Select Expiry Date ({expiry})',
+                '2': 'Done',
+            }
+
+            print('\nSelect operation')
             print('-------------------------')
 
             option = menu_items.keys()
@@ -388,12 +386,48 @@ class Interface():
             selection = input('Please select: ')
 
             if selection == '1':
-                self.enter_method()
+                self.select_chain_expiry()
             elif selection == '2':
                 break
 
 
-    def enter_method(self):
+    def select_chain_expiry(self):
+        expiry = self.chain.get_expiry()
+
+        print('')
+        for index, exp in enumerate(expiry):
+            print(f'{index+1})\t{exp}')
+
+        select = int(input('Select date, or 0 to cancel: '))
+        if select > 0:
+            self.chain.expire = expiry[select-1]
+
+
+    def select_settings(self):
+        '''TODO'''
+
+        menu_items = {
+            '1': 'Pricing Method',
+            '2': 'Cancel',
+        }
+
+        while True:
+            print('\nSelect Setting')
+            print('-------------------------')
+
+            option = menu_items.keys()
+            for entry in option:
+                print(f'{entry})\t{menu_items[entry]}')
+
+            selection = input('Please select: ')
+
+            if selection == '1':
+                self.select_method()
+            elif selection == '2':
+                break
+
+
+    def select_method(self):
         '''TODO'''
 
         menu_items = {
@@ -404,7 +438,7 @@ class Interface():
 
         modified = True
         while True:
-            print('\nSpecify Method')
+            print('\nSelect method')
             print('-------------------------')
 
             option = menu_items.keys()
@@ -466,7 +500,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Option Strategy Analyzer')
     subparser = parser.add_subparsers(help='Specify the desired command')
 
-    parser.add_argument('-x', '--exit', help='Exit after running running analysis', action='store_true', required=False, default=False)
+    parser.add_argument('-x', '--exit', help='Exit after running loaded strategy or script', action='store_true', required=False, default=False)
 
     # Create the parser for the "load" command
     parser_a = subparser.add_parser('load', help='Loads a strategy and direction')

@@ -9,10 +9,12 @@ class Chain():
     def __init__(self, ticker):
         self.ticker = ticker
         self.company = None
+        self.expire = None
 
-    def get(self):
-        self.company = None
+    def get_expiry(self):
+        ret = self.company = None
         if validate_ticker(self.ticker):
             self.company = get_company_info(self.ticker)
+            ret = self.company.options
 
-        return self.company.options
+        return ret
