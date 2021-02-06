@@ -1,4 +1,5 @@
 ''' Data fetcher'''
+
 import datetime
 import logging
 import configparser

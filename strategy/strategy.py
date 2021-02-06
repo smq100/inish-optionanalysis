@@ -32,15 +32,15 @@ class Strategy(ABC):
 
 
     def __str__(self):
-        return 'Strategy base class'
+        return 'Strategy abstract base class'
 
 
     def calculate(self):
         '''TODO'''
 
+        # Calculate all legs
         for leg in self.legs:
             leg.calculate()
-
 
     @abc.abstractmethod
     def analyze(self):
@@ -188,11 +188,13 @@ class Leg:
         price = 0.0
 
         if self._validate():
+            # Build the pricer
             if self.pricing_method == 'monte-carlo':
                 self.pricer = MonteCarlo(self.symbol.ticker, self.expiry, self.strike)
             else:
                 self.pricer = BlackScholes(self.symbol.ticker, self.expiry, self.strike)
 
+            # Calculate prices
             price_call, price_put = self.pricer.calculate_prices()
             self.symbol.spot = self.pricer.spot_price
             self.symbol.volatility = self.pricer.volatility
@@ -204,9 +206,10 @@ class Leg:
             else:
                 price = self.price = price_put
 
-            logging.info('Option price = ${:.2f} '.format(price))
-
+            # Generate the values table
             self.table = self.generate_value_table()
+
+            logging.info('Option price = ${:.2f} '.format(price))
 
         return price
 

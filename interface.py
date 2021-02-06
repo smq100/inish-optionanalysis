@@ -9,6 +9,7 @@ from strategy.strategy import Leg
 from strategy.call import Call
 from strategy.put import Put
 from strategy.vertical import Vertical
+from chain.chain import Chain
 from utils import utils as u
 
 MAX_ROWS = 50
@@ -17,13 +18,13 @@ MAX_COLS = 18
 class Interface():
     '''TODO'''
 
-    def __init__(self, ticker, strategy, direction, script=None, exit=False):
+    def __init__(self, ticker, strategy, direction, auto=None, script=None, exit=False):
         pd.options.display.float_format = '{:,.2f}'.format
 
         ticker = ticker.upper()
 
-        if strategy is not None:
-            if self._load_strategy(ticker, strategy, direction):
+        if auto is not None:
+            if self._load_strategy(ticker, auto, direction):
                 if not exit:
                     self.main_menu()
         elif script is not None:
@@ -51,12 +52,13 @@ class Interface():
             menu_items = {
                 '1': f'Specify Symbol ({self.strategy.ticker})',
                 '2': f'Specify Strategy ({self.strategy})',
-                '3': 'Analyze Stategy',
-                '4': 'Modify Leg',
-                '5': 'Calculate Values',
+                '3': 'Calculate Values',
+                '4': 'Analyze Stategy',
+                '5': 'Modify Leg',
                 '6': 'Plot Leg Values',
-                '7': 'Options',
-                '8': 'Exit'
+                '7': 'Option Chains',
+                '8': 'Settings',
+                '9': 'Exit'
             }
 
             self.write_legs()
@@ -73,11 +75,14 @@ class Interface():
             if selection == '1':
                 self.enter_symbol()
             elif selection == '2':
-                if self.enter_strategy():
-                    self.calculate()
+                self.enter_strategy()
             elif selection == '3':
-                self.analyze()
+                if len(self.strategy.legs) > 0:
+                    if self.calculate():
+                        self.plot_value(0)
             elif selection == '4':
+                self.analyze()
+            elif selection == '5':
                 if len(self.strategy.legs) < 1:
                     print('No legs configured')
                 elif len(self.strategy.legs) > 1:
@@ -89,10 +94,6 @@ class Interface():
                     if self.modify_leg(0):
                         if self.calculate():
                             self.plot_value(0)
-            elif selection == '5':
-                if len(self.strategy.legs) > 0:
-                    if self.calculate():
-                        self.plot_value(0)
             elif selection == '6':
                 if len(self.strategy.legs) < 1:
                     print('No legs configured')
@@ -102,8 +103,10 @@ class Interface():
                 else:
                     self.plot_value(0)
             elif selection == '7':
-                self.enter_options()
+                self.enter_chains()
             elif selection == '8':
+                self.enter_settings()
+            elif selection == '9':
                 break
             else:
                 u.print_error('Unknown operation selected')
@@ -360,7 +363,13 @@ class Interface():
         return changed
 
 
-    def enter_options(self):
+    def enter_chains(self):
+        chain = Chain(self.strategy.ticker)
+        exp = chain.get()
+        print(exp)
+
+
+    def enter_settings(self):
         '''TODO'''
 
         menu_items = {
@@ -416,31 +425,31 @@ class Interface():
             u.print_error('Unknown method selected')
 
 
-    def _load_strategy(self, ticker, strategy, direction):
+    def _load_strategy(self, ticker, name, direction):
         modified = False
 
-        # try:
-        if strategy.lower() == 'call':
-            modified = True
-            self.strategy = Call(ticker, 'call', direction)
-            self.analyze()
-        elif strategy.lower() == 'put':
-            modified = True
-            self.strategy = Put(ticker, 'put', direction)
-            self.analyze()
-        elif strategy.lower() == 'vertc':
-            modified = True
-            self.strategy = Vertical(ticker, 'call', direction)
-            self.analyze()
-        elif strategy.lower() == 'vertp':
-            modified = True
-            self.strategy = Vertical(ticker, 'put', direction)
-            self.analyze()
-        else:
-            u.print_error('Unknown argument')
-        # except:
-        #     u.print_error(sys.exc_info()[1], True)
-        #     return False
+        try:
+            if name.lower() == 'call':
+                modified = True
+                self.strategy = Call(ticker, 'call', direction)
+                self.analyze()
+            elif name.lower() == 'put':
+                modified = True
+                self.strategy = Put(ticker, 'put', direction)
+                self.analyze()
+            elif name.lower() == 'vertc':
+                modified = True
+                self.strategy = Vertical(ticker, 'call', direction)
+                self.analyze()
+            elif name.lower() == 'vertp':
+                modified = True
+                self.strategy = Vertical(ticker, 'put', direction)
+                self.analyze()
+            else:
+                u.print_error('Unknown argument')
+        except:
+            u.print_error(sys.exc_info()[1], True)
+            return False
 
         return modified
 
@@ -462,7 +471,7 @@ if __name__ == '__main__':
     # Create the parser for the "load" command
     parser_a = subparser.add_parser('load', help='Loads a strategy and direction')
     parser_a.add_argument('-t', '--ticker', help='Specify the ticker symbol', required=False, default='IBM')
-    parser_a.add_argument('-s', '--strategy', help='Load and analyze strategy', required=False, choices=['call', 'put', 'vertc', 'vertp'], default='call')
+    parser_a.add_argument('-s', '--strategy', help='Load and analyze strategy', required=False, choices=['call', 'put', 'vertc', 'vertp'], default=None)
     parser_a.add_argument('-d', '--direction', help='Specify the direction', required=False, choices=['long', 'short'], default='long')
 
     # Create the parser for the "execute" command
@@ -472,7 +481,7 @@ if __name__ == '__main__':
     command = vars(parser.parse_args())
 
     if 'strategy' in command.keys():
-        Interface(ticker=command['ticker'], strategy=command['strategy'], direction=command['direction'], exit=command['exit'])
+        Interface(ticker=command['ticker'], strategy='call', direction=command['direction'], auto=command['strategy'], exit=command['exit'])
     elif 'script' in command.keys():
         Interface('FB', 'call', 'long', script=command['script'], exit=command['exit'])
     else:
