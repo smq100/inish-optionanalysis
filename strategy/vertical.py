@@ -17,7 +17,7 @@ class Vertical(Strategy):
 
         self.name = 'vertical'
 
-        # Add legs (long leg is first)
+        # Add legs (long leg is always first)
         if product == 'call':
             if direction == 'long':
                 self.add_leg(1, product, 'long', self.initial_spot)
@@ -50,8 +50,8 @@ class Vertical(Strategy):
                 self.analysis.credit_debit = 'credit'
 
             # Calculate net debit or credit
-            self.analysis.amount = self.legs[1].price * self.legs[1].quantity
-            self.analysis.amount -= (self.legs[0].price * self.legs[0].quantity)
+            self.analysis.amount = self.legs[1].option.price * self.legs[1].quantity
+            self.analysis.amount -= (self.legs[0].option.price * self.legs[0].quantity)
 
             # Generate profit table
             self.analysis.table = self.generate_profit_table()
@@ -77,7 +77,7 @@ class Vertical(Strategy):
         gain = loss = 0.0
 
         if self.direction == 'long':
-            gain = abs(self.legs[0].strike - self.legs[1].strike)
+            gain = abs(self.legs[0].option.strike - self.legs[1].option.strike)
             loss = abs(self.analysis.amount)
 
             if self.product == 'call':
@@ -86,7 +86,7 @@ class Vertical(Strategy):
                 self.analysis.sentiment = 'bearish'
         else:
             gain = abs(self.analysis.amount)
-            loss = abs(self.legs[0].strike - self.legs[1].strike)
+            loss = abs(self.legs[0].option.strike - self.legs[1].option.strike)
 
             if self.product == 'call':
                 self.analysis.sentiment = 'bearish'
@@ -100,17 +100,17 @@ class Vertical(Strategy):
         if self.analysis.credit_debit == 'debit':
             if self.product == 'call':
                 print('1')
-                breakeven = self.legs[1].strike + self.analysis.amount
+                breakeven = self.legs[1].option.strike + self.analysis.amount
             else:
                 print('2')
-                breakeven = self.legs[1].strike + self.analysis.amount
+                breakeven = self.legs[1].option.strike + self.analysis.amount
         else:
             if self.product == 'call':
                 print('3')
-                breakeven = self.legs[1].strike - self.analysis.amount
+                breakeven = self.legs[1].option.strike - self.analysis.amount
             else:
                 print('4')
-                breakeven = self.legs[1].strike - self.analysis.amount
+                breakeven = self.legs[1].option.strike - self.analysis.amount
 
         return breakeven
 

@@ -36,7 +36,7 @@ class Call(Strategy):
                 self.analysis.credit_debit = 'credit'
 
             # Calculate net debit or credit
-            self.analysis.amount = self.legs[0].price * self.legs[0].quantity
+            self.analysis.amount = self.legs[0].option.price * self.legs[0].quantity
 
             # Generate profit table
             self.analysis.table = self.generate_profit_table()
@@ -49,7 +49,7 @@ class Call(Strategy):
 
 
     def generate_profit_table(self):
-        price = self.legs[0].price
+        price = self.legs[0].option.price
 
         if self.direction == 'long':
             dframe = self.legs[0].table - price
@@ -66,18 +66,18 @@ class Call(Strategy):
         if self.direction == 'long':
             self.analysis.sentiment = 'bullish'
             max_gain = -1.0
-            max_loss = self.legs[0].price
+            max_loss = self.legs[0].option.price
         else:
             self.analysis.sentiment = 'bearish'
-            max_gain = self.legs[0].price
+            max_gain = self.legs[0].option.price
             max_loss = -1.0
 
         return max_gain, max_loss
 
     def calc_breakeven(self):
         if self.direction == 'long':
-            breakeven = self.legs[0].strike + self.analysis.amount
+            breakeven = self.legs[0].option.strike + self.analysis.amount
         else:
-            breakeven = self.legs[0].strike - self.analysis.amount
+            breakeven = self.legs[0].option.strike - self.analysis.amount
 
         return breakeven

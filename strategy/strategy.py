@@ -144,10 +144,9 @@ class Strategy(ABC):
 class Leg:
     '''TODO'''
 
-    def __init__(self, strategy, ticker, quantity=1, call_put='call', long_short='long', strike=130.0, expiry=None):
+    def __init__(self, strategy, ticker, quantity=1, call_put='call', long_short='long', strike=100.0, expiry=None):
         self.symbol = Symbol(ticker)
-        self.option = Option()
-
+        self.option = Option(strike)
         self.strategy = strategy
         self.quantity = quantity
         self.call_put = call_put
@@ -156,29 +155,23 @@ class Leg:
         self.pricer = None
         self.table = None
 
-        self.symbol = Symbol(ticker)
-        self.option = Option()
-        self.strike = strike
-        self.price = 0.0
-        self.time_to_maturity = 0.0
-
         if expiry is None:
             self.expiry = datetime.datetime.today() + datetime.timedelta(days=10)
         else:
             self.expiry = expiry
 
     def __str__(self):
-        if self.price > 0.0:
+        if self.option.price > 0.0:
             output = f'{self.quantity} '\
             f'{self.symbol.ticker}@${self.symbol.spot:.2f} '\
             f'{self.long_short:5s} '\
             f'{self.call_put:5s} '\
-            f'${self.strike:.2f} for '\
+            f'${self.option.strike:.2f} for '\
             f'{str(self.expiry)[:10]}'\
-            f' = ${self.price*self.quantity:.2f}'
+            f' = ${self.option.price*self.quantity:.2f}'
 
             if self.quantity > 1:
-                output += f' (${self.price:.2f} each)'
+                output += f' (${self.option.price:.2f} each)'
         else:
             output = f'{self.symbol.ticker} leg not yet calculated'
 
@@ -196,21 +189,21 @@ class Leg:
         if self._validate():
             # Build the pricer
             if self.pricing_method == 'monte-carlo':
-                self.pricer = MonteCarlo(self.symbol.ticker, self.expiry, self.strike)
+                self.pricer = MonteCarlo(self.symbol.ticker, self.expiry, self.option.strike)
             else:
-                self.pricer = BlackScholes(self.symbol.ticker, self.expiry, self.strike)
+                self.pricer = BlackScholes(self.symbol.ticker, self.expiry, self.option.strike)
 
             # Calculate prices
             price_call, price_put = self.pricer.calculate_prices()
             self.symbol.spot = self.pricer.spot_price
             self.symbol.volatility = self.pricer.volatility
-            self.time_to_maturity = self.pricer.time_to_maturity
+            self.option.time_to_maturity = self.pricer.time_to_maturity
             self.symbol.short_name = self.pricer.short_name
 
             if self.call_put == 'call':
-                price = self.price = price_call
+                price = self.option.price = price_call
             else:
-                price = self.price = price_put
+                price = self.option.price = price_put
 
             # Generate the values table
             self.table = self.generate_value_table()
@@ -224,18 +217,18 @@ class Leg:
         '''TODO'''
 
         symbol = self.symbol
-        strike = self.strike
+        strike = self.option.strike
 
         self.symbol = Symbol(ticker, volatility, dividend)
 
         try:
             # Reset strike to spot value
-            self.strike = self.strategy.get_current_spot(ticker, True)
+            self.option.strike = self.strategy.get_current_spot(ticker, True)
             self.reset()
             return True
         except:
             self.symbol = symbol
-            self.strike = strike
+            self.option.strike = strike
             u.print_error(sys.exc_info()[1])
             return False
 
@@ -246,7 +239,7 @@ class Leg:
         self.quantity = quantity
         self.call_put = call_put
         self.long_short = long_short
-        self.strike = strike
+        self.option.strike = strike
 
         if expiry is None:
             self.expiry = datetime.datetime.today() + datetime.timedelta(days=10)
@@ -283,7 +276,7 @@ class Leg:
 
         dframe = pd.DataFrame()
 
-        if self.price > 0.0:
+        if self.option.price > 0.0:
             cols, step = self._calc_date_step()
             if cols > 1:
                 row = []
@@ -377,7 +370,7 @@ class Leg:
     def _calc_date_step(self):
         ''' TODO '''
 
-        cols = int(math.ceil(self.time_to_maturity * 365))
+        cols = int(math.ceil(self.option.time_to_maturity * 365))
         step = 1
 
         return cols, step
