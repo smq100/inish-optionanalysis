@@ -9,7 +9,7 @@ from strategy.strategy import Leg
 from strategy.call import Call
 from strategy.put import Put
 from strategy.vertical import Vertical
-from chain.chain import Chain
+from options.chain import Chain
 from utils import utils as u
 
 MAX_ROWS = 50
@@ -373,7 +373,9 @@ class Interface():
 
             menu_items = {
                 '1': f'Select Expiry Date ({expiry})',
-                '2': 'Done',
+                '2': f'Select Calls',
+                '3': f'Select Puts',
+                '4': 'Done',
             }
 
             print('\nSelect operation')
@@ -387,8 +389,38 @@ class Interface():
 
             if selection == '1':
                 self.select_chain_expiry()
-            elif selection == '2':
+            if selection == '2':
+                self.select_option('call')
+            if selection == '3':
+                self.select_option('put')
+            elif selection == '4':
                 break
+
+
+    def select_option(self, product):
+        options = None
+        if self.chain.expire is None:
+            u.print_error('No expiry date delected')
+        elif product == 'call':
+            options = self.chain.get_chain('call')
+        elif product == 'put':
+            options = self.chain.get_chain('put')
+
+        if options is not None:
+            print('')
+            for index, row in options.iterrows():
+                info = f'{index+1})\t'\
+                    f'${row["strike"]:7.2f} '\
+                    f'${row["lastPrice"]:7.2f} '\
+                    f'ITM: {bool(row["inTheMoney"])}'
+                print(info)
+
+            select = int(input('Select option, or 0 to cancel: '))
+            if select > 0:
+                sel_row = options.iloc[select-1]
+                print(sel_row)
+        else:
+            u.print_error('Invalid selection')
 
 
     def select_chain_expiry(self):

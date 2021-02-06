@@ -9,6 +9,8 @@ import logging
 
 import pandas as pd
 
+from .symbol import Symbol
+from options.option import Option
 from pricing.blackscholes import BlackScholes
 from pricing.montecarlo import MonteCarlo
 from utils import utils as u
@@ -143,18 +145,22 @@ class Leg:
     '''TODO'''
 
     def __init__(self, strategy, ticker, quantity=1, call_put='call', long_short='long', strike=130.0, expiry=None):
+        self.symbol = Symbol(ticker)
+        self.option = Option()
+
         self.strategy = strategy
         self.quantity = quantity
         self.call_put = call_put
         self.long_short = long_short
-
-        self.symbol = Symbol(ticker)
-        self.strike = strike
-        self.price = 0.0
-        self.time_to_maturity = 0
         self.pricing_method = 'black-scholes'
         self.pricer = None
         self.table = None
+
+        self.symbol = Symbol(ticker)
+        self.option = Option()
+        self.strike = strike
+        self.price = 0.0
+        self.time_to_maturity = 0.0
 
         if expiry is None:
             self.expiry = datetime.datetime.today() + datetime.timedelta(days=10)
@@ -454,20 +460,3 @@ class Analysis:
                 table = table.iloc[::step]
 
         return table
-
-
-class Symbol:
-    '''TODO'''
-
-    def __init__(self, ticker, dividend=0.0, volatility=-1.0):
-        self.ticker = ticker
-        self.dividend = dividend
-        self.volatility = volatility
-        self.spot = 0.0
-        self.short_name = 'unknown'
-
-
-    def __str__(self):
-        output = f'{self.ticker}@${self.spot:.2f}/{self.volatility*100:.1f}%'
-
-        return output
