@@ -50,8 +50,8 @@ class Vertical(Strategy):
                 self.analysis.credit_debit = 'credit'
 
             # Calculate net debit or credit
-            self.analysis.amount = self.legs[1].option.price * self.legs[1].quantity
-            self.analysis.amount -= (self.legs[0].option.price * self.legs[0].quantity)
+            self.analysis.amount = self.legs[1].option.calc_price * self.legs[1].quantity
+            self.analysis.amount -= (self.legs[0].option.calc_price * self.legs[0].quantity)
 
             # Generate profit table
             self.analysis.table = self.generate_profit_table()

@@ -50,4 +50,4 @@ def get_contract(contract_symbol):
         chain = company.option_chain(expiry).puts
     contract = chain.loc[chain['contractSymbol'] == contract_symbol]
 
-    return contract
+    return contract.iloc[0]

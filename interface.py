@@ -418,8 +418,7 @@ class Interface():
             select = int(input('Select option, or 0 to cancel: '))
             if select > 0:
                 sel_row = options.iloc[select-1]
-                self.strategy.legs[0].option.load_option(sel_row['contractSymbol'])
-                print(sel_row)
+                self.strategy.legs[0].option.load_contract(sel_row['contractSymbol'])
                 print(self.strategy.legs[0].option)
         else:
             u.print_error('Invalid selection')

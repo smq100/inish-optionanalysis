@@ -161,17 +161,17 @@ class Leg:
             self.expiry = expiry
 
     def __str__(self):
-        if self.option.price > 0.0:
+        if self.option.calc_price > 0.0:
             output = f'{self.quantity} '\
             f'{self.symbol.ticker}@${self.symbol.spot:.2f} '\
             f'{self.long_short:5s} '\
             f'{self.call_put:5s} '\
             f'${self.option.strike:.2f} for '\
             f'{str(self.expiry)[:10]}'\
-            f' = ${self.option.price*self.quantity:.2f}'
+            f' = ${self.option.calc_price * self.quantity:.2f}'
 
             if self.quantity > 1:
-                output += f' (${self.option.price:.2f} each)'
+                output += f' (${self.option.calc_price:.2f} each)'
         else:
             output = f'{self.symbol.ticker} leg not yet calculated'
 
@@ -201,9 +201,9 @@ class Leg:
             self.symbol.short_name = self.pricer.short_name
 
             if self.call_put == 'call':
-                price = self.option.price = price_call
+                price = self.option.calc_price = price_call
             else:
-                price = self.option.price = price_put
+                price = self.option.calc_price = price_put
 
             # Generate the values table
             self.table = self.generate_value_table()
@@ -276,7 +276,7 @@ class Leg:
 
         dframe = pd.DataFrame()
 
-        if self.option.price > 0.0:
+        if self.option.calc_price > 0.0:
             cols, step = self._calc_date_step()
             if cols > 1:
                 row = []
