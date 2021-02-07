@@ -296,8 +296,9 @@ class Interface():
         quantity = self.strategy.legs[leg].quantity
         call_put = self.strategy.legs[leg].call_put
         long_short = self.strategy.legs[leg].long_short
-        strike = self.strategy.legs[leg].strike
-        expiry = self.strategy.legs[leg].expiry
+        strike = self.strategy.legs[leg].option.strike
+        expiry = self.strategy.legs[leg].option.expiry
+        print(expiry)
 
         changed = False
 
@@ -307,7 +308,7 @@ class Interface():
                 '2': f'Call/Put ({call_put})',
                 '3': f'Buy/Write ({long_short})',
                 '4': f'Strike (${strike:.2f})',
-                '5': f'Expiration ({expiry:%Y/%m/%d})',
+                '5': f'Expiration ({expiry:%Y-%m-%d})',
                 '6': 'Done',
                 '7': 'Cancel',
             }

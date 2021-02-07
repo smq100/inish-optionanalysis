@@ -17,17 +17,17 @@ contractSize
 currency
 '''
 
-
+import datetime
 from .chain import get_contract
 from utils import utils as u
 
 
 class Option():
-    def __init__(self, strike):
+    def __init__(self, strike, expiry):
         self.ticker = ''
         self.product = ''
         self.strike = strike
-        self.expiry = ''
+        self.expiry = expiry
         self.time_to_maturity = 0.0
         self.calc_price = 0.0
 
@@ -44,6 +44,9 @@ class Option():
         self.itm = False
         self.contract_size = ''
         self.currency = ''
+
+        if self.expiry is None:
+            self.expiry = datetime.datetime.today() + datetime.timedelta(days=10)
 
 
     def __str__(self):

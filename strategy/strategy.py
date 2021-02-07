@@ -66,7 +66,7 @@ class Strategy(ABC):
         # Add one day to act as expiry value
         expiry += datetime.timedelta(days=1)
 
-        leg = Leg(self, self.ticker, quantity, call_put, long_short, strike, expiry)
+        leg = Leg(self,     self.ticker, quantity, call_put, long_short, strike, expiry)
         self.legs.append(leg)
 
         return len(self.legs)
@@ -144,9 +144,9 @@ class Strategy(ABC):
 class Leg:
     '''TODO'''
 
-    def __init__(self, strategy, ticker, quantity=1, call_put='call', long_short='long', strike=100.0, expiry=None):
+    def __init__(self, strategy, ticker, quantity, call_put, long_short, strike, expiry):
         self.symbol = Symbol(ticker)
-        self.option = Option(strike)
+        self.option = Option(strike, expiry)
         self.strategy = strategy
         self.quantity = quantity
         self.call_put = call_put
@@ -155,10 +155,6 @@ class Leg:
         self.pricer = None
         self.table = None
 
-        if expiry is None:
-            self.expiry = datetime.datetime.today() + datetime.timedelta(days=10)
-        else:
-            self.expiry = expiry
 
     def __str__(self):
         if self.option.calc_price > 0.0:
@@ -167,7 +163,7 @@ class Leg:
             f'{self.long_short:5s} '\
             f'{self.call_put:5s} '\
             f'${self.option.strike:.2f} for '\
-            f'{str(self.expiry)[:10]}'\
+            f'{str(self.option.expiry)[:10]}'\
             f' = ${self.option.calc_price * self.quantity:.2f}'
 
             if self.quantity > 1:
@@ -189,9 +185,9 @@ class Leg:
         if self._validate():
             # Build the pricer
             if self.pricing_method == 'monte-carlo':
-                self.pricer = MonteCarlo(self.symbol.ticker, self.expiry, self.option.strike)
+                self.pricer = MonteCarlo(self.symbol.ticker, self.option.expiry, self.option.strike)
             else:
-                self.pricer = BlackScholes(self.symbol.ticker, self.expiry, self.option.strike)
+                self.pricer = BlackScholes(self.symbol.ticker, self.option.expiry, self.option.strike)
 
             # Calculate prices
             price_call, price_put = self.pricer.calculate_prices()
@@ -242,9 +238,9 @@ class Leg:
         self.option.strike = strike
 
         if expiry is None:
-            self.expiry = datetime.datetime.today() + datetime.timedelta(days=10)
+            self.option.expiry = datetime.datetime.today() + datetime.timedelta(days=10)
         else:
-            self.expiry = expiry
+            self.option.expiry = expiry
 
         # Clear any calculated data and reacalculate
         self.strategy.reset()
@@ -289,7 +285,7 @@ class Leg:
                 today = today.replace(hour=0, minute=0, second=0, microsecond=0)
 
                 col_index.append(str(today))
-                while today < self.expiry:
+                while today < self.option.expiry:
                     today += datetime.timedelta(days=step)
                     col_index.append(str(today))
 
@@ -300,7 +296,7 @@ class Leg:
                     row = []
                     for item in col_index:
                         maturity_date = datetime.datetime.strptime(item, '%Y-%m-%d %H:%M:%S')
-                        time_to_maturity = self.expiry - maturity_date
+                        time_to_maturity = self.option.expiry - maturity_date
                         decimaldays_to_maturity = time_to_maturity.days / 365.0
 
                         # Compensate for zero delta days to provide small fraction of day
