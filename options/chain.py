@@ -33,21 +33,3 @@ class Chain():
                 ret = None
 
         return ret
-
-
-def get_contract(contract_symbol):
-    parsed = u.parse_contract_name(contract_symbol)
-
-    ticker = parsed['ticker']
-    product = parsed['product']
-    expiry = parsed['expiry']
-    strike = parsed['strike']
-
-    company = get_company_info(ticker)
-    if product == 'call':
-        chain = company.option_chain(expiry).calls
-    else:
-        chain = company.option_chain(expiry).puts
-    contract = chain.loc[chain['contractSymbol'] == contract_symbol]
-
-    return contract.iloc[0]

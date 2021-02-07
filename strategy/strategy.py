@@ -18,7 +18,7 @@ from utils import utils as u
 class Strategy(ABC):
     '''TODO'''
 
-    def __init__(self, ticker, product, direction, width, expiry):
+    def __init__(self, ticker, product, direction, width=1):
         self.name = ''
         self.ticker = ticker
         self.product = product
@@ -66,22 +66,6 @@ class Strategy(ABC):
         self.legs.append(leg)
 
         return len(self.legs)
-
-
-    def set_symbol(self, ticker, volatility=-1.0, dividend=0.0):
-        '''TODO'''
-
-        success = True
-        for leg in self.legs:
-            if not leg.modify_symbol(ticker, volatility, dividend):
-                success = False
-                break
-
-        if success:
-            self.ticker = ticker
-            self.reset()
-
-        return success
 
 
     def get_current_spot(self, ticker, roundup=False):

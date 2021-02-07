@@ -25,7 +25,7 @@ class Interface():
         self.chain = Chain(ticker)
 
         if auto is not None:
-            if self._load_strategy(ticker, auto, direction):
+            if self.load_strategy(ticker, auto, direction):
                 if not exit:
                     self.main_menu()
         elif script is not None:
@@ -40,8 +40,7 @@ class Interface():
                 u.print_error(f'File "{script}" not found')
         else:
             if not exit:
-                expiry = datetime.datetime.today() + datetime.timedelta(days=14)
-                self.strategy = Call(ticker, strategy, direction, 1, expiry)
+                self.strategy = Call(ticker, strategy, direction)
                 self.main_menu()
             else:
                 u.print_error('Nothing to do')
@@ -246,9 +245,8 @@ class Interface():
                 u.print_error('Unknown operation selected')
 
         self.chain = Chain(ticker)
-
-        return self.strategy.set_symbol(ticker, vol, div)
-
+        self.load_strategy(ticker, 'call', 'long', False)
+        u.print_message('The strategy has been reset to a long call')
 
     def select_strategy(self):
         '''TODO'''
@@ -290,18 +288,16 @@ class Interface():
         # Select width and expiry date
         if strategy:
             modified = True
-            width = -1
-
-            width = u.input_integer('Please select width: ', 1, 5)
-
-            self.select_chain_expiry()
 
             if strategy == 'call':
                 self.strategy = Call(self.strategy.ticker, 'call', 'long')
             elif strategy == 'put':
                 self.strategy = Put(self.strategy.ticker, 'put', 'long')
             elif strategy == 'vert':
-                self.strategy = Vertical(self.strategy.ticker, 'call', 'long')
+                width = u.input_integer('Please select width: ', 1, 5)
+                self.strategy = Vertical(self.strategy.ticker, 'call', 'long', width=width)
+
+            expiry = self.select_chain_expiry()
 
         return modified
 
@@ -427,7 +423,7 @@ class Interface():
             if select > 0:
                 sel_row = options.iloc[select-1]
                 self.strategy.legs[0].option.load_contract(sel_row['contractSymbol'])
-                # print(self.strategy.legs[0].option)
+                print(self.strategy.legs[0].option)
         else:
             u.print_error('Invalid selection')
 
@@ -443,7 +439,8 @@ class Interface():
         select = u.input_integer('Select expiration date: ', 1, index+1)
         self.chain.expire = expiry[select-1]
 
-        return self.chain.expire
+        expiry = datetime.datetime.strptime(self.chain.expire, '%Y-%m-%d')
+        return expiry
 
 
     def select_settings(self):
@@ -502,27 +499,30 @@ class Interface():
             u.print_error('Unknown method selected')
 
 
-    def _load_strategy(self, ticker, name, direction):
+    def load_strategy(self, ticker, name, direction, analyze=True):
         modified = False
 
         # try:
-        expiry = datetime.datetime.today() + datetime.timedelta(days=14)
         if name.lower() == 'call':
             modified = True
-            self.strategy = Call(ticker, 'call', direction, 1, expiry)
-            self.analyze()
+            self.strategy = Call(ticker, 'call', direction)
+            if analyze:
+                self.analyze()
         elif name.lower() == 'put':
             modified = True
-            self.strategy = Put(ticker, 'put', direction, 1, expiry)
-            self.analyze()
+            self.strategy = Put(ticker, 'put', direction)
+            if analyze:
+                self.analyze()
         elif name.lower() == 'vertc':
             modified = True
-            self.strategy = Vertical(ticker, 'call', direction, 1, expiry)
-            self.analyze()
+            self.strategy = Vertical(ticker, 'call', direction)
+            if analyze:
+                self.analyze()
         elif name.lower() == 'vertp':
             modified = True
-            self.strategy = Vertical(ticker, 'put', direction, 1, expiry)
-            self.analyze()
+            self.strategy = Vertical(ticker, 'put', direction)
+            if analyze:
+                self.analyze()
         else:
             u.print_error('Unknown argument')
         # except:

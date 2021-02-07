@@ -12,8 +12,8 @@ from utils import utils as u
 class Vertical(Strategy):
     '''TODO'''
 
-    def __init__(self, ticker, product, direction, width, expiry):
-        super().__init__(ticker, product, direction, width, expiry)
+    def __init__(self, ticker, product, direction, width=1):
+        super().__init__(ticker, product, direction, width)
 
         self.name = 'vertical'
         expiry = datetime.datetime.today() + datetime.timedelta(days=14)

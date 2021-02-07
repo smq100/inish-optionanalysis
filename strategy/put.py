@@ -12,9 +12,9 @@ from utils import utils as u
 class Put(Strategy):
     '''TODO'''
 
-    def __init__(self, ticker, product, direction, width, expiry):
+    def __init__(self, ticker, product, direction, width=1):
         product = 'put'
-        super().__init__(ticker, product, direction, width, expiry)
+        super().__init__(ticker, product, direction, width)
 
         self.name = 'put'
         expiry = datetime.datetime.today() + datetime.timedelta(days=14)

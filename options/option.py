@@ -18,8 +18,9 @@ currency
 '''
 
 import datetime
-from .chain import get_contract
-from utils import utils as u
+import re
+
+from pricing.fetcher import validate_ticker, get_company_info
 
 
 class Option():
@@ -71,8 +72,7 @@ class Option():
 
 
     def load_contract(self, contract_name):
-        self.contract_symbol = contract_name
-        parsed = u.parse_contract_name(contract_name)
+        parsed = parse_contract_name(contract_name)
 
         self.ticker = parsed['ticker']
         self.product = parsed['product']
@@ -95,3 +95,38 @@ class Option():
         self.itm = contract['inTheMoney']
         self.contract_size = contract['contractSize']
         self.currency = contract['currency']
+
+
+def get_contract(contract_symbol):
+    parsed = parse_contract_name(contract_symbol)
+
+    ticker = parsed['ticker']
+    product = parsed['product']
+    expiry = parsed['expiry']
+    strike = parsed['strike']
+
+    company = get_company_info(ticker)
+    if product == 'call':
+        chain = company.option_chain(expiry).calls
+    else:
+        chain = company.option_chain(expiry).puts
+    contract = chain.loc[chain['contractSymbol'] == contract_symbol]
+
+    return contract.iloc[0]
+
+
+def parse_contract_name(contract_name):
+    # ex: MSFT210305C00237500
+    regex = r'([\d]{6})([PC])'
+    parsed = re.split(regex, contract_name)
+
+    ticker = parsed[0]
+    expiry = f'20{parsed[1][:2]}-{parsed[1][2:4]}-{parsed[1][4:]}'
+    strike = float(parsed[3][:5]) + float(parsed[3][5:]) / 1000.0
+
+    if 'C' in parsed[2].upper():
+        product = 'call'
+    else:
+        product = 'put'
+
+    return {'ticker':ticker, 'expiry':expiry, 'product':product, 'strike':strike}
