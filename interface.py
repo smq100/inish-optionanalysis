@@ -409,16 +409,18 @@ class Interface():
         if options is not None:
             print('')
             for index, row in options.iterrows():
-                info = f'{index+1})\t'\
+                chain = f'{index+1})\t'\
                     f'${row["strike"]:7.2f} '\
                     f'${row["lastPrice"]:7.2f} '\
                     f'ITM: {bool(row["inTheMoney"])}'
-                print(info)
+                print(chain)
 
             select = int(input('Select option, or 0 to cancel: '))
             if select > 0:
                 sel_row = options.iloc[select-1]
+                self.strategy.legs[0].option.load_option(sel_row['contractSymbol'])
                 print(sel_row)
+                print(self.strategy.legs[0].option)
         else:
             u.print_error('Invalid selection')
 
