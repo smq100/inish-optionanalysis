@@ -12,8 +12,8 @@ from utils import utils as u
 class Vertical(Strategy):
     '''TODO'''
 
-    def __init__(self, ticker, product, direction):
-        super().__init__(ticker, product, direction)
+    def __init__(self, ticker, product, direction, width, expiry):
+        super().__init__(ticker, product, direction, width, expiry)
 
         self.name = 'vertical'
         expiry = datetime.datetime.today() + datetime.timedelta(days=14)
@@ -45,7 +45,8 @@ class Vertical(Strategy):
             self.legs[0].calculate()
             self.legs[1].calculate()
 
-            if self.direction == 'long':
+            dlong = (self.legs[0].option.calc_price > self.legs[1].option.calc_price)
+            if dlong:
                 self.analysis.credit_debit = 'debit'
             else:
                 self.analysis.credit_debit = 'credit'
@@ -77,7 +78,8 @@ class Vertical(Strategy):
     def calc_max_gain_loss(self):
         gain = loss = 0.0
 
-        if self.direction == 'long':
+        dlong = (self.legs[0].option.calc_price > self.legs[1].option.calc_price)
+        if dlong:
             gain = abs(self.legs[0].option.strike - self.legs[1].option.strike)
             loss = abs(self.analysis.amount)
 

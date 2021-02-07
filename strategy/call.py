@@ -12,17 +12,16 @@ from utils import utils as u
 class Call(Strategy):
     '''TODO'''
 
-    def __init__(self, ticker, product, direction):
+    def __init__(self, ticker, product, direction, width, expiry):
         product = 'call'
-        super().__init__(ticker, product, direction)
+        super().__init__(ticker, product, direction, width, expiry)
 
         self.name = 'call'
-        expiry = datetime.datetime.today() + datetime.timedelta(days=14)
         self.add_leg(1, product, direction, self.initial_spot, expiry)
 
 
     def __str__(self):
-        return f'{self.direction} {self.name}'
+        return f'{self.legs[0].direction} {self.name}'
 
 
     def analyze(self):
@@ -31,7 +30,7 @@ class Call(Strategy):
         if self._validate():
             self.legs[0].calculate()
 
-            if self.direction == 'long':
+            if self.legs[0].direction == 'long':
                 self.analysis.credit_debit = 'debit'
             else:
                 self.analysis.credit_debit = 'credit'
@@ -52,7 +51,7 @@ class Call(Strategy):
     def generate_profit_table(self):
         price = self.legs[0].option.calc_price
 
-        if self.direction == 'long':
+        if self.legs[0].direction == 'long':
             dframe = self.legs[0].table - price
         else:
             dframe = self.legs[0].table
@@ -64,7 +63,7 @@ class Call(Strategy):
 
 
     def calc_max_gain_loss(self):
-        if self.direction == 'long':
+        if self.legs[0].direction == 'long':
             self.analysis.sentiment = 'bullish'
             max_gain = -1.0
             max_loss = self.legs[0].option.calc_price
@@ -76,7 +75,7 @@ class Call(Strategy):
         return max_gain, max_loss
 
     def calc_breakeven(self):
-        if self.direction == 'long':
+        if self.legs[0].direction == 'long':
             breakeven = self.legs[0].option.strike + self.analysis.amount
         else:
             breakeven = self.legs[0].option.strike - self.analysis.amount

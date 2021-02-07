@@ -12,9 +12,9 @@ from utils import utils as u
 class Put(Strategy):
     '''TODO'''
 
-    def __init__(self, ticker, product, direction):
+    def __init__(self, ticker, product, direction, width, expiry):
         product = 'put'
-        super().__init__(ticker, product, direction)
+        super().__init__(ticker, product, direction, width, expiry)
 
         self.name = 'put'
         expiry = datetime.datetime.today() + datetime.timedelta(days=14)
@@ -22,7 +22,7 @@ class Put(Strategy):
 
 
     def __str__(self):
-        return f'{self.direction} {self.name}'
+        return f'{self.legs[0].direction} {self.name}'
 
 
     def analyze(self):
@@ -31,7 +31,7 @@ class Put(Strategy):
         if self._validate():
             self.legs[0].calculate()
 
-            if self.direction == 'long':
+            if self.legs[0].direction == 'long':
                 self.analysis.credit_debit = 'debit'
             else:
                 self.analysis.credit_debit = 'credit'
@@ -52,7 +52,7 @@ class Put(Strategy):
     def generate_profit_table(self):
         price = self.legs[0].option.calc_price
 
-        if self.direction == 'long':
+        if self.legs[0].direction == 'long':
             dframe = self.legs[0].table - price
             dframe = dframe.applymap(lambda x: x if x > -price else -price)
         else:
@@ -65,7 +65,7 @@ class Put(Strategy):
 
 
     def calc_max_gain_loss(self):
-        if self.direction == 'long':
+        if self.legs[0].direction == 'long':
             self.analysis.sentiment = 'bearish'
             max_gain = self.legs[0].option.strike - self.legs[0].option.calc_price
             max_loss = self.legs[0].option.calc_price
@@ -78,7 +78,7 @@ class Put(Strategy):
 
 
     def calc_breakeven(self):
-        if self.direction == 'long':
+        if self.legs[0].direction == 'long':
             breakeven = self.legs[0].option.strike - self.analysis.amount
         else:
             breakeven = self.legs[0].option.strike + self.analysis.amount

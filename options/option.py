@@ -76,10 +76,8 @@ class Option():
 
         self.ticker = parsed['ticker']
         self.product = parsed['product']
-        self.expiry = parsed['expiry']
+        self.expiry = datetime.datetime.strptime(parsed['expiry'], '%Y-%m-%d')
         self.strike = parsed['strike']
-
-        print(type(self.expiry), type(self.strike))
 
         contract = get_contract(contract_name)
 

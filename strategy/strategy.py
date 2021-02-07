@@ -18,11 +18,11 @@ from utils import utils as u
 class Strategy(ABC):
     '''TODO'''
 
-    def __init__(self, ticker, product, direction):
+    def __init__(self, ticker, product, direction, width, expiry):
         self.name = ''
         self.ticker = ticker
         self.product = product
-        self.direction = direction
+        self.width = width
         self.analysis = Analysis()
         self.legs = []
         self.initial_spot = 0.0
@@ -56,13 +56,13 @@ class Strategy(ABC):
         self.analysis = Analysis()
 
 
-    def add_leg(self, quantity, call_put, long_short, strike, expiry):
+    def add_leg(self, quantity, product, direction, strike, expiry):
         '''TODO'''
 
         # Add one day to act as expiry value
         expiry += datetime.timedelta(days=1)
 
-        leg = Leg(self, self.ticker, quantity, call_put, long_short, strike, expiry)
+        leg = Leg(self, self.ticker, quantity, product, direction, strike, expiry)
         self.legs.append(leg)
 
         return len(self.legs)
@@ -140,13 +140,13 @@ class Strategy(ABC):
 class Leg:
     '''TODO'''
 
-    def __init__(self, strategy, ticker, quantity, call_put, long_short, strike, expiry):
+    def __init__(self, strategy, ticker, quantity, product, direction, strike, expiry):
         self.symbol = Symbol(ticker)
         self.option = Option(strike, expiry)
         self.strategy = strategy
         self.quantity = quantity
-        self.call_put = call_put
-        self.long_short = long_short
+        self.product = product
+        self.direction = direction
         self.pricing_method = 'black-scholes'
         self.pricer = None
         self.table = None
@@ -156,8 +156,8 @@ class Leg:
         if self.option.calc_price > 0.0:
             output = f'{self.quantity} '\
             f'{self.symbol.ticker}@${self.symbol.spot:.2f} '\
-            f'{self.long_short:5s} '\
-            f'{self.call_put:5s} '\
+            f'{self.direction:5s} '\
+            f'{self.product:5s} '\
             f'${self.option.strike:.2f} for '\
             f'{str(self.option.expiry)[:10]}'\
             f' = ${self.option.calc_price * self.quantity:.2f}'
@@ -192,7 +192,7 @@ class Leg:
             self.option.time_to_maturity = self.pricer.time_to_maturity
             self.symbol.short_name = self.pricer.short_name
 
-            if self.call_put == 'call':
+            if self.product == 'call':
                 price = self.option.calc_price = price_call
             else:
                 price = self.option.calc_price = price_put
@@ -225,18 +225,13 @@ class Leg:
             return False
 
 
-    def modify_values(self, quantity, call_put, long_short, strike, expiry=None):
+    def modify_values(self, quantity, product, direction, strike):
         '''TODO'''
 
         self.quantity = quantity
-        self.call_put = call_put
-        self.long_short = long_short
+        self.product = product
+        self.direction = direction
         self.option.strike = strike
-
-        if expiry is None:
-            self.option.expiry = datetime.datetime.today() + datetime.timedelta(days=10)
-        else:
-            self.option.expiry = expiry
 
         # Clear any calculated data and reacalculate
         self.strategy.reset()
@@ -301,7 +296,7 @@ class Leg:
 
                         price_call, price_put = self.recalculate(spot_price=spot, time_to_maturity=decimaldays_to_maturity)
 
-                        if self.call_put == 'call':
+                        if self.product == 'call':
                             row.append(price_call)
                         else:
                             row.append(price_put)

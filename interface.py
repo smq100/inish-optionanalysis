@@ -40,7 +40,8 @@ class Interface():
                 u.print_error(f'File "{script}" not found')
         else:
             if not exit:
-                self.strategy = Call(ticker, strategy, direction)
+                expiry = datetime.datetime.today() + datetime.timedelta(days=14)
+                self.strategy = Call(ticker, strategy, direction, 1, expiry)
                 self.main_menu()
             else:
                 u.print_error('Nothing to do')
@@ -309,23 +310,20 @@ class Interface():
         '''TODO'''
 
         quantity = self.strategy.legs[leg].quantity
-        call_put = self.strategy.legs[leg].call_put
-        long_short = self.strategy.legs[leg].long_short
+        product = self.strategy.legs[leg].product
+        direction = self.strategy.legs[leg].direction
         strike = self.strategy.legs[leg].option.strike
-        expiry = self.strategy.legs[leg].option.expiry
-        print(expiry)
 
         changed = False
 
         while True:
             menu_items = {
                 '1': f'Quantity ({quantity})',
-                '2': f'Call/Put ({call_put})',
-                '3': f'Buy/Write ({long_short})',
+                '2': f'Call/Put ({product})',
+                '3': f'Buy/Write ({direction})',
                 '4': f'Strike (${strike:.2f})',
-                '5': f'Expiration ({expiry:%Y-%m-%d})',
-                '6': 'Done',
-                '7': 'Cancel',
+                '5': 'Done',
+                '6': 'Cancel',
             }
 
             self.write_legs()
@@ -337,24 +335,24 @@ class Interface():
             for entry in option:
                 print(f'{entry})\t{menu_items[entry]}')
 
-            selection = u.input_integer('Please select: ', 1, 7)
+            selection = u.input_integer('Please select: ', 1, 6)
 
             if selection == 1:
                 quantity = u.input_integer('Enter Quantity: ', 1, 100)
             elif selection == 2:
                 choice = input('Call (c) or Put (p): ')
                 if 'c' in choice:
-                    call_put = 'call'
+                    product = 'call'
                 elif 'p' in choice:
-                    call_put = 'put'
+                    product = 'put'
                 else:
                     print('Invalid option')
             elif selection == 3:
                 choice = input('Buy (b) or Write (w): ')
                 if 'b' in choice:
-                    long_short = 'long'
+                    direction = 'long'
                 elif 'w' in choice:
-                    long_short = 'short'
+                    direction = 'short'
                 else:
                     print('Invalid option')
             elif selection == 4:
@@ -364,11 +362,9 @@ class Interface():
                 else:
                     print('Invalid option')
             elif selection == 5:
-                pass
-            elif selection == 6:
-                changed = self.strategy.legs[leg].modify_values(quantity, call_put, long_short, strike, expiry)
+                changed = self.strategy.legs[leg].modify_values(quantity, product, direction, strike)
                 break
-            elif selection == 7:
+            elif selection == 6:
                 break
 
         return changed
@@ -510,21 +506,22 @@ class Interface():
         modified = False
 
         # try:
+        expiry = datetime.datetime.today() + datetime.timedelta(days=14)
         if name.lower() == 'call':
             modified = True
-            self.strategy = Call(ticker, 'call', direction)
+            self.strategy = Call(ticker, 'call', direction, 1, expiry)
             self.analyze()
         elif name.lower() == 'put':
             modified = True
-            self.strategy = Put(ticker, 'put', direction)
+            self.strategy = Put(ticker, 'put', direction, 1, expiry)
             self.analyze()
         elif name.lower() == 'vertc':
             modified = True
-            self.strategy = Vertical(ticker, 'call', direction)
+            self.strategy = Vertical(ticker, 'call', direction, 1, expiry)
             self.analyze()
         elif name.lower() == 'vertp':
             modified = True
-            self.strategy = Vertical(ticker, 'put', direction)
+            self.strategy = Vertical(ticker, 'put', direction, 1, expiry)
             self.analyze()
         else:
             u.print_error('Unknown argument')
