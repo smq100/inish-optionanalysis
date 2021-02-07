@@ -56,17 +56,13 @@ class Strategy(ABC):
         self.analysis = Analysis()
 
 
-    def add_leg(self, quantity, call_put, long_short, strike, expiry=None):
+    def add_leg(self, quantity, call_put, long_short, strike, expiry):
         '''TODO'''
-
-        # Add the leg if a symbol is specified
-        if expiry is None:
-            expiry = datetime.datetime.today() + datetime.timedelta(days=14)
 
         # Add one day to act as expiry value
         expiry += datetime.timedelta(days=1)
 
-        leg = Leg(self,     self.ticker, quantity, call_put, long_short, strike, expiry)
+        leg = Leg(self, self.ticker, quantity, call_put, long_short, strike, expiry)
         self.legs.append(leg)
 
         return len(self.legs)

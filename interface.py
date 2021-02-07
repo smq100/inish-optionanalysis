@@ -71,23 +71,23 @@ class Interface():
             for entry in option:
                 print(f'{entry})\t{menu_items[entry]}')
 
-            selection = input('Please select: ')
+            selection = u.input_integer('Please select: ', 1, 9)
 
-            if selection == '1':
+            if selection == 1:
                 self.select_symbol()
-            elif selection == '2':
+            elif selection == 2:
                 self.select_strategy()
-            elif selection == '3':
+            elif selection == 3:
                 if len(self.strategy.legs) > 0:
                     if self.calculate():
                         self.plot_value(0)
-            elif selection == '4':
+            elif selection == 4:
                 self.analyze()
-            elif selection == '5':
+            elif selection == 5:
                 if len(self.strategy.legs) < 1:
                     print('No legs configured')
                 elif len(self.strategy.legs) > 1:
-                    leg = int(input('Enter Leg: ')) - 1
+                    leg = u.input_integer('Enter Leg: ', 1, 2) - 1
                     if self.modify_leg(leg) > 0:
                         if self.calculate():
                             self.plot_value(leg)
@@ -95,22 +95,20 @@ class Interface():
                     if self.modify_leg(0):
                         if self.calculate():
                             self.plot_value(0)
-            elif selection == '6':
+            elif selection == 6:
                 if len(self.strategy.legs) < 1:
                     print('No legs configured')
                 elif len(self.strategy.legs) > 1:
-                    leg = int(input('Enter Leg: ')) - 1
+                    leg = u.input_integer('Enter Leg: ', 1, 2) - 1
                     self.plot_value(leg)
                 else:
                     self.plot_value(0)
-            elif selection == '7':
+            elif selection == 7:
                 self.select_chain_operation()
-            elif selection == '8':
+            elif selection == 8:
                 self.select_settings()
-            elif selection == '9':
+            elif selection == 9:
                 break
-            else:
-                u.print_error('Unknown operation selected')
 
 
     def calculate(self):
@@ -218,16 +216,16 @@ class Interface():
         '''TODO'''
         success = True
         ticker = input('Please enter symbol: ').upper()
-        vol = -1.0
+        vol = 0.0
         div = 0.0
 
-        menu_items = {
-            '1': 'Specify Volatility',
-            '2': 'Specify Dividend',
-            '3': 'Done'
-        }
-
         while True:
+            menu_items = {
+                '1': f'Specify Volatility ({vol:.2f})',
+                '2': f'Specify Dividend (${div:.2f})',
+                '3': 'Done'
+            }
+
             print('\nSelect Option')
             print('-------------------------')
 
@@ -235,16 +233,18 @@ class Interface():
             for entry in option:
                 print(f'{entry})\t{menu_items[entry]}')
 
-            selection = input('Please select: ')
+            selection = u.input_integer('Please select: ', 1, 3)
 
-            if selection == '1':
-                vol = float(input('Please enter volatility: '))
-            elif selection == '2':
-                div = float(input('Please enter average dividend: '))
-            elif selection == '3':
+            if selection == 1:
+                vol = u.input_float('Please enter volatility: ', 0.0, 5.0)
+            elif selection == 2:
+                div = u.input_float('Please enter average dividend: ', 0.0, 999.0)
+            elif selection == 3:
                 break
             else:
                 u.print_error('Unknown operation selected')
+
+        self.chain = Chain(ticker)
 
         return self.strategy.set_symbol(ticker, vol, div)
 
@@ -259,33 +259,48 @@ class Interface():
             '4': 'Cancel',
         }
 
+        # Select strategy
+        strategy = ''
         modified = False
         while True:
             print('\nSelect strategy')
-            print('---------------------')
+            print('-------------------------')
 
             option = menu_items.keys()
             for entry in option:
                 print(f'{entry})\t{menu_items[entry]}')
 
-            selection = input('Please select: ')
+            selection = u.input_integer('Please select: ', 1, 4)
 
-            if selection == '1':
-                self.strategy = Call(self.strategy.ticker, 'call', 'long')
-                modified = True
+            if selection == 1:
+                strategy = 'call'
                 break
-            if selection == '2':
-                self.strategy = Put(self.strategy.ticker, 'put', 'long')
-                modified = True
+            if selection == 2:
+                strategy = 'put'
                 break
-            if selection == '3':
-                self.strategy = Vertical(self.strategy.ticker, 'call', 'long')
-                modified = True
+            if selection == 3:
+                strategy = 'vert'
                 break
-            if selection == '4':
+            if selection == 4:
                 break
 
             u.print_error('Unknown strategy selected')
+
+        # Select width and expiry date
+        if strategy:
+            modified = True
+            width = -1
+
+            width = u.input_integer('Please select width: ', 1, 5)
+
+            self.select_chain_expiry()
+
+            if strategy == 'call':
+                self.strategy = Call(self.strategy.ticker, 'call', 'long')
+            elif strategy == 'put':
+                self.strategy = Put(self.strategy.ticker, 'put', 'long')
+            elif strategy == 'vert':
+                self.strategy = Vertical(self.strategy.ticker, 'call', 'long')
 
         return modified
 
@@ -322,15 +337,11 @@ class Interface():
             for entry in option:
                 print(f'{entry})\t{menu_items[entry]}')
 
-            selection = input('Please select: ')
+            selection = u.input_integer('Please select: ', 1, 7)
 
-            if selection == '1':
-                choice = input('Enter Quantity: ')
-                if choice.isnumeric():
-                    quantity = int(choice)
-                else:
-                    print('Invalid option')
-            elif selection == '2':
+            if selection == 1:
+                quantity = u.input_integer('Enter Quantity: ', 1, 100)
+            elif selection == 2:
                 choice = input('Call (c) or Put (p): ')
                 if 'c' in choice:
                     call_put = 'call'
@@ -338,7 +349,7 @@ class Interface():
                     call_put = 'put'
                 else:
                     print('Invalid option')
-            elif selection == '3':
+            elif selection == 3:
                 choice = input('Buy (b) or Write (w): ')
                 if 'b' in choice:
                     long_short = 'long'
@@ -346,21 +357,19 @@ class Interface():
                     long_short = 'short'
                 else:
                     print('Invalid option')
-            elif selection == '4':
+            elif selection == 4:
                 choice = input('Enter Strike: ')
-                if choice.isnumeric():
+                if choice.isnumeric() and choice > 0.0:
                     strike = float(choice)
                 else:
                     print('Invalid option')
-            elif selection == '5':
+            elif selection == 5:
                 pass
-            elif selection == '6':
+            elif selection == 6:
                 changed = self.strategy.legs[leg].modify_values(quantity, call_put, long_short, strike, expiry)
                 break
-            elif selection == '7':
+            elif selection == 7:
                 break
-            else:
-                u.print_error('Unknown operation selected')
 
         return changed
 
@@ -386,15 +395,15 @@ class Interface():
             for entry in option:
                 print(f'{entry})\t{menu_items[entry]}')
 
-            selection = input('Please select: ')
+            selection = u.input_integer('Please select: ', 1, 4)
 
-            if selection == '1':
+            if selection == 1:
                 self.select_chain_expiry()
-            if selection == '2':
+            if selection == 2:
                 self.select_option('call')
-            if selection == '3':
+            if selection == 3:
                 self.select_option('put')
-            elif selection == '4':
+            elif selection == 4:
                 break
 
 
@@ -408,7 +417,8 @@ class Interface():
             options = self.chain.get_chain('put')
 
         if options is not None:
-            print('')
+            print('\nSelect option')
+            print('-------------------------')
             for index, row in options.iterrows():
                 chain = f'{index+1})\t'\
                     f'${row["strike"]:7.2f} '\
@@ -416,11 +426,12 @@ class Interface():
                     f'ITM: {bool(row["inTheMoney"])}'
                 print(chain)
 
-            select = int(input('Select option, or 0 to cancel: '))
+            select = u.input_integer('Select option, or 0 to cancel: ', 0, index + 1)
+
             if select > 0:
                 sel_row = options.iloc[select-1]
                 self.strategy.legs[0].option.load_contract(sel_row['contractSymbol'])
-                print(self.strategy.legs[0].option)
+                # print(self.strategy.legs[0].option)
         else:
             u.print_error('Invalid selection')
 
@@ -428,13 +439,15 @@ class Interface():
     def select_chain_expiry(self):
         expiry = self.chain.get_expiry()
 
-        print('')
+        print('\nSelect expiration')
+        print('-------------------------')
         for index, exp in enumerate(expiry):
             print(f'{index+1})\t{exp}')
 
-        select = int(input('Select date, or 0 to cancel: '))
-        if select > 0:
-            self.chain.expire = expiry[select-1]
+        select = u.input_integer('Select expiration date: ', 1, index+1)
+        self.chain.expire = expiry[select-1]
+
+        return self.chain.expire
 
 
     def select_settings(self):
@@ -453,11 +466,11 @@ class Interface():
             for entry in option:
                 print(f'{entry})\t{menu_items[entry]}')
 
-            selection = input('Please select: ')
+            selection = u.input_integer('Please select: ', 1, 2)
 
-            if selection == '1':
+            if selection == 1:
                 self.select_method()
-            elif selection == '2':
+            elif selection == 2:
                 break
 
 
@@ -479,7 +492,7 @@ class Interface():
             for entry in option:
                 print(f'{entry})\t{menu_items[entry]}')
 
-            selection = input('Please select: ')
+            selection = u.input_integer('Please select: ', 1, 3)
 
             if selection == '1':
                 self.strategy.pricing_method = 'black-scholes'

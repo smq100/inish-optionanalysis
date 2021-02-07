@@ -17,7 +17,8 @@ class Call(Strategy):
         super().__init__(ticker, product, direction)
 
         self.name = 'call'
-        self.add_leg(1, product, direction, self.initial_spot)
+        expiry = datetime.datetime.today() + datetime.timedelta(days=14)
+        self.add_leg(1, product, direction, self.initial_spot, expiry)
 
 
     def __str__(self):

@@ -16,22 +16,23 @@ class Vertical(Strategy):
         super().__init__(ticker, product, direction)
 
         self.name = 'vertical'
+        expiry = datetime.datetime.today() + datetime.timedelta(days=14)
 
         # Add legs (long leg is always first)
         if product == 'call':
             if direction == 'long':
-                self.add_leg(1, product, 'long', self.initial_spot)
-                self.add_leg(1, product, 'short', self.initial_spot + 2.0)
+                self.add_leg(1, product, 'long', self.initial_spot, expiry)
+                self.add_leg(1, product, 'short', self.initial_spot + 2.0, expiry)
             else:
-                self.add_leg(1, product, 'long', self.initial_spot + 2.0)
-                self.add_leg(1, product, 'short', self.initial_spot)
+                self.add_leg(1, product, 'long', self.initial_spot + 2.0, expiry)
+                self.add_leg(1, product, 'short', self.initial_spot, expiry)
         else:
             if direction == 'long':
-                self.add_leg(1, product, 'long', self.initial_spot + 2.0)
-                self.add_leg(1, product, 'short', self.initial_spot)
+                self.add_leg(1, product, 'long', self.initial_spot + 2.0, expiry)
+                self.add_leg(1, product, 'short', self.initial_spot, expiry)
             else:
-                self.add_leg(1, product, 'long', self.initial_spot)
-                self.add_leg(1, product, 'short', self.initial_spot + 2.0)
+                self.add_leg(1, product, 'long', self.initial_spot, expiry)
+                self.add_leg(1, product, 'short', self.initial_spot + 2.0, expiry)
 
     def __str__(self):
         return f'{self.name} {self.product} {self.analysis.credit_debit} spread'
