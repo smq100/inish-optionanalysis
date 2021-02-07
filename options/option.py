@@ -79,6 +79,8 @@ class Option():
         self.expiry = parsed['expiry']
         self.strike = parsed['strike']
 
+        print(type(self.expiry), type(self.strike))
+
         contract = get_contract(contract_name)
 
         self.contract_symbol = contract['contractSymbol']

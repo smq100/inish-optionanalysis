@@ -67,7 +67,7 @@ def input_float(message, min_, max_):
     val = min_ - 1
     while val < min_:
         val = input(message)
-        if not _isnumeric(val):
+        if not isnumeric(val):
             print_error(f'Invalid value. Enter an integer between {min_} and {max_}')
             val = min_ - 1
         elif float(val) < min_:
@@ -82,13 +82,13 @@ def input_float(message, min_, max_):
     return val
 
 
-def print_error(message, creturn=False):
-    print(delimeter(f'Error: {message}', creturn))
-
-
-def _isnumeric(value):
+def isnumeric(value):
     try:
         float(value)
         return True
     except ValueError:
         return False
+
+
+def print_error(message, creturn=False):
+    print(delimeter(f'Error: {message}', creturn))
