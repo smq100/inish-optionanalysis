@@ -9,6 +9,7 @@ from strategy.strategy import Leg
 from strategy.call import Call
 from strategy.put import Put
 from strategy.vertical import Vertical
+from pricing.fetcher import validate_ticker
 from options.chain import Chain
 from utils import utils as u
 
@@ -18,32 +19,38 @@ MAX_COLS = 18
 class Interface():
     '''TODO'''
 
-    def __init__(self, ticker, strategy, direction, auto=None, script=None, exit=False):
+    def __init__(self, ticker, strategy, direction, autoload=None, script=None, exit=False):
         pd.options.display.float_format = '{:,.2f}'.format
 
         ticker = ticker.upper()
-        self.chain = Chain(ticker)
+        valid = validate_ticker(ticker)
 
-        if auto is not None:
-            if self.load_strategy(ticker, auto, direction):
+        if valid:
+            self.chain = Chain(ticker)
+
+            if autoload is not None:
+                if self.load_strategy(ticker, autoload, direction):
+                    if not exit:
+                        self.main_menu()
+            elif script is not None:
+                if os.path.exists(script):
+                    try:
+                        with open(script) as file_:
+                            data = json.load(file_)
+                            print(data)
+                    except:
+                        u.print_error('File read error')
+                else:
+                    u.print_error(f'File "{script}" not found')
+            else:
                 if not exit:
+                    self.strategy = Call(ticker, strategy, direction)
+                    self.strategy.calculate()
                     self.main_menu()
-        elif script is not None:
-            if os.path.exists(script):
-                try:
-                    with open(script) as file_:
-                        data = json.load(file_)
-                        print(data)
-                except:
-                    u.print_error('File read error')
-            else:
-                u.print_error(f'File "{script}" not found')
+                else:
+                    u.print_error('Nothing to do')
         else:
-            if not exit:
-                self.strategy = Call(ticker, strategy, direction)
-                self.main_menu()
-            else:
-                u.print_error('Nothing to do')
+            u.print_error('Invalid ticker symbol specified')
 
 
     def main_menu(self):
@@ -53,13 +60,13 @@ class Interface():
             menu_items = {
                 '1': f'Specify Symbol ({self.strategy.ticker})',
                 '2': f'Specify Strategy ({self.strategy})',
-                '3': 'Calculate Values',
-                '4': 'Analyze Stategy',
-                '5': 'Modify Leg',
-                '6': 'Plot Leg Values',
-                '7': 'Option Chains',
+                '3': f'Select Option ({self.strategy.legs[0].option.expiry:%Y-%m-%d}@${self.strategy.legs[0].option.strike:.2f})',
+                '4': 'Calculate Values',
+                '5': 'Analyze Stategy',
+                '6': 'Modify Leg',
+                '7': 'Plot Leg Values',
                 '8': 'Settings',
-                '9': 'Exit'
+                '0': 'Exit'
             }
 
             self.write_legs()
@@ -71,19 +78,21 @@ class Interface():
             for entry in option:
                 print(f'{entry})\t{menu_items[entry]}')
 
-            selection = u.input_integer('Please select: ', 1, 9)
+            selection = u.input_integer('Please select: ', 0, 8)
 
             if selection == 1:
                 self.select_symbol()
             elif selection == 2:
                 self.select_strategy()
             elif selection == 3:
+                self.select_chain()
+            elif selection == 4:
                 if len(self.strategy.legs) > 0:
                     if self.calculate():
                         self.plot_value(0)
-            elif selection == 4:
-                self.analyze()
             elif selection == 5:
+                self.analyze()
+            elif selection == 6:
                 if len(self.strategy.legs) < 1:
                     print('No legs configured')
                 elif len(self.strategy.legs) > 1:
@@ -95,7 +104,7 @@ class Interface():
                     if self.modify_leg(0):
                         if self.calculate():
                             self.plot_value(0)
-            elif selection == 6:
+            elif selection == 7:
                 if len(self.strategy.legs) < 1:
                     print('No legs configured')
                 elif len(self.strategy.legs) > 1:
@@ -103,11 +112,9 @@ class Interface():
                     self.plot_value(leg)
                 else:
                     self.plot_value(0)
-            elif selection == 7:
-                self.select_chain_operation()
             elif selection == 8:
                 self.select_settings()
-            elif selection == 9:
+            elif selection == 0:
                 break
 
 
@@ -214,39 +221,49 @@ class Interface():
 
     def select_symbol(self):
         '''TODO'''
-        success = True
-        ticker = input('Please enter symbol: ').upper()
+        valid = False
         vol = 0.0
         div = 0.0
 
-        while True:
-            menu_items = {
-                '1': f'Specify Volatility ({vol:.2f})',
-                '2': f'Specify Dividend (${div:.2f})',
-                '3': 'Done'
-            }
-
-            print('\nSelect Option')
-            print('-------------------------')
-
-            option = menu_items.keys()
-            for entry in option:
-                print(f'{entry})\t{menu_items[entry]}')
-
-            selection = u.input_integer('Please select: ', 1, 3)
-
-            if selection == 1:
-                vol = u.input_float('Please enter volatility: ', 0.0, 5.0)
-            elif selection == 2:
-                div = u.input_float('Please enter average dividend: ', 0.0, 999.0)
-            elif selection == 3:
-                break
+        while not valid:
+            ticker = input('Please enter symbol: ').upper()
+            if ticker != '0':
+                valid = validate_ticker(ticker)
+                if not valid:
+                    u.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
             else:
-                u.print_error('Unknown operation selected')
+                break
 
-        self.chain = Chain(ticker)
-        self.load_strategy(ticker, 'call', 'long', False)
-        u.print_message('The strategy has been reset to a long call')
+        if valid:
+            while True:
+                menu_items = {
+                    '1': f'Specify Volatility ({vol:.2f})',
+                    '2': f'Specify Dividend (${div:.2f})',
+                    '3': 'Done'
+                }
+
+                print('\nSelect Option')
+                print('-------------------------')
+
+                option = menu_items.keys()
+                for entry in option:
+                    print(f'{entry})\t{menu_items[entry]}')
+
+                selection = u.input_integer('Please select: ', 1, 3)
+
+                if selection == 1:
+                    vol = u.input_float('Please enter volatility: ', 0.0, 5.0)
+                elif selection == 2:
+                    div = u.input_float('Please enter average dividend: ', 0.0, 999.0)
+                elif selection == 3:
+                    break
+                else:
+                    u.print_error('Unknown operation selected')
+
+            self.chain = Chain(ticker)
+            self.load_strategy(ticker, 'call', 'long', False)
+            u.print_message('The initial strategy has been set to a long call')
+
 
     def select_strategy(self):
         '''TODO'''
@@ -272,34 +289,135 @@ class Interface():
             selection = u.input_integer('Please select: ', 1, 4)
 
             if selection == 1:
-                strategy = 'call'
+                direction = u.input_integer('Long (1), or short (2): ', 1, 2)
+                direction = 'long' if direction == 1 else 'short'
+                self.strategy = Call(self.strategy.ticker, 'call', direction)
+                modified = True
                 break
             if selection == 2:
-                strategy = 'put'
+                direction = u.input_integer('Long (1), or short (2): ', 1, 2)
+                direction = 'long' if direction == 1 else 'short'
+                self.strategy = Put(self.strategy.ticker, 'put', direction)
+                modified = True
                 break
             if selection == 3:
-                strategy = 'vert'
+                direction = u.input_integer('Debit (1), or credit (2): ', 1, 2)
+                direction = 'long' if direction == 1 else 'short'
+                self.strategy = Vertical(self.strategy.ticker, 'call', direction)
+                modified = True
                 break
             if selection == 4:
                 break
 
             u.print_error('Unknown strategy selected')
 
-        # Select width and expiry date
-        if strategy:
-            modified = True
-
-            if strategy == 'call':
-                self.strategy = Call(self.strategy.ticker, 'call', 'long')
-            elif strategy == 'put':
-                self.strategy = Put(self.strategy.ticker, 'put', 'long')
-            elif strategy == 'vert':
-                width = u.input_integer('Please select width: ', 1, 5)
-                self.strategy = Vertical(self.strategy.ticker, 'call', 'long', width=width)
-
-            expiry = self.select_chain_expiry()
-
         return modified
+
+
+    def select_chain(self):
+        contract = ''
+
+        while True:
+            if self.chain.expire is not None:
+                expiry = self.chain.expire
+            else:
+                expiry = 'None selected'
+
+            if not contract:
+                menu_items = {
+                    '1': f'Select Expiry Date ({expiry})',
+                    '2': 'Select Calls',
+                    '3': 'Select Puts',
+                    '4': 'Done',
+                }
+            elif self.strategy.legs[0].option.product == 'call':
+                menu_items = {
+                    '1': f'Select Expiry Date ({expiry})',
+                    '2': f'Select Calls ({self.strategy.legs[0].option.expiry:%Y-%m-%d}@${self.strategy.legs[0].option.strike:.2f})',
+                    '3': 'Select Puts',
+                    '4': 'Done',
+                }
+            else:
+                menu_items = {
+                    '1': f'Select Expiry Date ({expiry})',
+                    '2': 'Select Calls',
+                    '3': f'Select Puts ({self.strategy.legs[0].option.expiry:%Y-%m-%d}@${self.strategy.legs[0].option.strike:.2f})',
+                    '4': 'Done',
+                }
+
+            print('\nSelect operation')
+            print('-------------------------')
+
+            option = menu_items.keys()
+            for entry in option:
+                print(f'{entry})\t{menu_items[entry]}')
+
+            selection = u.input_integer('Please select: ', 1, 4)
+
+            if selection == 1:
+                self.select_chain_expiry()
+            if selection == 2:
+                contract = self.select_chain_option('call')
+                self.strategy.legs[0].option.load_contract(contract)
+            if selection == 3:
+                contract = self.select_chain_option('put')
+                self.strategy.legs[0].option.load_contract(contract)
+            elif selection == 4:
+                break
+
+        if contract:
+            print('')
+            print(self.strategy.legs[0].option)
+
+
+
+    def select_chain_expiry(self):
+        expiry = self.chain.get_expiry()
+
+        print('\nSelect expiration')
+        print('-------------------------')
+        for index, exp in enumerate(expiry):
+            print(f'{index+1})\t{exp}')
+
+        select = u.input_integer('Select expiration date, or 0 to cancel: ', 0, index+1)
+        if select > 0:
+            self.chain.expire = expiry[select-1]
+            expiry = datetime.datetime.strptime(self.chain.expire, '%Y-%m-%d')
+        else:
+            expiry = None
+
+        return expiry
+
+
+    def select_chain_option(self, product):
+        options = None
+        contract = ''
+        if self.chain.expire is None:
+            u.print_error('No expiry date delected')
+        elif product == 'call':
+            options = self.chain.get_chain('call')
+        elif product == 'put':
+            options = self.chain.get_chain('put')
+
+        if options is not None:
+            print('\nSelect option')
+            print('-------------------------')
+            for index, row in options.iterrows():
+                chain = f'{index+1})\t'\
+                    f'${row["strike"]:7.2f} '\
+                    f'${row["lastPrice"]:7.2f} '\
+                    f'ITM: {bool(row["inTheMoney"])}'
+                print(chain)
+
+            select = u.input_integer('Select option, or 0 to cancel: ', 0, index + 1)
+
+            if select > 0:
+                sel_row = options.iloc[select-1]
+                contract = sel_row['contractSymbol']
+        else:
+            u.print_error('Invalid selection')
+
+        return contract
 
 
     def modify_leg(self, leg):
@@ -336,27 +454,21 @@ class Interface():
             if selection == 1:
                 quantity = u.input_integer('Enter Quantity: ', 1, 100)
             elif selection == 2:
-                choice = input('Call (c) or Put (p): ')
-                if 'c' in choice:
+                choice = u.input_integer('Call (1) or Put (2): ', 1, 2)
+                if choice == 1:
                     product = 'call'
-                elif 'p' in choice:
+                elif choice == 2:
                     product = 'put'
-                else:
-                    print('Invalid option')
             elif selection == 3:
-                choice = input('Buy (b) or Write (w): ')
-                if 'b' in choice:
+                choice = u.input_integer('Buy (1) or Write (2): ', 1, 2)
+                if choice == 1:
                     direction = 'long'
-                elif 'w' in choice:
+                elif choice == 2:
                     direction = 'short'
                 else:
                     print('Invalid option')
             elif selection == 4:
-                choice = input('Enter Strike: ')
-                if choice.isnumeric() and choice > 0.0:
-                    strike = float(choice)
-                else:
-                    print('Invalid option')
+                strike = u.input_float('Enter Strike: ', 0.01, 999.0)
             elif selection == 5:
                 changed = self.strategy.legs[leg].modify_values(quantity, product, direction, strike)
                 break
@@ -364,83 +476,6 @@ class Interface():
                 break
 
         return changed
-
-
-    def select_chain_operation(self):
-        while True:
-            if self.chain.expire is not None:
-                expiry = self.chain.expire
-            else:
-                expiry = 'None selected'
-
-            menu_items = {
-                '1': f'Select Expiry Date ({expiry})',
-                '2': f'Select Calls',
-                '3': f'Select Puts',
-                '4': 'Done',
-            }
-
-            print('\nSelect operation')
-            print('-------------------------')
-
-            option = menu_items.keys()
-            for entry in option:
-                print(f'{entry})\t{menu_items[entry]}')
-
-            selection = u.input_integer('Please select: ', 1, 4)
-
-            if selection == 1:
-                self.select_chain_expiry()
-            if selection == 2:
-                self.select_option('call')
-            if selection == 3:
-                self.select_option('put')
-            elif selection == 4:
-                break
-
-
-    def select_option(self, product):
-        options = None
-        if self.chain.expire is None:
-            u.print_error('No expiry date delected')
-        elif product == 'call':
-            options = self.chain.get_chain('call')
-        elif product == 'put':
-            options = self.chain.get_chain('put')
-
-        if options is not None:
-            print('\nSelect option')
-            print('-------------------------')
-            for index, row in options.iterrows():
-                chain = f'{index+1})\t'\
-                    f'${row["strike"]:7.2f} '\
-                    f'${row["lastPrice"]:7.2f} '\
-                    f'ITM: {bool(row["inTheMoney"])}'
-                print(chain)
-
-            select = u.input_integer('Select option, or 0 to cancel: ', 0, index + 1)
-
-            if select > 0:
-                sel_row = options.iloc[select-1]
-                self.strategy.legs[0].option.load_contract(sel_row['contractSymbol'])
-                print(self.strategy.legs[0].option)
-        else:
-            u.print_error('Invalid selection')
-
-
-    def select_chain_expiry(self):
-        expiry = self.chain.get_expiry()
-
-        print('\nSelect expiration')
-        print('-------------------------')
-        for index, exp in enumerate(expiry):
-            print(f'{index+1})\t{exp}')
-
-        select = u.input_integer('Select expiration date: ', 1, index+1)
-        self.chain.expire = expiry[select-1]
-
-        expiry = datetime.datetime.strptime(self.chain.expire, '%Y-%m-%d')
-        return expiry
 
 
     def select_settings(self):
@@ -559,7 +594,7 @@ if __name__ == '__main__':
     command = vars(parser.parse_args())
 
     if 'strategy' in command.keys():
-        Interface(ticker=command['ticker'], strategy='call', direction=command['direction'], auto=command['strategy'], exit=command['exit'])
+        Interface(ticker=command['ticker'], strategy='call', direction=command['direction'], autoload=command['strategy'], exit=command['exit'])
     elif 'script' in command.keys():
         Interface('FB', 'call', 'long', script=command['script'], exit=command['exit'])
     else:

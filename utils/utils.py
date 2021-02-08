@@ -73,7 +73,7 @@ def isnumeric(value):
 
 
 def print_message(message, creturn=False):
-    print(delimeter(f'Info: {message}', creturn))
+    print(delimeter(f'{message}', creturn))
 
 
 def print_error(message, creturn=False):

@@ -18,11 +18,11 @@ from utils import utils as u
 class Strategy(ABC):
     '''TODO'''
 
-    def __init__(self, ticker, product, direction, width=1):
+    def __init__(self, ticker, product, direction):
         self.name = ''
         self.ticker = ticker
         self.product = product
-        self.width = width
+        self.width = 1
         self.analysis = Analysis()
         self.legs = []
         self.initial_spot = 0.0
@@ -148,6 +148,10 @@ class Leg:
 
             if self.quantity > 1:
                 output += f' (${self.option.calc_price:.2f} each)'
+
+            if not self.option.contract_symbol:
+                output += ' (actual option not yet selected)'
+
         else:
             output = f'{self.symbol.ticker} leg not yet calculated'
 

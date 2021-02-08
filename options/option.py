@@ -72,7 +72,7 @@ class Option():
 
 
     def load_contract(self, contract_name):
-        parsed = parse_contract_name(contract_name)
+        parsed = _parse_contract_name(contract_name)
 
         self.ticker = parsed['ticker']
         self.product = parsed['product']
@@ -98,7 +98,7 @@ class Option():
 
 
 def get_contract(contract_symbol):
-    parsed = parse_contract_name(contract_symbol)
+    parsed = _parse_contract_name(contract_symbol)
 
     ticker = parsed['ticker']
     product = parsed['product']
@@ -115,14 +115,14 @@ def get_contract(contract_symbol):
     return contract.iloc[0]
 
 
-def parse_contract_name(contract_name):
+def _parse_contract_name(contract_name):
     # ex: MSFT210305C00237500
     regex = r'([\d]{6})([PC])'
     parsed = re.split(regex, contract_name)
 
     ticker = parsed[0]
     expiry = f'20{parsed[1][:2]}-{parsed[1][2:4]}-{parsed[1][4:]}'
-    strike = float(parsed[3][:5]) + float(parsed[3][5:]) / 1000.0
+    strike = float(parsed[3][:5]) + (float(parsed[3][5:]) / 1000.0)
 
     if 'C' in parsed[2].upper():
         product = 'call'

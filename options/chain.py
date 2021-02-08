@@ -11,6 +11,7 @@ class Chain():
         self.ticker = ticker
         self.company = None
         self.expire = None
+        self.width = 1
 
     def get_expiry(self):
         ret = self.company = None

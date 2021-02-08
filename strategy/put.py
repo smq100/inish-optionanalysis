@@ -12,9 +12,9 @@ from utils import utils as u
 class Put(Strategy):
     '''TODO'''
 
-    def __init__(self, ticker, product, direction, width=1):
+    def __init__(self, ticker, product, direction):
         product = 'put'
-        super().__init__(ticker, product, direction, width)
+        super().__init__(ticker, product, direction)
 
         self.name = 'put'
         expiry = datetime.datetime.today() + datetime.timedelta(days=14)
@@ -72,7 +72,7 @@ class Put(Strategy):
         else:
             self.analysis.sentiment = 'bullish'
             max_gain = self.legs[0].option.calc_price
-            max_loss = self.legs[0].strike - self.legs[0].option.calc_price
+            max_loss = self.legs[0].option.strike - self.legs[0].option.calc_price
 
         return max_gain, max_loss
 

@@ -12,9 +12,9 @@ from utils import utils as u
 class Call(Strategy):
     '''TODO'''
 
-    def __init__(self, ticker, product, direction, width=1):
+    def __init__(self, ticker, product, direction):
         product = 'call'
-        super().__init__(ticker, product, direction, width)
+        super().__init__(ticker, product, direction)
 
         self.name = 'call'
         expiry = datetime.datetime.today() + datetime.timedelta(days=14)
