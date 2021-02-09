@@ -34,6 +34,7 @@ class Vertical(Strategy):
                 self.add_leg(1, product, 'long', self.initial_spot, expiry)
                 self.add_leg(1, product, 'short', self.initial_spot + 2.0, expiry)
 
+
     def __str__(self):
         return f'{self.name} {self.product} {self.analysis.credit_debit} spread'
 
@@ -117,6 +118,25 @@ class Vertical(Strategy):
 
         return breakeven
 
+
+    def get_errors(self):
+        '''TODO'''
+        error = ''
+        if self.analysis.credit_debit:
+            if self.product == 'call':
+                if self.analysis.credit_debit == 'debit':
+                    if self.legs[0].option.strike >= self.legs[1].option.strike:
+                        error = 'Bad option configuration'
+                elif self.legs[1].option.strike >= self.legs[0].option.strike:
+                    error = 'Bad option configuration'
+            else:
+                if self.analysis.credit_debit == 'credit':
+                    if self.legs[0].option.strike >= self.legs[1].option.strike:
+                        error = 'Bad option configuration'
+                elif self.legs[1].option.strike >= self.legs[0].option.strike:
+                    error = 'Bad option configuration'
+
+        return error
 
     def _validate(self):
         return len(self.legs) > 1

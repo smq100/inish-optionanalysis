@@ -44,6 +44,7 @@ class Strategy(ABC):
         for leg in self.legs:
             leg.calculate()
 
+
     @abc.abstractmethod
     def analyze(self):
         ''' TODO '''
@@ -54,6 +55,11 @@ class Strategy(ABC):
 
         # Clear the analysis
         self.analysis = Analysis()
+
+
+    def update_expiry(self, date):
+        for leg in self.legs:
+            leg.option.expiry = date
 
 
     def add_leg(self, quantity, product, direction, strike, expiry):
@@ -96,6 +102,11 @@ class Strategy(ABC):
     def calc_breakeven(self):
         '''TODO'''
 
+    def get_errors(self):
+        '''TODO'''
+        return ''
+
+
     def _calc_price_min_max_step(self):
         '''TODO'''
 
@@ -126,7 +137,7 @@ class Leg:
 
     def __init__(self, strategy, ticker, quantity, product, direction, strike, expiry):
         self.symbol = Symbol(ticker)
-        self.option = Option(strike, expiry)
+        self.option = Option(ticker, product, strike, expiry)
         self.strategy = strategy
         self.quantity = quantity
         self.product = product
@@ -150,7 +161,7 @@ class Leg:
                 output += f' (${self.option.calc_price:.2f} each)'
 
             if not self.option.contract_symbol:
-                output += ' (actual option not yet selected)'
+                output += ' (specific option not selected)'
 
         else:
             output = f'{self.symbol.ticker} leg not yet calculated'

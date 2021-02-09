@@ -7,13 +7,14 @@ from pricing.fetcher import validate_ticker, get_company_info
 
 
 class Option():
-    def __init__(self, strike, expiry):
-        self.ticker = ''
-        self.product = ''
+    def __init__(self, ticker, product, strike, expiry):
+        self.ticker = ticker
+        self.product = product
         self.strike = strike
         self.expiry = expiry
         self.time_to_maturity = 0.0
         self.calc_price = 0.0
+        self.decorator = '*'
 
         self.contract_symbol = ''
         self.last_trade_date = ''
@@ -80,6 +81,8 @@ class Option():
             self.itm = contract['inTheMoney']
             self.contract_size = contract['contractSize']
             self.currency = contract['currency']
+            self.decorator = ''
+
         else:
             ret = False
 

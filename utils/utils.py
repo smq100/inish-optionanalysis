@@ -76,5 +76,9 @@ def print_message(message, creturn=False):
     print(delimeter(f'{message}', creturn))
 
 
+def print_warning(message, creturn=False):
+    print(delimeter(f'Warning: {message}', creturn))
+
+
 def print_error(message, creturn=False):
     print(delimeter(f'Error: {message}', creturn))

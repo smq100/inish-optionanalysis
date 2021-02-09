@@ -25,6 +25,9 @@ class Interface():
         ticker = ticker.upper()
         valid = validate_ticker(ticker)
 
+        self.dirty_calc = True
+        self.dirty_anal = True
+
         if valid:
             self.chain = Chain(ticker)
 
@@ -60,7 +63,7 @@ class Interface():
             menu_items = {
                 '1': f'Specify Symbol ({self.strategy.ticker})',
                 '2': f'Specify Strategy ({self.strategy})',
-                '3': f'Select Option ({self.strategy.legs[0].option.expiry:%Y-%m-%d}@${self.strategy.legs[0].option.strike:.2f})',
+                '3': 'Select Options',
                 '4': 'Calculate Values',
                 '5': 'Analyze Stategy',
                 '6': 'Modify Leg',
@@ -68,6 +71,19 @@ class Interface():
                 '8': 'Settings',
                 '0': 'Exit'
             }
+
+            if self.dirty_calc:
+                menu_items['4'] += ' *'
+
+            if self.dirty_anal:
+                menu_items['5'] += ' *'
+
+            if self.strategy.name == 'vertical':
+                menu_items['3'] += f' '\
+                    f'(L:${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator}'\
+                    f' S:${self.strategy.legs[1].option.strike:.2f}{self.strategy.legs[1].option.decorator})'
+            else:
+                menu_items['3'] += f' (${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator})'
 
             self.write_legs()
 
@@ -114,6 +130,7 @@ class Interface():
     def calculate(self):
         try:
             self.strategy.calculate()
+            self.dirty_calc = False
             return True
         except:
             return False
@@ -121,9 +138,15 @@ class Interface():
 
     def analyze(self):
         '''TODO'''
-        self.strategy.analyze()
-        self.write_legs()
-        self.plot_analysis()
+        errors = self.strategy.get_errors()
+        if not errors:
+            self.strategy.analyze()
+            self.write_legs()
+            self.plot_analysis()
+            self.dirty_calc = False
+            self.dirty_anal = False
+        else:
+            u.print_error(errors)
 
 
     def plot_value(self, leg):
@@ -228,6 +251,9 @@ class Interface():
                 break
 
         if valid:
+            self.dirty_calc = True
+            self.dirty_anal = True
+
             while True:
                 menu_items = {
                     '1': f'Specify Volatility ({vol:.2f})',
@@ -271,18 +297,31 @@ class Interface():
                 direction = u.input_integer('Long (1), or short (2): ', 1, 2)
                 direction = 'long' if direction == 1 else 'short'
                 self.strategy = Call(self.strategy.ticker, 'call', direction)
+
+                self.dirty_calc = True
+                self.dirty_anal = True
                 modified = True
                 break
             if selection == 2:
                 direction = u.input_integer('Long (1), or short (2): ', 1, 2)
                 direction = 'long' if direction == 1 else 'short'
                 self.strategy = Put(self.strategy.ticker, 'put', direction)
+
+                self.dirty_calc = True
+                self.dirty_anal = True
                 modified = True
                 break
             if selection == 3:
+                product = u.input_integer('Call (1), or Put (2): ', 1, 2)
+                product = 'call' if product == 1 else 'put'
+
                 direction = u.input_integer('Debit (1), or credit (2): ', 1, 2)
                 direction = 'long' if direction == 1 else 'short'
-                self.strategy = Vertical(self.strategy.ticker, 'call', direction)
+
+                self.strategy = Vertical(self.strategy.ticker, product, direction)
+
+                self.dirty_calc = True
+                self.dirty_anal = True
                 modified = True
                 break
             if selection == 4:
@@ -302,30 +341,50 @@ class Interface():
             else:
                 expiry = 'None selected'
 
+            if self.strategy.legs[0].option.product == 'call':
+                product = 'Call'
+            else:
+                product = 'Put'
+
             menu_items = {
                 '1': f'Select Expiry Date ({expiry})',
-                '2': 'Select Option',
+                '2': f'Select {product} Option',
                 '3': 'Done',
             }
 
-            if contract:
-                    menu_items['2'] = f'Select Option ({self.strategy.legs[0].option.expiry:%Y-%m-%d}@${self.strategy.legs[0].option.strike:.2f})'
+            if self.strategy.name == 'vertical':
+                menu_items['2'] = f'Select {product} Options'
+                menu_items['2'] += f' '\
+                    f'(L:${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator}'\
+                    f' S:${self.strategy.legs[1].option.strike:.2f}{self.strategy.legs[1].option.decorator})'
+            else:
+                menu_items['2'] += f' (${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator})'
 
             selection = self._menu(menu_items, 'Select Operation', 0, 3)
 
             ret = True
             if selection == 1:
                 ret = self.select_chain_expiry()
-            if selection == 2:
-                if self.strategy.legs[0].option.product == 'call':
-                    contract = self.select_chain_option('call')
-                else:
-                    contract = self.select_chain_option('put')
+                if ret:
+                    self.strategy.update_expiry(ret)
+            elif selection == 2:
+                if self.chain.expire is not None:
+                    if self.strategy.name == 'vertical':
+                        leg = u.input_integer('Long leg (1), or short (2): ', 1, 2) - 1
+                    else:
+                        leg = 0
 
-                if contract:
-                    ret = self.strategy.legs[0].option.load_contract(contract)
+                    if self.strategy.legs[leg].option.product == 'call':
+                        contract = self.select_chain_option('call')
+                    else:
+                        contract = self.select_chain_option('put')
+
+                    if contract:
+                        ret = self.strategy.legs[leg].option.load_contract(contract)
+                    else:
+                        u.print_error('No option selected')
                 else:
-                    u.print_error('No option selected')
+                    u.print_error('Please first select expiry date')
             elif selection == 3:
                 break
             elif selection == 0:
@@ -351,6 +410,9 @@ class Interface():
         if select > 0:
             self.chain.expire = expiry[select-1]
             expiry = datetime.datetime.strptime(self.chain.expire, '%Y-%m-%d')
+
+            self.dirty_calc = True
+            self.dirty_anal = True
         else:
             expiry = None
 
@@ -382,6 +444,9 @@ class Interface():
             if select > 0:
                 sel_row = options.iloc[select-1]
                 contract = sel_row['contractSymbol']
+
+                self.dirty_calc = True
+                self.dirty_anal = True
         else:
             u.print_error('Invalid selection')
 
@@ -432,6 +497,8 @@ class Interface():
                 strike = u.input_float('Enter Strike: ', 0.01, 999.0)
             elif selection == 5:
                 changed = self.strategy.legs[leg].modify_values(quantity, product, direction, strike)
+                self.dirty_calc = True
+                self.dirty_anal = True
                 break
             elif selection == 6:
                 break
@@ -467,15 +534,19 @@ class Interface():
 
         modified = True
         while True:
-            selection = self._menu(menu_items, 'Select Methob', 1, 3)
+            selection = self._menu(menu_items, 'Select Method', 0, 2)
 
-            if selection == '1':
+            if selection == 1:
                 self.strategy.pricing_method = 'black-scholes'
+                self.dirty_calc = True
+                self.dirty_anal = True
                 break
-            if selection == '2':
+            if selection == 2:
                 self.strategy.pricing_method = 'monte-carlo'
+                self.dirty_calc = True
+                self.dirty_anal = True
                 break
-            if selection == '3':
+            if selection == 0:
                 break
 
             u.print_error('Unknown method selected')
@@ -507,6 +578,7 @@ class Interface():
                 self.analyze()
         else:
             u.print_error('Unknown argument')
+
         # except:
         #     u.print_error(sys.exc_info()[1], True)
         #     return False
