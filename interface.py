@@ -61,8 +61,8 @@ class Interface():
 
         while True:
             menu_items = {
-                '1': f'Specify Symbol ({self.strategy.ticker})',
-                '2': f'Specify Strategy ({self.strategy})',
+                '1': f'Change Symbol ({self.strategy.ticker})',
+                '2': f'Change Strategy ({self.strategy})',
                 '3': 'Select Options',
                 '4': 'Calculate Values',
                 '5': 'Analyze Stategy',
@@ -80,10 +80,10 @@ class Interface():
 
             if self.strategy.name == 'vertical':
                 menu_items['3'] += f' '\
-                    f'(L:${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator}'\
-                    f' S:${self.strategy.legs[1].option.strike:.2f}{self.strategy.legs[1].option.decorator})'
+                    f'(L:${self.strategy.legs[0].option.strike:.2f} {self.strategy.legs[0].option.decorator}'\
+                    f' S:${self.strategy.legs[1].option.strike:.2f} {self.strategy.legs[1].option.decorator})'
             else:
-                menu_items['3'] += f' (${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator})'
+                menu_items['3'] += f' (${self.strategy.legs[0].option.strike:.2f} {self.strategy.legs[0].option.decorator})'
 
             self.write_legs()
 
@@ -143,6 +143,7 @@ class Interface():
             self.strategy.analyze()
             self.write_legs()
             self.plot_analysis()
+
             self.dirty_calc = False
             self.dirty_anal = False
         else:
