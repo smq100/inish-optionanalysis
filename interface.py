@@ -71,14 +71,7 @@ class Interface():
 
             self.write_legs()
 
-            print('\nSelect Operation')
-            print('-------------------------')
-
-            option = menu_items.keys()
-            for entry in option:
-                print(f'{entry})\t{menu_items[entry]}')
-
-            selection = u.input_integer('Please select: ', 0, 8)
+            selection = self._menu(menu_items, 'Select Operation', 0, 8)
 
             if selection == 1:
                 self.select_symbol()
@@ -242,14 +235,7 @@ class Interface():
                     '3': 'Done'
                 }
 
-                print('\nSelect Option')
-                print('-------------------------')
-
-                option = menu_items.keys()
-                for entry in option:
-                    print(f'{entry})\t{menu_items[entry]}')
-
-                selection = u.input_integer('Please select: ', 1, 3)
+                selection = self._menu(menu_items, 'Select Option', 1, 3)
 
                 if selection == 1:
                     vol = u.input_float('Please enter volatility: ', 0.0, 5.0)
@@ -279,14 +265,7 @@ class Interface():
         strategy = ''
         modified = False
         while True:
-            print('\nSelect strategy')
-            print('-------------------------')
-
-            option = menu_items.keys()
-            for entry in option:
-                print(f'{entry})\t{menu_items[entry]}')
-
-            selection = u.input_integer('Please select: ', 1, 4)
+            selection = self._menu(menu_items, 'Select Strategy', 1, 4)
 
             if selection == 1:
                 direction = u.input_integer('Long (1), or short (2): ', 1, 2)
@@ -323,58 +302,47 @@ class Interface():
             else:
                 expiry = 'None selected'
 
-            if not contract:
-                menu_items = {
-                    '1': f'Select Expiry Date ({expiry})',
-                    '2': 'Select Calls',
-                    '3': 'Select Puts',
-                    '4': 'Done',
-                }
-            elif self.strategy.legs[0].option.product == 'call':
-                menu_items = {
-                    '1': f'Select Expiry Date ({expiry})',
-                    '2': f'Select Calls ({self.strategy.legs[0].option.expiry:%Y-%m-%d}@${self.strategy.legs[0].option.strike:.2f})',
-                    '3': 'Select Puts',
-                    '4': 'Done',
-                }
-            else:
-                menu_items = {
-                    '1': f'Select Expiry Date ({expiry})',
-                    '2': 'Select Calls',
-                    '3': f'Select Puts ({self.strategy.legs[0].option.expiry:%Y-%m-%d}@${self.strategy.legs[0].option.strike:.2f})',
-                    '4': 'Done',
-                }
+            menu_items = {
+                '1': f'Select Expiry Date ({expiry})',
+                '2': 'Select Option',
+                '3': 'Done',
+            }
 
-            print('\nSelect operation')
-            print('-------------------------')
+            if contract:
+                    menu_items['2'] = f'Select Option ({self.strategy.legs[0].option.expiry:%Y-%m-%d}@${self.strategy.legs[0].option.strike:.2f})'
 
-            option = menu_items.keys()
-            for entry in option:
-                print(f'{entry})\t{menu_items[entry]}')
+            selection = self._menu(menu_items, 'Select Operation', 0, 3)
 
-            selection = u.input_integer('Please select: ', 1, 4)
-
+            ret = True
             if selection == 1:
-                self.select_chain_expiry()
+                ret = self.select_chain_expiry()
             if selection == 2:
-                contract = self.select_chain_option('call')
-                self.strategy.legs[0].option.load_contract(contract)
-            if selection == 3:
-                contract = self.select_chain_option('put')
-                self.strategy.legs[0].option.load_contract(contract)
-            elif selection == 4:
+                if self.strategy.legs[0].option.product == 'call':
+                    contract = self.select_chain_option('call')
+                else:
+                    contract = self.select_chain_option('put')
+
+                if contract:
+                    ret = self.strategy.legs[0].option.load_contract(contract)
+                else:
+                    u.print_error('No option selected')
+            elif selection == 3:
+                break
+            elif selection == 0:
                 break
 
-        if contract:
-            print('')
-            print(self.strategy.legs[0].option)
+            if not ret:
+                u.print_error('Error loading option. Please try again')
 
+        if contract:
+            print(u.delimeter('Option Information', True))
+            print(self.strategy.legs[0].option)
 
 
     def select_chain_expiry(self):
         expiry = self.chain.get_expiry()
 
-        print('\nSelect expiration')
+        print('\nSelect Expiration')
         print('-------------------------')
         for index, exp in enumerate(expiry):
             print(f'{index+1})\t{exp}')
@@ -442,14 +410,7 @@ class Interface():
 
             self.write_legs()
 
-            print('\nSelect leg')
-            print('-------------------------')
-
-            option = menu_items.keys()
-            for entry in option:
-                print(f'{entry})\t{menu_items[entry]}')
-
-            selection = u.input_integer('Please select: ', 1, 6)
+            selection = self._menu(menu_items, 'Select Leg', 1, 6)
 
             if selection == 1:
                 quantity = u.input_integer('Enter Quantity: ', 1, 100)
@@ -487,14 +448,7 @@ class Interface():
         }
 
         while True:
-            print('\nSelect Setting')
-            print('-------------------------')
-
-            option = menu_items.keys()
-            for entry in option:
-                print(f'{entry})\t{menu_items[entry]}')
-
-            selection = u.input_integer('Please select: ', 1, 2)
+            selection = self._menu(menu_items, 'Select Setting', 1, 2)
 
             if selection == 1:
                 self.select_method()
@@ -513,14 +467,7 @@ class Interface():
 
         modified = True
         while True:
-            print('\nSelect method')
-            print('-------------------------')
-
-            option = menu_items.keys()
-            for entry in option:
-                print(f'{entry})\t{menu_items[entry]}')
-
-            selection = u.input_integer('Please select: ', 1, 3)
+            selection = self._menu(menu_items, 'Select Methob', 1, 3)
 
             if selection == '1':
                 self.strategy.pricing_method = 'black-scholes'
@@ -567,6 +514,17 @@ class Interface():
         return modified
 
 
+    def _menu(self, menu_items, header, minvalue, maxvalue):
+        print(f'\n{header}')
+        print('-----------------------------')
+
+        option = menu_items.keys()
+        for entry in option:
+            print(f'{entry})\t{menu_items[entry]}')
+
+        return u.input_integer('Please select: ', minvalue, maxvalue)
+
+
     def _validate(self):
         '''TODO'''
         return True
@@ -582,13 +540,13 @@ if __name__ == '__main__':
     parser.add_argument('-x', '--exit', help='Exit after running loaded strategy or script', action='store_true', required=False, default=False)
 
     # Create the parser for the "load" command
-    parser_a = subparser.add_parser('load', help='Loads a strategy and direction')
+    parser_a = subparser.add_parser('load', help='Load a strategy')
     parser_a.add_argument('-t', '--ticker', help='Specify the ticker symbol', required=False, default='IBM')
     parser_a.add_argument('-s', '--strategy', help='Load and analyze strategy', required=False, choices=['call', 'put', 'vertc', 'vertp'], default=None)
     parser_a.add_argument('-d', '--direction', help='Specify the direction', required=False, choices=['long', 'short'], default='long')
 
     # Create the parser for the "execute" command
-    parser_b = subparser.add_parser('execute', help='Executes a JSON command script')
+    parser_b = subparser.add_parser('execute', help='Execute a JSON command script')
     parser_b.add_argument('-f', '--script', help='Specify a script', required=False, default='script.json')
 
     command = vars(parser.parse_args())

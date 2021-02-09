@@ -14,9 +14,9 @@ from utils import utils as u
 
 logging.basicConfig(format='%(levelname)s: %(message)s', level=u.LOG_LEVEL)
 
-config = configparser.ConfigParser()
-config.read('config.ini')
-quandl.ApiConfig.api_key = config['DEFAULT']['APIKEY']
+quandl_config = configparser.ConfigParser()
+quandl_config.read('config.ini')
+quandl.ApiConfig.api_key = quandl_config['DEFAULT']['APIKEY']
 
 SOURCES = ['yahoo', 'morningstar']
 

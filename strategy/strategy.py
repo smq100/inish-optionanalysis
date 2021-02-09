@@ -178,7 +178,6 @@ class Leg:
             self.symbol.spot = self.pricer.spot_price
             self.symbol.volatility = self.pricer.volatility
             self.option.time_to_maturity = self.pricer.time_to_maturity
-            self.symbol.short_name = self.pricer.short_name
 
             if self.product == 'call':
                 price = self.option.calc_price = price_call

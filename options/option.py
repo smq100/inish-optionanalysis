@@ -1,22 +1,5 @@
 '''TODO'''
 
-''' yfinance fields
-contractSymbol
-lastTradeDate
-strike
-lastPrice
-bid
-ask
-change
-percentChange
-volume
-openInterest
-impliedVolatility
-inTheMoney
-contractSize
-currency
-'''
-
 import datetime
 import re
 
@@ -55,12 +38,12 @@ class Option():
             f'Ticker:{self.ticker}\n'\
             f'Product:{self.product}\n'\
             f'Expiry:{self.expiry}\n'\
-            f'Strike:${self.strike:.2f}\n'\
+            f'Strike:{self.strike:.2f}\n'\
             f'Last Trade:{self.last_trade_date}\n'\
             f'Calc Price:{self.calc_price:.2f}\n'\
             f'Last Price:{self.last_price:.2f}\n'\
-            f'Bid:{self.bid}\n'\
-            f'Ask:{self.ask}\n'\
+            f'Bid:{self.bid:.2f}\n'\
+            f'Ask:{self.ask:.2f}\n'\
             f'Change:{self.change}\n'\
             f'%Change:{self.percent_change}\n'\
             f'Volume:{self.volume}\n'\
@@ -68,10 +51,11 @@ class Option():
             f'Implied Volitility:{self.implied_volatility:.3f}\n'\
             f'ITM:{self.itm}\n'\
             f'Size:{self.contract_size}\n'\
-            f'Currency:{self.currency}'\
+            f'Currency:{self.currency}'
 
 
     def load_contract(self, contract_name):
+        ret = True
         parsed = _parse_contract_name(contract_name)
 
         self.ticker = parsed['ticker']
@@ -81,20 +65,25 @@ class Option():
 
         contract = get_contract(contract_name)
 
-        self.contract_symbol = contract['contractSymbol']
-        self.last_trade_date = contract['lastTradeDate']
-        self.strike = contract['strike']
-        self.last_price = contract['lastPrice']
-        self.bid = contract['bid']
-        self.ask = contract['ask']
-        self.change = contract['change']
-        self.percent_change = contract['percentChange']
-        self.volume = contract['volume']
-        self.open_interest = contract['openInterest']
-        self.implied_volatility = contract['impliedVolatility']
-        self.itm = contract['inTheMoney']
-        self.contract_size = contract['contractSize']
-        self.currency = contract['currency']
+        if contract is not None:
+            self.contract_symbol = contract['contractSymbol']
+            self.last_trade_date = contract['lastTradeDate']
+            self.strike = contract['strike']
+            self.last_price = contract['lastPrice']
+            self.bid = contract['bid']
+            self.ask = contract['ask']
+            self.change = contract['change']
+            self.percent_change = contract['percentChange']
+            self.volume = contract['volume']
+            self.open_interest = contract['openInterest']
+            self.implied_volatility = contract['impliedVolatility']
+            self.itm = contract['inTheMoney']
+            self.contract_size = contract['contractSize']
+            self.currency = contract['currency']
+        else:
+            ret = False
+
+        return ret
 
 
 def get_contract(contract_symbol):
@@ -105,14 +94,17 @@ def get_contract(contract_symbol):
     expiry = parsed['expiry']
     strike = parsed['strike']
 
-    company = get_company_info(ticker)
-    if product == 'call':
-        chain = company.option_chain(expiry).calls
-    else:
-        chain = company.option_chain(expiry).puts
-    contract = chain.loc[chain['contractSymbol'] == contract_symbol]
+    try:
+        company = get_company_info(ticker)
+        if product == 'call':
+            chain = company.option_chain(expiry).calls
+        else:
+            chain = company.option_chain(expiry).puts
 
-    return contract.iloc[0]
+        contract = chain.loc[chain['contractSymbol'] == contract_symbol]
+        return contract.iloc[0]
+    except:
+        return None
 
 
 def _parse_contract_name(contract_name):
@@ -130,3 +122,21 @@ def _parse_contract_name(contract_name):
         product = 'put'
 
     return {'ticker':ticker, 'expiry':expiry, 'product':product, 'strike':strike}
+
+
+''' Available option fields (Pandas dataframe)
+contractSymbol
+lastTradeDate
+strike
+lastPrice
+bid
+ask
+change
+percentChange
+volume
+openInterest
+impliedVolatility
+inTheMoney
+contractSize
+currency
+'''
