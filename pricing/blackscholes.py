@@ -5,11 +5,11 @@ import datetime
 import numpy as np
 import scipy.stats as stats
 
-from .pricingbase import BasePricing
+from .pricing import Pricing
 from utils import utils as u
 
 
-class BlackScholes(BasePricing):
+class BlackScholes(Pricing):
     '''
     This class uses the classic Black-Scholes method to calculate prices for European Call and Put options
 

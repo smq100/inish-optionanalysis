@@ -17,7 +17,7 @@ from .fetcher import validate_ticker, get_ranged_data, get_treasury_rate
 from utils import utils as u
 
 
-class BasePricing(ABC):
+class Pricing(ABC):
     ''' TODO '''
 
     LOOK_BACK_WINDOW = 252
@@ -42,8 +42,8 @@ class BasePricing(ABC):
         self.dividend = dividend or 0.0
         self.cost_call = 0.0
         self.cost_put = 0.0
-        self.__underlying_asset_data = pd.DataFrame()
-        self.__start_date = datetime.datetime.today() - BDay(self.LOOK_BACK_WINDOW)  # How far we need to go to get historical prices
+        self._underlying_asset_data = pd.DataFrame()
+        self._start_date = datetime.datetime.today() - BDay(self.LOOK_BACK_WINDOW)  # How far we need to go to get historical prices
 
         # Convert time to midnight
         self.expiry = self.expiry.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -84,7 +84,7 @@ class BasePricing(ABC):
         :param hist_start_date:
         :return: <void>
         '''
-        self.__start_date = hist_start_date
+        self._start_date = hist_start_date
 
 
     def log_parameters(self):
@@ -151,12 +151,12 @@ class BasePricing(ABC):
         Please check module stock_analyzer.data_fetcher for details
         :return:
         '''
-        if self.__underlying_asset_data.empty:
+        if self._underlying_asset_data.empty:
             logging.debug('Getting historical stock data for %s; used to calculate volatility in this asset', self.ticker)
 
-            self.__underlying_asset_data = get_ranged_data(self.ticker, self.__start_date, None, use_quandl=False)
+            self._underlying_asset_data = get_ranged_data(self.ticker, self._start_date, None, use_quandl=False)
 
-            if self.__underlying_asset_data.empty:
+            if self._underlying_asset_data.empty:
                 logging.error('Unable to get historical stock data')
                 raise IOError(f'Unable to get historical stock data for {self.ticker}!')
 
@@ -167,10 +167,10 @@ class BasePricing(ABC):
         :return:
         '''
         self._calc_underlying_asset_data()
-        self.__underlying_asset_data.reset_index(inplace=True)
-        self.__underlying_asset_data.set_index('Date', inplace=True)
-        self.__underlying_asset_data['log_returns'] = np.log(self.__underlying_asset_data['Close'] / self.__underlying_asset_data['Close'].shift(1))
-        d_std = np.std(self.__underlying_asset_data.log_returns)
+        self._underlying_asset_data.reset_index(inplace=True)
+        self._underlying_asset_data.set_index('Date', inplace=True)
+        self._underlying_asset_data['log_returns'] = np.log(self._underlying_asset_data['Close'] / self._underlying_asset_data['Close'].shift(1))
+        d_std = np.std(self._underlying_asset_data.log_returns)
         std = d_std * 252 ** 0.5
 
         logging.info('Annualized Volatility calculated is {:f} '.format(std))
@@ -184,4 +184,4 @@ class BasePricing(ABC):
         :return:
         '''
         self._calc_underlying_asset_data()
-        self.spot_price = self.__underlying_asset_data['Close'][-1]
+        self.spot_price = self._underlying_asset_data['Close'][-1]

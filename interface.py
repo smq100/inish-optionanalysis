@@ -25,8 +25,8 @@ class Interface():
         ticker = ticker.upper()
         valid = validate_ticker(ticker)
 
-        self.dirty_calc = True
-        self.dirty_anal = True
+        self.dirty_calculate = True
+        self.dirty_analyze = True
 
         if valid:
             self.chain = Chain(ticker)
@@ -72,16 +72,16 @@ class Interface():
                 '0': 'Exit'
             }
 
-            if self.dirty_calc:
+            if self.dirty_calculate:
                 menu_items['4'] += ' *'
 
-            if self.dirty_anal:
+            if self.dirty_analyze:
                 menu_items['5'] += ' *'
 
             if self.strategy.name == 'vertical':
                 menu_items['3'] += f' '\
-                    f'(L:${self.strategy.legs[0].option.strike:.2f} {self.strategy.legs[0].option.decorator}'\
-                    f' S:${self.strategy.legs[1].option.strike:.2f} {self.strategy.legs[1].option.decorator})'
+                    f'(L:${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator}'\
+                    f' S:${self.strategy.legs[1].option.strike:.2f}{self.strategy.legs[1].option.decorator})'
             else:
                 menu_items['3'] += f' (${self.strategy.legs[0].option.strike:.2f} {self.strategy.legs[0].option.decorator})'
 
@@ -130,7 +130,7 @@ class Interface():
     def calculate(self):
         try:
             self.strategy.calculate()
-            self.dirty_calc = False
+            self.dirty_calculate = False
             return True
         except:
             return False
@@ -144,8 +144,8 @@ class Interface():
             self.write_legs()
             self.plot_analysis()
 
-            self.dirty_calc = False
-            self.dirty_anal = False
+            self.dirty_calculate = False
+            self.dirty_analyze = False
         else:
             u.print_error(errors)
 
@@ -252,8 +252,8 @@ class Interface():
                 break
 
         if valid:
-            self.dirty_calc = True
-            self.dirty_anal = True
+            self.dirty_calculate = True
+            self.dirty_analyze = True
 
             while True:
                 menu_items = {
@@ -299,8 +299,8 @@ class Interface():
                 direction = 'long' if direction == 1 else 'short'
                 self.strategy = Call(self.strategy.ticker, 'call', direction)
 
-                self.dirty_calc = True
-                self.dirty_anal = True
+                self.dirty_calculate = True
+                self.dirty_analyze = True
                 modified = True
                 break
             if selection == 2:
@@ -308,21 +308,20 @@ class Interface():
                 direction = 'long' if direction == 1 else 'short'
                 self.strategy = Put(self.strategy.ticker, 'put', direction)
 
-                self.dirty_calc = True
-                self.dirty_anal = True
+                self.dirty_calculate = True
+                self.dirty_analyze = True
                 modified = True
                 break
             if selection == 3:
                 product = u.input_integer('Call (1), or Put (2): ', 1, 2)
                 product = 'call' if product == 1 else 'put'
-
                 direction = u.input_integer('Debit (1), or credit (2): ', 1, 2)
                 direction = 'long' if direction == 1 else 'short'
 
                 self.strategy = Vertical(self.strategy.ticker, product, direction)
 
-                self.dirty_calc = True
-                self.dirty_anal = True
+                self.dirty_calculate = True
+                self.dirty_analyze = True
                 modified = True
                 break
             if selection == 4:
@@ -412,8 +411,8 @@ class Interface():
             self.chain.expire = expiry[select-1]
             expiry = datetime.datetime.strptime(self.chain.expire, '%Y-%m-%d')
 
-            self.dirty_calc = True
-            self.dirty_anal = True
+            self.dirty_calculate = True
+            self.dirty_analyze = True
         else:
             expiry = None
 
@@ -446,8 +445,8 @@ class Interface():
                 sel_row = options.iloc[select-1]
                 contract = sel_row['contractSymbol']
 
-                self.dirty_calc = True
-                self.dirty_anal = True
+                self.dirty_calculate = True
+                self.dirty_analyze = True
         else:
             u.print_error('Invalid selection')
 
@@ -498,8 +497,8 @@ class Interface():
                 strike = u.input_float('Enter Strike: ', 0.01, 999.0)
             elif selection == 5:
                 changed = self.strategy.legs[leg].modify_values(quantity, product, direction, strike)
-                self.dirty_calc = True
-                self.dirty_anal = True
+                self.dirty_calculate = True
+                self.dirty_analyze = True
                 break
             elif selection == 6:
                 break
@@ -510,17 +509,17 @@ class Interface():
     def select_settings(self):
         '''TODO'''
 
-        menu_items = {
-            '1': 'Pricing Method',
-            '2': 'Cancel',
-        }
-
         while True:
-            selection = self._menu(menu_items, 'Select Setting', 1, 2)
+            menu_items = {
+                '1': f'Pricing Method ({self.strategy.legs[0].pricing_method.title()})',
+                '0': 'Done',
+            }
+
+            selection = self._menu(menu_items, 'Select Setting', 0, 1)
 
             if selection == 1:
                 self.select_method()
-            elif selection == 2:
+            elif selection == 0:
                 break
 
 
@@ -530,7 +529,7 @@ class Interface():
         menu_items = {
             '1': 'Black-Scholes',
             '2': 'Monte Carlo',
-            '3': 'Cancel',
+            '0': 'Cancel',
         }
 
         modified = True
@@ -539,14 +538,18 @@ class Interface():
 
             if selection == 1:
                 self.strategy.pricing_method = 'black-scholes'
-                self.dirty_calc = True
-                self.dirty_anal = True
+                self.strategy.set_pricing_method(self.strategy.pricing_method)
+                self.dirty_calculate = True
+                self.dirty_analyze = True
                 break
+
             if selection == 2:
                 self.strategy.pricing_method = 'monte-carlo'
-                self.dirty_calc = True
-                self.dirty_anal = True
+                self.strategy.set_pricing_method(self.strategy.pricing_method)
+                self.dirty_calculate = True
+                self.dirty_analyze = True
                 break
+
             if selection == 0:
                 break
 

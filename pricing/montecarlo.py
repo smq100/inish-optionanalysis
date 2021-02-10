@@ -5,11 +5,11 @@ from random import gauss
 
 import numpy as np
 
-from .pricingbase import BasePricing
+from .pricing import Pricing
 from utils import utils as u
 
 
-class MonteCarlo(BasePricing):
+class MonteCarlo(Pricing):
     '''
     This class uses Monte-Carlo simulation to calculate prices for American Call and Put Options.
 

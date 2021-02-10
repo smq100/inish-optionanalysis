@@ -88,6 +88,15 @@ class Strategy(ABC):
         return spot
 
 
+    def set_pricing_method(self, method):
+        if method != 'black-scholes':
+            for leg in self.legs:
+                leg.pricing_method = method
+        elif method != 'monte-carlo':
+            for leg in self.legs:
+                leg.pricing_method = method
+
+
     @abc.abstractmethod
     def generate_profit_table(self):
         '''TODO'''
@@ -288,7 +297,7 @@ class Leg:
                         time_to_maturity = self.option.expiry - maturity_date
                         decimaldays_to_maturity = time_to_maturity.days / 365.0
 
-                        # Compensate for zero delta days to provide small fraction of day
+                        # Compensate for zero delta days to provide small fraction of day (ex: expiration day)
                         if decimaldays_to_maturity < 0.0003:
                             decimaldays_to_maturity = 0.00001
 
