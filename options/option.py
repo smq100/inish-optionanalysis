@@ -14,6 +14,7 @@ class Option():
         self.expiry = expiry
         self.time_to_maturity = 0.0
         self.calc_price = 0.0
+        self.calc_volatility = 0.0
         self.decorator = '*'
 
         self.delta = 0.0
@@ -51,13 +52,18 @@ class Option():
             f'Bid:{self.bid:.2f}\n'\
             f'Ask:{self.ask:.2f}\n'\
             f'Change:{self.change}\n'\
-            f'%Change:{self.percent_change}\n'\
+            f'Change%:{self.percent_change}\n'\
             f'Volume:{self.volume}\n'\
             f'Open Interest:{self.open_interest}\n'\
+            f'Calc Volitility:{self.calc_volatility:.3f}\n'\
             f'Implied Volitility:{self.implied_volatility:.3f}\n'\
             f'ITM:{self.itm}\n'\
             f'Size:{self.contract_size}\n'\
-            f'Currency:{self.currency}'
+            f'Currency:{self.currency}\n'\
+            f'Delta:{self.delta:.4f}\n'\
+            f'Gamma:{self.gamma:.4f}\n'\
+            f'Theta:{self.theta:.4f}\n'\
+            f'Vega:{self.vega:.4f}'
 
 
     def load_contract(self, contract_name):
@@ -122,17 +128,18 @@ def _parse_contract_name(contract_name):
 
     ticker = parsed[0]
     expiry = f'20{parsed[1][:2]}-{parsed[1][2:4]}-{parsed[1][4:]}'
-    strike = float(parsed[3][:5]) + (float(parsed[3][5:]) / 1000.0)
 
     if 'C' in parsed[2].upper():
         product = 'call'
     else:
         product = 'put'
 
+    strike = float(parsed[3][:5]) + (float(parsed[3][5:]) / 1000.0)
+
     return {'ticker':ticker, 'expiry':expiry, 'product':product, 'strike':strike}
 
 
-''' Available option fields (Pandas dataframe)
+''' Available Yahoo option fields (Pandas dataframe)
 contractSymbol
 lastTradeDate
 strike

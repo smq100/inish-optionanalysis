@@ -42,28 +42,32 @@ class BlackScholes(Pricing):
         d1 = self._calculate_d1(spot_price, time_to_maturity)
         d2 = self._calculate_d2(spot_price, time_to_maturity)
 
-        self.cost_call = ((spot_price * np.exp(-1 * self.dividend * time_to_maturity)) *
+        self.price_call = ((spot_price * np.exp(-1 * self.dividend * time_to_maturity)) *
             stats.norm.cdf(d1, 0.0, 1.0) -
             (self.strike_price * np.exp(-1 * self.risk_free_rate * time_to_maturity) *
             stats.norm.cdf(d2, 0.0, 1.0)))
 
-        self.cost_put = (self.strike_price * np.exp(-1 * self.risk_free_rate * time_to_maturity) *
+        self.price_put = (self.strike_price * np.exp(-1 * self.risk_free_rate * time_to_maturity) *
             stats.norm.cdf(-1 * d2, 0.0, 1.0) -
             (spot_price * np.exp(-1 * self.dividend * time_to_maturity)) *
             stats.norm.cdf(-1 * d1, 0.0, 1.0))
 
-        logging.info('Calculated value for Black-Scholes Call Option is $%.2f ', self.cost_call)
-        logging.info('Calculated value for Black-Scholes Put Option is $%.2f ', self.cost_put)
+        logging.info('Calculated value for Black-Scholes Call Option is $%.2f ', self.price_call)
+        logging.info('Calculated value for Black-Scholes Put Option is $%.2f ', self.price_put)
 
-        return self.cost_call, self.cost_put
+        return self.price_call, self.price_put
 
 
     def calculate_delta(self, spot_price=-1.0, time_to_maturity=-1.0):
         ''' Calculate Call and Put option delta based on the below equations from Black-Scholes.
         If dividend is not zero, then it is subtracted from the risk free rate in the below calculations.
 
+        delta call =  np.exp(-q * T) * si.norm.cdf(d1, 0.0, 1.0)
+        delta put  = -np.exp(-q * T) * si.norm.cdf(-d1, 0.0, 1.0)
+
         :return: <float>, <float> Calculated delta of Call & Put options
         '''
+
         if spot_price <= 0.0:
             spot_price = self.spot_price
 
@@ -72,7 +76,7 @@ class BlackScholes(Pricing):
 
         d1 = self._calculate_d1(spot_price, time_to_maturity)
 
-        self.delta_call = delta = np.exp(-self.dividend * time_to_maturity) * stats.norm.cdf(d1, 0.0, 1.0)
+        self.delta_call = np.exp(-self.dividend * time_to_maturity) * stats.norm.cdf(d1, 0.0, 1.0)
         self.delta_put = -np.exp(-self.dividend * time_to_maturity) * stats.norm.cdf(-d1, 0.0, 1.0)
 
         logging.info('Calculated delta for Black-Scholes Call Option is $%.2f ', self.delta_call)
@@ -85,8 +89,11 @@ class BlackScholes(Pricing):
         ''' Calculate Call and Put option gamma based on the below equations from Black-Scholes.
         If dividend is not zero, then it is subtracted from the risk free rate in the below calculations.
 
+        gamma call & put = np.exp(-q * T) * si.norm.cdf(d1, 0.0, 1.0) / S * sigma * np.sqrt(T)
+
         :return: <float>, <float> Calculated delta of Call & Put options
         '''
+
         if spot_price <= 0.0:
             spot_price = self.spot_price
 
@@ -97,8 +104,7 @@ class BlackScholes(Pricing):
 
         gamma = np.exp(-self.dividend * time_to_maturity) * stats.norm.cdf(d1, 0.0, 1.0) / spot_price * self.volatility * np.sqrt(time_to_maturity)
 
-        self.gamma_call = gamma
-        self.gamma_put = gamma
+        self.gamma_call = self.gamma_put = gamma
 
         logging.info('Calculated gamma for Black-Scholes Call Option is $%.2f ', self.gamma_call)
         logging.info('Calculated gamma for Black-Scholes Put Option is $%.2f ', self.gamma_put)
@@ -110,8 +116,22 @@ class BlackScholes(Pricing):
         ''' Calculate Call and Put option theta based on the below equations from Black-Scholes.
         If dividend is not zero, then it is subtracted from the risk free rate in the below calculations.
 
+        theta call = -np.exp(-q * T) *
+                     (S * si.norm.cdf(d1, 0.0, 1.0) * sigma) /
+                     (2 * np.sqrt(T)) - r * K * np.exp(-r * T) *
+                     si.norm.cdf(d2, 0.0, 1.0) + q * S *
+                     np.exp(-q * T) * si.norm.cdf(d1, 0.0, 1.0)
+
+        theta put = -np.exp(-q * T) *
+                     (S * si.norm.cdf(d1, 0.0, 1.0) * sigma) /
+                     (2 * np.sqrt(T)) + r * K * np.exp(-r * T) *
+                     si.norm.cdf(-d2, 0.0, 1.0) - q * S *
+                     np.exp(-q * T) * si.norm.cdf(-d1, 0.0, 1.0)
+
+
         :return: <float>, <float> Calculated delta of Call & Put options
         '''
+
         if spot_price <= 0.0:
             spot_price = self.spot_price
 
@@ -121,12 +141,20 @@ class BlackScholes(Pricing):
         d1 = self._calculate_d1(spot_price, time_to_maturity)
         d2 = self._calculate_d2(spot_price, time_to_maturity)
 
-        theta_call = -np.exp(-self.dividend * time_to_maturity) * (spot_price * stats.norm.cdf(d1, 0.0, 1.0) * self.volatility) / (2 * np.sqrt(time_to_maturity)) - self.risk_free_rate * self.strike_price * np.exp(-self.risk_free_rate * time_to_maturity) * stats.norm.cdf(d2, 0.0, 1.0) + self.dividend * spot_price * np.exp(-self.dividend * time_to_maturity) * stats.norm.cdf(d1, 0.0, 1.0)
-        theta_put = -np.exp(-self.dividend * time_to_maturity) * (spot_price * stats.norm.cdf(d1, 0.0, 1.0) * self.volatility) / (2 * np.sqrt(time_to_maturity)) + self.risk_free_rate * self.strike_price * np.exp(-self.risk_free_rate * time_to_maturity) * stats.norm.cdf(-d2, 0.0, 1.0) - self.dividend * spot_price * np.exp(-self.dividend * time_to_maturity) * stats.norm.cdf(-d1, 0.0, 1.0)
+        theta_call = -np.exp(-self.dividend * time_to_maturity) * \
+                     (spot_price * stats.norm.cdf(d1, 0.0, 1.0) * self.volatility) / \
+                     (2 * np.sqrt(time_to_maturity)) - self.risk_free_rate * self.strike_price * np.exp(-self.risk_free_rate * time_to_maturity) * \
+                     stats.norm.cdf(d2, 0.0, 1.0) + self.dividend * spot_price * \
+                     np.exp(-self.dividend * time_to_maturity) * stats.norm.cdf(d1, 0.0, 1.0)
 
+        theta_put = -np.exp(-self.dividend * time_to_maturity) * \
+                    (spot_price * stats.norm.cdf(d1, 0.0, 1.0) * self.volatility) / \
+                    (2 * np.sqrt(time_to_maturity)) + self.risk_free_rate * self.strike_price * np.exp(-self.risk_free_rate * time_to_maturity) * \
+                    stats.norm.cdf(-d2, 0.0, 1.0) - self.dividend * spot_price * \
+                    np.exp(-self.dividend * time_to_maturity) * stats.norm.cdf(-d1, 0.0, 1.0)
 
-        self.theta_call = theta_call
-        self.theta_put = theta_put
+        self.theta_call = theta_call / 365.0
+        self.theta_put = theta_put / 365.0
 
         logging.info('Calculated theta for Black-Scholes Call Option is $%.2f ', self.theta_call)
         logging.info('Calculated theta for Black-Scholes Put Option is $%.2f ', self.theta_put)
@@ -137,6 +165,8 @@ class BlackScholes(Pricing):
     def calculate_vega(self, spot_price=-1.0, time_to_maturity=-1.0):
         ''' Calculate Call and Put option vega based on the below equations from Black-Scholes.
         If dividend is not zero, then it is subtracted from the risk free rate in the below calculations.
+
+        vega call & put = 1 / np.sqrt(2 * np.pi) * S * np.exp(-q * T) * np.exp(-d1 ** 2 * 0.5) * np.sqrt(T)
 
         :return: <float>, <float> Calculated delta of Call & Put options
         '''
@@ -150,8 +180,7 @@ class BlackScholes(Pricing):
 
         vega = 1 / np.sqrt(2 * np.pi) * spot_price * np.exp(-self.dividend * time_to_maturity) * np.exp(-d1 ** 2 * 0.5) * np.sqrt(time_to_maturity)
 
-        self.vega_call = vega
-        self.vega_put = vega
+        self.vega_call = self.vega_put = vega / 100.0
 
         logging.info('Calculated vega for Black-Scholes Call Option is $%.2f ', self.vega_call)
         logging.info('Calculated vega for Black-Scholes Put Option is $%.2f ', self.vega_put)

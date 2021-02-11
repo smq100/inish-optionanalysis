@@ -48,7 +48,7 @@ class Interface():
             else:
                 if not exit:
                     self.strategy = Call(ticker, strategy, direction)
-                    self.strategy.calculate()
+                    self.calculate()
                     self.main_menu()
                 else:
                     u.print_error('Nothing to do')
@@ -67,8 +67,9 @@ class Interface():
                 '4': 'Calculate Values',
                 '5': 'Analyze Stategy',
                 '6': 'Modify Leg',
-                '7': 'Plot Leg Values',
-                '8': 'Settings',
+                '7': 'View Options',
+                '8': 'Plot Leg Values',
+                '9': 'Settings',
                 '0': 'Exit'
             }
 
@@ -83,11 +84,11 @@ class Interface():
                     f'(L:${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator}'\
                     f' S:${self.strategy.legs[1].option.strike:.2f}{self.strategy.legs[1].option.decorator})'
             else:
-                menu_items['3'] += f' (${self.strategy.legs[0].option.strike:.2f} {self.strategy.legs[0].option.decorator})'
+                menu_items['3'] += f' (${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator})'
 
-            self.write_legs()
+            self.view_legs()
 
-            selection = self._menu(menu_items, 'Select Operation', 0, 8)
+            selection = self._menu(menu_items, 'Select Operation', 0, 9)
 
             if selection == 1:
                 self.select_symbol()
@@ -118,10 +119,18 @@ class Interface():
                     print('No legs configured')
                 elif len(self.strategy.legs) > 1:
                     leg = u.input_integer('Enter Leg: ', 1, 2) - 1
+                    self.view_options(leg)
+                else:
+                    self.view_options(0)
+            elif selection == 8:
+                if len(self.strategy.legs) < 1:
+                    print('No legs configured')
+                elif len(self.strategy.legs) > 1:
+                    leg = u.input_integer('Enter Leg: ', 1, 2) - 1
                     self.plot_value(leg)
                 else:
                     self.plot_value(0)
-            elif selection == 8:
+            elif selection == 9:
                 self.select_settings()
             elif selection == 0:
                 break
@@ -141,7 +150,7 @@ class Interface():
         errors = self.strategy.get_errors()
         if not errors:
             self.strategy.analyze()
-            self.write_legs()
+            self.view_legs()
             self.plot_analysis()
 
             self.dirty_calculate = False
@@ -213,7 +222,7 @@ class Interface():
             u.print_error('No option legs configured')
 
 
-    def write_legs(self, leg=-1, delimeter=True):
+    def view_legs(self, leg=-1, delimeter=True):
         '''TODO'''
         if delimeter:
             print(u.delimeter('Option Leg Values', True))
@@ -223,9 +232,26 @@ class Interface():
         elif leg < 0:
             for index in range(0, len(self.strategy.legs), 1):
                 # Recursive call to output each leg
-                self.write_legs(index, False)
+                self.view_legs(index, False)
         elif leg < len(self.strategy.legs):
             output = f'{leg+1}: {self.strategy.legs[leg]}'
+            print(output)
+        else:
+            u.print_error('Invalid leg')
+
+
+    def view_options(self, leg=-1, delimeter=True):
+        if delimeter:
+            print(u.delimeter('Option Metrics', True))
+
+        if len(self.strategy.legs) < 1:
+            print('No legs configured')
+        elif leg < 0:
+            for index in range(0, len(self.strategy.legs), 1):
+                # Recursive call to output each leg
+                self.view_legs(index, False)
+        elif leg < len(self.strategy.legs):
+            output = f'{self.strategy.legs[leg].option}'
             print(output)
         else:
             u.print_error('Invalid leg')
@@ -473,7 +499,7 @@ class Interface():
                 '6': 'Cancel',
             }
 
-            self.write_legs()
+            self.view_legs()
 
             selection = self._menu(menu_items, 'Select Leg', 1, 6)
 

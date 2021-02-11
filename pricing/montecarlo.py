@@ -45,13 +45,13 @@ class MonteCarlo(Pricing):
         call_payoffs, put_payoffs = self._generate_simulations(spot_price)
         discount_factor = np.exp(-1 * self.risk_free_rate * self.time_to_maturity)
 
-        self.cost_call = discount_factor * (sum(call_payoffs) / len(call_payoffs))
-        self.cost_put = discount_factor * (sum(put_payoffs) / len(put_payoffs))
+        self.price_call = discount_factor * (sum(call_payoffs) / len(call_payoffs))
+        self.price_put = discount_factor * (sum(put_payoffs) / len(put_payoffs))
 
-        logging.info('Calculated value for American Call Option is $%.2f ', self.cost_call)
-        logging.info('Calculated value for American Put Option is $%.2f ', self.cost_put)
+        logging.info('Calculated value for American Call Option is $%.2f ', self.price_call)
+        logging.info('Calculated value for American Put Option is $%.2f ', self.price_put)
 
-        return self.cost_call, self.cost_put
+        return self.price_call, self.price_put
 
 
     def calculate_delta(self, spot_price=-1.0, time_to_maturity=-1.0):

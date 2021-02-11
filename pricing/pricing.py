@@ -1,6 +1,6 @@
 ''' Abstract Option Pricing Base Class
 
-Based on https://github.com/shashank-khanna/Option-Pricing
+Pricing calculation based on https://github.com/shashank-khanna/Option-Pricing
 Greeks calculation based on https://aaronschlegel.me/measure-sensitivity-derivatives-greeks-python.html
 '''
 
@@ -41,8 +41,8 @@ class Pricing(ABC):
         self.risk_free_rate = None  # We will fetch current 3-month Treasury rate from the web
         self.spot_price = None
         self.dividend = dividend or 0.0
-        self.cost_call = 0.0
-        self.cost_put = 0.0
+        self.price_call = 0.0
+        self.price_put = 0.0
 
         self.delta_call = 0.0
         self.delta_put = 0.0
@@ -71,6 +71,13 @@ class Pricing(ABC):
     @abc.abstractmethod
     def calculate_price(self, spot_price=-1.0, time_to_maturity=-1.0):
         '''TODO'''
+
+
+    def calculate_greeks(self, spot_price=-1.0, time_to_maturity=-1.0):
+        self.calculate_delta(spot_price, time_to_maturity)
+        self.calculate_gamma(spot_price, time_to_maturity)
+        self.calculate_theta(spot_price, time_to_maturity)
+        self.calculate_vega(spot_price, time_to_maturity)
 
 
     @abc.abstractmethod

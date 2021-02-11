@@ -194,31 +194,28 @@ class Leg:
                 self.pricer = BlackScholes(self.symbol.ticker, self.option.expiry, self.option.strike)
 
             # Calculate prices
-            price_call, price_put = self.pricer.calculate_price()
-
-            # Calculate Greeks
-            delta_call, delta_put = self.pricer.calculate_delta()
-            gamma_call, gamma_put = self.pricer.calculate_gamma()
-            theta_call, theta_put = self.pricer.calculate_theta()
-            vega_call,  vega_put  = self.pricer.calculate_vega()
+            self.pricer.calculate_price()
 
             self.symbol.spot = self.pricer.spot_price
-            self.symbol.volatility = self.pricer.volatility
+            self.option.calc_volatility = self.symbol.volatility = self.pricer.volatility
             self.option.time_to_maturity = self.pricer.time_to_maturity
 
+            # Calculate Greeks
+            self.pricer.calculate_greeks()
+
             if self.product == 'call':
-                self.option.calc_price = price = price_call
-                self.option.delta = delta_call
-                self.option.gamma = gamma_call
-                self.option.theta = theta_call
-                self.option.vega = vega_call
+                self.option.calc_price = price = self.pricer.price_call
+                self.option.delta = self.pricer.delta_call
+                self.option.gamma = self.pricer.gamma_call
+                self.option.theta = self.pricer.theta_call
+                self.option.vega = self.pricer.vega_call
             else:
-                self.option.calc_price = price = price_put
-                self.option.delta = delta_put
-                self.option.delta = delta_put
-                self.option.gamma = gamma_put
-                self.option.theta = theta_put
-                self.option.vega = vega_put
+                self.option.calc_price = price = self.pricer.price_put
+                self.option.delta = self.pricer.delta_put
+                self.option.delta = self.pricer.delta_put
+                self.option.gamma = self.pricer.gamma_put
+                self.option.theta = self.pricer.theta_put
+                self.option.vega = self.pricer.vega_put
 
             # Generate the values table
             self.table = self.generate_value_table()
