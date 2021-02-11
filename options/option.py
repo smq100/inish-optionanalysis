@@ -16,6 +16,11 @@ class Option():
         self.calc_price = 0.0
         self.decorator = '*'
 
+        self.delta = 0.0
+        self.gamma = 0.0
+        self.theta = 0.0
+        self.vega = 0.0
+
         self.contract_symbol = ''
         self.last_trade_date = ''
         self.last_price = 0.0

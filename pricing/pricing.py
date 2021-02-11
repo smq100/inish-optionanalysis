@@ -1,6 +1,7 @@
 ''' Abstract Option Pricing Base Class
 
 Based on https://github.com/shashank-khanna/Option-Pricing
+Greeks calculation based on https://aaronschlegel.me/measure-sensitivity-derivatives-greeks-python.html
 '''
 
 import sys
@@ -42,6 +43,16 @@ class Pricing(ABC):
         self.dividend = dividend or 0.0
         self.cost_call = 0.0
         self.cost_put = 0.0
+
+        self.delta_call = 0.0
+        self.delta_put = 0.0
+        self.gamma_call = 0.0
+        self.gamma_put = 0.0
+        self.theta_call = 0.0
+        self.theta_put = 0.0
+        self.vega_call = 0.0
+        self.vega_put = 0.0
+
         self._underlying_asset_data = pd.DataFrame()
         self._start_date = datetime.datetime.today() - BDay(self.LOOK_BACK_WINDOW)  # How far we need to go to get historical prices
 
@@ -58,8 +69,32 @@ class Pricing(ABC):
 
 
     @abc.abstractmethod
-    def calculate_prices(self, spot_price=-1.0, time_to_maturity=-1.0):
+    def calculate_price(self, spot_price=-1.0, time_to_maturity=-1.0):
         '''TODO'''
+
+
+    @abc.abstractmethod
+    def calculate_delta(self, spot_price=-1.0, time_to_maturity=-1.0):
+        '''TODO'''
+        return 0.0, 0.0
+
+
+    @abc.abstractmethod
+    def calculate_gamma(self, spot_price=-1.0, time_to_maturity=-1.0):
+        '''TODO'''
+        return 0.0, 0.0
+
+
+    @abc.abstractmethod
+    def calculate_theta(self, spot_price=-1.0, time_to_maturity=-1.0):
+        '''TODO'''
+        return 0.0, 0.0
+
+
+    @abc.abstractmethod
+    def calculate_vega(self, spot_price=-1.0, time_to_maturity=-1.0):
+        '''TODO'''
+        return 0.0, 0.0
 
 
     def initialize_variables(self):
@@ -170,6 +205,7 @@ class Pricing(ABC):
         self._underlying_asset_data.reset_index(inplace=True)
         self._underlying_asset_data.set_index('Date', inplace=True)
         self._underlying_asset_data['log_returns'] = np.log(self._underlying_asset_data['Close'] / self._underlying_asset_data['Close'].shift(1))
+
         d_std = np.std(self._underlying_asset_data.log_returns)
         std = d_std * 252 ** 0.5
 

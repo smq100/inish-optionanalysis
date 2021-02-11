@@ -194,15 +194,31 @@ class Leg:
                 self.pricer = BlackScholes(self.symbol.ticker, self.option.expiry, self.option.strike)
 
             # Calculate prices
-            price_call, price_put = self.pricer.calculate_prices()
+            price_call, price_put = self.pricer.calculate_price()
+
+            # Calculate Greeks
+            delta_call, delta_put = self.pricer.calculate_delta()
+            gamma_call, gamma_put = self.pricer.calculate_gamma()
+            theta_call, theta_put = self.pricer.calculate_theta()
+            vega_call,  vega_put  = self.pricer.calculate_vega()
+
             self.symbol.spot = self.pricer.spot_price
             self.symbol.volatility = self.pricer.volatility
             self.option.time_to_maturity = self.pricer.time_to_maturity
 
             if self.product == 'call':
-                price = self.option.calc_price = price_call
+                self.option.calc_price = price = price_call
+                self.option.delta = delta_call
+                self.option.gamma = gamma_call
+                self.option.theta = theta_call
+                self.option.vega = vega_call
             else:
-                price = self.option.calc_price = price_put
+                self.option.calc_price = price = price_put
+                self.option.delta = delta_put
+                self.option.delta = delta_put
+                self.option.gamma = gamma_put
+                self.option.theta = theta_put
+                self.option.vega = vega_put
 
             # Generate the values table
             self.table = self.generate_value_table()
@@ -260,7 +276,7 @@ class Leg:
         call = put = 0.0
 
         if self.pricer is not None:
-            call, put = self.pricer.calculate_prices(spot_price, time_to_maturity)
+            call, put = self.pricer.calculate_price(spot_price, time_to_maturity)
 
         return call, put
 

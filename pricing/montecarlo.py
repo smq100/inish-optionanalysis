@@ -28,7 +28,7 @@ class MonteCarlo(Pricing):
         self.log_parameters()
 
 
-    def calculate_prices(self, spot_price=-1.0, time_to_maturity=-1.0):
+    def calculate_price(self, spot_price=-1.0, time_to_maturity=-1.0):
         ''' Calculate present-value of of expected payoffs and their average becomes the price of the respective option.
         Calculations are performed based on below equations:
 
@@ -52,6 +52,26 @@ class MonteCarlo(Pricing):
         logging.info('Calculated value for American Put Option is $%.2f ', self.cost_put)
 
         return self.cost_call, self.cost_put
+
+
+    def calculate_delta(self, spot_price=-1.0, time_to_maturity=-1.0):
+        '''TODO'''
+        return 0.0, 0.0
+
+
+    def calculate_gamma(self, spot_price=-1.0, time_to_maturity=-1.0):
+        '''TODO'''
+        return 0.0, 0.0
+
+
+    def calculate_theta(self, spot_price=-1.0, time_to_maturity=-1.0):
+        '''TODO'''
+        return 0.0, 0.0
+
+
+    def calculate_vega(self, spot_price=-1.0, time_to_maturity=-1.0):
+        '''TODO'''
+        return 0.0, 0.0
 
 
     def _generate_asset_price(self, spot_price):
