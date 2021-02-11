@@ -24,7 +24,7 @@ class BlackScholes(Pricing):
         # Get/Calculate all the required underlying parameters, ex. Volatility, Risk-free rate, etc.
         self.log_parameters()
 
-    def calculate_price(self, spot_price=-1.0, time_to_maturity=-1.0):
+    def calculate_price(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         ''' Calculate Call and Put option prices based on the below equations from Black-Scholes.
         If dividend is not zero, then it is subtracted from the risk free rate in the below calculations.
 
@@ -39,8 +39,11 @@ class BlackScholes(Pricing):
         if time_to_maturity <= 0.0:
             time_to_maturity = self.time_to_maturity
 
-        d1 = self._calculate_d1(spot_price, time_to_maturity)
-        d2 = self._calculate_d2(spot_price, time_to_maturity)
+        if volatility <= 0.0:
+            volatility = self.volatility
+
+        d1 = self._calculate_d1(spot_price, time_to_maturity, volatility)
+        d2 = self._calculate_d2(spot_price, time_to_maturity, volatility)
 
         self.price_call = ((spot_price * np.exp(-1 * self.dividend * time_to_maturity)) *
             stats.norm.cdf(d1, 0.0, 1.0) -
@@ -58,7 +61,7 @@ class BlackScholes(Pricing):
         return self.price_call, self.price_put
 
 
-    def calculate_delta(self, spot_price=-1.0, time_to_maturity=-1.0):
+    def calculate_delta(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         ''' Calculate Call and Put option delta based on the below equations from Black-Scholes.
         If dividend is not zero, then it is subtracted from the risk free rate in the below calculations.
 
@@ -74,7 +77,10 @@ class BlackScholes(Pricing):
         if time_to_maturity <= 0.0:
             time_to_maturity = self.time_to_maturity
 
-        d1 = self._calculate_d1(spot_price, time_to_maturity)
+        if volatility <= 0.0:
+            volatility = self.volatility
+
+        d1 = self._calculate_d1(spot_price, time_to_maturity, volatility)
 
         self.delta_call = np.exp(-self.dividend * time_to_maturity) * stats.norm.cdf(d1, 0.0, 1.0)
         self.delta_put = -np.exp(-self.dividend * time_to_maturity) * stats.norm.cdf(-d1, 0.0, 1.0)
@@ -85,7 +91,7 @@ class BlackScholes(Pricing):
         return self.delta_call, self.delta_put
 
 
-    def calculate_gamma(self, spot_price=-1.0, time_to_maturity=-1.0):
+    def calculate_gamma(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         ''' Calculate Call and Put option gamma based on the below equations from Black-Scholes.
         If dividend is not zero, then it is subtracted from the risk free rate in the below calculations.
 
@@ -100,9 +106,12 @@ class BlackScholes(Pricing):
         if time_to_maturity <= 0.0:
             time_to_maturity = self.time_to_maturity
 
-        d1 = self._calculate_d1(spot_price, time_to_maturity)
+        if volatility <= 0.0:
+            volatility = self.volatility
 
-        gamma = np.exp(-self.dividend * time_to_maturity) * stats.norm.cdf(d1, 0.0, 1.0) / spot_price * self.volatility * np.sqrt(time_to_maturity)
+        d1 = self._calculate_d1(spot_price, time_to_maturity, volatility)
+
+        gamma = np.exp(-self.dividend * time_to_maturity) * stats.norm.cdf(d1, 0.0, 1.0) / spot_price * volatility * np.sqrt(time_to_maturity)
 
         self.gamma_call = self.gamma_put = gamma
 
@@ -112,7 +121,7 @@ class BlackScholes(Pricing):
         return self.gamma_call, self.gamma_put
 
 
-    def calculate_theta(self, spot_price=-1.0, time_to_maturity=-1.0):
+    def calculate_theta(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         ''' Calculate Call and Put option theta based on the below equations from Black-Scholes.
         If dividend is not zero, then it is subtracted from the risk free rate in the below calculations.
 
@@ -138,20 +147,19 @@ class BlackScholes(Pricing):
         if time_to_maturity <= 0.0:
             time_to_maturity = self.time_to_maturity
 
-        d1 = self._calculate_d1(spot_price, time_to_maturity)
-        d2 = self._calculate_d2(spot_price, time_to_maturity)
+        if volatility <= 0.0:
+            volatility = self.volatility
 
-        theta_call = -np.exp(-self.dividend * time_to_maturity) * \
-                     (spot_price * stats.norm.cdf(d1, 0.0, 1.0) * self.volatility) / \
-                     (2 * np.sqrt(time_to_maturity)) - self.risk_free_rate * self.strike_price * np.exp(-self.risk_free_rate * time_to_maturity) * \
-                     stats.norm.cdf(d2, 0.0, 1.0) + self.dividend * spot_price * \
-                     np.exp(-self.dividend * time_to_maturity) * stats.norm.cdf(d1, 0.0, 1.0)
+        d1 = self._calculate_d1(spot_price, time_to_maturity, volatility)
+        d2 = self._calculate_d2(spot_price, time_to_maturity, volatility)
 
-        theta_put = -np.exp(-self.dividend * time_to_maturity) * \
-                    (spot_price * stats.norm.cdf(d1, 0.0, 1.0) * self.volatility) / \
-                    (2 * np.sqrt(time_to_maturity)) + self.risk_free_rate * self.strike_price * np.exp(-self.risk_free_rate * time_to_maturity) * \
-                    stats.norm.cdf(-d2, 0.0, 1.0) - self.dividend * spot_price * \
-                    np.exp(-self.dividend * time_to_maturity) * stats.norm.cdf(-d1, 0.0, 1.0)
+        theta_call = (-np.exp(-self.dividend * time_to_maturity) * spot_price * stats.norm.cdf(d1, 0.0, 1.0) * volatility / (2 * np.sqrt(time_to_maturity))) - \
+                     (self.risk_free_rate * self.strike_price * np.exp(-self.risk_free_rate * time_to_maturity) * stats.norm.cdf(d2, 0.0, 1.0)) + \
+                     (self.dividend * spot_price * np.exp(-self.dividend * time_to_maturity) * stats.norm.cdf(d1, 0.0, 1.0))
+
+        theta_put  = (-np.exp(-self.dividend * time_to_maturity) * spot_price * stats.norm.cdf(d1, 0.0, 1.0) * volatility / (2 * np.sqrt(time_to_maturity))) + \
+                     (self.risk_free_rate * self.strike_price * np.exp(-self.risk_free_rate * time_to_maturity) * stats.norm.cdf(-d2, 0.0, 1.0)) - \
+                     (self.dividend * spot_price * np.exp(-self.dividend * time_to_maturity) * stats.norm.cdf(-d1, 0.0, 1.0))
 
         self.theta_call = theta_call / 365.0
         self.theta_put = theta_put / 365.0
@@ -162,7 +170,7 @@ class BlackScholes(Pricing):
         return self.theta_call, self.theta_put
 
 
-    def calculate_vega(self, spot_price=-1.0, time_to_maturity=-1.0):
+    def calculate_vega(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         ''' Calculate Call and Put option vega based on the below equations from Black-Scholes.
         If dividend is not zero, then it is subtracted from the risk free rate in the below calculations.
 
@@ -176,7 +184,10 @@ class BlackScholes(Pricing):
         if time_to_maturity <= 0.0:
             time_to_maturity = self.time_to_maturity
 
-        d1 = self._calculate_d1(spot_price, time_to_maturity)
+        if volatility <= 0.0:
+            volatility = self.volatility
+
+        d1 = self._calculate_d1(spot_price, time_to_maturity, volatility)
 
         vega = 1 / np.sqrt(2 * np.pi) * spot_price * np.exp(-self.dividend * time_to_maturity) * np.exp(-d1 ** 2 * 0.5) * np.sqrt(time_to_maturity)
 
@@ -188,7 +199,7 @@ class BlackScholes(Pricing):
         return self.vega_call, self.vega_put
 
 
-    def _calculate_d1(self, spot_price=-1.0, time_to_maturity=-1.0):
+    def _calculate_d1(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         ''' Famous d1 variable from Black-Scholes model calculated as shown in:
 
                 https://en.wikipedia.org/wiki/Black%E2%80%93Scholes_model
@@ -200,16 +211,19 @@ class BlackScholes(Pricing):
         if time_to_maturity <= 0.0:
             time_to_maturity = self.time_to_maturity
 
-        d_1 = (np.log(spot_price / self.strike_price) +
-            (self.risk_free_rate - self.dividend + 0.5 * self.volatility ** 2) * time_to_maturity) / \
-            (self.volatility * np.sqrt(time_to_maturity))
+        if volatility <= 0.0:
+            volatility = self.volatility
 
-        logging.debug('Calculated value for d1 = %f', d_1)
+        d1 = (np.log(spot_price / self.strike_price) +
+            (self.risk_free_rate - self.dividend + 0.5 * volatility ** 2) * time_to_maturity) / \
+            (volatility * np.sqrt(time_to_maturity))
 
-        return d_1
+        logging.debug('Calculated value for d1 = %f', d1)
+
+        return d1
 
 
-    def _calculate_d2(self, spot_price=-1.0, time_to_maturity=-1.0):
+    def _calculate_d2(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         ''' Famous d2 variable from Black-Scholes model calculated as shown in:
 
                 https://en.wikipedia.org/wiki/Black%E2%80%93Scholes_model
@@ -221,13 +235,16 @@ class BlackScholes(Pricing):
         if time_to_maturity <= 0.0:
             time_to_maturity = self.time_to_maturity
 
-        d_2 = (np.log(spot_price / self.strike_price) +
-            (self.risk_free_rate - self.dividend - 0.5 * self.volatility ** 2) * time_to_maturity) / \
-            (self.volatility * np.sqrt(time_to_maturity))
+        if volatility <= 0.0:
+            volatility = self.volatility
 
-        logging.debug('Calculated value for d2 = %f', d_2)
+        d2 = (np.log(spot_price / self.strike_price) +
+            (self.risk_free_rate - self.dividend - 0.5 * volatility ** 2) * time_to_maturity) / \
+            (volatility * np.sqrt(time_to_maturity))
 
-        return d_2
+        logging.debug('Calculated value for d2 = %f', d2)
+
+        return d2
 
 if __name__ == '__main__':
     pricer_ = BlackScholes('TSLA', datetime.datetime(2021, 8, 31), 1000)

@@ -8,20 +8,25 @@ from pricing.fetcher import validate_ticker, get_company_info
 
 class Option():
     def __init__(self, ticker, product, strike, expiry):
+        # Specified
         self.ticker = ticker
         self.product = product
         self.strike = strike
         self.expiry = expiry
-        self.time_to_maturity = 0.0
+        self.spot = 0.0
+
+        # Calculated
         self.calc_price = 0.0
         self.calc_volatility = 0.0
-        self.decorator = '*'
-
+        self.time_to_maturity = 0.0
+        self.rate = 0.0
         self.delta = 0.0
         self.gamma = 0.0
         self.theta = 0.0
         self.vega = 0.0
+        self.decorator = '*'
 
+        # Fetched online
         self.contract_symbol = ''
         self.last_trade_date = ''
         self.last_price = 0.0
@@ -43,9 +48,11 @@ class Option():
     def __str__(self):
         return f'Contract:{self.contract_symbol}\n'\
             f'Ticker:{self.ticker}\n'\
-            f'Product:{self.product}\n'\
-            f'Expiry:{self.expiry}\n'\
+            f'Product:{self.product.title()}\n'\
+            f'Expiry:{self.expiry:%Y-%m-%d} ({self.time_to_maturity*365:.0f}/{self.time_to_maturity:.5f})\n'\
             f'Strike:{self.strike:.2f}\n'\
+            f'Spot:{self.spot:.2f}\n'\
+            f'Rate:{self.rate:.3f}\n'\
             f'Last Trade:{self.last_trade_date}\n'\
             f'Calc Price:{self.calc_price:.2f}\n'\
             f'Last Price:{self.last_price:.2f}\n'\
@@ -55,15 +62,15 @@ class Option():
             f'Change%:{self.percent_change}\n'\
             f'Volume:{self.volume}\n'\
             f'Open Interest:{self.open_interest}\n'\
-            f'Calc Volitility:{self.calc_volatility:.3f}\n'\
-            f'Implied Volitility:{self.implied_volatility:.3f}\n'\
+            f'Calc Volitility:{self.calc_volatility:.4f}\n'\
+            f'Implied Volitility:{self.implied_volatility:.4f}\n'\
             f'ITM:{self.itm}\n'\
             f'Size:{self.contract_size}\n'\
             f'Currency:{self.currency}\n'\
-            f'Delta:{self.delta:.4f}\n'\
-            f'Gamma:{self.gamma:.4f}\n'\
-            f'Theta:{self.theta:.4f}\n'\
-            f'Vega:{self.vega:.4f}'
+            f'Delta:{self.delta:.5f}\n'\
+            f'Gamma:{self.gamma:.5f}\n'\
+            f'Theta:{self.theta:.5f}\n'\
+            f'Vega:{self.vega:.5f}'
 
 
     def load_contract(self, contract_name):

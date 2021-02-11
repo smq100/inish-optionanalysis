@@ -73,7 +73,7 @@ class Pricing(ABC):
         '''TODO'''
 
 
-    def calculate_greeks(self, spot_price=-1.0, time_to_maturity=-1.0):
+    def calculate_greeks(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         self.calculate_delta(spot_price, time_to_maturity)
         self.calculate_gamma(spot_price, time_to_maturity)
         self.calculate_theta(spot_price, time_to_maturity)
@@ -81,25 +81,25 @@ class Pricing(ABC):
 
 
     @abc.abstractmethod
-    def calculate_delta(self, spot_price=-1.0, time_to_maturity=-1.0):
+    def calculate_delta(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         '''TODO'''
         return 0.0, 0.0
 
 
     @abc.abstractmethod
-    def calculate_gamma(self, spot_price=-1.0, time_to_maturity=-1.0):
+    def calculate_gamma(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         '''TODO'''
         return 0.0, 0.0
 
 
     @abc.abstractmethod
-    def calculate_theta(self, spot_price=-1.0, time_to_maturity=-1.0):
+    def calculate_theta(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         '''TODO'''
         return 0.0, 0.0
 
 
     @abc.abstractmethod
-    def calculate_vega(self, spot_price=-1.0, time_to_maturity=-1.0):
+    def calculate_vega(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         '''TODO'''
         return 0.0, 0.0
 

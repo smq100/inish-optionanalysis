@@ -178,7 +178,7 @@ class Leg:
         return output
 
 
-    def calculate(self, pricing_method='black-scholes'):
+    def calculate(self, pricing_method='black-scholes', greeks=True):
         '''TODO'''
 
         if pricing_method is not None:
@@ -194,35 +194,57 @@ class Leg:
                 self.pricer = BlackScholes(self.symbol.ticker, self.option.expiry, self.option.strike)
 
             # Calculate prices
-            self.pricer.calculate_price()
-
-            self.symbol.spot = self.pricer.spot_price
-            self.option.calc_volatility = self.symbol.volatility = self.pricer.volatility
-            self.option.time_to_maturity = self.pricer.time_to_maturity
-
-            # Calculate Greeks
-            self.pricer.calculate_greeks()
+            if self.option.implied_volatility > 0.0:
+                self.pricer.calculate_price(volatility=self.option.implied_volatility)
+            else:
+                self.pricer.calculate_price()
 
             if self.product == 'call':
                 self.option.calc_price = price = self.pricer.price_call
-                self.option.delta = self.pricer.delta_call
-                self.option.gamma = self.pricer.gamma_call
-                self.option.theta = self.pricer.theta_call
-                self.option.vega = self.pricer.vega_call
             else:
                 self.option.calc_price = price = self.pricer.price_put
-                self.option.delta = self.pricer.delta_put
-                self.option.delta = self.pricer.delta_put
-                self.option.gamma = self.pricer.gamma_put
-                self.option.theta = self.pricer.theta_put
-                self.option.vega = self.pricer.vega_put
+
+            self.option.spot = self.symbol.spot = self.pricer.spot_price
+            self.option.rate = self.pricer.risk_free_rate
+            self.option.calc_volatility = self.symbol.volatility = self.pricer.volatility
+            self.option.time_to_maturity = self.pricer.time_to_maturity
 
             # Generate the values table
             self.table = self.generate_value_table()
 
+            # Calculate Greeks
+            if greeks:
+                if self.option.implied_volatility > 0.0:
+                    self.pricer.calculate_greeks(volatility=self.option.implied_volatility)
+                else:
+                    self.pricer.calculate_greeks()
+
+                if self.product == 'call':
+                    self.option.delta = self.pricer.delta_call
+                    self.option.gamma = self.pricer.gamma_call
+                    self.option.theta = self.pricer.theta_call
+                    self.option.vega = self.pricer.vega_call
+                else:
+                    self.option.delta = self.pricer.delta_put
+                    self.option.delta = self.pricer.delta_put
+                    self.option.gamma = self.pricer.gamma_put
+                    self.option.theta = self.pricer.theta_put
+                    self.option.vega = self.pricer.vega_put
+
             logging.info('Option price = ${:.2f} '.format(price))
 
         return price
+
+
+    def recalculate(self, spot_price, time_to_maturity):
+        '''TODO'''
+
+        call = put = 0.0
+
+        if self.pricer is not None:
+            call, put = self.pricer.calculate_price(spot_price, time_to_maturity)
+
+        return call, put
 
 
     def modify_symbol(self, ticker, volatility=-1.0, dividend=0.0):
@@ -265,17 +287,6 @@ class Leg:
         self.table = None
         self.pricer = None
         self.calculate()
-
-
-    def recalculate(self, spot_price, time_to_maturity):
-        '''TODO'''
-
-        call = put = 0.0
-
-        if self.pricer is not None:
-            call, put = self.pricer.calculate_price(spot_price, time_to_maturity)
-
-        return call, put
 
 
     def generate_value_table(self):

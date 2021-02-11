@@ -96,6 +96,7 @@ class Interface():
                 self.select_strategy()
             elif selection == 3:
                 self.select_chain()
+                self.calculate()
             elif selection == 4:
                 if len(self.strategy.legs) > 0:
                     if self.calculate():
@@ -418,10 +419,6 @@ class Interface():
 
             if not ret:
                 u.print_error('Error loading option. Please try again')
-
-        if contract:
-            print(u.delimeter('Option Information', True))
-            print(self.strategy.legs[0].option)
 
 
     def select_chain_expiry(self):
