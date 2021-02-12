@@ -3,7 +3,7 @@
 import datetime
 import re
 
-from pricing.fetcher import validate_ticker, get_company_info
+from pricing.fetcher import validate_ticker, get_company
 
 
 class Option():
@@ -118,7 +118,8 @@ def get_contract(contract_symbol):
     strike = parsed['strike']
 
     try:
-        company = get_company_info(ticker)
+        company = get_company(ticker)
+
         if product == 'call':
             chain = company.option_chain(expiry).calls
         else:

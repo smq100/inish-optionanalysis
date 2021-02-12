@@ -1,6 +1,6 @@
 '''TODO'''
 
-from pricing.fetcher import validate_ticker, get_company_info
+from pricing.fetcher import validate_ticker, get_company
 from utils import utils as u
 
 
@@ -16,7 +16,7 @@ class Chain():
     def get_expiry(self):
         value = self.company = None
         if validate_ticker(self.ticker):
-            self.company = get_company_info(self.ticker)
+            self.company = get_company(self.ticker)
             value = self.company.options
 
         return value
@@ -24,7 +24,7 @@ class Chain():
     def get_chain(self, product):
         value = self.company = None
         if validate_ticker(self.ticker):
-            self.company = get_company_info(self.ticker)
+            self.company = get_company(self.ticker)
             value = self.company.option_chain(date=self.expire)
             if product == 'call':
                 value = value.calls

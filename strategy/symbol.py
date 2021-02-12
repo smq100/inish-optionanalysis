@@ -1,20 +1,18 @@
 '''TODO'''
 
-from pricing.fetcher import validate_ticker, get_company_info
+from pricing.fetcher import validate_ticker, get_company
 
 
 class Symbol:
     '''TODO'''
 
     def __init__(self, ticker):
+        self.company = None
+        self.ticker = ticker
+
         if validate_ticker(ticker):
             # Fetch YFinance opbject
-            self.company = get_company_info(ticker)
-
-            self.ticker = ticker
-        else:
-            self.company = None
-            self.ticker = 'error'
+            self.company = get_company(ticker)
 
 
     def __str__(self):
@@ -22,12 +20,13 @@ class Symbol:
 
         return output
 
-''' YFinance info object:
+
+''' YFinance .info object:
 {
     "zip":"98052-6399",
     "sector":"Technology",
     "fullTimeEmployees":163000,
-    "longBusinessSummary":"Microsoft Corporation develops, licenses, and supports software, services, devices, and solutions worldwide. Its Productivity and Business Processes segment offers Office, Exchange, SharePoint, Microsoft Teams, Office 365 Security and Compliance, and Skype for Business, as well as related Client Access Licenses (CAL); Skype, Outlook.com, OneDrive, and LinkedIn; and Dynamics 365, a set of cloud-based and on-premises business solutions for small and medium businesses, large organizations, and divisions of enterprises. Its Intelligent Cloud segment licenses SQL and Windows Servers, Visual Studio, System Center, and related CALs; GitHub that provides a collaboration platform and code hosting service for developers; and Azure, a cloud platform. It also offers support services and Microsoft consulting services to assist customers in developing, deploying, and managing Microsoft server and desktop solutions; and training and certification to developers and IT professionals on various Microsoft products. Its More Personal Computing segment provides Windows original equipment manufacturer (OEM) licensing and other non-volume licensing of the Windows operating system; Windows Commercial, such as volume licensing of the Windows operating system, Windows cloud services, and other Windows commercial offerings; patent licensing; Windows Internet of Things; and MSN advertising. It also offers Surface, PC accessories, PCs, tablets, gaming and entertainment consoles, and other devices; Gaming, including Xbox hardware, and Xbox content and services; video games and third-party video game royalties; and Search, including Bing and Microsoft advertising. It sells its products through OEMs, distributors, and resellers; and directly through digital marketplaces, online stores, and retail stores. It has a strategic collaboration with DXC Technology. The company was founded in 1975 and is headquartered in Redmond, Washington.",
+    "longBusinessSummary":"Microsoft Corporation develops, licenses, ...",
     "city":"Redmond",
     "phone":"425-882-8080",
     "state":"WA",

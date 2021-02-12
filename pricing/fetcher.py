@@ -20,10 +20,29 @@ quandl.ApiConfig.api_key = quandl_config['DEFAULT']['APIKEY']
 
 SOURCES = ['yahoo', 'morningstar']
 
-def get_company_info(ticker):
-    '''TODO'''
+def get_company(ticker):
+    '''
+    Retrieves a company object that may be used to gather numerous data about the company and security.
 
-    return yf.Ticker(ticker)
+    Attributes include:
+        .info
+        .history(start="2010-01-01",  end=”2020-07-21”)
+        .actions
+        .dividends
+        .splits
+        .sustainability
+        .recommendations
+        .calendar
+        .isin
+        .options
+
+    :return: <object> Ticker object
+    '''
+
+    if validate_ticker(ticker):
+        return yf.Ticker(ticker)
+    else:
+        return None
 
 
 def validate_ticker(ticker):
