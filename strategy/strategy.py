@@ -224,12 +224,13 @@ class Leg:
                     self.option.gamma = self.pricer.gamma_call
                     self.option.theta = self.pricer.theta_call
                     self.option.vega = self.pricer.vega_call
+                    self.option.rho = self.pricer.rho_call
                 else:
-                    self.option.delta = self.pricer.delta_put
                     self.option.delta = self.pricer.delta_put
                     self.option.gamma = self.pricer.gamma_put
                     self.option.theta = self.pricer.theta_put
                     self.option.vega = self.pricer.vega_put
+                    self.option.rho = self.pricer.rho_put
 
             logging.info('Option price = ${:.2f} '.format(price))
 
@@ -247,13 +248,10 @@ class Leg:
         return call, put
 
 
-    def modify_symbol(self, ticker, volatility=-1.0, dividend=0.0):
+    def modify_symbol(self, ticker):
         '''TODO'''
 
-        symbol = self.symbol
-        strike = self.option.strike
-
-        self.symbol = Symbol(ticker, volatility, dividend)
+        self.symbol = Symbol(ticker)
 
         try:
             # Reset strike to spot value
@@ -262,7 +260,6 @@ class Leg:
             return True
         except:
             self.symbol = symbol
-            self.option.strike = strike
             u.print_error(sys.exc_info()[1])
             return False
 

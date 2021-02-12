@@ -24,9 +24,10 @@ class Option():
         self.gamma = 0.0
         self.theta = 0.0
         self.vega = 0.0
+        self.rho = 0.0
         self.decorator = '*'
 
-        # Fetched online
+        # Fetched online with YFinance
         self.contract_symbol = ''
         self.last_trade_date = ''
         self.last_price = 0.0
@@ -70,7 +71,8 @@ class Option():
             f'Delta: {self.delta:.5f}\n'\
             f'Gamma: {self.gamma:.5f}\n'\
             f'Theta: {self.theta:.5f}\n'\
-            f'Vega: {self.vega:.5f}'
+            f'Vega: {self.vega:.5f}\n'\
+            f'Rho: {self.rho:.5f}'
 
 
     def load_contract(self, contract_name):

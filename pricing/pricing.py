@@ -52,6 +52,8 @@ class Pricing(ABC):
         self.theta_put = 0.0
         self.vega_call = 0.0
         self.vega_put = 0.0
+        self.rho_call = 0.0
+        self.rho_put = 0.0
 
         self._underlying_asset_data = pd.DataFrame()
         self._start_date = datetime.datetime.today() - BDay(self.LOOK_BACK_WINDOW)  # How far we need to go to get historical prices
@@ -74,10 +76,11 @@ class Pricing(ABC):
 
 
     def calculate_greeks(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
-        self.calculate_delta(spot_price, time_to_maturity)
-        self.calculate_gamma(spot_price, time_to_maturity)
-        self.calculate_theta(spot_price, time_to_maturity)
-        self.calculate_vega(spot_price, time_to_maturity)
+        self.calculate_delta(spot_price=spot_price, time_to_maturity=time_to_maturity, volatility=volatility)
+        self.calculate_gamma(spot_price=spot_price, time_to_maturity=time_to_maturity, volatility=volatility)
+        self.calculate_theta(spot_price=spot_price, time_to_maturity=time_to_maturity, volatility=volatility)
+        self.calculate_vega(spot_price=spot_price, time_to_maturity=time_to_maturity, volatility=volatility)
+        self.calculate_rho(spot_price=spot_price, time_to_maturity=time_to_maturity, volatility=volatility)
 
 
     @abc.abstractmethod

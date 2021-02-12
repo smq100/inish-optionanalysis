@@ -85,8 +85,8 @@ class BlackScholes(Pricing):
         self.delta_call = np.exp(-self.dividend * time_to_maturity) * stats.norm.cdf(d1, 0.0, 1.0)
         self.delta_put = -np.exp(-self.dividend * time_to_maturity) * stats.norm.cdf(-d1, 0.0, 1.0)
 
-        logging.info('Calculated delta for Black-Scholes Call Option is $%.2f ', self.delta_call)
-        logging.info('Calculated delta for Black-Scholes Put Option is $%.2f ', self.delta_put)
+        logging.info('Calculated delta for Black-Scholes Call Option is %.4f ', self.delta_call)
+        logging.info('Calculated delta for Black-Scholes Put Option is %.4f ', self.delta_put)
 
         return self.delta_call, self.delta_put
 
@@ -110,18 +110,12 @@ class BlackScholes(Pricing):
             volatility = self.volatility
 
         d1 = self._calculate_d1(spot_price, time_to_maturity, volatility)
+        gamma = np.exp(-self.dividend * time_to_maturity) * stats.norm.pdf(d1, 0.0, 1.0) / spot_price * volatility * np.sqrt(time_to_maturity)
 
-        if self.dividend > 0.0:
-            gamma = np.exp(-self.dividend * time_to_maturity) * stats.norm.cdf(d1, 0.0, 1.0) / spot_price * volatility * np.sqrt(time_to_maturity)
-        else:
-            prob_density = 1 / np.sqrt(2 * np.pi) * np.exp(-d1 ** 2 * 0.5)
-            gamma = prob_density / (spot_price * volatility * np.sqrt(time_to_maturity))
+        self.gamma_call = self.gamma_put = gamma * 365.0
 
-
-        self.gamma_call = self.gamma_put = gamma
-
-        logging.info('Calculated gamma for Black-Scholes Call Option is $%.2f ', self.gamma_call)
-        logging.info('Calculated gamma for Black-Scholes Put Option is $%.2f ', self.gamma_put)
+        logging.info('Calculated gamma for Black-Scholes Call Option is %.4f ', self.gamma_call)
+        logging.info('Calculated gamma for Black-Scholes Put Option is %.4f ', self.gamma_put)
 
         return self.gamma_call, self.gamma_put
 
@@ -169,8 +163,8 @@ class BlackScholes(Pricing):
         self.theta_call = theta_call / 365.0
         self.theta_put = theta_put / 365.0
 
-        logging.info('Calculated theta for Black-Scholes Call Option is $%.2f ', self.theta_call)
-        logging.info('Calculated theta for Black-Scholes Put Option is $%.2f ', self.theta_put)
+        logging.info('Calculated theta for Black-Scholes Call Option is %.4f ', self.theta_call)
+        logging.info('Calculated theta for Black-Scholes Put Option is %.4f ', self.theta_put)
 
         return self.theta_call, self.theta_put
 
@@ -198,10 +192,41 @@ class BlackScholes(Pricing):
 
         self.vega_call = self.vega_put = vega / 100.0
 
-        logging.info('Calculated vega for Black-Scholes Call Option is $%.2f ', self.vega_call)
-        logging.info('Calculated vega for Black-Scholes Put Option is $%.2f ', self.vega_put)
+        logging.info('Calculated vega for Black-Scholes Call Option is %.4f ', self.vega_call)
+        logging.info('Calculated vega for Black-Scholes Put Option is %.4f ', self.vega_put)
 
         return self.vega_call, self.vega_put
+
+
+    def calculate_rho(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
+        ''' Calculate Call and Put option rho based on the below equations from Black-Scholes.
+        If dividend is not zero, then it is subtracted from the risk free rate in the below calculations.
+
+        vega call & put = 1 / np.sqrt(2 * np.pi) * S * np.exp(-q * T) * np.exp(-d1 ** 2 * 0.5) * np.sqrt(T)
+
+        :return: <float>, <float> Calculated delta of Call & Put options
+        '''
+        if spot_price <= 0.0:
+            spot_price = self.spot_price
+
+        if time_to_maturity <= 0.0:
+            time_to_maturity = self.time_to_maturity
+
+        if volatility <= 0.0:
+            volatility = self.volatility
+
+        d2 = self._calculate_d2(spot_price, time_to_maturity, volatility)
+
+        rho_call = self.strike_price * time_to_maturity * np.exp(-self.risk_free_rate * time_to_maturity) * stats.norm.cdf(d2, 0.0, 1.0)
+        rho_put = -self.strike_price * time_to_maturity * np.exp(-self.risk_free_rate * time_to_maturity) * stats.norm.cdf(-d2, 0.0, 1.0)
+
+        self.rho_call = rho_call / 100.0
+        self.rho_put = rho_put / 100.0
+
+        logging.info('Calculated rho for Black-Scholes Call Option is %.4f ', self.rho_call)
+        logging.info('Calculated rho for Black-Scholes Put Option is %.4f ', self.rho_put)
+
+        return self.rho_call, self.rho_put
 
 
     def _calculate_d1(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):

@@ -68,7 +68,7 @@ class Interface():
                 '5': 'Analyze Stategy',
                 '6': 'Modify Leg',
                 '7': 'View Options',
-                '8': 'Plot Leg Values',
+                '8': 'View Values',
                 '9': 'Settings',
                 '0': 'Exit'
             }
@@ -196,7 +196,7 @@ class Interface():
         '''TODO'''
 
         if len(self.strategy.legs) > 0:
-            print(u.delimeter(f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].symbol.short_name}) {str(self.strategy).title()}', True) + '\n')
+            print(u.delimeter(f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].symbol.company.info["shortName"]}) {str(self.strategy).title()}', True) + '\n')
 
             table = self.strategy.analysis.table
             if table is not None:
@@ -271,7 +271,7 @@ class Interface():
         div = 0.0
 
         while not valid:
-            ticker = input('Please enter symbol: ').upper()
+            ticker = input('Please enter symbol, or 0 to cancel: ').upper()
             if ticker != '0':
                 valid = validate_ticker(ticker)
                 if not valid:
@@ -282,24 +282,6 @@ class Interface():
         if valid:
             self.dirty_calculate = True
             self.dirty_analyze = True
-
-            while True:
-                menu_items = {
-                    '1': f'Specify Volatility ({vol:.2f})',
-                    '2': f'Specify Dividend (${div:.2f})',
-                    '3': 'Done'
-                }
-
-                selection = self._menu(menu_items, 'Select Option', 1, 3)
-
-                if selection == 1:
-                    vol = u.input_float('Please enter volatility: ', 0.0, 5.0)
-                elif selection == 2:
-                    div = u.input_float('Please enter average dividend: ', 0.0, 999.0)
-                elif selection == 3:
-                    break
-                else:
-                    u.print_error('Unknown operation selected')
 
             self.chain = Chain(ticker)
             self.load_strategy(ticker, 'call', 'long', False)
@@ -369,11 +351,13 @@ class Interface():
             if ret:
                 self.strategy.update_expiry(ret)
                 if self.strategy.name != 'vertical':
+                    # Go directly to choose option if only one leg in strategy
                     if self.strategy.legs[0].option.product == 'call':
                         contract = self.select_chain_option('call')
                     else:
                         contract = self.select_chain_option('put')
 
+                    # Load the new contract
                     if contract:
                         self.strategy.legs[0].option.load_contract(contract)
 

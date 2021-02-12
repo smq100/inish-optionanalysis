@@ -6,22 +6,15 @@ from pricing.fetcher import validate_ticker, get_company_info
 class Symbol:
     '''TODO'''
 
-    def __init__(self, ticker, dividend=0.0, volatility=-1.0):
+    def __init__(self, ticker):
         if validate_ticker(ticker):
-            self.ticker = ticker
-            self.dividend = dividend
-            self.volatility = volatility
-            self.spot = 0.0
-            self.company = get_company_info(self.ticker)
+            # Fetch YFinance opbject
+            self.company = get_company_info(ticker)
 
-            self.short_name = self.company.info['shortName']
+            self.ticker = ticker
         else:
-            self.ticker = 'error'
-            self.dividend = 0.0
-            self.volatility = 0.0
-            self.spot = 0.0
             self.company = None
-            self.short_name = 'error'
+            self.ticker = 'error'
 
 
     def __str__(self):
@@ -29,7 +22,7 @@ class Symbol:
 
         return output
 
-''' Sample company info (json):
+''' YFinance info object:
 {
     "zip":"98052-6399",
     "sector":"Technology",
