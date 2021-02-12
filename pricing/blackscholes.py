@@ -111,7 +111,12 @@ class BlackScholes(Pricing):
 
         d1 = self._calculate_d1(spot_price, time_to_maturity, volatility)
 
-        gamma = np.exp(-self.dividend * time_to_maturity) * stats.norm.cdf(d1, 0.0, 1.0) / spot_price * volatility * np.sqrt(time_to_maturity)
+        if self.dividend > 0.0:
+            gamma = np.exp(-self.dividend * time_to_maturity) * stats.norm.cdf(d1, 0.0, 1.0) / spot_price * volatility * np.sqrt(time_to_maturity)
+        else:
+            prob_density = 1 / np.sqrt(2 * np.pi) * np.exp(-d1 ** 2 * 0.5)
+            gamma = prob_density / (spot_price * volatility * np.sqrt(time_to_maturity))
+
 
         self.gamma_call = self.gamma_put = gamma
 
@@ -201,10 +206,12 @@ class BlackScholes(Pricing):
 
     def _calculate_d1(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         ''' Famous d1 variable from Black-Scholes model calculated as shown in:
-
                 https://en.wikipedia.org/wiki/Black%E2%80%93Scholes_model
+
+            d1 = (np.log(S / K) + (r - q + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
         :return: <float>
         '''
+
         if spot_price <= 0.0:
             spot_price = self.spot_price
 
@@ -215,8 +222,7 @@ class BlackScholes(Pricing):
             volatility = self.volatility
 
         d1 = (np.log(spot_price / self.strike_price) +
-            (self.risk_free_rate - self.dividend + 0.5 * volatility ** 2) * time_to_maturity) / \
-            (volatility * np.sqrt(time_to_maturity))
+             (self.risk_free_rate - self.dividend + 0.5 * volatility ** 2) * time_to_maturity) / (volatility * np.sqrt(time_to_maturity))
 
         logging.debug('Calculated value for d1 = %f', d1)
 
@@ -225,10 +231,12 @@ class BlackScholes(Pricing):
 
     def _calculate_d2(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         ''' Famous d2 variable from Black-Scholes model calculated as shown in:
-
                 https://en.wikipedia.org/wiki/Black%E2%80%93Scholes_model
+
+            d2 = (np.log(S / K) + (r - q - 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
         :return: <float>
         '''
+
         if spot_price <= 0.0:
             spot_price = self.spot_price
 
@@ -239,8 +247,7 @@ class BlackScholes(Pricing):
             volatility = self.volatility
 
         d2 = (np.log(spot_price / self.strike_price) +
-            (self.risk_free_rate - self.dividend - 0.5 * volatility ** 2) * time_to_maturity) / \
-            (volatility * np.sqrt(time_to_maturity))
+             (self.risk_free_rate - self.dividend - 0.5 * volatility ** 2) * time_to_maturity) / (volatility * np.sqrt(time_to_maturity))
 
         logging.debug('Calculated value for d2 = %f', d2)
 

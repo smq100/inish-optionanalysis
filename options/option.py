@@ -47,30 +47,30 @@ class Option():
 
     def __str__(self):
         return f'Contract:{self.contract_symbol}\n'\
-            f'Ticker:{self.ticker}\n'\
-            f'Product:{self.product.title()}\n'\
-            f'Expiry:{self.expiry:%Y-%m-%d} ({self.time_to_maturity*365:.0f}/{self.time_to_maturity:.5f})\n'\
-            f'Strike:{self.strike:.2f}\n'\
-            f'Spot:{self.spot:.2f}\n'\
-            f'Rate:{self.rate:.3f}\n'\
-            f'Last Trade:{self.last_trade_date}\n'\
-            f'Calc Price:{self.calc_price:.2f}\n'\
-            f'Last Price:{self.last_price:.2f}\n'\
-            f'Bid:{self.bid:.2f}\n'\
-            f'Ask:{self.ask:.2f}\n'\
-            f'Change:{self.change}\n'\
-            f'Change%:{self.percent_change}\n'\
-            f'Volume:{self.volume}\n'\
-            f'Open Interest:{self.open_interest}\n'\
-            f'Calc Volitility:{self.calc_volatility:.4f}\n'\
-            f'Implied Volitility:{self.implied_volatility:.4f}\n'\
-            f'ITM:{self.itm}\n'\
-            f'Size:{self.contract_size}\n'\
-            f'Currency:{self.currency}\n'\
-            f'Delta:{self.delta:.5f}\n'\
-            f'Gamma:{self.gamma:.5f}\n'\
-            f'Theta:{self.theta:.5f}\n'\
-            f'Vega:{self.vega:.5f}'
+            f'Ticker: {self.ticker}\n'\
+            f'Product: {self.product.title()}\n'\
+            f'Expiry: {self.expiry:%Y-%m-%d} ({self.time_to_maturity*365:.0f}/{self.time_to_maturity:.5f})\n'\
+            f'Strike: {self.strike:.2f}\n'\
+            f'Spot: {self.spot:.2f}\n'\
+            f'Rate: {self.rate:.3f}\n'\
+            f'Last Trade: {self.last_trade_date}\n'\
+            f'Calc Price: {self.calc_price:.2f}\n'\
+            f'Last Price: {self.last_price:.2f}\n'\
+            f'Bid: {self.bid:.2f}\n'\
+            f'Ask: {self.ask:.2f}\n'\
+            f'Change: {self.change}\n'\
+            f'Change%: {self.percent_change}\n'\
+            f'Volume: {self.volume}\n'\
+            f'Open Interest: {self.open_interest}\n'\
+            f'Calc Volitility: {self.calc_volatility:.4f}\n'\
+            f'Impl Volitility: {self.implied_volatility:.4f}\n'\
+            f'ITM: {self.itm}\n'\
+            f'Size: {self.contract_size}\n'\
+            f'Currency: {self.currency}\n'\
+            f'Delta: {self.delta:.5f}\n'\
+            f'Gamma: {self.gamma:.5f}\n'\
+            f'Theta: {self.theta:.5f}\n'\
+            f'Vega: {self.vega:.5f}'
 
 
     def load_contract(self, contract_name):

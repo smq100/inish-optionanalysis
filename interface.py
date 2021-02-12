@@ -95,8 +95,9 @@ class Interface():
             elif selection == 2:
                 self.select_strategy()
             elif selection == 3:
-                self.select_chain()
-                self.calculate()
+                if self.select_chain():
+                    self.calculate()
+                    self.view_options(0)
             elif selection == 4:
                 if len(self.strategy.legs) > 0:
                     if self.calculate():
@@ -243,7 +244,7 @@ class Interface():
 
     def view_options(self, leg=-1, delimeter=True):
         if delimeter:
-            print(u.delimeter('Option Metrics', True))
+            print(u.delimeter('Option Specs', True))
 
         if len(self.strategy.legs) < 1:
             print('No legs configured')
@@ -362,63 +363,84 @@ class Interface():
     def select_chain(self):
         contract = ''
 
-        while True:
-            if self.chain.expire is not None:
-                expiry = self.chain.expire
-            else:
-                expiry = 'None selected'
-
-            if self.strategy.legs[0].option.product == 'call':
-                product = 'Call'
-            else:
-                product = 'Put'
-
-            menu_items = {
-                '1': f'Select Expiry Date ({expiry})',
-                '2': f'Select {product} Option',
-                '3': 'Done',
-            }
-
-            if self.strategy.name == 'vertical':
-                menu_items['2'] = f'Select {product} Options'
-                menu_items['2'] += f' '\
-                    f'(L:${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator}'\
-                    f' S:${self.strategy.legs[1].option.strike:.2f}{self.strategy.legs[1].option.decorator})'
-            else:
-                menu_items['2'] += f' (${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator})'
-
-            selection = self._menu(menu_items, 'Select Operation', 0, 3)
-
-            ret = True
-            if selection == 1:
-                ret = self.select_chain_expiry()
-                if ret:
-                    self.strategy.update_expiry(ret)
-            elif selection == 2:
-                if self.chain.expire is not None:
-                    if self.strategy.name == 'vertical':
-                        leg = u.input_integer('Long leg (1), or short (2): ', 1, 2) - 1
-                    else:
-                        leg = 0
-
-                    if self.strategy.legs[leg].option.product == 'call':
+        # Go directly to get expire date if not already entered
+        if self.chain.expire is None:
+            ret = self.select_chain_expiry()
+            if ret:
+                self.strategy.update_expiry(ret)
+                if self.strategy.name != 'vertical':
+                    if self.strategy.legs[0].option.product == 'call':
                         contract = self.select_chain_option('call')
                     else:
                         contract = self.select_chain_option('put')
 
                     if contract:
-                        ret = self.strategy.legs[leg].option.load_contract(contract)
-                    else:
-                        u.print_error('No option selected')
-                else:
-                    u.print_error('Please first select expiry date')
-            elif selection == 3:
-                break
-            elif selection == 0:
-                break
+                        self.strategy.legs[0].option.load_contract(contract)
 
-            if not ret:
-                u.print_error('Error loading option. Please try again')
+
+        if not contract:
+            while True:
+                if self.chain.expire is not None:
+                    expiry = self.chain.expire
+                else:
+                    expiry = 'None selected'
+
+                if self.strategy.legs[0].option.product == 'call':
+                    product = 'Call'
+                else:
+                    product = 'Put'
+
+                menu_items = {
+                    '1': f'Select Expiry Date ({expiry})',
+                    '2': f'Select {product} Option',
+                    '3': 'Done',
+                }
+
+                if self.strategy.name == 'vertical':
+                    menu_items['2'] = f'Select {product} Options'
+                    menu_items['2'] += f' '\
+                        f'(L:${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator}'\
+                        f' S:${self.strategy.legs[1].option.strike:.2f}{self.strategy.legs[1].option.decorator})'
+                else:
+                    menu_items['2'] += f' (${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator})'
+
+                selection = self._menu(menu_items, 'Select Operation', 0, 3)
+
+                ret = True
+                if selection == 1:
+                    if self.select_chain_expiry():
+                        self.strategy.update_expiry(ret)
+
+                elif selection == 2:
+                    if self.chain.expire is not None:
+                        if self.strategy.name == 'vertical':
+                            leg = u.input_integer('Long leg (1), or short (2): ', 1, 2) - 1
+                        else:
+                            leg = 0
+
+                        if self.strategy.legs[leg].option.product == 'call':
+                            contract = self.select_chain_option('call')
+                        else:
+                            contract = self.select_chain_option('put')
+
+                        if contract:
+                            ret = self.strategy.legs[leg].option.load_contract(contract)
+                        else:
+                            u.print_error('No option selected')
+
+                        if self.strategy.name != 'vertical':
+                            break
+                    else:
+                        u.print_error('Please first select expiry date')
+                elif selection == 3:
+                    break
+                elif selection == 0:
+                    break
+
+                if not ret:
+                    u.print_error('Error loading option. Please try again')
+
+        return contract
 
 
     def select_chain_expiry(self):
