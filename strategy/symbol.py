@@ -16,7 +16,7 @@ class Symbol:
 
 
     def __str__(self):
-        output = f'{self.ticker}@${self.spot:.2f}/{self.volatility*100:.1f}%'
+        output = f'{self.company.info["shortName"]}'
 
         return output
 

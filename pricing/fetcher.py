@@ -8,7 +8,6 @@ import quandl
 import yfinance as yf
 import pandas as pd
 from pandas.tseries.offsets import BDay
-from pandas_datareader import data
 
 from utils import utils as u
 
@@ -18,7 +17,7 @@ quandl_config = configparser.ConfigParser()
 quandl_config.read('config.ini')
 quandl.ApiConfig.api_key = quandl_config['DEFAULT']['APIKEY']
 
-SOURCES = ['yahoo', 'morningstar']
+SOURCE = 'yahoo'
 
 def get_company(ticker):
     '''
@@ -36,7 +35,7 @@ def get_company(ticker):
         .isin
         .options
 
-    :return: <object> Ticker object
+    :return: <object> YFinance Ticker object
     '''
 
     if validate_ticker(ticker):
@@ -48,94 +47,84 @@ def get_company(ticker):
 def validate_ticker(ticker):
     '''Perform quick check to see if a ticker is valid'''
 
-    start = datetime.datetime.today() - datetime.timedelta(days=3)
-
     try:
-        data.DataReader(ticker, 'yahoo', start, None)
+        data = yf.Ticker(ticker)
         return True
     except:
         return False
 
 
-def get_ranged_data(ticker, start, end=None, use_quandl=True):
+def get_ranged_data(ticker, start, end=None):
     ''' TODO '''
 
-    dframe = pd.DataFrame()
+    df = pd.DataFrame()
 
     if not end:
         end = datetime.date.today()
-    if use_quandl:
-        logging.info('Fetching data for Ticker=%s from Source=Quandl', ticker)
-        dframe = quandl.get('WIKI/' + ticker, start_date=start, end_date=end)
-    else:
-        for source in SOURCES:
-            logging.info('Fetching data for Ticker=%s from Source=%s', ticker, source)
-            dframe = data.DataReader(ticker, source, start, end)
 
-            if not dframe.empty:
-                logging.info('Successfully fetched data')
-                break
+    if validate_ticker(ticker):
+        company = get_company(ticker)
+        info = company.history(start=f'{start:%Y-%m-%d}', end=f'{end:%Y-%m-%d}')
+        df = pd.DataFrame(info)
 
-    return dframe
+    return df
 
 
-def get_data(ticker, use_quandl=True):
+def get_data(ticker):
     ''' TODO '''
 
-    dframe = pd.DataFrame()
-    if use_quandl:
-        logging.info('Fetching data for Ticker=%s from Source=Quandl', ticker)
-        dframe = quandl.get('WIKI/' + ticker)
-        logging.info('Successfully fetched data')
-    else:
-        for source in SOURCES:
-            logging.info('Fetching data for Ticker=%s from Source=%s', ticker, source)
-            dframe = data.DataReader(ticker, source)
-            if not dframe.empty:
-                logging.info('Successfully fetched data')
-                break
+    df = pd.DataFrame()
 
-    return dframe
+    if validate_ticker(ticker):
+        company = get_company(ticker)
+        info = company.history()
+        df = pd.DataFrame(info)
+
+    return df
 
 
-def get_treasury_rate(ticker=None):
+def get_treasury_rate(ticker='DTB3'):
     ''' TODO '''
 
-    dframe = pd.DataFrame()
-    if not ticker:
-        ticker = 'DTB3'  # Default to 3-Month Treasury Rate
+    # DTB3: Default to 3-Month Treasury Rate
+    logging.info('Fetching data for Ticker=%s', ticker)
+
+    df = pd.DataFrame()
     prev_business_date = datetime.datetime.today() - BDay(1)
-    logging.info('Fetching data for Ticker=%s from Source=Quandl', ticker)
-    dframe = quandl.get('FRED/' + ticker, start_date=prev_business_date - BDay(1), end_date=prev_business_date)
-    if dframe.empty:
+
+    df = quandl.get('FRED/' + ticker, start_date=prev_business_date - BDay(1), end_date=prev_business_date)
+    if df.empty:
         logging.error('Unable to get Treasury Rates from Quandl. Please check connection')
         raise IOError('Unable to get Treasury Rate from Quandl')
 
-    return dframe['Value'][0]
+    return df['Value'][0]
 
 
 def get_spx_prices(start_date=None):
     ''' TODO '''
 
-    if not start_date:
+    if start_date is None:
         start_date = datetime.datetime(2017, 1, 1)
-    dframe = pd.DataFrame()
-    dframe = get_data('SPX', False)
-    if dframe.empty:
+
+    df = pd.DataFrame()
+    df = get_data('SPX', False)
+
+    if df.empty:
         logging.error('Unable to get SNP 500 Index from Web. Please check connection')
         raise IOError('Unable to get Treasury Rate from Web')
 
-    return dframe
+    return df
 
 
 if __name__ == '__main__':
-    start_ = datetime.datetime.today() + datetime.timedelta(days=-10)
-    end_ = datetime.datetime.today() + datetime.timedelta(days=-5)
-    # d_f = get_ranged_data('AAPL', start1_, end1_, use_quandl=True)
-    # print(d_f.tail())
+    start = datetime.datetime.today() + datetime.timedelta(days=-10)
+    end = datetime.datetime.today() + datetime.timedelta(days=-5)
 
-    d_f = get_data('WMT', use_quandl=True)
-    print(d_f.tail())
+    df = get_ranged_data('AAPL', start, end)
+    print(df.tail())
 
-    rate1 = get_treasury_rate()
-    print(rate1)
+    df = get_data('WMT')
+    print(df.tail())
+
+    # rate1 = get_treasury_rate()
+    # print(rate1)

@@ -195,33 +195,30 @@ class Interface():
     def plot_analysis(self):
         '''TODO'''
 
-        if len(self.strategy.legs) > 0:
-            print(u.delimeter(f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].symbol.company.info["shortName"]}) {str(self.strategy).title()}', True) + '\n')
+        print(u.delimeter(f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].symbol}) {str(self.strategy).title()}', True) + '\n')
 
-            table = self.strategy.analysis.table
-            if table is not None:
-                rows, cols = table.shape
+        table = self.strategy.analysis.table
+        if table is not None:
+            rows, cols = table.shape
 
-                if rows > MAX_ROWS:
-                    rows = MAX_ROWS
-                else:
-                    rows = -1
-
-                if cols > MAX_COLS:
-                    cols = MAX_COLS
-                else:
-                    cols = -1
-
-                # See if we need to compress the table
-                if rows > 0 or cols > 0:
-                    table = self.strategy.analysis.compress_table(rows, cols)
-
-                print(table)
-                print(self.strategy.analysis)
+            if rows > MAX_ROWS:
+                rows = MAX_ROWS
             else:
-                u.print_error('No table')
+                rows = -1
+
+            if cols > MAX_COLS:
+                cols = MAX_COLS
+            else:
+                cols = -1
+
+            # See if we need to compress the table
+            if rows > 0 or cols > 0:
+                table = self.strategy.analysis.compress_table(rows, cols)
+
+            print(table)
+            print(self.strategy.analysis)
         else:
-            u.print_error('No option legs configured')
+            u.print_error('No table')
 
 
     def view_legs(self, leg=-1, delimeter=True):

@@ -199,7 +199,7 @@ class Pricing(ABC):
         if self._underlying_asset_data.empty:
             logging.debug('Getting historical stock data for %s; used to calculate volatility in this asset', self.ticker)
 
-            self._underlying_asset_data = get_ranged_data(self.ticker, self._start_date, None, use_quandl=False)
+            self._underlying_asset_data = get_ranged_data(self.ticker, self._start_date, None)
 
             if self._underlying_asset_data.empty:
                 logging.error('Unable to get historical stock data')
