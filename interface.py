@@ -319,6 +319,7 @@ class Interface():
                 self.dirty_analyze = True
                 modified = True
                 break
+
             if selection == 2:
                 direction = u.input_integer('Long (1), or short (2): ', 1, 2)
                 direction = 'long' if direction == 1 else 'short'
@@ -328,6 +329,7 @@ class Interface():
                 self.dirty_analyze = True
                 modified = True
                 break
+
             if selection == 3:
                 product = u.input_integer('Call (1), or Put (2): ', 1, 2)
                 product = 'call' if product == 1 else 'put'
@@ -340,6 +342,7 @@ class Interface():
                 self.dirty_analyze = True
                 modified = True
                 break
+
             if selection == 0:
                 break
 
@@ -355,8 +358,6 @@ class Interface():
         }
 
         # Select strategy
-        strategy = ''
-        modified = False
         while True:
             selection = self._menu(menu_items, 'Select Analysis', 0, 1)
 
