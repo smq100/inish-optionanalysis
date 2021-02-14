@@ -5,7 +5,8 @@ import logging
 
 import pandas as pd
 
-from strategy.strategy import Strategy, Analysis
+from strategy.strategy import Strategy
+from analysis.strategy import StrategyAnalysis
 from utils import utils as u
 
 

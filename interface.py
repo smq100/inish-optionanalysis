@@ -11,6 +11,7 @@ from strategy.put import Put
 from strategy.vertical import Vertical
 from pricing.fetcher import validate_ticker
 from options.chain import Chain
+from analysis.technical import TechnicalAnalysis
 from utils import utils as u
 
 MAX_ROWS = 50
@@ -25,6 +26,9 @@ class Interface():
         ticker = ticker.upper()
         valid = validate_ticker(ticker)
 
+        self.ticker = ticker
+        self.strategy = None
+        self.technical = None
         self.dirty_calculate = True
         self.dirty_analyze = True
 
@@ -63,28 +67,29 @@ class Interface():
             menu_items = {
                 '1': f'Change Symbol ({self.strategy.ticker})',
                 '2': f'Change Strategy ({self.strategy})',
-                '3': 'Select Options',
-                '4': 'Calculate Values',
-                '5': 'Analyze Stategy',
-                '6': 'Modify Leg',
-                '7': 'View Options',
-                '8': 'View Values',
-                '9': 'Settings',
+                '3': 'Technical Analysis',
+                '4': 'Select Options',
+                '5': 'Calculate Values',
+                '6': 'Analyze Stategy',
+                '7': 'Modify Leg',
+                '8': 'View Options',
+                '9': 'View Values',
+                '10': 'Settings',
                 '0': 'Exit'
             }
 
             if self.dirty_calculate:
-                menu_items['4'] += ' *'
-
-            if self.dirty_analyze:
                 menu_items['5'] += ' *'
 
+            if self.dirty_analyze:
+                menu_items['6'] += ' *'
+
             if self.strategy.name == 'vertical':
-                menu_items['3'] += f' '\
+                menu_items['4'] += f' '\
                     f'(L:${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator}'\
                     f' S:${self.strategy.legs[1].option.strike:.2f}{self.strategy.legs[1].option.decorator})'
             else:
-                menu_items['3'] += f' (${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator})'
+                menu_items['4'] += f' (${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator})'
 
             self.view_legs()
 
@@ -95,16 +100,18 @@ class Interface():
             elif selection == 2:
                 self.select_strategy()
             elif selection == 3:
+                self.select_technical()
+            elif selection == 4:
                 if self.select_chain():
                     self.calculate()
                     self.view_options(0)
-            elif selection == 4:
+            elif selection == 5:
                 if len(self.strategy.legs) > 0:
                     if self.calculate():
                         self.plot_value(0)
-            elif selection == 5:
-                self.analyze()
             elif selection == 6:
+                self.analyze()
+            elif selection == 7:
                 if len(self.strategy.legs) < 1:
                     print('No legs configured')
                 elif len(self.strategy.legs) > 1:
@@ -116,7 +123,7 @@ class Interface():
                     if self.modify_leg(0):
                         if self.calculate():
                             self.plot_value(0)
-            elif selection == 7:
+            elif selection == 8:
                 if len(self.strategy.legs) < 1:
                     print('No legs configured')
                 elif len(self.strategy.legs) > 1:
@@ -124,7 +131,7 @@ class Interface():
                     self.view_options(leg)
                 else:
                     self.view_options(0)
-            elif selection == 8:
+            elif selection == 9:
                 if len(self.strategy.legs) < 1:
                     print('No legs configured')
                 elif len(self.strategy.legs) > 1:
@@ -132,7 +139,7 @@ class Interface():
                     self.plot_value(leg)
                 else:
                     self.plot_value(0)
-            elif selection == 9:
+            elif selection == 10:
                 self.select_settings()
             elif selection == 0:
                 break
@@ -277,10 +284,12 @@ class Interface():
                 break
 
         if valid:
+            self.ticker = ticker
             self.dirty_calculate = True
             self.dirty_analyze = True
 
             self.chain = Chain(ticker)
+            self.technical = None
             self.load_strategy(ticker, 'call', 'long', False)
             u.print_message('The initial strategy has been set to a long call')
 
@@ -292,7 +301,7 @@ class Interface():
             '1': 'Call',
             '2': 'Put',
             '3': 'Vertical',
-            '4': 'Cancel',
+            '0': 'Done/Cancel',
         }
 
         # Select strategy
@@ -331,12 +340,35 @@ class Interface():
                 self.dirty_analyze = True
                 modified = True
                 break
-            if selection == 4:
+            if selection == 0:
                 break
 
             u.print_error('Unknown strategy selected')
 
         return modified
+
+
+    def select_technical(self):
+        menu_items = {
+            '1': 'MACD',
+            '0': 'Done',
+        }
+
+        # Select strategy
+        strategy = ''
+        modified = False
+        while True:
+            selection = self._menu(menu_items, 'Select Analysis', 0, 1)
+
+            if selection == 1:
+                start = datetime.datetime.today() + datetime.timedelta(days=-365)
+                self.technical = TechnicalAnalysis(self.ticker, start=start)
+                df = self.technical.macd()
+                print(df)
+                break
+
+            if selection == 0:
+                break
 
 
     def select_chain(self):
