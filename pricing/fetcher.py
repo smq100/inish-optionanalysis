@@ -54,6 +54,17 @@ def validate_ticker(ticker):
         return False
 
 
+def get_current_price(ticker):
+    if validate_ticker(ticker):
+        start = datetime.datetime.today() - datetime.timedelta(days=5)
+        df = get_ranged_data(ticker, start)
+        price = df.iloc[-1]['Close']
+    else:
+        price = -1.0
+
+    return price
+
+
 def get_ranged_data(ticker, start, end=None):
     ''' TODO '''
 

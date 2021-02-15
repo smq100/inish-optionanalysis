@@ -2,6 +2,7 @@
 
 import sys, os, json
 import datetime
+import logging
 
 import pandas as pd
 
@@ -21,6 +22,9 @@ class Interface():
     '''TODO'''
 
     def __init__(self, ticker, strategy, direction, autoload=None, script=None, exit=False):
+        logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
+        logging.info('Initializing trend analysis...')
+
         pd.options.display.float_format = '{:,.2f}'.format
 
         ticker = ticker.upper()

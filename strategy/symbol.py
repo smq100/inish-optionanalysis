@@ -1,5 +1,7 @@
 '''TODO'''
 
+import logging
+
 from pricing.fetcher import validate_ticker, get_company
 
 
@@ -13,6 +15,10 @@ class Symbol:
         if validate_ticker(ticker):
             # Fetch YFinance opbject
             self.company = get_company(ticker)
+
+            logging.info('Initializing Symbol')
+        else:
+            logging.info('Error initializing Symbol')
 
 
     def __str__(self):

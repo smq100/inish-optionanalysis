@@ -10,7 +10,7 @@ import yfinance as yf
 import trendln
 import matplotlib.pyplot as plt
 
-from pricing.fetcher import validate_ticker
+from pricing.fetcher import validate_ticker, get_current_price
 from utils import utils as u
 
 
@@ -18,12 +18,10 @@ class SupportResistance:
     '''TODO'''
 
     def __init__(self, ticker, start=None):
-        logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
-        logging.info('Initializing trend analysis...')
-
         if (validate_ticker(ticker)):
             self.ticker = ticker.upper()
             self.history = None
+            self.price = 0.0
             self.resistance_lines = []
             self.support_lines = []
             self._resistance = []
@@ -33,6 +31,13 @@ class SupportResistance:
                 self.history = yf.Ticker(ticker).history(period="max", rounding=True)
             else:
                 self.history = yf.Ticker(ticker).history(start=f'{start:%Y-%m-%d}', rounding=True)
+
+            self.price = get_current_price(ticker)
+            print(self.price)
+
+            logging.info('Initialized SupportResitance')
+        else:
+            logging.info('Error initializing trend analysis')
 
 
     def __str__(self):
@@ -140,11 +145,12 @@ class SupportResistance:
         self.resistance_points.sort()
         self.support_points.sort(reverse=True)
 
-        logging.debug(f'RPoints: {self.resistance_points}')
-        logging.debug(f'SPoints: {self.support_points}')
+        logging.info(f'Resistance Points: {self.resistance_points}')
+        logging.info(f'Support Points: {self.support_points}')
 
 
 if __name__ == '__main__':
+    logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
     start = datetime.datetime.today() - datetime.timedelta(days=1000)
     sr = SupportResistance('IBM', start=start)
     sr.calculate(300)

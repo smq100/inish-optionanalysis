@@ -18,11 +18,10 @@ class BlackScholes(Pricing):
     def __init__(self, ticker, expiry, strike, dividend=0.0):
         super().__init__(ticker, expiry, strike, dividend=dividend)
 
-        logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
-        logging.info('Initializing Black-Scholes pricing...')
-
         # Get/Calculate all the required underlying parameters, ex. Volatility, Risk-free rate, etc.
         self.log_parameters()
+
+        logging.info('Initialized BlackScholes')
 
     def calculate_price(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         ''' Calculate Call and Put option prices based on the below equations from Black-Scholes.
@@ -279,5 +278,6 @@ class BlackScholes(Pricing):
         return d2
 
 if __name__ == '__main__':
+    logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
     pricer_ = BlackScholes('TSLA', datetime.datetime(2021, 8, 31), 1000)
     call_price, put_price = pricer_.calculate_prices()

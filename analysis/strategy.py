@@ -1,5 +1,8 @@
 '''TODO'''
 
+import logging
+logging.info('Initialized ')
+
 import math
 
 import pandas as pd
@@ -16,6 +19,8 @@ class StrategyAnalysis:
         self.max_gain = 0.0
         self.max_loss = 0.0
         self.breakeven = 0.0
+
+        logging.info('Initialized StrategyAnalysis')
 
 
     def __str__(self):

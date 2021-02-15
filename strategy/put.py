@@ -21,6 +21,8 @@ class Put(Strategy):
         expiry = datetime.datetime.today() + datetime.timedelta(days=14)
         self.add_leg(1, product, direction, self.initial_spot, expiry)
 
+        logging.info('Initializing Put')
+
 
     def __str__(self):
         return f'{self.legs[0].direction} {self.name}'

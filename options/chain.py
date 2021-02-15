@@ -1,4 +1,6 @@
 '''TODO'''
+import logging
+logging.info('Initializing ...')
 
 from pricing.fetcher import validate_ticker, get_company
 from utils import utils as u
@@ -12,6 +14,8 @@ class Chain():
         self.company = None
         self.expire = None
         self.width = 1
+
+        logging.info('Initialized Chain')
 
     def get_expiry(self):
         value = self.company = None

@@ -20,9 +20,6 @@ class TechnicalAnalysis():
 
     def __init__(self, ticker, start=None):
         if (validate_ticker(ticker)):
-            logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
-            logging.info('Initializing technical analysis...')
-
             self.ticker = ticker.upper()
 
             if start is None:
@@ -30,6 +27,9 @@ class TechnicalAnalysis():
             else:
                 self.history = yf.Ticker(ticker).history(start=f'{start:%Y-%m-%d}', rounding=True)
 
+            logging.info('Initialized TechnicalAnalysis')
+        else:
+            logging.info('Error initializing TechnicalAnalysis')
 
     def __str__(self):
         return f'Technical analysis for {self.ticker}'

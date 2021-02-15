@@ -1,5 +1,6 @@
 '''TODO'''
 
+import logging
 import datetime
 import re
 
@@ -44,6 +45,8 @@ class Option():
 
         if self.expiry is None:
             self.expiry = datetime.datetime.today() + datetime.timedelta(days=10)
+
+        logging.info('Initialized Option')
 
 
     def __str__(self):

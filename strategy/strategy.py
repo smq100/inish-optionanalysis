@@ -28,8 +28,7 @@ class Strategy(ABC):
         self.legs = []
         self.initial_spot = 0.0
 
-        logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
-        logging.info('Initializing Strategy ...')
+        logging.info('Initialized Strategy')
 
         self.initial_spot = self.get_current_spot(ticker, True)
 

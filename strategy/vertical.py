@@ -35,6 +35,8 @@ class Vertical(Strategy):
                 self.add_leg(1, product, 'long', self.initial_spot, expiry)
                 self.add_leg(1, product, 'short', self.initial_spot + 2.0, expiry)
 
+        logging.info('Initializing Vertical')
+
 
     def __str__(self):
         return f'{self.name} {self.product} {self.analysis.credit_debit} spread'
