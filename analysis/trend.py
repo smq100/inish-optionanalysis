@@ -4,23 +4,30 @@
 '''
 
 import datetime
+import logging
 
 import yfinance as yf
 import trendln
 import matplotlib.pyplot as plt
 
 from pricing.fetcher import validate_ticker
+from utils import utils as u
 
 
 class SupportResistance:
     '''TODO'''
 
     def __init__(self, ticker, start=None):
+        logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
+        logging.info('Initializing trend analysis...')
+
         if (validate_ticker(ticker)):
             self.ticker = ticker.upper()
             self.history = None
-            self.resistance = []
-            self.support = []
+            self.resistance_lines = []
+            self.support_lines = []
+            self._resistance = []
+            self._support = []
 
             if start is None:
                 self.history = yf.Ticker(ticker).history(period="max", rounding=True)
@@ -29,29 +36,26 @@ class SupportResistance:
 
 
     def __str__(self):
-        return f'Technical analysis for {self.ticker}'
+        return f'Support and resistance analysis for {self.ticker}'
 
 
     def calculate(self, points):
-        if self.history is not None:
-            self.resistance = []
-            self.support = []
+        if self.history is not None and points > 100:
+            self.points = points
+            self.resistance_lines = []
+            self.support_lines = []
+            self.resistance_points = []
+            self.support_points = []
+            self._resistance = []
+            self._support = []
 
             minimaIdxs, pmin, mintrend, minwindows = trendln.calc_support_resistance((sr.history[-points:].Low, None), accuracy=2)  #support
             maximaIdxs, pmax, maxtrend, maxwindows = trendln.calc_support_resistance((None, sr.history[-points:].High), accuracy=2) #resistance
 
-            for window in maxtrend:
-                sr.resistance += [{'relavent':False, 'points':window[0],
-                    'line':
-                        {'slope':window[1][0],
-                        'intercept':window[1][1],
-                        'ssr':window[1][2],
-                        'slope_err':window[1][3],
-                        'intercept_err':window[1][4],
-                        'area_avg':window[1][5]}}]
-
             for window in mintrend:
-                sr.support += [{'relavent':False, 'points':window[0],
+                self._support += [
+                    {'relevant':False,
+                    'points':window[0],
                     'line':
                         {'slope':window[1][0],
                         'intercept':window[1][1],
@@ -60,40 +64,92 @@ class SupportResistance:
                         'intercept_err':window[1][4],
                         'area_avg':window[1][5]}}]
 
+            for window in maxtrend:
+                self._resistance += [
+                    {'relevant':False,
+                    'points':window[0],
+                    'line':
+                        {'slope':window[1][0],
+                        'intercept':window[1][1],
+                        'ssr':window[1][2],
+                        'slope_err':window[1][3],
+                        'intercept_err':window[1][4],
+                        'area_avg':window[1][5]}}]
 
-    def _find_relavent(self, age, threshold=10, best=4, remove=True):
-        # Find relavent items
-        for line in self.resistance:
+            # Find the relevant lines
+            self._find_relevant(points)
+
+
+    def _find_relevant(self, points, threshold=10, best=4, remove=True):
+        # Find relevant lines
+        for line in self._resistance:
             for point in line['points']:
-                if point >= (age - threshold):
-                    line['relavent'] = True
+                if point >= (points - threshold):
+                    line['relevant'] = True
                     break
 
-        # Remove irrelavent items
+        for line in self._support:
+            for point in line['points']:
+                if point >= (points - threshold):
+                    line['relevant'] = True
+                    break
+
+        # Remove irrelevant lines
         if remove:
-            for index, line in enumerate(self.resistance):
-                if not line['relavent']:
-                    self.resistance.pop(index)
+            for index, line in enumerate(self._resistance):
+                if not line['relevant']:
+                    self._resistance.pop(index)
+
+            for index, line in enumerate(self._support):
+                if not line['relevant']:
+                    self._support.pop(index)
 
         # Find the best and reverse order from best to worst. Items are sorted by calc_support_resistance() in acsending order of 'area_avg'
-        self.resistance = self.resistance[-best:]
-        self.resistance = self.resistance[::-1]
-        self.support = self.support[-best:]
-        self.support = self.support[::-1]
+        self._resistance = self._resistance[-best:]
+        self._resistance = self._resistance[::-1]
+        for line in self._resistance:
+            self.resistance_lines += [(line['line']['slope'], line['line']['intercept'], line['line']['area_avg'])]
+
+        logging.debug(f'RLines: {self.resistance_lines}')
+
+        self._support = self._support[-best:]
+        self._support = self._support[::-1]
+        for line in self._support:
+            self.support_lines += [(line['line']['slope'], line['line']['intercept'], line['line']['area_avg'])]
+
+        logging.debug(f'SLines: {self.support_lines}')
+
+        self._calc_endpoints()
+
+
+    def _calc_endpoints(self):
+        self.resistance_points = []
+        self.support_points = []
+
+        for line in self.resistance_lines:
+            point = (self.points * line[0]) + line[1]
+            if point > 0.0:
+                self.resistance_points += [point]
+
+        for line in self.support_lines:
+            point = (self.points * line[0]) + line[1]
+            if point > 0.0:
+                self.support_points += [point]
+
+        # Sort values by relevance to current price
+        self.resistance_points.sort()
+        self.support_points.sort(reverse=True)
+
+        logging.debug(f'RPoints: {self.resistance_points}')
+        logging.debug(f'SPoints: {self.support_points}')
 
 
 if __name__ == '__main__':
     start = datetime.datetime.today() - datetime.timedelta(days=1000)
-    sr = SupportResistance('AAPL', start=start)
-
+    sr = SupportResistance('IBM', start=start)
     sr.calculate(300)
-    sr._find_relavent(300)
-
-    for line in sr.resistance:
-        print(line['points'])
-        print(line['line']['area_avg'])
 
     # idx = sr.history[-300:].index
-    # fig = trendln.plot_support_resistance((None, sr.history.High), accuracy=2)
+    fig = trendln.plot_support_resistance((sr.history.Low[-300:], sr.history[-300:].High), accuracy=2)
     # fig = trendln.plot_sup_res_date((None, sr.history[-300:].High), idx, accuracy=2)
-    # fig.savefig('figure')
+    fig.savefig('figure')

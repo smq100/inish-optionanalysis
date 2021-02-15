@@ -5,12 +5,14 @@
 '''
 
 import datetime
+import logging
 
 import yfinance as yf
 import pandas as pd
 from ta import trend, momentum, volatility, volume
 
 from pricing.fetcher import validate_ticker
+from utils import utils as u
 
 
 class TechnicalAnalysis():
@@ -18,6 +20,9 @@ class TechnicalAnalysis():
 
     def __init__(self, ticker, start=None):
         if (validate_ticker(ticker)):
+            logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
+            logging.info('Initializing technical analysis...')
+
             self.ticker = ticker.upper()
 
             if start is None:

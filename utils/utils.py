@@ -4,7 +4,7 @@ import logging
 import numpy as np
 
 
-LOG_LEVEL = logging.WARNING
+LOG_LEVEL = logging.DEBUG
 
 
 def delimeter(message, creturn=False):
