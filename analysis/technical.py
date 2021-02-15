@@ -21,9 +21,9 @@ class TechnicalAnalysis():
             self.ticker = ticker.upper()
 
             if start is None:
-                self.history = yf.Ticker(ticker).history(period="max")
+                self.history = yf.Ticker(ticker).history(period="max", rounding=True)
             else:
-                self.history = yf.Ticker(ticker).history(start=f'{start:%Y-%m-%d}')
+                self.history = yf.Ticker(ticker).history(start=f'{start:%Y-%m-%d}', rounding=True)
 
 
     def __str__(self):
