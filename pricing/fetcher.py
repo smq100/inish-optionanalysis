@@ -1,7 +1,6 @@
 ''' Data fetcher'''
 
 import datetime
-import logging
 import configparser
 
 import quandl
@@ -11,12 +10,12 @@ from pandas.tseries.offsets import BDay
 
 from utils import utils as u
 
+logger = u.get_logger()
 
 quandl_config = configparser.ConfigParser()
 quandl_config.read('config.ini')
 quandl.ApiConfig.api_key = quandl_config['DEFAULT']['APIKEY']
 
-SOURCE = 'yahoo'
 
 def get_company(ticker):
     '''
@@ -50,6 +49,7 @@ def validate_ticker(ticker):
         data = yf.Ticker(ticker)
         return True
     except:
+        logger.error(f'Ticker {ticker} not valid')
         return False
 
 
@@ -59,6 +59,7 @@ def get_current_price(ticker):
         df = get_ranged_data(ticker, start)
         price = df.iloc[-1]['Close']
     else:
+        logger.error(f'Ticker {ticker} not valid')
         price = -1.0
 
     return price
@@ -97,46 +98,26 @@ def get_treasury_rate(ticker='DTB3'):
     ''' TODO '''
 
     # DTB3: Default to 3-Month Treasury Rate
-    logging.info('Fetching data for Ticker=%s', ticker)
-
     df = pd.DataFrame()
     prev_business_date = datetime.datetime.today() - BDay(1)
 
-    df = quandl.get('FRED/' + ticker, start_date=prev_business_date - BDay(1), end_date=prev_business_date)
+    df = quandl.get('FRED/' + ticker)
     if df.empty:
-        logging.error('Unable to get Treasury Rates from Quandl. Please check connection')
+        logger.error('Unable to get Treasury Rates from Quandl. Please check connection')
         raise IOError('Unable to get Treasury Rate from Quandl')
 
     return df['Value'][0]
 
 
-def get_spx_prices(start_date=None):
-    ''' TODO '''
-
-    if start_date is None:
-        start_date = datetime.datetime(2017, 1, 1)
-
-    df = pd.DataFrame()
-    df = get_data('SPX', False)
-
-    if df.empty:
-        logging.error('Unable to get SNP 500 Index from Web. Please check connection')
-        raise IOError('Unable to get Treasury Rate from Web')
-
-    return df
-
-
 if __name__ == '__main__':
-    logging.basicConfig(format='%(levelname)s: %(message)s', level=u.LOG_LEVEL)
-
-    start = datetime.datetime.today() + datetime.timedelta(days=-10)
-    end = datetime.datetime.today() + datetime.timedelta(days=-5)
-
-    df = get_ranged_data('AAPL', start, end)
-    print(df.tail())
+    start = datetime.datetime.today() - datetime.timedelta(days=10)
+    end = datetime.datetime.today() - datetime.timedelta(days=5)
 
     df = get_data('WMT')
     print(df.tail())
 
-    # rate1 = get_treasury_rate()
-    # print(rate1)
+    df = get_ranged_data('AAPL', start, end)
+    print(df.tail())
+
+    rate = get_treasury_rate()
+    print(rate)

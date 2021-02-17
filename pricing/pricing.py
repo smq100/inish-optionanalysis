@@ -17,6 +17,8 @@ from pandas.tseries.offsets import BDay
 from .fetcher import validate_ticker, get_ranged_data, get_treasury_rate
 from utils import utils as u
 
+logger = u.get_logger()
+
 
 class Pricing(ABC):
     ''' TODO '''
@@ -26,13 +28,14 @@ class Pricing(ABC):
 
     def __init__(self, ticker, expiry, strike, dividend=0.0):
         '''
-
         :param ticker: Ticker of the Underlying Stock asset, ex. 'AAPL', 'TSLA', 'GOOGL', etc.
         :param expiry_date: <datetime.date> ExpiryDate for the option -must be in the future
         :param strike: <float> Strike price of the option. This is the price option holder plans to
         buy underlying asset (for call option) or sell underlying asset (for put option).
         :param dividend: <float> If the underlying asset is paying dividend to stock-holders.
         '''
+        logger.info('Initializing Pricing...')
+
         self.ticker = ticker
         self.expiry = expiry
         self.strike_price = strike
@@ -116,8 +119,6 @@ class Pricing(ABC):
         self._calc_volatility()
         self._calc_spot_price()
 
-        logging.debug('Initializing variables completed')
-
 
     def override_historical_start_date(self, hist_start_date):
         '''
@@ -136,14 +137,14 @@ class Pricing(ABC):
 
         :return: <void>
         '''
-        logging.info('TICKER = %s', self.ticker)
-        logging.info('STRIKE = %.2f', self.strike_price)
-        logging.info('DIVIDEND = %.2f', self.dividend)
-        logging.info('VOLATILITY = %.2f', self.volatility)
-        logging.info('EXPIRY = %s', self.expiry)
-        logging.info('TIME TO MATURITY = %.1f', self.time_to_maturity*365)
-        logging.info('RISK FREE RATE = %f', self.risk_free_rate)
-        logging.info('SPOT PRICE = %.2f', self.spot_price)
+        logger.info('TICKER = %s', self.ticker)
+        logger.info('STRIKE = %.2f', self.strike_price)
+        logger.info('DIVIDEND = %.2f', self.dividend)
+        logger.info('VOLATILITY = %.2f', self.volatility)
+        logger.info('EXPIRY = %s', self.expiry)
+        logger.info('TIME TO MATURITY = %.1f', self.time_to_maturity*365)
+        logger.info('RISK FREE RATE = %f', self.risk_free_rate)
+        logger.info('SPOT PRICE = %.2f', self.spot_price)
 
 
     def is_call_put_parity_maintained(self, call_price, put_price):
@@ -156,8 +157,8 @@ class Pricing(ABC):
         lhs = call_price - put_price
         rhs = self.spot_price - np.exp(-1 * self.risk_free_rate * self.time_to_maturity) * self.strike_price
 
-        logging.info('Put-Call Parity LHS = %f', lhs)
-        logging.info('Put-Call Parity RHS = %f', rhs)
+        logger.debug('Put-Call Parity LHS = %f', lhs)
+        logger.debug('Put-Call Parity RHS = %f', rhs)
 
         return bool(round(lhs) == round(rhs))
 
@@ -169,7 +170,6 @@ class Pricing(ABC):
         :return: <void>
         '''
         self.risk_free_rate = get_treasury_rate()  # / 100?
-        logging.info('Risk Free Rate = %d', self.risk_free_rate)
 
 
     def _calc_time_to_maturity(self):
@@ -180,12 +180,10 @@ class Pricing(ABC):
         :return: <void>
         '''
         if self.expiry < datetime.datetime.today():
-            logging.error('Expiry/Maturity Date is in the past. Please check')
+            logger.error('Expiry/Maturity Date is in the past. Please check')
             raise ValueError('Expiry/Maturity Date is in the past. Please check')
 
         self.time_to_maturity = (self.expiry - datetime.datetime.today()).days / 365.0
-
-        logging.info('Setting Time To Maturity to %d days as Expiry/Maturity Date provided is %s ', self.time_to_maturity, self.expiry)
 
 
     def _calc_underlying_asset_data(self):
@@ -195,12 +193,10 @@ class Pricing(ABC):
         :return:
         '''
         if self._underlying_asset_data.empty:
-            logging.debug('Getting historical stock data for %s; used to calculate volatility in this asset', self.ticker)
-
             self._underlying_asset_data = get_ranged_data(self.ticker, self._start_date, None)
 
             if self._underlying_asset_data.empty:
-                logging.error('Unable to get historical stock data')
+                logger.error('Unable to get historical stock data')
                 raise IOError(f'Unable to get historical stock data for {self.ticker}!')
 
 
@@ -216,8 +212,6 @@ class Pricing(ABC):
 
         d_std = np.std(self._underlying_asset_data.log_returns)
         std = d_std * 252 ** 0.5
-
-        logging.info('Annualized Volatility calculated is {:f} '.format(std))
 
         self.volatility = std
 

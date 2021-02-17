@@ -3,6 +3,18 @@ import logging
 
 import numpy as np
 
+def get_logger():
+    logger = logging.getLogger('analysis')
+    if not logger.handlers:
+        logger.propagate = 0 # Prevent logging from propagating to the root logger
+        logger.setLevel(logging.INFO)
+        cformat = logging.Formatter('%(levelname)s: %(message)s')
+        handler = logging.StreamHandler()
+        handler.setFormatter(cformat)
+        logger.addHandler(handler)
+
+    return logger
+
 
 def delimeter(message, creturn=False):
     '''Common delimeter to bracket output'''

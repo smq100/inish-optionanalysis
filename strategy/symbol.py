@@ -1,24 +1,25 @@
 '''TODO'''
 
-import logging
-
 from pricing.fetcher import validate_ticker, get_company
+from utils import utils as u
+
+logger = u.get_logger()
 
 
 class Symbol:
     '''TODO'''
 
     def __init__(self, ticker):
+        logger.info('Initializing Symbol...')
+
         self.company = None
         self.ticker = ticker
 
         if validate_ticker(ticker):
             # Fetch YFinance opbject
             self.company = get_company(ticker)
-
-            logging.info('Initializing Symbol')
         else:
-            logging.info('Error initializing Symbol')
+            logger.info('Error initializing Symbol')
 
 
     def __str__(self):

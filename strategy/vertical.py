@@ -1,7 +1,6 @@
 '''TODO'''
 
 import datetime
-import logging
 
 import pandas as pd
 
@@ -9,12 +8,16 @@ from strategy.strategy import Strategy
 from analysis.strategy import StrategyAnalysis
 from utils import utils as u
 
+logger = u.get_logger()
+
 
 class Vertical(Strategy):
     '''TODO'''
 
     def __init__(self, ticker, product, direction):
         super().__init__(ticker, product, direction)
+
+        logger.info('Initializing Vertical...')
 
         self.name = 'vertical'
         expiry = datetime.datetime.today() + datetime.timedelta(days=14)
@@ -34,8 +37,6 @@ class Vertical(Strategy):
             else:
                 self.add_leg(1, product, 'long', self.initial_spot, expiry)
                 self.add_leg(1, product, 'short', self.initial_spot + 2.0, expiry)
-
-        logging.info('Initializing Vertical')
 
 
     def __str__(self):

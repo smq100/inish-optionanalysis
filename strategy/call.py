@@ -1,13 +1,14 @@
 '''TODO'''
 
 import datetime
-import logging
 
 import pandas as pd
 
 from strategy.strategy import Strategy
 from analysis.strategy import StrategyAnalysis
 from utils import utils as u
+
+logger = u.get_logger()
 
 
 class Call(Strategy):
@@ -17,11 +18,11 @@ class Call(Strategy):
         product = 'call'
         super().__init__(ticker, product, direction)
 
+        logger.info('Initializing Call...')
+
         self.name = 'call'
         expiry = datetime.datetime.today() + datetime.timedelta(days=14)
         self.add_leg(1, product, direction, self.initial_spot, expiry)
-
-        logging.info('Initializing Call')
 
 
     def __str__(self):

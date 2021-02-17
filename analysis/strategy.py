@@ -1,17 +1,18 @@
 '''TODO'''
 
-import logging
-logging.info('Initialized ')
-
 import math
 
 import pandas as pd
+from utils import utils as u
 
+logger = u.get_logger()
 
 class StrategyAnalysis:
     '''TODO'''
 
     def __init__(self):
+        logger.info('Initializing StrategyAnalysis...')
+
         self.table = None
         self.credit_debit = ''
         self.sentiment = ''
@@ -19,8 +20,6 @@ class StrategyAnalysis:
         self.max_gain = 0.0
         self.max_loss = 0.0
         self.breakeven = 0.0
-
-        logging.info('Initialized StrategyAnalysis')
 
 
     def __str__(self):

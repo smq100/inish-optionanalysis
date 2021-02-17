@@ -1,5 +1,4 @@
 '''European Pricing Class'''
-import logging
 import datetime
 
 import numpy as np
@@ -7,6 +6,8 @@ import scipy.stats as stats
 
 from .pricing import Pricing
 from utils import utils as u
+
+logger = u.get_logger()
 
 
 class BlackScholes(Pricing):
@@ -18,10 +19,8 @@ class BlackScholes(Pricing):
     def __init__(self, ticker, expiry, strike, dividend=0.0):
         super().__init__(ticker, expiry, strike, dividend=dividend)
 
-        # Get/Calculate all the required underlying parameters, ex. Volatility, Risk-free rate, etc.
-        self.log_parameters()
+        logger.info('Initializing BlackScholes...')
 
-        logging.info('Initialized BlackScholes')
 
     def calculate_price(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         ''' Calculate Call and Put option prices based on the below equations from Black-Scholes.
@@ -54,9 +53,6 @@ class BlackScholes(Pricing):
             (spot_price * np.exp(-1 * self.dividend * time_to_maturity)) *
             stats.norm.cdf(-1 * d1, 0.0, 1.0))
 
-        logging.info('Calculated value for Black-Scholes Call Option is $%.2f ', self.price_call)
-        logging.info('Calculated value for Black-Scholes Put Option is $%.2f ', self.price_put)
-
         return self.price_call, self.price_put
 
 
@@ -84,9 +80,6 @@ class BlackScholes(Pricing):
         self.delta_call = np.exp(-self.dividend * time_to_maturity) * stats.norm.cdf(d1, 0.0, 1.0)
         self.delta_put = -np.exp(-self.dividend * time_to_maturity) * stats.norm.cdf(-d1, 0.0, 1.0)
 
-        logging.info('Calculated delta for Black-Scholes Call Option is %.4f ', self.delta_call)
-        logging.info('Calculated delta for Black-Scholes Put Option is %.4f ', self.delta_put)
-
         return self.delta_call, self.delta_put
 
 
@@ -112,9 +105,6 @@ class BlackScholes(Pricing):
         gamma = np.exp(-self.dividend * time_to_maturity) * stats.norm.pdf(d1, 0.0, 1.0) / spot_price * volatility * np.sqrt(time_to_maturity)
 
         self.gamma_call = self.gamma_put = gamma * 365.0
-
-        logging.info('Calculated gamma for Black-Scholes Call Option is %.4f ', self.gamma_call)
-        logging.info('Calculated gamma for Black-Scholes Put Option is %.4f ', self.gamma_put)
 
         return self.gamma_call, self.gamma_put
 
@@ -162,9 +152,6 @@ class BlackScholes(Pricing):
         self.theta_call = theta_call / 365.0
         self.theta_put = theta_put / 365.0
 
-        logging.info('Calculated theta for Black-Scholes Call Option is %.4f ', self.theta_call)
-        logging.info('Calculated theta for Black-Scholes Put Option is %.4f ', self.theta_put)
-
         return self.theta_call, self.theta_put
 
 
@@ -190,9 +177,6 @@ class BlackScholes(Pricing):
         vega = 1 / np.sqrt(2 * np.pi) * spot_price * np.exp(-self.dividend * time_to_maturity) * np.exp(-d1 ** 2 * 0.5) * np.sqrt(time_to_maturity)
 
         self.vega_call = self.vega_put = vega / 100.0
-
-        logging.info('Calculated vega for Black-Scholes Call Option is %.4f ', self.vega_call)
-        logging.info('Calculated vega for Black-Scholes Put Option is %.4f ', self.vega_put)
 
         return self.vega_call, self.vega_put
 
@@ -222,9 +206,6 @@ class BlackScholes(Pricing):
         self.rho_call = rho_call / 100.0
         self.rho_put = rho_put / 100.0
 
-        logging.info('Calculated rho for Black-Scholes Call Option is %.4f ', self.rho_call)
-        logging.info('Calculated rho for Black-Scholes Put Option is %.4f ', self.rho_put)
-
         return self.rho_call, self.rho_put
 
 
@@ -247,8 +228,6 @@ class BlackScholes(Pricing):
 
         d1 = (np.log(spot_price / self.strike_price) +
              (self.risk_free_rate - self.dividend + 0.5 * volatility ** 2) * time_to_maturity) / (volatility * np.sqrt(time_to_maturity))
-
-        logging.debug('Calculated value for d1 = %f', d1)
 
         return d1
 
@@ -273,11 +252,8 @@ class BlackScholes(Pricing):
         d2 = (np.log(spot_price / self.strike_price) +
              (self.risk_free_rate - self.dividend - 0.5 * volatility ** 2) * time_to_maturity) / (volatility * np.sqrt(time_to_maturity))
 
-        logging.debug('Calculated value for d2 = %f', d2)
-
         return d2
 
 if __name__ == '__main__':
-    logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
     pricer_ = BlackScholes('TSLA', datetime.datetime(2021, 8, 31), 1000)
     call_price, put_price = pricer_.calculate_prices()

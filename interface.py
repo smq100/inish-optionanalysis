@@ -2,7 +2,6 @@
 
 import sys, os, json
 import datetime
-import logging
 
 import pandas as pd
 
@@ -18,12 +17,14 @@ from utils import utils as u
 MAX_ROWS = 50
 MAX_COLS = 18
 
+logger = u.get_logger()
+
+
 class Interface():
     '''TODO'''
 
     def __init__(self, ticker, strategy, direction, autoload=None, script=None, exit=False):
-        logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.WARNING)
-        logging.info('Initializing trend analysis...')
+        logger.info('Initializing Interface...')
 
         pd.options.display.float_format = '{:,.2f}'.format
 

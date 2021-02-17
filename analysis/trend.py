@@ -4,7 +4,6 @@
 '''
 
 import datetime
-import logging
 
 import yfinance as yf
 import trendln
@@ -13,6 +12,7 @@ import matplotlib.pyplot as plt
 from pricing.fetcher import validate_ticker, get_current_price
 from utils import utils as u
 
+logger = u.get_logger()
 
 class SupportResistance:
     '''TODO'''
@@ -34,9 +34,9 @@ class SupportResistance:
 
             self.price = get_current_price(ticker)
 
-            logging.info('Initialized SupportResitance')
+            logger.info('Initialized SupportResitance')
         else:
-            logging.info('Error initializing trend analysis')
+            logger.info('Error initializing SupportResitance')
 
 
     def __str__(self):
@@ -53,12 +53,14 @@ class SupportResistance:
             self._resistance = []
             self._support = []
 
-            minimaIdxs, pmin, mintrend, minwindows = trendln.calc_support_resistance((sr.history[-points:].Low, None), accuracy=2)  #support
-            maximaIdxs, pmax, maxtrend, maxwindows = trendln.calc_support_resistance((None, sr.history[-points:].High), accuracy=2) #resistance
+            # Calculate support and resistance lines
+            mins = trendln.calc_support_resistance((sr.history[-points:].Low, None), accuracy=2)  #support
+            maxs = trendln.calc_support_resistance((None, sr.history[-points:].High), accuracy=2) #resistance
 
+            minimaIdxs, pmin, mintrend, minwindows = mins
             for window in mintrend:
-                self._support += [
-                    {'relevant':False,
+                self._support += [{
+                    'relevant':False,
                     'points':window[0],
                     'line':
                         {'slope':window[1][0],
@@ -68,9 +70,10 @@ class SupportResistance:
                         'intercept_err':window[1][4],
                         'area_avg':window[1][5]}}]
 
+            maximaIdxs, pmax, maxtrend, maxwindows = maxs
             for window in maxtrend:
-                self._resistance += [
-                    {'relevant':False,
+                self._resistance += [{
+                    'relevant':False,
                     'points':window[0],
                     'line':
                         {'slope':window[1][0],
@@ -118,10 +121,11 @@ class SupportResistance:
             self.resistance_lines += [
                 {'slope':line['line']['slope'],
                 'intercept':line['line']['intercept'],
-                'area':line['line']['area_avg'],
-                'width':line['points'][-1] - line['points'][0]}]
+                'start':line['points'][0],
+                'stop':line['points'][-1],
+                'area':line['line']['area_avg']}]
 
-        logging.debug(f'Res lines: {self.resistance_lines}')
+        logger.debug(f'Res lines: {self.resistance_lines}')
 
         self._support = self._support[-best:]
         self._support = self._support[::-1]
@@ -129,10 +133,11 @@ class SupportResistance:
             self.support_lines += [
                 {'slope':line['line']['slope'],
                 'intercept':line['line']['intercept'],
-                'area':line['line']['area_avg'],
-                'width':line['points'][-1] - line['points'][0]}]
+                'start':line['points'][0],
+                'stop':line['points'][-1],
+                'area':line['line']['area_avg']}]
 
-        logging.debug(f'Sup Lines: {self.support_lines}')
+        logger.debug(f'Sup Lines: {self.support_lines}')
 
 
     def _calc_endpoints(self):
@@ -153,18 +158,16 @@ class SupportResistance:
         self.resistance_points.sort()
         self.support_points.sort(reverse=True)
 
-        logging.info(f'ResPts {self.ticker}@{self.price:.2f}: {self.resistance_points}')
-        logging.info(f'SupPts {self.ticker}@{self.price:.2f}: {self.support_points}')
+        logger.debug(f'ResPts {self.ticker}@{self.price:.2f}: {self.resistance_points}')
+        logger.debug(f'SupPts {self.ticker}@{self.price:.2f}: {self.support_points}')
 
 
 if __name__ == '__main__':
-    logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
-
     start = datetime.datetime.today() - datetime.timedelta(days=1000)
     sr = SupportResistance('AAPL', start=start)
     sr.calculate(300)
 
-    # idx = sr.history[-300:].index
-    fig = trendln.plot_support_resistance((sr.history.Low[-300:], sr.history[-300:].High), accuracy=2)
-    # fig = trendln.plot_sup_res_date((None, sr.history[-300:].High), idx, accuracy=2)
+    fig = trendln.plot_support_resistance((None, sr.history[-300:].High), accuracy=2)
+    # fig = trendln.plot_support_resistance((sr.history.Low[-300:], None), accuracy=2)
+    # fig = trendln.plot_support_resistance((sr.history.Low[-300:], sr.history[-300:].High), accuracy=2)
     fig.savefig('figure')

@@ -1,5 +1,5 @@
 '''American Pricing Class'''
-import logging
+
 import datetime
 from random import gauss
 
@@ -8,6 +8,7 @@ import numpy as np
 from .pricing import Pricing
 from utils import utils as u
 
+logger = u.get_logger()
 
 class MonteCarlo(Pricing):
     '''
@@ -21,10 +22,7 @@ class MonteCarlo(Pricing):
     def __init__(self, ticker, expiry, strike, dividend=0.0):
         super().__init__(ticker, expiry, strike, dividend=dividend)
 
-        # Get/Calculate all the required underlying parameters, ex. Volatility, Risk-free rate, etc.
-        self.log_parameters()
-
-        logging.info('Initialized MonteCarlo')
+        logger.info('Initializing MonteCarlo...')
 
 
     def calculate_price(self, spot_price=-1.0, time_to_maturity=-1.0):
@@ -46,9 +44,6 @@ class MonteCarlo(Pricing):
 
         self.price_call = discount_factor * (sum(call_payoffs) / len(call_payoffs))
         self.price_put = discount_factor * (sum(put_payoffs) / len(put_payoffs))
-
-        logging.info('Calculated value for American Call Option is $%.2f ', self.price_call)
-        logging.info('Calculated value for American Put Option is $%.2f ', self.price_put)
 
         return self.price_call, self.price_put
 
@@ -126,6 +121,5 @@ class MonteCarlo(Pricing):
         return call_payoffs, put_payoffs
 
 if __name__ == '__main__':
-    logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
     pricer_ = MonteCarlo('TSLA', datetime.datetime(2021, 8, 31), 1000)
     call_price, put_price = pricer_.calculate_prices()

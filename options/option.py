@@ -1,14 +1,18 @@
 '''TODO'''
 
-import logging
 import datetime
 import re
 
 from pricing.fetcher import validate_ticker, get_company
+from utils import utils as u
+
+logger = u.get_logger()
 
 
 class Option():
     def __init__(self, ticker, product, strike, expiry):
+        logger.info('Initializing Option...')
+
         # Specified
         self.ticker = ticker
         self.product = product
@@ -45,8 +49,6 @@ class Option():
 
         if self.expiry is None:
             self.expiry = datetime.datetime.today() + datetime.timedelta(days=10)
-
-        logging.info('Initialized Option')
 
 
     def __str__(self):

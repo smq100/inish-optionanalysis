@@ -5,7 +5,6 @@ import abc
 from abc import ABC
 import datetime
 import math
-import logging
 
 import pandas as pd
 
@@ -16,10 +15,15 @@ from pricing.montecarlo import MonteCarlo
 from analysis.strategy import StrategyAnalysis
 from utils import utils as u
 
+logger = u.get_logger()
+
+
 class Strategy(ABC):
     '''TODO'''
 
     def __init__(self, ticker, product, direction):
+        logger.info('Initializing Strategy...')
+
         self.name = ''
         self.ticker = ticker
         self.product = product
@@ -28,7 +32,6 @@ class Strategy(ABC):
         self.legs = []
         self.initial_spot = 0.0
 
-        logging.info('Initialized Strategy')
 
         self.initial_spot = self.get_current_spot(ticker, True)
 
@@ -232,7 +235,7 @@ class Leg:
                     self.option.vega = self.pricer.vega_put
                     self.option.rho = self.pricer.rho_put
 
-            logging.info('Option price = ${:.2f} '.format(price))
+            logger.info('Option price = ${:.2f} '.format(price))
 
         return price
 

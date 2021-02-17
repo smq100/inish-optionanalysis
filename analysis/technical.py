@@ -5,7 +5,6 @@
 '''
 
 import datetime
-import logging
 
 import yfinance as yf
 import pandas as pd
@@ -14,11 +13,14 @@ from ta import trend, momentum, volatility, volume
 from pricing.fetcher import validate_ticker
 from utils import utils as u
 
+logger = u.get_logger()
 
 class TechnicalAnalysis():
     '''TODO'''
 
     def __init__(self, ticker, start=None):
+        logger.info('Initialized TechnicalAnalysis...')
+
         if (validate_ticker(ticker)):
             self.ticker = ticker.upper()
 
@@ -26,10 +28,8 @@ class TechnicalAnalysis():
                 self.history = yf.Ticker(ticker).history(period="max", rounding=True)
             else:
                 self.history = yf.Ticker(ticker).history(start=f'{start:%Y-%m-%d}', rounding=True)
-
-            logging.info('Initialized TechnicalAnalysis')
         else:
-            logging.info('Error initializing TechnicalAnalysis')
+            logger.info('Error initializing TechnicalAnalysis')
 
     def __str__(self):
         return f'Technical analysis for {self.ticker}'

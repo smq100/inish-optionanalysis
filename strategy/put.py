@@ -1,7 +1,6 @@
 '''TODO'''
 
 import datetime
-import logging
 
 import pandas as pd
 
@@ -9,6 +8,7 @@ from strategy.strategy import Strategy
 from analysis.strategy import StrategyAnalysis
 from utils import utils as u
 
+logger = u.get_logger()
 
 class Put(Strategy):
     '''TODO'''
@@ -17,11 +17,12 @@ class Put(Strategy):
         product = 'put'
         super().__init__(ticker, product, direction)
 
+        logger.info('Initializing Put...')
+
         self.name = 'put'
         expiry = datetime.datetime.today() + datetime.timedelta(days=14)
         self.add_leg(1, product, direction, self.initial_spot, expiry)
 
-        logging.info('Initializing Put')
 
 
     def __str__(self):
