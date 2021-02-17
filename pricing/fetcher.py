@@ -11,7 +11,6 @@ from pandas.tseries.offsets import BDay
 
 from utils import utils as u
 
-logging.basicConfig(format='%(levelname)s: %(message)s', level=u.LOG_LEVEL)
 
 quandl_config = configparser.ConfigParser()
 quandl_config.read('config.ini')
@@ -128,6 +127,8 @@ def get_spx_prices(start_date=None):
 
 
 if __name__ == '__main__':
+    logging.basicConfig(format='%(levelname)s: %(message)s', level=u.LOG_LEVEL)
+
     start = datetime.datetime.today() + datetime.timedelta(days=-10)
     end = datetime.datetime.today() + datetime.timedelta(days=-5)
 

@@ -4,9 +4,6 @@ import logging
 import numpy as np
 
 
-LOG_LEVEL = logging.INFO
-
-
 def delimeter(message, creturn=False):
     '''Common delimeter to bracket output'''
     if creturn:

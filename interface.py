@@ -22,7 +22,7 @@ class Interface():
     '''TODO'''
 
     def __init__(self, ticker, strategy, direction, autoload=None, script=None, exit=False):
-        logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
+        logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.WARNING)
         logging.info('Initializing trend analysis...')
 
         pd.options.display.float_format = '{:,.2f}'.format

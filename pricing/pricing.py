@@ -67,8 +67,6 @@ class Pricing(ABC):
         else:
             raise IOError('Problem fetching ticker information')
 
-        logging.basicConfig(format='%(level_name)s: %(message)s', level=u.LOG_LEVEL)
-
 
     @abc.abstractmethod
     def calculate_price(self, spot_price=-1.0, time_to_maturity=-1.0):
