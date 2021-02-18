@@ -24,10 +24,10 @@ class SupportResistance:
             self.ticker = ticker.upper()
             self.history = None
             self.price = 0.0
-            self.resistance_lines = []
-            self.support_lines = []
-            self._resistance = []
-            self._support = []
+            self.points = 0
+            self.lines = []
+            self.resistance_points = []
+            self.support_points = []
 
             if start is None:
                 self.history = yf.Ticker(ticker).history(period="max", rounding=True)
@@ -46,12 +46,9 @@ class SupportResistance:
     def calculate(self, points):
         if self.history is not None and points > 100:
             self.points = points
-            self.resistance_lines = []
-            self.support_lines = []
+            self.lines = []
             self.resistance_points = []
             self.support_points = []
-            self._resistance = []
-            self._support = []
 
             # Calculate support and resistance lines
             mins = trendln.calc_support_resistance((sr.history[-points:].Low, None), accuracy=2)  #support
@@ -59,8 +56,9 @@ class SupportResistance:
 
             minimaIdxs, pmin, mintrend, minwindows = mins
             for window in mintrend:
-                self._support += [{
-                    'relevant':False,
+                self.lines += [{
+                    'support':True,
+                    'end_point': 0.0,
                     'points':window[0],
                     'slope':window[1][0],
                     'intercept':window[1][1],
@@ -71,8 +69,9 @@ class SupportResistance:
 
             maximaIdxs, pmax, maxtrend, maxwindows = maxs
             for window in maxtrend:
-                self._resistance += [{
-                    'relevant':False,
+                self.lines += [{
+                    'support':False,
+                    'end_point': 0.0,
                     'points':window[0],
                     'slope':window[1][0],
                     'intercept':window[1][1],
@@ -81,107 +80,83 @@ class SupportResistance:
                     'intercept_err':window[1][4],
                     'area_avg':window[1][5]}]
 
-            logger.debug(f'Found {len(self._support)} total support lines')
-            logger.debug(f'Found {len(self._resistance)} total resistance lines')
+            logger.debug(f'{len(self.get_support())} total support lines')
+            logger.debug(f'{len(self.get_resistance())} total resistance lines')
 
             # Find the relevant lines and calculate endpoints
-            self._find_relevant_lines(points)
-            self._calc_endpoints()
+            self._identify_relevant_lines()
+
+    def get_support(self):
+        support = []
+        for line in self.lines:
+            if line['support']:
+                support += [line]
+
+        return support
 
 
-    def _find_relevant_lines(self, points, end_distance=100, min_width=10, best=5, remove=False):
-        # Find relevant lines
-        for line in self._support:
-            if max(line['points']) >= (points - end_distance):
-                if max(line['points']) - min(line['points']) >= min_width:
-                    line['relevant'] = True
-                    break
+    def get_resistance(self):
+        resistance = []
+        for line in self.lines:
+            if not line['support']:
+                resistance += [line]
 
-        for line in self._resistance:
-            if max(line['points']) >= (points - end_distance):
-                if max(line['points']) - min(line['points']) >= min_width:
-                    line['relevant'] = True
-                    break
-
-        # Remove irrelevant lines if desired
-        if remove:
-            for index, line in enumerate(self._support):
-                if not line['relevant']:
-                    self._support.pop(index)
-
-            for index, line in enumerate(self._resistance):
-                if not line['relevant']:
-                    self._resistance.pop(index)
-
-        # Find the best and reverse order from best to worst. Items are sorted by calc_support_resistance() in acsending order of 'area_avg'
-        self.support_lines = []
-        for line in self._support:
-            if line['relevant']:
-                self.support_lines += [
-                    {'slope':line['slope'],
-                    'intercept':line['intercept'],
-                    'start':line['points'][0],
-                    'stop':line['points'][-1],
-                    'area':line['area_avg']}]
-
-                line = f'Sup: m={line["slope"]:.2f}, '\
-                            f'b={line["intercept"]:.1f}, '\
-                            f's={line["points"][0]}/{line["points"][-1]}({self.points}), '\
-                            f'a={line["area_avg"]:.3f}'
-                logger.debug(line)
-
-        # Save the best, and reverse order
-        self.support_lines = self.support_lines[-best:]
-        self.support_lines = self.support_lines[::-1]
-
-        logger.debug(f'Identified {len(self.support_lines)} relevant support lines')
-
-        self.resistance_lines = []
-        for line in self._resistance:
-            if line['relevant']:
-                self.resistance_lines += [
-                    {'slope':line['slope'],
-                    'intercept':line['intercept'],
-                    'start':line['points'][0],
-                    'stop':line['points'][-1],
-                    'area':line['area_avg']}]
-
-                line = f'Res: m={line["slope"]:.2f}, '\
-                            f'b={line["intercept"]:.1f}, '\
-                            f's={line["points"][0]}/{line["points"][-1]}({self.points}), '\
-                            f'a={line["area_avg"]:.3f}'
-                logger.debug(line)
-
-        # Save the best, and reverse order
-        self.resistance_lines = self.resistance_lines[-best:]
-        self.resistance_lines = self.resistance_lines[::-1]
-
-        logger.debug(f'Identified {len(self.resistance_lines)} relevant resistance lines')
+        return resistance
 
 
-    def _calc_endpoints(self):
-        self.resistance_points = []
-        self.support_points = []
+    def _identify_relevant_lines(self, min_width=50, best=5):
+        # Enforce min width between pivot end points
+        for index, line in enumerate(self.lines):
+            if max(line['points']) - min(line['points']) < min_width:
+                self.lines.pop(index)
 
-        for line in self.resistance_lines:
-            point = (self.points * line['slope']) + line['intercept']
-            if point > 0.0 and point > self.price:
-                self.resistance_points += [point]
+        logger.debug(f'{len(self.get_support())} relevant support lines')
+        logger.debug(f'{len(self.get_resistance())} relevant resistance lines')
 
-        for line in self.support_lines:
-            point = (self.points * line['slope']) + line['intercept']
-            if point > 0.0 and point < self.price:
-                self.support_points += [point]
+        # Calculate end point extension
+        for line in self.lines:
+            line['end_point'] = (self.points * line['slope']) + line['intercept']
 
-        # Sort values by relevance to current price
-        self.resistance_points.sort()
-        self.support_points.sort(reverse=True)
+        # Based on extension, maybe some support lines are now resistance, and vice versa
+        for index, line in enumerate(self.lines):
+            if line['support']:
+                if line['end_point'] > self.price:
+                    line['support'] = False
+            elif line['end_point'] < self.price:
+                line['support'] = True
 
-        logger.debug(f'Res: {self.ticker}@{self.price:.2f}: {self.resistance_points}')
-        logger.debug(f'Sup: {self.ticker}@{self.price:.2f}: {self.support_points}')
+        # Prune and sort
+        self._sort_prune(best)
+
+        for line in self.get_support():
+            line = f'Sup: m={line["slope"]:.2f}, '\
+                        f'b={line["intercept"]:.1f}, '\
+                        f's={line["points"][0]}/{line["points"][-1]}({self.points}), '\
+                        f'a={line["area_avg"]:.3f}'
+            logger.debug(line)
+
+        for line in self.get_resistance():
+            line = f'Res: m={line["slope"]:.2f}, '\
+                        f'b={line["intercept"]:.1f}, '\
+                        f's={line["points"][0]}/{line["points"][-1]}({self.points}), '\
+                        f'a={line["area_avg"]:.3f}'
+            logger.debug(line)
+
+
+    def _sort_prune(self, best):
+        sup = sorted(self.get_support(), reverse=True, key=lambda k: k['area_avg'])
+        sup = sup[:best]
+
+        res = sorted(self.get_resistance(), reverse=True, key=lambda k: k['area_avg'])
+        res = res[:best]
+
+        self.lines = sup + res
 
 
 if __name__ == '__main__':
+    import logging
+    u.get_logger(logging.DEBUG)
+
     start = datetime.datetime.today() - datetime.timedelta(days=1000)
     sr = SupportResistance('MSFT', start=start)
     sr.calculate(300)

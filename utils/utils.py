@@ -3,11 +3,17 @@ import logging
 
 import numpy as np
 
-def get_logger():
+def get_logger(level=None):
     logger = logging.getLogger('analysis')
+
+    if level is not None:
+        logger.handlers = []
+    else:
+        level = logging.WARNING
+
     if not logger.handlers:
         logger.propagate = 0 # Prevent logging from propagating to the root logger
-        logger.setLevel(logging.DEBUG)
+        logger.setLevel(level)
         cformat = logging.Formatter('%(levelname)s: %(message)s')
         handler = logging.StreamHandler()
         handler.setFormatter(cformat)
@@ -33,6 +39,7 @@ def delimeter(message, creturn=False):
 def mround(n, precision):
     val = int(n / precision + 0.5) * precision
     if val < 0.01: val = 0.01
+
     return val
 
 
