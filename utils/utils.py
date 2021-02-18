@@ -7,7 +7,7 @@ def get_logger():
     logger = logging.getLogger('analysis')
     if not logger.handlers:
         logger.propagate = 0 # Prevent logging from propagating to the root logger
-        logger.setLevel(logging.INFO)
+        logger.setLevel(logging.DEBUG)
         cformat = logging.Formatter('%(levelname)s: %(message)s')
         handler = logging.StreamHandler()
         handler.setFormatter(cformat)
