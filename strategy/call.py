@@ -1,5 +1,3 @@
-'''TODO'''
-
 import datetime
 
 import pandas as pd
@@ -10,10 +8,7 @@ from utils import utils as u
 
 logger = u.get_logger()
 
-
 class Call(Strategy):
-    '''TODO'''
-
     def __init__(self, ticker, product, direction):
         product = 'call'
         super().__init__(ticker, product, direction)
@@ -24,10 +19,8 @@ class Call(Strategy):
         expiry = datetime.datetime.today() + datetime.timedelta(days=14)
         self.add_leg(1, product, direction, self.initial_spot, expiry)
 
-
     def __str__(self):
         return f'{self.legs[0].direction} {self.name}'
-
 
     def analyze(self):
         dframe = None
@@ -52,7 +45,6 @@ class Call(Strategy):
             # Calculate breakeven
             self.analysis.breakeven = self.calc_breakeven()
 
-
     def generate_profit_table(self):
         price = self.legs[0].option.calc_price
 
@@ -65,7 +57,6 @@ class Call(Strategy):
         dframe.style.applymap(lambda x: 'color:red' if x is not str and x < 0 else 'color:black')
 
         return dframe
-
 
     def calc_max_gain_loss(self):
         if self.legs[0].direction == 'long':

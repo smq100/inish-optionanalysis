@@ -1,5 +1,3 @@
-'''TODO'''
-
 import datetime
 
 import pandas as pd
@@ -10,10 +8,7 @@ from utils import utils as u
 
 logger = u.get_logger()
 
-
 class Vertical(Strategy):
-    '''TODO'''
-
     def __init__(self, ticker, product, direction):
         super().__init__(ticker, product, direction)
 
@@ -38,10 +33,8 @@ class Vertical(Strategy):
                 self.add_leg(1, product, 'long', self.initial_spot, expiry)
                 self.add_leg(1, product, 'short', self.initial_spot + 2.0, expiry)
 
-
     def __str__(self):
         return f'{self.name} {self.product} {self.analysis.credit_debit} spread'
-
 
     def analyze(self):
         ''' Analyze the stratwgy (Important: Assumes the long leg is the index-0 leg)'''
@@ -69,7 +62,6 @@ class Vertical(Strategy):
             # Calculate breakeven
             self.analysis.breakeven = self.calc_breakeven()
 
-
     def generate_profit_table(self):
         # Create net-value table
 
@@ -78,7 +70,6 @@ class Vertical(Strategy):
         dframe.style.applymap(lambda x: 'color:red' if x is not str and x < 0 else 'color:black')
 
         return dframe
-
 
     def calc_max_gain_loss(self):
         gain = loss = 0.0
@@ -103,7 +94,6 @@ class Vertical(Strategy):
 
         return gain, loss
 
-
     def calc_breakeven(self):
         if self.analysis.credit_debit == 'debit':
             if self.product == 'call':
@@ -121,7 +111,6 @@ class Vertical(Strategy):
                 breakeven = self.legs[1].option.strike - self.analysis.amount
 
         return breakeven
-
 
     def get_errors(self):
         '''TODO'''

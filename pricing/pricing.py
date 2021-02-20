@@ -21,10 +21,7 @@ logger = u.get_logger()
 
 
 class Pricing(ABC):
-    ''' TODO '''
-
     LOOK_BACK_WINDOW = 252
-
 
     def __init__(self, ticker, expiry, strike, dividend=0.0):
         '''
@@ -70,7 +67,6 @@ class Pricing(ABC):
         else:
             raise IOError('Problem fetching ticker information')
 
-
     @abc.abstractmethod
     def calculate_price(self, spot_price=-1.0, time_to_maturity=-1.0):
         '''TODO'''
@@ -83,30 +79,25 @@ class Pricing(ABC):
         self.calculate_vega(spot_price=spot_price, time_to_maturity=time_to_maturity, volatility=volatility)
         self.calculate_rho(spot_price=spot_price, time_to_maturity=time_to_maturity, volatility=volatility)
 
-
     @abc.abstractmethod
     def calculate_delta(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         '''TODO'''
         return 0.0, 0.0
-
 
     @abc.abstractmethod
     def calculate_gamma(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         '''TODO'''
         return 0.0, 0.0
 
-
     @abc.abstractmethod
     def calculate_theta(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         '''TODO'''
         return 0.0, 0.0
 
-
     @abc.abstractmethod
     def calculate_vega(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         '''TODO'''
         return 0.0, 0.0
-
 
     def initialize_variables(self):
         '''
@@ -119,7 +110,6 @@ class Pricing(ABC):
         self._calc_volatility()
         self._calc_spot_price()
 
-
     def override_historical_start_date(self, hist_start_date):
         '''
         If we want to change the look_back window for historical prices (used for volatility calculations),
@@ -129,7 +119,6 @@ class Pricing(ABC):
         :return: <void>
         '''
         self._start_date = hist_start_date
-
 
     def log_parameters(self):
         '''
@@ -146,7 +135,6 @@ class Pricing(ABC):
         logger.info('RISK FREE RATE = %f', self.risk_free_rate)
         logger.info('SPOT PRICE = %.2f', self.spot_price)
 
-
     def is_call_put_parity_maintained(self, call_price, put_price):
         ''' Verify is the Put-Call Pairty is maintained by the two option prices calculated by us.
 
@@ -162,7 +150,6 @@ class Pricing(ABC):
 
         return bool(round(lhs) == round(rhs))
 
-
     def _calc_risk_free_rate(self):
         '''
         Fetch 3-month Treasury Bill Rate from the web. Please check module stock_analyzer.data_fetcher for details
@@ -170,7 +157,6 @@ class Pricing(ABC):
         :return: <void>
         '''
         self.risk_free_rate = get_treasury_rate()  # / 100?
-
 
     def _calc_time_to_maturity(self):
         '''
@@ -185,7 +171,6 @@ class Pricing(ABC):
 
         self.time_to_maturity = (self.expiry - datetime.datetime.today()).days / 365.0
 
-
     def _calc_underlying_asset_data(self):
         '''
         Scan through the web to get historical prices of the underlying asset.
@@ -198,7 +183,6 @@ class Pricing(ABC):
             if self._underlying_asset_data.empty:
                 logger.error('Unable to get historical stock data')
                 raise IOError(f'Unable to get historical stock data for {self.ticker}!')
-
 
     def _calc_volatility(self):
         '''
@@ -214,7 +198,6 @@ class Pricing(ABC):
         std = d_std * 252 ** 0.5
 
         self.volatility = std
-
 
     def _calc_spot_price(self):
         '''

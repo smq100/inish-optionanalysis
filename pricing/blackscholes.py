@@ -21,7 +21,6 @@ class BlackScholes(Pricing):
 
         logger.info('Initializing BlackScholes...')
 
-
     def calculate_price(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         ''' Calculate Call and Put option prices based on the below equations from Black-Scholes.
         If dividend is not zero, then it is subtracted from the risk free rate in the below calculations.
@@ -55,7 +54,6 @@ class BlackScholes(Pricing):
 
         return self.price_call, self.price_put
 
-
     def calculate_delta(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         ''' Calculate Call and Put option delta based on the below equations from Black-Scholes.
         If dividend is not zero, then it is subtracted from the risk free rate in the below calculations.
@@ -82,7 +80,6 @@ class BlackScholes(Pricing):
 
         return self.delta_call, self.delta_put
 
-
     def calculate_gamma(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         ''' Calculate Call and Put option gamma based on the below equations from Black-Scholes.
         If dividend is not zero, then it is subtracted from the risk free rate in the below calculations.
@@ -107,7 +104,6 @@ class BlackScholes(Pricing):
         self.gamma_call = self.gamma_put = gamma * 365.0
 
         return self.gamma_call, self.gamma_put
-
 
     def calculate_theta(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         ''' Calculate Call and Put option theta based on the below equations from Black-Scholes.
@@ -154,7 +150,6 @@ class BlackScholes(Pricing):
 
         return self.theta_call, self.theta_put
 
-
     def calculate_vega(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         ''' Calculate Call and Put option vega based on the below equations from Black-Scholes.
         If dividend is not zero, then it is subtracted from the risk free rate in the below calculations.
@@ -179,7 +174,6 @@ class BlackScholes(Pricing):
         self.vega_call = self.vega_put = vega / 100.0
 
         return self.vega_call, self.vega_put
-
 
     def calculate_rho(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         ''' Calculate Call and Put option rho based on the below equations from Black-Scholes.
@@ -208,7 +202,6 @@ class BlackScholes(Pricing):
 
         return self.rho_call, self.rho_put
 
-
     def _calculate_d1(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         ''' Famous d1 variable from Black-Scholes model calculated as shown in:
                 https://en.wikipedia.org/wiki/Black%E2%80%93Scholes_model
@@ -231,7 +224,6 @@ class BlackScholes(Pricing):
 
         return d1
 
-
     def _calculate_d2(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         ''' Famous d2 variable from Black-Scholes model calculated as shown in:
                 https://en.wikipedia.org/wiki/Black%E2%80%93Scholes_model
@@ -253,6 +245,7 @@ class BlackScholes(Pricing):
              (self.risk_free_rate - self.dividend - 0.5 * volatility ** 2) * time_to_maturity) / (volatility * np.sqrt(time_to_maturity))
 
         return d2
+
 
 if __name__ == '__main__':
     pricer_ = BlackScholes('TSLA', datetime.datetime(2021, 8, 31), 1000)

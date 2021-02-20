@@ -1,5 +1,3 @@
-'''TODO'''
-
 import datetime
 import re
 
@@ -7,7 +5,6 @@ from pricing.fetcher import validate_ticker, get_company
 from utils import utils as u
 
 logger = u.get_logger()
-
 
 class Option():
     def __init__(self, ticker, product, strike, expiry):
@@ -50,7 +47,6 @@ class Option():
         if self.expiry is None:
             self.expiry = datetime.datetime.today() + datetime.timedelta(days=10)
 
-
     def __str__(self):
         return f'Contract:{self.contract_symbol}\n'\
             f'Ticker: {self.ticker}\n'\
@@ -78,7 +74,6 @@ class Option():
             f'Theta: {self.theta:.5f}\n'\
             f'Vega: {self.vega:.5f}\n'\
             f'Rho: {self.rho:.5f}'
-
 
     def load_contract(self, contract_name):
         ret = True
@@ -113,7 +108,6 @@ class Option():
 
         return ret
 
-
 def get_contract(contract_symbol):
     parsed = _parse_contract_name(contract_symbol)
 
@@ -134,7 +128,6 @@ def get_contract(contract_symbol):
         return contract.iloc[0]
     except:
         return None
-
 
 def _parse_contract_name(contract_name):
     # ex: MSFT210305C00237500

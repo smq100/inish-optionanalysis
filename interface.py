@@ -1,5 +1,3 @@
-''' TODO '''
-
 import sys, os, json
 import datetime
 
@@ -21,8 +19,6 @@ logger = u.get_logger()
 
 
 class Interface():
-    '''TODO'''
-
     def __init__(self, ticker, strategy, direction, autoload=None, script=None, exit=False):
         logger.info('Initializing Interface...')
 
@@ -63,7 +59,6 @@ class Interface():
                     u.print_error('Nothing to do')
         else:
             u.print_error('Invalid ticker symbol specified')
-
 
     def main_menu(self):
         '''Displays opening menu'''
@@ -149,7 +144,6 @@ class Interface():
             elif selection == 0:
                 break
 
-
     def calculate(self):
         try:
             self.strategy.calculate()
@@ -157,7 +151,6 @@ class Interface():
             return True
         except:
             return False
-
 
     def analyze(self):
         '''TODO'''
@@ -171,7 +164,6 @@ class Interface():
             self.dirty_analyze = False
         else:
             u.print_error(errors)
-
 
     def plot_value(self, leg):
         '''TODO'''
@@ -203,7 +195,6 @@ class Interface():
         else:
             u.print_error('Invalid leg')
 
-
     def plot_analysis(self):
         '''TODO'''
 
@@ -232,7 +223,6 @@ class Interface():
         else:
             u.print_error('No table')
 
-
     def view_legs(self, leg=-1, delimeter=True):
         '''TODO'''
         if delimeter:
@@ -250,7 +240,6 @@ class Interface():
         else:
             u.print_error('Invalid leg')
 
-
     def view_options(self, leg=-1, delimeter=True):
         if delimeter:
             print(u.delimeter('Option Specs', True))
@@ -267,11 +256,9 @@ class Interface():
         else:
             u.print_error('Invalid leg')
 
-
     def reset(self):
         '''TODO'''
         self.strategy.reset()
-
 
     def select_symbol(self):
         '''TODO'''
@@ -297,7 +284,6 @@ class Interface():
             self.technical = None
             self.load_strategy(ticker, 'call', 'long', False)
             u.print_message('The initial strategy has been set to a long call')
-
 
     def select_strategy(self):
         '''TODO'''
@@ -355,7 +341,6 @@ class Interface():
 
         return modified
 
-
     def select_technical(self):
         if self.technical is None:
             start = datetime.datetime.today() - datetime.timedelta(days=365)
@@ -406,7 +391,6 @@ class Interface():
             if selection == 0:
                 break
 
-
     def select_chain(self):
         contract = ''
 
@@ -425,7 +409,6 @@ class Interface():
                     # Load the new contract
                     if contract:
                         self.strategy.legs[0].option.load_contract(contract)
-
 
         if not contract:
             while True:
@@ -491,7 +474,6 @@ class Interface():
 
         return contract
 
-
     def select_chain_expiry(self):
         expiry = self.chain.get_expiry()
 
@@ -511,7 +493,6 @@ class Interface():
             expiry = None
 
         return expiry
-
 
     def select_chain_option(self, product):
         options = None
@@ -545,7 +526,6 @@ class Interface():
             u.print_error('Invalid selection')
 
         return contract
-
 
     def modify_leg(self, leg):
         '''TODO'''
@@ -599,7 +579,6 @@ class Interface():
 
         return changed
 
-
     def select_settings(self):
         '''TODO'''
 
@@ -615,7 +594,6 @@ class Interface():
                 self.select_method()
             elif selection == 0:
                 break
-
 
     def select_method(self):
         '''TODO'''
@@ -648,7 +626,6 @@ class Interface():
                 break
 
             u.print_error('Unknown method selected')
-
 
     def load_strategy(self, ticker, name, direction, analyze=True):
         modified = False
@@ -683,7 +660,6 @@ class Interface():
 
         return modified
 
-
     def _menu(self, menu_items, header, minvalue, maxvalue):
         print(f'\n{header}')
         print('-----------------------------')
@@ -693,7 +669,6 @@ class Interface():
             print(f'{entry})\t{menu_items[entry]}')
 
         return u.input_integer('Please select: ', minvalue, maxvalue)
-
 
     def _validate(self):
         '''TODO'''

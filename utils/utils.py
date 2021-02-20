@@ -1,4 +1,3 @@
-'''TODO'''
 import logging
 
 import numpy as np
@@ -21,7 +20,6 @@ def get_logger(level=None):
 
     return logger
 
-
 def delimeter(message, creturn=False):
     '''Common delimeter to bracket output'''
     if creturn:
@@ -41,7 +39,6 @@ def mround(n, precision):
     if val < 0.01: val = 0.01
 
     return val
-
 
 def input_integer(message, min_, max_):
     val = min_ - 1
@@ -79,7 +76,6 @@ def input_float(message, min_, max_):
 
     return val
 
-
 def isnumeric(value):
     try:
         float(value)
@@ -87,14 +83,11 @@ def isnumeric(value):
     except ValueError:
         return False
 
-
 def print_message(message, creturn=False):
     print(delimeter(f'{message}', creturn))
 
-
 def print_warning(message, creturn=False):
     print(delimeter(f'Warning: {message}', creturn))
-
 
 def print_error(message, creturn=False):
     print(delimeter(f'Error: {message}', creturn))

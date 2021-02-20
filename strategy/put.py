@@ -1,5 +1,3 @@
-'''TODO'''
-
 import datetime
 
 import pandas as pd
@@ -11,8 +9,6 @@ from utils import utils as u
 logger = u.get_logger()
 
 class Put(Strategy):
-    '''TODO'''
-
     def __init__(self, ticker, product, direction):
         product = 'put'
         super().__init__(ticker, product, direction)
@@ -23,11 +19,8 @@ class Put(Strategy):
         expiry = datetime.datetime.today() + datetime.timedelta(days=14)
         self.add_leg(1, product, direction, self.initial_spot, expiry)
 
-
-
     def __str__(self):
         return f'{self.legs[0].direction} {self.name}'
-
 
     def analyze(self):
         dframe = None
@@ -52,7 +45,6 @@ class Put(Strategy):
             # Calculate breakeven
             self.analysis.breakeven = self.calc_breakeven()
 
-
     def generate_profit_table(self):
         price = self.legs[0].option.calc_price
 
@@ -67,7 +59,6 @@ class Put(Strategy):
 
         return dframe
 
-
     def calc_max_gain_loss(self):
         if self.legs[0].direction == 'long':
             self.analysis.sentiment = 'bearish'
@@ -79,7 +70,6 @@ class Put(Strategy):
             max_loss = self.legs[0].option.strike - self.legs[0].option.calc_price
 
         return max_gain, max_loss
-
 
     def calc_breakeven(self):
         if self.legs[0].direction == 'long':

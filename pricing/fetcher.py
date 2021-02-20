@@ -41,7 +41,6 @@ def get_company(ticker):
     else:
         return None
 
-
 def validate_ticker(ticker):
     '''Perform quick check to see if a ticker is valid'''
 
@@ -51,7 +50,6 @@ def validate_ticker(ticker):
     except:
         logger.error(f'Ticker {ticker} not valid')
         return False
-
 
 def get_current_price(ticker):
     if validate_ticker(ticker):
@@ -63,7 +61,6 @@ def get_current_price(ticker):
         price = -1.0
 
     return price
-
 
 def get_ranged_data(ticker, start, end=None):
     ''' TODO '''
@@ -80,7 +77,6 @@ def get_ranged_data(ticker, start, end=None):
 
     return df
 
-
 def get_data(ticker):
     ''' TODO '''
 
@@ -92,7 +88,6 @@ def get_data(ticker):
         df = pd.DataFrame(info)
 
     return df
-
 
 def get_treasury_rate(ticker='DTB3'):
     ''' TODO '''

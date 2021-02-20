@@ -47,26 +47,21 @@ class MonteCarlo(Pricing):
 
         return self.price_call, self.price_put
 
-
     def calculate_delta(self, spot_price=-1.0, time_to_maturity=-1.0):
         '''TODO'''
         return 0.0, 0.0
-
 
     def calculate_gamma(self, spot_price=-1.0, time_to_maturity=-1.0):
         '''TODO'''
         return 0.0, 0.0
 
-
     def calculate_theta(self, spot_price=-1.0, time_to_maturity=-1.0):
         '''TODO'''
         return 0.0, 0.0
 
-
     def calculate_vega(self, spot_price=-1.0, time_to_maturity=-1.0):
         '''TODO'''
         return 0.0, 0.0
-
 
     def _generate_asset_price(self, spot_price):
         ''' Calculate predicted Asset Price at the time of Option Expiry date.
@@ -82,7 +77,6 @@ class MonteCarlo(Pricing):
 
         return expected_price
 
-
     def _call_payoff(self, expected_price):
         ''' Calculate payoff of the call option at Option Expiry Date assuming the asset price
         is equal to expected price. This calculation is based on below equation:
@@ -94,7 +88,6 @@ class MonteCarlo(Pricing):
         '''
         return max(0, expected_price - self.strike_price)
 
-
     def _put_payoff(self, expected_price):
         ''' Calculate payoff of the put option at Option Expiry Date assuming the asset price
         is equal to expected price. This calculation is based on below equation:
@@ -105,7 +98,6 @@ class MonteCarlo(Pricing):
         :return: <float> payoff
         '''
         return max(0, self.strike_price - expected_price)
-
 
     def _generate_simulations(self, spot_price):
         ''' Perform Brownian motion simulation to get the Call & Put option payouts on Expiry Date
@@ -119,6 +111,7 @@ class MonteCarlo(Pricing):
             put_payoffs.append(self._put_payoff(expected_asset_price))
 
         return call_payoffs, put_payoffs
+
 
 if __name__ == '__main__':
     pricer_ = MonteCarlo('TSLA', datetime.datetime(2021, 8, 31), 1000)

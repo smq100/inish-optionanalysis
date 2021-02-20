@@ -1,14 +1,9 @@
-'''TODO'''
-
 from pricing.fetcher import validate_ticker, get_company
 from utils import utils as u
 
 logger = u.get_logger()
 
-
 class Symbol:
-    '''TODO'''
-
     def __init__(self, ticker):
         logger.info('Initializing Symbol...')
 

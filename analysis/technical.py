@@ -16,8 +16,6 @@ from utils import utils as u
 logger = u.get_logger()
 
 class TechnicalAnalysis():
-    '''TODO'''
-
     def __init__(self, ticker, start=None):
         logger.info('Initialized TechnicalAnalysis...')
 
@@ -34,7 +32,6 @@ class TechnicalAnalysis():
     def __str__(self):
         return f'Technical analysis for {self.ticker}'
 
-
     def calc_ema(self, interval):
         df = pd.DataFrame()
 
@@ -42,7 +39,6 @@ class TechnicalAnalysis():
             df = trend.ema_indicator(self.history['Close'], window=interval, fillna=True)
 
         return df
-
 
     def calc_rsi(self, interval=14):
         df = pd.DataFrame()
@@ -52,7 +48,6 @@ class TechnicalAnalysis():
 
         return df
 
-
     def calc_vwap(self):
         df = pd.DataFrame()
 
@@ -60,7 +55,6 @@ class TechnicalAnalysis():
         df = vwap.volume_weighted_average_price()
 
         return df
-
 
     def calc_macd(self, slow=26, fast=12, signal=9):
         macd = trend.MACD(self.history['Close'], window_slow=slow, window_fast=fast, window_sign=signal, fillna=True)
@@ -72,7 +66,6 @@ class TechnicalAnalysis():
         df.columns = ['Diff', 'MACD', 'Signal']
 
         return df
-
 
     def calc_bb(self, interval=14, std=2):
         df = pd.DataFrame()

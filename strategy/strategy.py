@@ -1,5 +1,3 @@
-'''TODO'''
-
 import sys
 import abc
 from abc import ABC
@@ -17,10 +15,7 @@ from utils import utils as u
 
 logger = u.get_logger()
 
-
 class Strategy(ABC):
-    '''TODO'''
-
     def __init__(self, ticker, product, direction):
         logger.info('Initializing Strategy...')
 
@@ -35,10 +30,8 @@ class Strategy(ABC):
 
         self.initial_spot = self.get_current_spot(ticker, True)
 
-
     def __str__(self):
         return 'Strategy abstract base class'
-
 
     def calculate(self):
         '''TODO'''
@@ -47,11 +40,9 @@ class Strategy(ABC):
         for leg in self.legs:
             leg.calculate()
 
-
     @abc.abstractmethod
     def analyze(self):
         ''' TODO '''
-
 
     def reset(self):
         '''TODO'''
@@ -59,11 +50,9 @@ class Strategy(ABC):
         # Clear the analysis
         self.analysis = StrategyAnalysis()
 
-
     def update_expiry(self, date):
         for leg in self.legs:
             leg.option.expiry = date
-
 
     def add_leg(self, quantity, product, direction, strike, expiry):
         '''TODO'''
@@ -75,7 +64,6 @@ class Strategy(ABC):
         self.legs.append(leg)
 
         return len(self.legs)
-
 
     def get_current_spot(self, ticker, roundup=False):
         '''TODO'''
@@ -90,7 +78,6 @@ class Strategy(ABC):
 
         return spot
 
-
     def set_pricing_method(self, method):
         if method != 'black-scholes':
             for leg in self.legs:
@@ -99,16 +86,13 @@ class Strategy(ABC):
             for leg in self.legs:
                 leg.pricing_method = method
 
-
     @abc.abstractmethod
     def generate_profit_table(self):
         '''TODO'''
 
-
     @abc.abstractmethod
     def calc_max_gain_loss(self):
         '''TODO'''
-
 
     @abc.abstractmethod
     def calc_breakeven(self):
@@ -117,7 +101,6 @@ class Strategy(ABC):
     def get_errors(self):
         '''TODO'''
         return ''
-
 
     def _calc_price_min_max_step(self):
         '''TODO'''
@@ -143,10 +126,7 @@ class Strategy(ABC):
 
         return len(self.legs) > 0
 
-
 class Leg:
-    '''TODO'''
-
     def __init__(self, strategy, ticker, quantity, product, direction, strike, expiry):
         self.symbol = Symbol(ticker)
         self.option = Option(ticker, product, strike, expiry)
@@ -157,7 +137,6 @@ class Leg:
         self.pricing_method = 'black-scholes'
         self.pricer = None
         self.table = None
-
 
     def __str__(self):
         if self.option.calc_price > 0.0:
@@ -179,7 +158,6 @@ class Leg:
             output = f'{self.symbol.ticker} leg not yet calculated'
 
         return output
-
 
     def calculate(self, pricing_method='black-scholes', greeks=True):
         '''TODO'''
@@ -239,7 +217,6 @@ class Leg:
 
         return price
 
-
     def recalculate(self, spot_price, time_to_maturity):
         '''TODO'''
 
@@ -249,7 +226,6 @@ class Leg:
             call, put = self.pricer.calculate_price(spot_price, time_to_maturity)
 
         return call, put
-
 
     def modify_symbol(self, ticker):
         '''TODO'''
@@ -265,7 +241,6 @@ class Leg:
             self.symbol = symbol
             u.print_error(sys.exc_info()[1])
             return False
-
 
     def modify_values(self, quantity, product, direction, strike):
         '''TODO'''
@@ -287,7 +262,6 @@ class Leg:
         self.table = None
         self.pricer = None
         self.calculate()
-
 
     def generate_value_table(self):
         ''' TODO '''
@@ -362,7 +336,6 @@ class Leg:
 
         return dframe
 
-
     def compress_table(self, rows, cols):
         ''' TODO '''
 
@@ -383,7 +356,6 @@ class Leg:
 
         return table
 
-
     def _calc_date_step(self):
         ''' TODO '''
 
@@ -391,7 +363,6 @@ class Leg:
         step = 1
 
         return cols, step
-
 
     def _validate(self):
         '''TODO'''

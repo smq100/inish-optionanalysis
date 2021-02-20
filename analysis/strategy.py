@@ -1,5 +1,3 @@
-'''TODO'''
-
 import math
 
 import pandas as pd
@@ -8,8 +6,6 @@ from utils import utils as u
 logger = u.get_logger()
 
 class StrategyAnalysis:
-    '''TODO'''
-
     def __init__(self):
         logger.info('Initializing StrategyAnalysis...')
 
@@ -20,7 +16,6 @@ class StrategyAnalysis:
         self.max_gain = 0.0
         self.max_loss = 0.0
         self.breakeven = 0.0
-
 
     def __str__(self):
         if self.table is not None:
@@ -45,7 +40,6 @@ class StrategyAnalysis:
             output = 'Not yet analyzed'
 
         return output
-
 
     def compress_table(self, rows, cols):
         ''' TODO '''

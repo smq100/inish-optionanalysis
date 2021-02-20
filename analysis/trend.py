@@ -14,16 +14,46 @@ from utils import utils as u
 
 logger = u.get_logger()
 
-class SupportResistance:
-    '''TODO'''
 
+class Line:
+    def __init__(self):
+        self.support = False
+        self.score = 0.0
+        self.end_point = 0.0
+        self.points = []
+        self.slope = 0.0
+        self.intercept = 0.0
+        self.ssr = 0.0
+        self.slope_err = 0.0
+        self.intercept_err = 0.0
+        self.area_avg = 0.0
+
+    def __str__(self):
+        dates = []
+        for point in self.points:
+            dates += point['date']
+
+        output = f'ssr={self.ssr:.1e}, '\
+                 f'se={self.slope_err:.1e}, '\
+                 f'ie={self.intercept_err:.1e}, '\
+                 f'a={self.area_avg:.3f}, '\
+                 f'd={dates}, '\
+                 f's={self.score:.1e}, '\
+                 f'x={self.end_point:.2f} '
+
+        return output
+
+    def calculate(self):
+        self.score = (self.area_avg * 1000) / (self.intercept_err * self.slope_err * self.ssr)
+
+class SupportResistance:
     def __init__(self, ticker, start=None):
         if (validate_ticker(ticker)):
             self.ticker = ticker.upper()
             self.history = None
             self.price = 0.0
             self.lines = []
-            self.method = trendln.METHOD_NAIVECONSEC # METHOD_NAIVE, METHOD_NAIVECONSEC, METHOD_NUMDIFF
+            self.method = trendln.METHOD_NAIVECONSEC    # METHOD_NAIVE, METHOD_NAIVECONSEC, METHOD_NUMDIFF
             self.extmethod = trendln.METHOD_NSQUREDLOGN # METHOD_NCUBED, METHOD_NSQUREDLOGN, METHOD_HOUGHPOINTS, METHOD_HOUGHLINES, METHOD_PROBHOUGH
 
             if start is None:
@@ -39,11 +69,8 @@ class SupportResistance:
         else:
             logger.info('Error initializing SupportResitance')
 
-
-
     def __str__(self):
         return f'Support and resistance analysis for {self.ticker} (${self.price:.2f})'
-
 
     def calculate(self):
         if self.history is not None:
@@ -55,33 +82,39 @@ class SupportResistance:
 
             maximaIdxs, pmax, maxtrend, maxwindows = maxs
             for line in maxtrend:
-                self.lines += [{
-                    'support':False,
-                    'score':0.0,
-                    'end_point':0.0,
-                    'dates':[],
-                    'points':line[0],
-                    'slope':line[1][0],
-                    'intercept':line[1][1],
-                    'ssr':line[1][2],
-                    'slope_err':line[1][3],
-                    'intercept_err':line[1][4],
-                    'area_avg':line[1][5]}]
+                newline = Line()
+                newline.support = False
+                newline.score = 0.0
+                newline.end_point = 0.0
+                newline.points = []
+                newline.slope = line[1][0]
+                newline.intercept = line[1][1]
+                newline.ssr = line[1][2]
+                newline.slope_err = line[1][3]
+                newline.intercept_err = line[1][4]
+                newline.area_avg = line[1][5]
+
+                self.lines += [newline]
+                for point in line[0]:
+                    self.lines[-1].points += [{'index':point, 'date':''}]
 
             minimaIdxs, pmin, mintrend, minwindows = mins
             for line in mintrend:
-                self.lines += [{
-                    'support':True,
-                    'score':0.0,
-                    'end_point':0.0,
-                    'dates':[],
-                    'points':line[0],
-                    'slope':line[1][0],
-                    'intercept':line[1][1],
-                    'ssr':line[1][2],
-                    'slope_err':line[1][3],
-                    'intercept_err':line[1][4],
-                    'area_avg':line[1][5]}]
+                newline = Line()
+                newline.support = True
+                newline.score = 0.0
+                newline.end_point = 0.0
+                newline.points = []
+                newline.slope = line[1][0]
+                newline.intercept = line[1][1]
+                newline.ssr = line[1][2]
+                newline.slope_err = line[1][3]
+                newline.intercept_err = line[1][4]
+                newline.area_avg = line[1][5]
+
+                self.lines += [newline]
+                for point in line[0]:
+                    self.lines[-1].points += [{'index':point, 'date':''}]
 
             logger.debug(f'{len(self.get_resistance())} total resistance lines')
             logger.debug(f'{len(self.get_support())} total support lines')
@@ -92,35 +125,23 @@ class SupportResistance:
     def get_resistance(self):
         resistance = []
         for line in self.lines:
-            if not line['support']:
+            if not line.support:
                 resistance += [line]
 
         return resistance
 
-
     def get_support(self):
         support = []
         for line in self.lines:
-            if line['support']:
+            if line.support:
                 support += [line]
 
         return support
 
-
     def _identify_relevant_lines(self, min_width=50, best=3):
-        # Inner function to calculate overall score
-        def calculate_score(line):
-            return (line['area_avg'] * 1000) / (line['intercept_err'] * line['slope_err'] * line['ssr'])
-
-        # Inner function to get dates from points
-        def dates_from_points_in_line(line):
-            for points in line['points']:
-                date = self.history.iloc[points].name
-                line['dates'] += [date.date().strftime("%Y-%m-%d")]
-
         # Enforce min width between pivot end points
         for index, line in enumerate(self.lines):
-            if max(line['points']) - min(line['points']) < min_width:
+            if line.points[-1]['index'] - line.points[0]['index'] < min_width:
                 self.lines.pop(index)
 
         logger.debug(f'{len(self.get_resistance())} relevant resistance lines')
@@ -128,7 +149,7 @@ class SupportResistance:
 
         # Calculate end point extensions
         for line in self.lines:
-            line['end_point'] = (self.points * line['slope']) + line['intercept']
+            line.end_point = (self.points * line.slope) + line.intercept
 
         # Based on extension, maybe some support lines are now resistance, and vice versa
         # for index, line in enumerate(self.lines):
@@ -139,38 +160,28 @@ class SupportResistance:
         #         line['support'] = True
 
         # Calculate dates of pivit points
-        for index, line in enumerate(self.lines):
-            dates_from_points_in_line(line)
+        for line in self.lines:
+            for point in line.points:
+                date = self.history.iloc[point['index']].name
+                point['date'] = [date.date().strftime('%Y-%m-%d')]
 
         # Calculate final score
         for line in self.lines:
-            line['score'] = calculate_score(line)
+            line.calculate()
 
         # Sort and Prune
-        sup = sorted(self.get_support(), reverse=True, key=lambda k: k['score'])
+        sup = sorted(self.get_support(), reverse=True, key=lambda k: k.score)
         sup = sup[:best]
-        res = sorted(self.get_resistance(), reverse=True, key=lambda k: k['score'])
+        res = sorted(self.get_resistance(), reverse=True, key=lambda k: k.score)
         res = res[:best]
         self.lines = res + sup
 
         for line in self.get_resistance():
-            line = f'Res: ssr={line["ssr"]:.1e}, '\
-                        f'se={line["slope_err"]:.1e}, '\
-                        f'ie={line["intercept_err"]:.1e}, '\
-                        f'a={line["area_avg"]:.3f}, '\
-                        f'd={line["dates"]}, '\
-                        f's={line["score"]:.1e}, '\
-                        f'x={line["end_point"]:.2f} '
+            line = f'Res:{line}'
             logger.debug(line)
 
         for line in self.get_support():
-            line = f'Sup: ssr={line["ssr"]:.1e}, '\
-                        f'se={line["slope_err"]:.1e}, '\
-                        f'ie={line["intercept_err"]:.1e}, '\
-                        f'a={line["area_avg"]:.3f}, '\
-                        f'd={line["dates"]}, '\
-                        f's={line["score"]:.1e}, '\
-                        f'x={line["end_point"]:.2f} '
+            line = f'Sup:{line}'
             logger.debug(line)
 
 
