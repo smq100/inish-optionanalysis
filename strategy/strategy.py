@@ -351,8 +351,7 @@ class Leg:
 
                 # Strip the time from the datetime string
                 for index, item in enumerate(col_index):
-                    day = datetime.datetime.strptime(
-                        item, '%Y-%m-%d %H:%M:%S').date()
+                    day = datetime.datetime.strptime(item, '%Y-%m-%d %H:%M:%S').date()
                     col_index[index] = f'{str(day.strftime("%b"))}-{str(day.day)}'
 
                 # Finally, create the Pandas dataframe then reverse the row order
