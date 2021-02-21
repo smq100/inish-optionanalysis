@@ -189,7 +189,7 @@ class SupportResistance:
 
     def plot(self):
         fig, ax = plt.subplots()
-        plt.style.use('seaborn')
+        plt.style.use('seaborn-pastel')
         plt.title(f'{self.ticker} History with Support & Resistance Lines')
         # ax.set_xlabel('Date')
         # ax.set_ylabel('Price')
@@ -204,7 +204,7 @@ class SupportResistance:
 
         plt.xticks(range(0, length+1, 20))
         plt.xticks(rotation=45)
-        plt.subplots_adjust(bottom=0.25)
+        plt.subplots_adjust(bottom=0.20)
 
         ax.plot(dates, self.history.High, '-g', label='High Price', linewidth=0.5)
         ax.plot(dates, self.history.Low, '-r', label='Low Price', linewidth=0.5)
@@ -242,7 +242,7 @@ class SupportResistance:
             date = self.history.iloc[index].name
             dates += [date.date().strftime('%Y-%m-%d')]
             values += [self.history.iloc[index].High]
-            ax.plot(dates, values, '--g', linewidth=0.5)
+            ax.plot(dates, values, '-g', linewidth=0.5)
 
         dates = []
         values = []
@@ -255,6 +255,33 @@ class SupportResistance:
             date = self.history.iloc[index].name
             dates += [date.date().strftime('%Y-%m-%d')]
             values += [self.history.iloc[index].Low]
+            ax.plot(dates, values, '-r', linewidth=0.5)
+
+        # Trend lines extensions
+        dates = []
+        values = []
+        for line in self.get_resistance():
+            index = line.points[-1]['index']
+            date = self.history.iloc[index].name
+            dates = [date.date().strftime('%Y-%m-%d')]
+            values = [self.history.iloc[index].High]
+            index = self.points-1
+            date = self.history.iloc[index].name
+            dates += [date.date().strftime('%Y-%m-%d')]
+            values += [line.end_point]
+            ax.plot(dates, values, '--g', linewidth=0.5)
+
+        dates = []
+        values = []
+        for line in self.get_support():
+            index = line.points[-1]['index']
+            date = self.history.iloc[index].name
+            dates = [date.date().strftime('%Y-%m-%d')]
+            values = [self.history.iloc[index].Low]
+            index = self.points-1
+            date = self.history.iloc[index].name
+            dates += [date.date().strftime('%Y-%m-%d')]
+            values += [line.end_point]
             ax.plot(dates, values, '--r', linewidth=0.5)
 
         # Price line
