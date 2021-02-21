@@ -50,9 +50,7 @@ class Line:
 
     def calculate_score(self, price):
         self.proximity = abs(self.end_point - price)
-
-        self.score = ((self.area_avg * self.width * len(self.points)) /
-                     (self.age * self.proximity))
+        self.score = ((self.area_avg * self.width * len(self.points)) / (self.proximity))
 
 class SupportResistance:
     def __init__(self, ticker, start=None):
@@ -188,7 +186,7 @@ class SupportResistance:
 
         return support, resistance
 
-    def plot(self, file=''):
+    def plot(self, show=True, file=''):
         fig, ax = plt.subplots()
         plt.style.use('seaborn-pastel')
         plt.title(f'{self.ticker} History with Support & Resistance Lines')
@@ -289,7 +287,7 @@ class SupportResistance:
             ax.plot(dates, values, '--r', linewidth=0.5)
 
         # Price line
-        plt.axhline(y=self.price, color='black', linestyle='-', label='Current Price', linewidth=0.5)
+        plt.axhline(y=self.price, color='black', linestyle='--', label='Current Price', linewidth=0.5)
         plt.grid()
         # ax.legend()
 
@@ -297,6 +295,9 @@ class SupportResistance:
         if file:
             fig.savefig(file, dpi=150)
             logger.info(f'Saved plot as {file}')
+
+        if show:
+            plt.show()
 
         return fig
 
@@ -312,10 +313,11 @@ if __name__ == '__main__':
     import logging
     u.get_logger(logging.INFO)
 
-    start = datetime.datetime.today() - datetime.timedelta(days=240)
-    sr = SupportResistance('IBM', start=start)
+    start = datetime.datetime.today() - datetime.timedelta(days=1000)
+    sr = SupportResistance('AAPL', start=start)
     sr.calculate()
-    sr.plot(file='plot.png')
+    sr.plot()
+
 
     # fig = trendln.plot_support_resistance((None, sr.history.High), accuracy=2)
     # fig = trendln.plot_support_resistance((sr.history.Low[-300:], None), accuracy=2)

@@ -54,8 +54,6 @@ class Call(Strategy):
             dframe = self.legs[0].table
             dframe = dframe.applymap(lambda x: (price - x) if x < price else -(x - price))
 
-        dframe.style.applymap(lambda x: 'color:red' if x is not str and x < 0 else 'color:black')
-
         return dframe
 
     def calc_max_gain_loss(self):

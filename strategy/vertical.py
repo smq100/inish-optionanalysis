@@ -67,8 +67,6 @@ class Vertical(Strategy):
 
         dframe = self.legs[0].table - self.legs[1].table + self.analysis.amount
 
-        dframe.style.applymap(lambda x: 'color:red' if x is not str and x < 0 else 'color:black')
-
         return dframe
 
     def calc_max_gain_loss(self):

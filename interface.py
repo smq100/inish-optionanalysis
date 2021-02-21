@@ -397,30 +397,38 @@ class Interface():
                 break
 
     def get_trend_parameters(self):
-        days = 240
+        days = 1000
         filename = 'plot.png'
+        show = False
 
         while True:
             menu_items = {
                 '1': f'Number of Days ({days})',
                 '2': f'Plot File Name ({filename})',
-                '3': 'Analyze',
+                '3': f'Show Window ({show})',
+                '4': 'Analyze',
                 '0': 'Cancel'
             }
 
-            selection = self._menu(menu_items, 'Select Indicator', 0, 3)
+            selection = self._menu(menu_items, 'Select option', 0, 4)
 
             if selection == 1:
-                days = u.input_integer('Enter number of days', 100, 9999)
+                days = u.input_integer('Enter number of days (0 = max): ', 0, 9999)
 
             if selection == 2:
-                filename = input('Enter filename')
+                filename = input('Enter filename: ')
 
             if selection == 3:
-                start = datetime.datetime.today() - datetime.timedelta(days=days)
+                show = True if u.input_integer('Show Window? (1=Yes, 0=No): ', 0, 1) == 1 else False
+
+            if selection == 4:
+                start = None
+                if days > 0:
+                    start = datetime.datetime.today() - datetime.timedelta(days=days)
+
                 sr = SupportResistance(self.ticker, start=start)
                 sr.calculate()
-                sr.plot(file=filename)
+                sr.plot(file=filename, show=show)
                 break
 
             if selection == 0:
