@@ -188,24 +188,88 @@ class SupportResistance:
         return support
 
     def plot(self):
+        fig, ax = plt.subplots()
         plt.style.use('seaborn')
-        x = np.linspace(0, 3, 100)
-        fig, ax = plt.subplots()  # Create a figure and an axes
-        ax.plot(x, x, '-k', label='High Price')  # Plot some data on the axes
-        ax.plot(x, np.exp(x), '-r', label='Resistance')  # Plot more data on the axes...
-        ax.set_xlabel('Date')  # Add an x-label to the axes
-        ax.set_ylabel('Price')  # Add a y-label to the axes
-        plt.title('Prices with Support/Resistance Trend Lines')
-        ax.legend()  # Add a legend
-        ax.grid(True)
+        plt.title(f'{self.ticker} History with Support & Resistance Lines')
+        ax.set_xlabel('Date')
+        ax.set_ylabel('Price')
+        ax.yaxis.set_major_formatter('${x:1.0f}')
+
+        # High/Lows
+        dates = []
+        length = len(self.history)
+        for index in range(length):
+            date = self.history.iloc[index].name
+            dates += [date.date().strftime('%Y-%m-%d')]
+
+        plt.xticks(range(0, length+1, 20))
+        plt.xticks(rotation=45)
+        plt.subplots_adjust(bottom=0.25)
+
+        ax.plot(dates, self.history.High, '-g', label='High Price', linewidth=0.5)
+        ax.plot(dates, self.history.Low, '-r', label='Low Price', linewidth=0.5)
+
+        # Pivot points
+        dates = []
+        values = []
+        for line in self.get_resistance():
+            for point in line.points:
+                index = point['index']
+                date = self.history.iloc[index].name
+                dates += [date.date().strftime('%Y-%m-%d')]
+                values += [self.history.iloc[index].High]
+        ax.plot(dates, values, '.g')
+
+        dates = []
+        values = []
+        for line in self.get_support():
+            for point in line.points:
+                index = point['index']
+                date = self.history.iloc[index].name
+                dates += [date.date().strftime('%Y-%m-%d')]
+                values += [self.history.iloc[index].Low]
+        ax.plot(dates, values, '.r')
+
+        # Trend lines
+        dates = []
+        values = []
+        for line in self.get_resistance():
+            index = line.points[0]['index']
+            date = self.history.iloc[index].name
+            dates = [date.date().strftime('%Y-%m-%d')]
+            values = [self.history.iloc[index].High]
+            index = line.points[-1]['index']
+            date = self.history.iloc[index].name
+            dates += [date.date().strftime('%Y-%m-%d')]
+            values += [self.history.iloc[index].High]
+            ax.plot(dates, values, '--g', linewidth=0.5)
+
+        dates = []
+        values = []
+        for line in self.get_support():
+            index = line.points[0]['index']
+            date = self.history.iloc[index].name
+            dates = [date.date().strftime('%Y-%m-%d')]
+            values = [self.history.iloc[index].Low]
+            index = line.points[-1]['index']
+            date = self.history.iloc[index].name
+            dates += [date.date().strftime('%Y-%m-%d')]
+            values += [self.history.iloc[index].Low]
+            ax.plot(dates, values, '--r', linewidth=0.5)
+
+        # Price line
+        plt.axhline(y=self.price, color='k', linestyle='-', linewidth=0.3)
+
+        ax.legend()
+
         return fig
 
 '''
-['Solarize_Light2', '_classic_test_patch', 'bmh', 'classic', 'dark_background', 'fast',
+'Solarize_Light2', '_classic_test_patch', 'bmh', 'classic', 'dark_background', 'fast',
 'fivethirtyeight', 'ggplot', 'grayscale', 'seaborn', 'seaborn-bright', 'seaborn-colorblind',
 'seaborn-dark', 'seaborn-dark-palette', 'seaborn-darkgrid', 'seaborn-deep', 'seaborn-muted',
 'seaborn-notebook', 'seaborn-paper', 'seaborn-pastel', 'seaborn-poster', 'seaborn-talk',
-'seaborn-ticks', 'seaborn-white', 'seaborn-whitegrid', 'tableau-colorblind10']
+'seaborn-ticks', 'seaborn-white', 'seaborn-whitegrid', 'tableau-colorblind10'
 '''
 
 if __name__ == '__main__':
