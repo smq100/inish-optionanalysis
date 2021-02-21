@@ -191,8 +191,8 @@ class SupportResistance:
         fig, ax = plt.subplots()
         plt.style.use('seaborn')
         plt.title(f'{self.ticker} History with Support & Resistance Lines')
-        ax.set_xlabel('Date')
-        ax.set_ylabel('Price')
+        # ax.set_xlabel('Date')
+        # ax.set_ylabel('Price')
         ax.yaxis.set_major_formatter('${x:1.0f}')
 
         # High/Lows
