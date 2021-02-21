@@ -8,8 +8,6 @@ logger = u.get_logger()
 
 class Option():
     def __init__(self, ticker, product, strike, expiry):
-        logger.info('Initializing Option...')
-
         # Specified
         self.ticker = ticker
         self.product = product
@@ -46,6 +44,8 @@ class Option():
 
         if self.expiry is None:
             self.expiry = datetime.datetime.today() + datetime.timedelta(days=10)
+
+        logger.debug('Initialized Option')
 
     def __str__(self):
         return f'Contract:{self.contract_symbol}\n'\

@@ -10,6 +10,7 @@ from strategy.vertical import Vertical
 from pricing.fetcher import validate_ticker
 from options.chain import Chain
 from analysis.technical import TechnicalAnalysis
+from analysis.trend import SupportResistance
 from utils import utils as u
 
 MAX_ROWS = 50
@@ -347,11 +348,12 @@ class Interface():
             self.technical = TechnicalAnalysis(self.ticker, start=start)
 
         menu_items = {
-            '1': 'EMA',
-            '2': 'RSI',
-            '3': 'VWAP',
-            '4': 'MACD',
-            '5': 'Bollinger Bands',
+            '1': 'Support & Resistance',
+            '2': 'EMA',
+            '3': 'RSI',
+            '4': 'VWAP',
+            '5': 'MACD',
+            '6': 'Bollinger Bands',
             '0': 'Done',
         }
 
@@ -359,34 +361,67 @@ class Interface():
             selection = self._menu(menu_items, 'Select Indicator', 0, 5)
 
             if selection == 1:
+                self.get_trend_parameters()
+
+            if selection == 2:
                 interval = u.input_integer('Enter interval: ', 5, 200)
                 df = self.technical.calc_ema(interval)
                 print(u.delimeter(f'EMA {interval}', True))
                 print(f'Yesterday: {df[-1]:.2f}')
 
-            if selection == 2:
+            if selection == 3:
                 df = self.technical.calc_rsi()
                 print(u.delimeter('RSI', True))
                 print(f'Yesterday: {df[-1]:.2f}')
 
-            if selection == 3:
+            if selection == 4:
                 df = self.technical.calc_vwap()
                 print(u.delimeter('VWAP', True))
                 print(f'Yesterday: {df[-1]:.2f}')
 
-            if selection == 4:
+            if selection == 5:
                 df = self.technical.calc_macd()
                 print(u.delimeter('MACD', True))
                 print(f'Diff: {df.iloc[-1]["Diff"]:.2f}')
                 print(f'MACD: {df.iloc[-1]["MACD"]:.2f}')
                 print(f'Sig:  {df.iloc[-1]["Signal"]:.2f}')
 
-            if selection == 5:
+            if selection == 6:
                 df = self.technical.calc_bb()
                 print(u.delimeter('Bollinger Band', True))
                 print(f'High: {df.iloc[-1]["High"]:.2f}')
                 print(f'Mid:  {df.iloc[-1]["Mid"]:.2f}')
                 print(f'Low:  {df.iloc[-1]["Low"]:.2f}')
+
+            if selection == 0:
+                break
+
+    def get_trend_parameters(self):
+        days = 240
+        filename = 'plot.png'
+
+        while True:
+            menu_items = {
+                '1': f'Number of Days ({days})',
+                '2': f'Plot File Name ({filename})',
+                '3': 'Analyze',
+                '0': 'Cancel'
+            }
+
+            selection = self._menu(menu_items, 'Select Indicator', 0, 3)
+
+            if selection == 1:
+                days = u.input_integer('Enter number of days', 100, 9999)
+
+            if selection == 2:
+                filename = input('Enter filename')
+
+            if selection == 3:
+                start = datetime.datetime.today() - datetime.timedelta(days=days)
+                sr = SupportResistance(self.ticker, start=start)
+                sr.calculate()
+                sr.plot(file=filename)
+                break
 
             if selection == 0:
                 break

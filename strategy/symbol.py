@@ -5,16 +5,16 @@ logger = u.get_logger()
 
 class Symbol:
     def __init__(self, ticker):
-        logger.info('Initializing Symbol...')
-
         self.company = None
         self.ticker = ticker
 
         if validate_ticker(ticker):
             # Fetch YFinance opbject
             self.company = get_company(ticker)
+
+            logger.debug('Initialized Symbol')
         else:
-            logger.info('Error initializing Symbol')
+            logger.error('Error initializing Symbol')
 
 
     def __str__(self):

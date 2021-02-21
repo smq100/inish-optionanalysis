@@ -51,7 +51,7 @@ class Line:
     def calculate_score(self, price):
         self.proximity = abs(self.end_point - price)
 
-        self.score = ((self.area_avg * self.width) /
+        self.score = ((self.area_avg * self.width * len(self.points)) /
                      (self.age * self.proximity))
 
 class SupportResistance:
@@ -72,15 +72,15 @@ class SupportResistance:
             self.points = len(self.history)
             self.price = get_current_price(ticker)
 
-            logger.info(f'Initialized SupportResitance for {ticker} (${self.price:.2f})')
-            logger.info(f'{self.points} points from {self.history.iloc[0].name} to {self.history.iloc[-1].name}')
+            logger.debug(f'Initialized SupportResitance for {ticker} (${self.price:.2f})')
+            logger.debug(f'{self.points} points from {self.history.iloc[0].name} to {self.history.iloc[-1].name}')
         else:
-            logger.info('Error initializing SupportResitance')
+            logger.error('Error initializing SupportResitance')
 
     def __str__(self):
         return f'Support and resistance analysis for {self.ticker} (${self.price:.2f})'
 
-    def calculate(self, best=3, allow_reversal=False):
+    def calculate(self, best=5):
         if self.history is not None:
             self.lines = []
 
@@ -130,8 +130,8 @@ class SupportResistance:
 
                 self.lines += [newline]
 
-            logger.debug(f'{len(self.get_resistance())} total resistance lines')
-            logger.debug(f'{len(self.get_support())} total support lines')
+            logger.info(f'{len(self.get_resistance())} total resistance lines')
+            logger.info(f'{len(self.get_support())} total support lines')
 
             # Calculate dates of pivot points
             for line in self.lines:
@@ -142,15 +142,6 @@ class SupportResistance:
             # Calculate end point extension
             for line in self.lines:
                 line.end_point = (self.points * line.slope) + line.intercept
-
-            # Based on extension, some support lines may now be resistance, and vice versa
-            if allow_reversal:
-                for index, line in enumerate(self.lines):
-                    if line.support:
-                        if line.end_point > self.price:
-                            line.support = False
-                    elif line.end_point < self.price:
-                        line.support = True
 
             # Calculate final score
             for line in self.lines:
@@ -187,13 +178,26 @@ class SupportResistance:
 
         return support
 
-    def plot(self):
+    def get_endpoints(self):
+        support = resistance = []
+        for line in self.lines:
+            if line.support:
+                support += [line.end_point]
+            else:
+                resistance += [line.end_point]
+
+        return support, resistance
+
+    def plot(self, file=''):
         fig, ax = plt.subplots()
         plt.style.use('seaborn-pastel')
         plt.title(f'{self.ticker} History with Support & Resistance Lines')
         # ax.set_xlabel('Date')
         # ax.set_ylabel('Price')
-        ax.yaxis.set_major_formatter('${x:1.0f}')
+        if self.price > 20.0:
+            ax.yaxis.set_major_formatter('${x:.0f}')
+        else:
+            ax.yaxis.set_major_formatter('${x:.2f}')
 
         # High/Lows
         dates = []
@@ -202,7 +206,7 @@ class SupportResistance:
             date = self.history.iloc[index].name
             dates += [date.date().strftime('%Y-%m-%d')]
 
-        plt.xticks(range(0, length+1, 20))
+        plt.xticks(range(0, length+1, int(length/12)))
         plt.xticks(rotation=45)
         plt.subplots_adjust(bottom=0.20)
 
@@ -285,9 +289,14 @@ class SupportResistance:
             ax.plot(dates, values, '--r', linewidth=0.5)
 
         # Price line
-        plt.axhline(y=self.price, color='k', linestyle='-', linewidth=0.3)
+        plt.axhline(y=self.price, color='black', linestyle='-', label='Current Price', linewidth=0.5)
+        plt.grid()
+        # ax.legend()
 
-        ax.legend()
+        # Save as PNG if desired
+        if file:
+            fig.savefig(file, dpi=150)
+            logger.info(f'Saved plot as {file}')
 
         return fig
 
@@ -301,14 +310,14 @@ class SupportResistance:
 
 if __name__ == '__main__':
     import logging
-    u.get_logger(logging.DEBUG)
+    u.get_logger(logging.INFO)
 
     start = datetime.datetime.today() - datetime.timedelta(days=240)
-    sr = SupportResistance('MSFT', start=start)
+    sr = SupportResistance('IBM', start=start)
     sr.calculate()
-    fig = sr.plot()
+    sr.plot(file='plot.png')
 
     # fig = trendln.plot_support_resistance((None, sr.history.High), accuracy=2)
     # fig = trendln.plot_support_resistance((sr.history.Low[-300:], None), accuracy=2)
     # fig = trendln.plot_support_resistance((sr.history.Low[-300:], sr.history[-300:].High), accuracy=2)
-    fig.savefig('figure')
+    # fig.savefig('figure')

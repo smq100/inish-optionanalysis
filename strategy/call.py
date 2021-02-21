@@ -13,11 +13,11 @@ class Call(Strategy):
         product = 'call'
         super().__init__(ticker, product, direction)
 
-        logger.info('Initializing Call...')
-
         self.name = 'call'
         expiry = datetime.datetime.today() + datetime.timedelta(days=14)
         self.add_leg(1, product, direction, self.initial_spot, expiry)
+
+        logger.debug('Initialized Call')
 
     def __str__(self):
         return f'{self.legs[0].direction} {self.name}'

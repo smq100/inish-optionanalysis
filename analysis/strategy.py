@@ -7,8 +7,6 @@ logger = u.get_logger()
 
 class StrategyAnalysis:
     def __init__(self):
-        logger.info('Initializing StrategyAnalysis...')
-
         self.table = None
         self.credit_debit = ''
         self.sentiment = ''
@@ -38,6 +36,8 @@ class StrategyAnalysis:
                 f'Breakeven: ${self.breakeven:.2f} at expiry\n'
         else:
             output = 'Not yet analyzed'
+
+        logger.debug('Initialized StrategyAnalysis')
 
         return output
 

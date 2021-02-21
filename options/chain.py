@@ -5,12 +5,12 @@ logger = u.get_logger()
 
 class Chain():
     def __init__(self, ticker):
-        logger.info('Initializing Chain...')
-
         self.ticker = ticker
         self.company = None
         self.expire = None
         self.width = 1
+
+        logger.debug('Initialized Chain')
 
     def get_expiry(self):
         value = self.company = None

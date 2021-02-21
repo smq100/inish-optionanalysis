@@ -31,7 +31,6 @@ class Pricing(ABC):
         buy underlying asset (for call option) or sell underlying asset (for put option).
         :param dividend: <float> If the underlying asset is paying dividend to stock-holders.
         '''
-        logger.info('Initializing Pricing...')
 
         self.ticker = ticker
         self.expiry = expiry
@@ -66,6 +65,8 @@ class Pricing(ABC):
             self.initialize_variables()
         else:
             raise IOError('Problem fetching ticker information')
+
+        logger.debug('Initialized Pricing')
 
     @abc.abstractmethod
     def calculate_price(self, spot_price=-1.0, time_to_maturity=-1.0):

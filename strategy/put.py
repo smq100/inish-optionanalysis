@@ -13,11 +13,11 @@ class Put(Strategy):
         product = 'put'
         super().__init__(ticker, product, direction)
 
-        logger.info('Initializing Put...')
-
         self.name = 'put'
         expiry = datetime.datetime.today() + datetime.timedelta(days=14)
         self.add_leg(1, product, direction, self.initial_spot, expiry)
+
+        logger.debug('Initialized Put')
 
     def __str__(self):
         return f'{self.legs[0].direction} {self.name}'

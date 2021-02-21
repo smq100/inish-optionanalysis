@@ -17,8 +17,6 @@ logger = u.get_logger()
 
 class Strategy(ABC):
     def __init__(self, ticker, product, direction):
-        logger.info('Initializing Strategy...')
-
         self.name = ''
         self.ticker = ticker
         self.product = product
@@ -26,9 +24,9 @@ class Strategy(ABC):
         self.analysis = StrategyAnalysis()
         self.legs = []
         self.initial_spot = 0.0
-
-
         self.initial_spot = self.get_current_spot(ticker, True)
+
+        logger.debug('Initialized Strategy')
 
     def __str__(self):
         return 'Strategy abstract base class'

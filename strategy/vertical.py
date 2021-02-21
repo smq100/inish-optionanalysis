@@ -12,8 +12,6 @@ class Vertical(Strategy):
     def __init__(self, ticker, product, direction):
         super().__init__(ticker, product, direction)
 
-        logger.info('Initializing Vertical...')
-
         self.name = 'vertical'
         expiry = datetime.datetime.today() + datetime.timedelta(days=14)
 
@@ -32,6 +30,8 @@ class Vertical(Strategy):
             else:
                 self.add_leg(1, product, 'long', self.initial_spot, expiry)
                 self.add_leg(1, product, 'short', self.initial_spot + 2.0, expiry)
+
+        logger.debug('Initialized Vertical')
 
     def __str__(self):
         return f'{self.name} {self.product} {self.analysis.credit_debit} spread'
