@@ -10,7 +10,7 @@ from strategy.vertical import Vertical
 from pricing.fetcher import validate_ticker
 from options.chain import Chain
 from analysis.technical import TechnicalAnalysis
-from analysis.trend import SupportResistance
+from analysis.trend import SupportResistance, Line
 from utils import utils as u
 
 MAX_ROWS = 50
@@ -413,7 +413,7 @@ class Interface():
             selection = self._menu(menu_items, 'Select option', 0, 4)
 
             if selection == 1:
-                days = u.input_integer('Enter number of days (0 = max): ', 0, 9999)
+                days = u.input_integer('Enter number of days (0=max): ', 0, 9999)
 
             if selection == 2:
                 filename = input('Enter filename: ')
@@ -428,7 +428,15 @@ class Interface():
 
                 sr = SupportResistance(self.ticker, start=start)
                 sr.calculate()
-                sr.plot(file=filename, show=show)
+                sr.plot(filename=filename, show=show)
+
+                print(u.delimeter('Support and Resistance Levels', True))
+                sup, res = sr.get_endpoints()
+                print(len(sup), len(res))
+                for line in sup:
+                    print(f'Support:    ${line:.2f}')
+                for line in res:
+                    print(f'Resistance: ${line:.2f}')
                 break
 
             if selection == 0:

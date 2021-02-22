@@ -59,6 +59,11 @@ class SupportResistance:
             self.history = None
             self.price = 0.0
             self.lines = []
+            self.slope_sup = 0.0
+            self.intercept_sup = 0.0
+            self.slope_res = 0.0
+            self.intercept_res = 0.0
+
             self.extmethod = trendln.METHOD_NUMDIFF # METHOD_NAIVE, METHOD_NAIVECONSEC, METHOD_NUMDIFF*
             self.method = trendln.METHOD_NSQUREDLOGN # METHOD_NCUBED, METHOD_NSQUREDLOGN*, METHOD_HOUGHPOINTS, METHOD_HOUGHLINES, METHOD_PROBHOUGH
 
@@ -87,6 +92,11 @@ class SupportResistance:
             mins = trendln.calc_support_resistance((self.history.Low, None), extmethod=self.extmethod, method=self.method, accuracy=2)  #support
 
             maximaIdxs, pmax, maxtrend, maxwindows = maxs
+            minimaIdxs, pmin, mintrend, minwindows = mins
+
+            self.slope_res = pmax[0]
+            self.intercept_res = pmax[1]
+
             for line in maxtrend:
                 newline = Line()
                 newline.support = False
@@ -107,7 +117,9 @@ class SupportResistance:
 
                 self.lines += [newline]
 
-            minimaIdxs, pmin, mintrend, minwindows = mins
+            self.slope_sup = pmin[0]
+            self.intercept_sup = pmin[1]
+
             for line in mintrend:
                 newline = Line()
                 newline.support = True
@@ -141,9 +153,16 @@ class SupportResistance:
             for line in self.lines:
                 line.end_point = (self.points * line.slope) + line.intercept
 
-            # Calculate final score
+            # Calculate scores and normalize to a max of 10.0
+            max_ = 0.0
             for line in self.lines:
                 line.calculate_score(self.price)
+                if line.score > max_:
+                    max_ = line.score
+
+            for line in self.lines:
+                line.score /= max_
+                line.score *= 10.0
 
             # Sort and Prune
             sup = sorted(self.get_support(), reverse=True, key=lambda l: l.score)
@@ -152,6 +171,7 @@ class SupportResistance:
             res = res[:best]
             self.lines = res + sup
 
+            # Log the line details
             for line in self.get_resistance():
                 line = f'Res:{line}'
                 logger.debug(line)
@@ -177,7 +197,8 @@ class SupportResistance:
         return support
 
     def get_endpoints(self):
-        support = resistance = []
+        support = []
+        resistance = []
         for line in self.lines:
             if line.support:
                 support += [line.end_point]
@@ -186,18 +207,18 @@ class SupportResistance:
 
         return support, resistance
 
-    def plot(self, show=True, file=''):
+    def plot(self, show=True, filename='', legend=False, srlines=False, trendlines=False):
         fig, ax = plt.subplots()
-        plt.style.use('seaborn-pastel')
+        plt.style.use('seaborn-deep')
+        plt.grid()
         plt.title(f'{self.ticker} History with Support & Resistance Lines')
-        # ax.set_xlabel('Date')
-        # ax.set_ylabel('Price')
-        if self.price > 20.0:
+
+        if self.price > 30.0:
             ax.yaxis.set_major_formatter('${x:.0f}')
         else:
             ax.yaxis.set_major_formatter('${x:.2f}')
 
-        # High/Lows
+        # High & Lows
         dates = []
         length = len(self.history)
         for index in range(length):
@@ -244,7 +265,10 @@ class SupportResistance:
             date = self.history.iloc[index].name
             dates += [date.date().strftime('%Y-%m-%d')]
             values += [self.history.iloc[index].High]
-            ax.plot(dates, values, '-g', linewidth=0.5)
+
+            width = line.score / 5.0
+            if width < 0.5: width = 0.5
+            ax.plot(dates, values, '-g', linewidth=width)
 
         dates = []
         values = []
@@ -257,9 +281,12 @@ class SupportResistance:
             date = self.history.iloc[index].name
             dates += [date.date().strftime('%Y-%m-%d')]
             values += [self.history.iloc[index].Low]
-            ax.plot(dates, values, '-r', linewidth=0.5)
 
-        # Trend lines extensions
+            width = line.score / 5.0
+            if width < 0.5: width = 0.5
+            ax.plot(dates, values, '-r', linewidth=width)
+
+        # Trend line extensions
         dates = []
         values = []
         for line in self.get_resistance():
@@ -271,7 +298,10 @@ class SupportResistance:
             date = self.history.iloc[index].name
             dates += [date.date().strftime('%Y-%m-%d')]
             values += [line.end_point]
-            ax.plot(dates, values, '--g', linewidth=0.5)
+
+            width = line.score / 5.0
+            if width < 0.5: width = 0.5
+            ax.plot(dates, values, ':g', linewidth=width)
 
         dates = []
         values = []
@@ -284,42 +314,75 @@ class SupportResistance:
             date = self.history.iloc[index].name
             dates += [date.date().strftime('%Y-%m-%d')]
             values += [line.end_point]
-            ax.plot(dates, values, '--r', linewidth=0.5)
+
+            width = line.score / 5.0
+            if width < 0.5: width = 0.5
+            ax.plot(dates, values, ':r', linewidth=width)
 
         # Price line
-        plt.axhline(y=self.price, color='black', linestyle='--', label='Current Price', linewidth=0.5)
-        plt.grid()
-        # ax.legend()
+        plt.axhline(y=self.price, color='b', linestyle='--', label='Current Price', linewidth=1.0)
 
-        # Save as PNG if desired
-        if file:
-            fig.savefig(file, dpi=150)
-            logger.info(f'Saved plot as {file}')
+        # Current support and resistance levels
+        if srlines:
+            for line in self.get_support():
+                width = line.score / 5.0
+                if width < 0.5: width = 0.5
+                plt.axhline(y=line.end_point, color='r', linestyle='-', linewidth=width)
+
+            for line in self.get_resistance():
+                width = line.score / 5.0
+                if width < 0.5: width = 0.5
+                plt.axhline(y=line.end_point, color='g', linestyle='-', linewidth=width)
+
+        if trendlines:
+            index = 0
+            date = self.history.iloc[index].name
+            dates = [date.date().strftime('%Y-%m-%d')]
+            values = [self.intercept_res]
+            index = self.points-1
+            date = self.history.iloc[index].name
+            dates += [date.date().strftime('%Y-%m-%d')]
+            values += [self.slope_res * self.points + self.intercept_res]
+
+            ax.plot(dates, values, '-g', label='Avg Res', linewidth=2.0)
+
+            index = 0
+            date = self.history.iloc[index].name
+            dates = [date.date().strftime('%Y-%m-%d')]
+            values = [self.intercept_sup]
+            index = self.points-1
+            date = self.history.iloc[index].name
+            dates += [date.date().strftime('%Y-%m-%d')]
+            values += [self.slope_sup * self.points + self.intercept_sup]
+
+            ax.plot(dates, values, '-r', label='Avg Sup', linewidth=2.0)
+
+        if legend:
+            plt.legend()
+
+        if filename:
+            fig.savefig(filename, dpi=150)
+            logger.info(f'Saved plot as {filename}')
 
         if show:
             plt.show()
 
         return fig
 
-'''
-'Solarize_Light2', '_classic_test_patch', 'bmh', 'classic', 'dark_background', 'fast',
-'fivethirtyeight', 'ggplot', 'grayscale', 'seaborn', 'seaborn-bright', 'seaborn-colorblind',
-'seaborn-dark', 'seaborn-dark-palette', 'seaborn-darkgrid', 'seaborn-deep', 'seaborn-muted',
-'seaborn-notebook', 'seaborn-paper', 'seaborn-pastel', 'seaborn-poster', 'seaborn-talk',
-'seaborn-ticks', 'seaborn-white', 'seaborn-whitegrid', 'tableau-colorblind10'
-'''
 
 if __name__ == '__main__':
     import logging
     u.get_logger(logging.INFO)
 
     start = datetime.datetime.today() - datetime.timedelta(days=1000)
-    sr = SupportResistance('AAPL', start=start)
+    sr = SupportResistance('IBM', start=start)
     sr.calculate()
     sr.plot()
 
-
-    # fig = trendln.plot_support_resistance((None, sr.history.High), accuracy=2)
-    # fig = trendln.plot_support_resistance((sr.history.Low[-300:], None), accuracy=2)
-    # fig = trendln.plot_support_resistance((sr.history.Low[-300:], sr.history[-300:].High), accuracy=2)
-    # fig.savefig('figure')
+''' Plot styles
+'Solarize_Light2', '_classic_test_patch', 'bmh', 'classic', 'dark_background', 'fast',
+'fivethirtyeight', 'ggplot', 'grayscale', 'seaborn', 'seaborn-bright', 'seaborn-colorblind',
+'seaborn-dark', 'seaborn-dark-palette', 'seaborn-darkgrid', 'seaborn-deep', 'seaborn-muted',
+'seaborn-notebook', 'seaborn-paper', 'seaborn-pastel', 'seaborn-poster', 'seaborn-talk',
+'seaborn-ticks', 'seaborn-white', 'seaborn-whitegrid', 'tableau-colorblind10'
+'''
