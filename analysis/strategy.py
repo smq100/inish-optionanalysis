@@ -37,13 +37,9 @@ class StrategyAnalysis:
         else:
             output = 'Not yet analyzed'
 
-        logger.debug(f'{__class__}: Initialized')
-
         return output
 
     def compress_table(self, rows, cols):
-        ''' TODO '''
-
         if self.table is not None:
             table = self.table
             srows, scols = table.shape

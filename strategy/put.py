@@ -23,8 +23,6 @@ class Put(Strategy):
 
         self.add_leg(1, product, direction, self.initial_spot, expiry)
 
-        logger.debug(f'{__class__}: Initialized')
-
     def __str__(self):
         return f'{self.legs[0].direction} {self.name}'
 
@@ -82,3 +80,12 @@ class Put(Strategy):
             breakeven = self.legs[0].option.strike + self.analysis.amount
 
         return breakeven
+
+if __name__ == '__main__':
+    import logging
+    u.get_logger(logging.INFO)
+
+    call = Put('MSFT', 'call', 'long')
+    call.legs[0].calculate(table=False, greeks=False)
+    output = f'${call.legs[0].option.calc_price:.2f}, ({call.legs[0].option.strike:.2f})'
+    print(output)

@@ -10,8 +10,6 @@ class Chain():
         self.expire = None
         self.width = 1
 
-        logger.debug(f'{__class__}: Initialized')
-
     def get_expiry(self):
         value = self.company = None
         if validate_ticker(self.ticker):

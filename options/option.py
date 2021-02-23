@@ -42,8 +42,6 @@ class Option():
         self.contract_size = ''
         self.currency = ''
 
-        logger.debug(f'{__class__}: Initialized')
-
     def __str__(self):
         symbol = self.contract_symbol if self.contract_symbol else 'No contract selected'
         return f'Contract:{symbol}\n'\

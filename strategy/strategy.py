@@ -26,25 +26,19 @@ class Strategy(ABC):
         self.initial_spot = 0.0
         self.initial_spot = self.get_current_spot(ticker, True)
 
-        logger.debug(f'{__class__}: Initialized')
-
     def __str__(self):
         return 'Strategy abstract base class'
 
     def calculate(self):
-        '''TODO'''
-
         # Calculate all legs
         for leg in self.legs:
             leg.calculate()
 
     @abc.abstractmethod
     def analyze(self):
-        ''' TODO '''
+        pass
 
     def reset(self):
-        '''TODO'''
-
         # Clear the analysis
         self.analysis = StrategyAnalysis()
 
@@ -53,8 +47,6 @@ class Strategy(ABC):
             leg.option.expiry = date
 
     def add_leg(self, quantity, product, direction, strike, expiry):
-        '''TODO'''
-
         # Add one day to act as expiry value
         expiry += datetime.timedelta(days=1)
 
@@ -64,8 +56,6 @@ class Strategy(ABC):
         return len(self.legs)
 
     def get_current_spot(self, ticker, roundup=False):
-        '''TODO'''
-
         expiry = datetime.datetime.today() + datetime.timedelta(days=10)
         pricer = MonteCarlo(ticker, expiry, self.initial_spot)
 
@@ -83,26 +73,25 @@ class Strategy(ABC):
         elif method == 'monte-carlo':
             for leg in self.legs:
                 leg.pricing_method = method
+        else:
+            raise ValueError('Invalid pricing model')
 
     @abc.abstractmethod
     def generate_profit_table(self):
-        '''TODO'''
+        pass
 
     @abc.abstractmethod
     def calc_max_gain_loss(self):
-        '''TODO'''
+        pass
 
     @abc.abstractmethod
     def calc_breakeven(self):
-        '''TODO'''
+        pass
 
     def get_errors(self):
-        '''TODO'''
         return ''
 
     def _calc_price_min_max_step(self):
-        '''TODO'''
-
         min_ = max_ = step_ = 0
 
         if len(self.legs) > 0:
@@ -118,10 +107,7 @@ class Strategy(ABC):
 
         return min_, max_, step_
 
-
     def _validate(self):
-        '''TODO'''
-
         return len(self.legs) > 0
 
 class Leg:
@@ -136,41 +122,42 @@ class Leg:
         self.pricer = None
         self.table = None
 
-        logger.debug(f'{__class__}: Initialized')
-
     def __str__(self):
         if self.option.calc_price > 0.0:
+            d1 = 'bs' if self.pricing_method == 'black-scholes' else 'mc'
+            d2 = 'iv' if self.option.implied_volatility > 0.0 else 'cv'
+            d3 = '' if self.option.implied_volatility > 0.0 else '*'
             output = f'{self.quantity:2d} '\
             f'{self.symbol.ticker}@${self.symbol.spot:.2f} '\
             f'{self.direction} '\
             f'{self.product} '\
             f'${self.option.strike:.2f} for '\
             f'{str(self.option.expiry)[:10]}'\
-            f' = ${self.option.last_price:.2f} each (${self.option.calc_price:.2f} {self.pricing_method})'
+            f'=${self.option.last_price:.2f}{d3} each (${self.option.calc_price:.2f}{d1}/{d2})'
 
             if not self.option.contract_symbol:
-                output += '; actual option not selected'
+                output += ' * actual option not selected'
 
             if self.option.last_price > 0.0:
                 diff = self.option.calc_price / self.option.last_price
-                if diff > 1.25 or diff < 0.75:
-                    output += '\n      *** Warning: The calculated price is significantly different than the last traded price'
+                if diff > 1.50 or diff < 0.50:
+                    output += '\n    *** Warning: The calculated price is significantly different than the last traded price'
         else:
             output = 'Leg not yet calculated'
 
         return output
 
-    def calculate(self, greeks=True):
-        '''TODO'''
-
+    def calculate(self, table=True, greeks=True):
         price = 0.0
 
         if self._validate():
             # Build the pricer
-            if self.pricing_method == 'monte-carlo':
+            if self.pricing_method == 'black-scholes':
+                self.pricer = BlackScholes(self.symbol.ticker, self.option.expiry, self.option.strike)
+            elif self.pricing_method == 'monte-carlo':
                 self.pricer = MonteCarlo(self.symbol.ticker, self.option.expiry, self.option.strike)
             else:
-                self.pricer = BlackScholes(self.symbol.ticker, self.option.expiry, self.option.strike)
+                raise ValueError('Unknown pricing model')
 
             logger.debug(f'{__name__}: Calculating price using {self.pricing_method}')
 
@@ -192,10 +179,18 @@ class Leg:
             self.option.calc_volatility = self.symbol.volatility = self.pricer.volatility
             self.option.time_to_maturity = self.pricer.time_to_maturity
 
-            logger.debug(f'{__name__}: Volatility = {self.option.implied_volatility:.4f}, Spot = ${self.option.spot:.2f}')
-
             # Generate the values table
-            self.table = self.generate_value_table()
+            if table:
+                self.table = self.generate_value_table()
+
+            logger.debug(f'{__name__}: Strike {self.option.strike:.2f}')
+            logger.debug(f'{__name__}: Expiry {self.option.expiry}')
+            logger.debug(f'{__name__}: Price {price:.2f}')
+            logger.debug(f'{__name__}: Spot {self.option.spot:.2f}')
+            logger.debug(f'{__name__}: Rate {self.option.rate:.4f}')
+            logger.debug(f'{__name__}: Cvol {self.option.calc_volatility:.4f}')
+            logger.debug(f'{__name__}: Ivol {self.option.implied_volatility:.4f}')
+            logger.debug(f'{__name__}: TTM {self.option.time_to_maturity:.4f}')
 
             # Calculate Greeks
             if greeks:
@@ -216,14 +211,18 @@ class Leg:
                     self.option.theta = self.pricer.theta_put
                     self.option.vega = self.pricer.vega_put
                     self.option.rho = self.pricer.rho_put
+
+                logger.debug(f'{__name__}: Delta {self.option.delta:.4f}')
+                logger.debug(f'{__name__}: Gamma {self.option.gamma:.4f}')
+                logger.debug(f'{__name__}: Theta {self.option.theta:.4f}')
+                logger.debug(f'{__name__}: Vega {self.option.vega:.4f}')
+                logger.debug(f'{__name__}: Rho {self.option.rho:.4f}')
         else:
-            logger.error('Validation error')
+            logger.error(f'{__name__}: Validation error')
 
         return price
 
     def recalculate(self, spot_price, time_to_maturity):
-        '''TODO'''
-
         call = put = 0.0
 
         if self.pricer is not None:
@@ -232,8 +231,6 @@ class Leg:
         return call, put
 
     def modify_symbol(self, ticker):
-        '''TODO'''
-
         self.symbol = Symbol(ticker)
 
         try:
@@ -247,8 +244,6 @@ class Leg:
             return False
 
     def modify_values(self, quantity, product, direction, strike):
-        '''TODO'''
-
         self.quantity = quantity
         self.product = product
         self.direction = direction
@@ -261,15 +256,11 @@ class Leg:
         return True
 
     def reset(self):
-        '''TODO'''
-
         self.table = None
         self.pricer = None
         self.calculate()
 
     def generate_value_table(self):
-        ''' TODO '''
-
         dframe = pd.DataFrame()
 
         if self.option.calc_price > 0.0:
@@ -341,8 +332,6 @@ class Leg:
         return dframe
 
     def compress_table(self, rows, cols):
-        ''' TODO '''
-
         table = self.table
         srows, scols = table.shape
 
@@ -361,16 +350,12 @@ class Leg:
         return table
 
     def _calc_date_step(self):
-        ''' TODO '''
-
         cols = int(math.ceil(self.option.time_to_maturity * 365))
         step = 1
 
         return cols, step
 
     def _validate(self):
-        '''TODO'''
-
         valid = False
 
         if self.symbol.ticker:

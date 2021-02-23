@@ -24,8 +24,6 @@ class TechnicalAnalysis():
                 self.history = yf.Ticker(ticker).history(period="max", rounding=True)
             else:
                 self.history = yf.Ticker(ticker).history(start=f'{start:%Y-%m-%d}', rounding=True)
-
-            logger.debug(f'{__class__}: Initialized')
         else:
             logger.error(f'Error initializing {__class__}')
 

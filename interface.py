@@ -17,7 +17,7 @@ from utils import utils as u
 MAX_ROWS = 50
 MAX_COLS = 18
 
-logger = u.get_logger(logging.DEBUG)
+logger = u.get_logger(logging.WARNING)
 
 
 class Interface():
@@ -34,8 +34,6 @@ class Interface():
         self.dirty_analyze = True
 
         if valid:
-            logger.debug(f'{__name__}: Initialized')
-
             self.chain = Chain(ticker)
 
             if autoload is not None:
@@ -288,7 +286,7 @@ class Interface():
         strategy = ''
         modified = False
         while True:
-            selection = self._menu(menu_items, 'Select Strategy', 1, 4)
+            selection = self._menu(menu_items, 'Select Strategy', 0, 4)
 
             if selection == 1:
                 direction = u.input_integer('Long (1), or short (2): ', 1, 2)

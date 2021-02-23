@@ -36,8 +36,6 @@ class Vertical(Strategy):
                 self.add_leg(1, product, 'long', self.initial_spot, expiry)
                 self.add_leg(1, product, 'short', self.initial_spot + 2.0, expiry)
 
-        logger.debug(f'{__class__}: Initialized')
-
     def __str__(self):
         return f'{self.name} {self.product} {self.analysis.credit_debit} spread'
 
@@ -116,7 +114,6 @@ class Vertical(Strategy):
         return breakeven
 
     def get_errors(self):
-        '''TODO'''
         error = ''
         if self.analysis.credit_debit:
             if self.product == 'call':
@@ -136,3 +133,14 @@ class Vertical(Strategy):
 
     def _validate(self):
         return len(self.legs) > 1
+
+if __name__ == '__main__':
+    import logging
+    u.get_logger(logging.INFO)
+
+    call = Vertical('MSFT', 'call', 'long')
+    call.legs[0].calculate(table=False, greeks=False)
+    output = f'${call.legs[0].option.calc_price:.2f}, ({call.legs[0].option.strike:.2f})'
+    print(output)
+    output = f'${call.legs[1].option.calc_price:.2f}, ({call.legs[1].option.strike:.2f})'
+    print(output)

@@ -66,12 +66,9 @@ class Pricing(ABC):
         else:
             raise IOError('Problem fetching ticker information')
 
-        logger.debug(f'{__class__}: Initialized')
-
     @abc.abstractmethod
     def calculate_price(self, spot_price=-1.0, time_to_maturity=-1.0):
-        '''TODO'''
-
+        pass
 
     def calculate_greeks(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         self.calculate_delta(spot_price=spot_price, time_to_maturity=time_to_maturity, volatility=volatility)
@@ -82,30 +79,21 @@ class Pricing(ABC):
 
     @abc.abstractmethod
     def calculate_delta(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
-        '''TODO'''
         return 0.0, 0.0
 
     @abc.abstractmethod
     def calculate_gamma(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
-        '''TODO'''
         return 0.0, 0.0
 
     @abc.abstractmethod
     def calculate_theta(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
-        '''TODO'''
         return 0.0, 0.0
 
     @abc.abstractmethod
     def calculate_vega(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
-        '''TODO'''
         return 0.0, 0.0
 
     def initialize_variables(self):
-        '''
-        Initialize all the required parameters for Option pricing
-        :return:
-        '''
-
         self._calc_risk_free_rate()
         self._calc_time_to_maturity()
         self._calc_volatility()
@@ -121,21 +109,6 @@ class Pricing(ABC):
         '''
         self._start_date = hist_start_date
 
-    def log_parameters(self):
-        '''
-        Useful method for logging purpose. Prints all the parameter values required for Option pricing.
-
-        :return: <void>
-        '''
-        logger.info('TICKER = %s', self.ticker)
-        logger.info('STRIKE = %.2f', self.strike_price)
-        logger.info('DIVIDEND = %.2f', self.dividend)
-        logger.info('VOLATILITY = %.2f', self.volatility)
-        logger.info('EXPIRY = %s', self.expiry)
-        logger.info('TIME TO MATURITY = %.1f', self.time_to_maturity*365)
-        logger.info('RISK FREE RATE = %f', self.risk_free_rate)
-        logger.info('SPOT PRICE = %.2f', self.spot_price)
-
     def is_call_put_parity_maintained(self, call_price, put_price):
         ''' Verify is the Put-Call Pairty is maintained by the two option prices calculated by us.
 
@@ -146,8 +119,8 @@ class Pricing(ABC):
         lhs = call_price - put_price
         rhs = self.spot_price - np.exp(-1 * self.risk_free_rate * self.time_to_maturity) * self.strike_price
 
-        logger.debug('Put-Call Parity LHS = %f', lhs)
-        logger.debug('Put-Call Parity RHS = %f', rhs)
+        logger.info(f'{__name__}: Put-Call Parity LHS = %f', lhs)
+        logger.info(f'{__name__}: Put-Call Parity RHS = %f', rhs)
 
         return bool(round(lhs) == round(rhs))
 
@@ -161,7 +134,7 @@ class Pricing(ABC):
             self._underlying_asset_data = get_ranged_data(self.ticker, self._start_date, None)
 
             if self._underlying_asset_data.empty:
-                logger.error('Unable to get historical stock data')
+                logger.error(f'{__name__}: Unable to get historical stock data')
                 raise IOError(f'Unable to get historical stock data for {self.ticker}!')
 
     def _calc_risk_free_rate(self):
@@ -171,7 +144,7 @@ class Pricing(ABC):
         :return: <void>
         '''
         self.risk_free_rate = get_treasury_rate()
-        logger.debug(f'{__name__}: Calculated risk-free rate = {self.risk_free_rate:.4f}')
+        logger.info(f'{__name__}: Risk-free rate = {self.risk_free_rate:.4f}')
 
     def _calc_time_to_maturity(self):
         '''
@@ -181,11 +154,11 @@ class Pricing(ABC):
         :return: <void>
         '''
         if self.expiry < datetime.datetime.today():
-            logger.error('Expiry/Maturity Date is in the past. Please check')
+            logger.error(f'{__name__}: Expiry/Maturity Date is in the past. Please check')
             raise ValueError('Expiry/Maturity Date is in the past. Please check')
 
         self.time_to_maturity = (self.expiry - datetime.datetime.today()).days / 365.0
-        logger.debug(f'{__name__}: Calculated time to maturity = {self.time_to_maturity:.5f}')
+        logger.info(f'{__name__}: Time to maturity = {self.time_to_maturity:.5f}')
 
     def _calc_volatility(self):
         '''
@@ -201,7 +174,7 @@ class Pricing(ABC):
         std = d_std * 252 ** 0.5
 
         self.volatility = std
-        logger.debug(f'{__name__}: Calculated volatility = {self.volatility:.4f}')
+        logger.info(f'{__name__}: Calculated volatility = {self.volatility:.4f}')
 
     def _calc_spot_price(self):
         '''
@@ -210,4 +183,4 @@ class Pricing(ABC):
         '''
         self._calc_underlying_asset_data()
         self.spot_price = self._underlying_asset_data['Close'][-1]
-        logger.debug(f'{__name__}: Calculated spot price = {self.spot_price:.2f}')
+        logger.info(f'{__name__}: Spot price = {self.spot_price:.2f}')

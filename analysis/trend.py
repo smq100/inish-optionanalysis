@@ -32,8 +32,6 @@ class Line:
         self.age = 0.0
         self.proximity = 0.0
 
-        logger.debug(f'{__class__}: Initialized')
-
     def __str__(self):
         dates = []
         for point in self.points:
@@ -78,10 +76,10 @@ class SupportResistance:
             self.price = get_current_price(ticker)
 
             logger.debug(f'{__name__}: Initialized')
-            logger.info(f'Initialized SupportResitance for {ticker} (${self.price:.2f})')
-            logger.info(f'{self.points} points from {self.history.iloc[0].name} to {self.history.iloc[-1].name}')
+            logger.info(f'{__name__}: Initialized SupportResitance for {ticker} (${self.price:.2f})')
+            logger.info(f'{__name__}: {self.points} points from {self.history.iloc[0].name} to {self.history.iloc[-1].name}')
         else:
-            logger.error('Error initializing SupportResitance')
+            logger.error('{__name__}: Error initializing {__class__}')
 
     def __str__(self):
         return f'Support and resistance analysis for {self.ticker} (${self.price:.2f})'
@@ -143,8 +141,8 @@ class SupportResistance:
 
                 self.lines += [newline]
 
-            logger.info(f'{len(self.get_resistance())} total resistance lines')
-            logger.info(f'{len(self.get_support())} total support lines')
+            logger.info(f'{__name__}: {len(self.get_resistance())} total resistance lines')
+            logger.info(f'{__name__}: {len(self.get_support())} total support lines')
 
             # Calculate dates of pivot points
             for line in self.lines:
@@ -176,11 +174,11 @@ class SupportResistance:
 
             # Log the line details
             for line in self.get_resistance():
-                line = f'Res:{line}'
+                line = f'{__name__}: Res:{line}'
                 logger.debug(line)
 
             for line in self.get_support():
-                line = f'Sup:{line}'
+                line = f'{__name__}: Sup:{line}'
                 logger.debug(line)
 
     def get_resistance(self):
@@ -365,7 +363,7 @@ class SupportResistance:
 
         if filename:
             fig.savefig(filename, dpi=150)
-            logger.info(f'Saved plot as {filename}')
+            logger.info(f'{__name__}: Saved plot as {filename}')
 
         if show:
             plt.show()

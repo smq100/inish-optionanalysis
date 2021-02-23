@@ -11,8 +11,6 @@ class Symbol:
         if validate_ticker(ticker):
             # Fetch YFinance opbject
             self.company = get_company(ticker)
-
-            logger.debug(f'{__class__}: Initialized')
         else:
             logger.error(f'Error initializing {__class__}')
 
