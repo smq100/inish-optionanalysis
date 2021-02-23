@@ -223,10 +223,13 @@ class Leg:
         return price
 
     def recalculate(self, spot_price, time_to_maturity):
-        call = put = 0.0
-
         if self.pricer is not None:
-            call, put = self.pricer.calculate_price(spot_price, time_to_maturity)
+            if self.option.implied_volatility > 0.0:
+                call, put = self.pricer.calculate_price(spot_price, time_to_maturity, volatility=self.option.implied_volatility)
+            else:
+                call, put = self.pricer.calculate_price(spot_price, time_to_maturity)
+        else:
+            raise AssertionError('Must call calculate() prior to recalculate()')
 
         return call, put
 

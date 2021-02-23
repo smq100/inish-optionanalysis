@@ -10,8 +10,6 @@ from strategy.put import Put
 from strategy.vertical import Vertical
 from pricing.fetcher import validate_ticker
 from options.chain import Chain
-from analysis.technical import TechnicalAnalysis
-from analysis.trend import SupportResistance, Line
 from utils import utils as u
 
 MAX_ROWS = 50
@@ -29,7 +27,6 @@ class Interface():
 
         self.ticker = ticker
         self.strategy = None
-        self.technical = None
         self.dirty_calculate = True
         self.dirty_analyze = True
 
@@ -61,19 +58,16 @@ class Interface():
             u.print_error('Invalid ticker symbol specified')
 
     def main_menu(self):
-        '''Displays opening menu'''
-
         while True:
             menu_items = {
                 '1': f'Change Symbol ({self.strategy.ticker})',
                 '2': f'Change Strategy ({self.strategy})',
                 '3': 'Select Options',
-                '4': 'Technical Analysis',
-                '5': 'Calculate Values',
-                '6': 'Analyze Stategy',
-                '7': 'View Options',
-                '8': 'View Values',
-                '9': 'Settings',
+                '4': 'Calculate Values',
+                '5': 'Analyze Stategy',
+                '6': 'View Options',
+                '7': 'View Values',
+                '8': 'Settings',
                 '0': 'Exit'
             }
 
@@ -85,14 +79,14 @@ class Interface():
                 menu_items['3'] += f' (${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator})'
 
             if self.dirty_calculate:
-                menu_items['5'] += ' *'
+                menu_items['4'] += ' *'
 
             if self.dirty_analyze:
-                menu_items['6'] += ' *'
+                menu_items['5'] += ' *'
 
             self.view_legs()
 
-            selection = self._menu(menu_items, 'Select Operation', 0, 9)
+            selection = self._menu(menu_items, 'Select Operation', 0, 8)
 
             if selection == 1:
                 self.select_symbol()
@@ -103,14 +97,12 @@ class Interface():
                     self.calculate()
                     self.view_options(0)
             elif selection == 4:
-                self.select_technical()
-            elif selection == 5:
                 if len(self.strategy.legs) > 0:
                     if self.calculate():
                         self.plot_value(0)
-            elif selection == 6:
+            elif selection == 5:
                 self.analyze()
-            elif selection == 7:
+            elif selection == 6:
                 if len(self.strategy.legs) < 1:
                     print('No legs configured')
                 elif len(self.strategy.legs) > 1:
@@ -118,7 +110,7 @@ class Interface():
                     self.view_options(leg)
                 else:
                     self.view_options(0)
-            elif selection == 8:
+            elif selection == 7:
                 if len(self.strategy.legs) < 1:
                     print('No legs configured')
                 elif len(self.strategy.legs) > 1:
@@ -126,7 +118,7 @@ class Interface():
                     self.plot_value(leg)
                 else:
                     self.plot_value(0)
-            elif selection == 9:
+            elif selection == 8:
                 self.select_settings()
             elif selection == 0:
                 break
@@ -140,7 +132,6 @@ class Interface():
             return False
 
     def analyze(self):
-        '''TODO'''
         errors = self.strategy.get_errors()
         if not errors:
             self.strategy.analyze()
@@ -153,8 +144,6 @@ class Interface():
             u.print_error(errors)
 
     def plot_value(self, leg):
-        '''TODO'''
-
         if leg < len(self.strategy.legs):
             print(u.delimeter(f'Value: {self.strategy.legs[leg].symbol}', True) + '\n')
 
@@ -183,8 +172,6 @@ class Interface():
             u.print_error('Invalid leg')
 
     def plot_analysis(self):
-        '''TODO'''
-
         print(u.delimeter(f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].symbol}) {str(self.strategy).title()}', True) + '\n')
 
         table = self.strategy.analysis.table
@@ -211,7 +198,6 @@ class Interface():
             u.print_error('No table')
 
     def view_legs(self, leg=-1, delimeter=True):
-        '''TODO'''
         if delimeter:
             print(u.delimeter('Option Leg Values', True))
 
@@ -244,11 +230,9 @@ class Interface():
             u.print_error('Invalid leg')
 
     def reset(self):
-        '''TODO'''
         self.strategy.reset()
 
     def select_symbol(self):
-        '''TODO'''
         valid = False
         vol = 0.0
         div = 0.0
@@ -268,13 +252,10 @@ class Interface():
             self.dirty_analyze = True
 
             self.chain = Chain(ticker)
-            self.technical = None
             self.load_strategy(ticker, 'call', 'long', False)
             u.print_message('The initial strategy has been set to a long call')
 
     def select_strategy(self):
-        '''TODO'''
-
         menu_items = {
             '1': 'Call',
             '2': 'Put',
@@ -327,106 +308,6 @@ class Interface():
             u.print_error('Unknown strategy selected')
 
         return modified
-
-    def select_technical(self):
-        if self.technical is None:
-            start = datetime.datetime.today() - datetime.timedelta(days=365)
-            self.technical = TechnicalAnalysis(self.ticker, start=start)
-
-        menu_items = {
-            '1': 'Support & Resistance',
-            '2': 'EMA',
-            '3': 'RSI',
-            '4': 'VWAP',
-            '5': 'MACD',
-            '6': 'Bollinger Bands',
-            '0': 'Done',
-        }
-
-        while True:
-            selection = self._menu(menu_items, 'Select Indicator', 0, 6)
-
-            if selection == 1:
-                self.get_trend_parameters()
-
-            if selection == 2:
-                interval = u.input_integer('Enter interval: ', 5, 200)
-                df = self.technical.calc_ema(interval)
-                print(u.delimeter(f'EMA {interval}', True))
-                print(f'Yesterday: {df[-1]:.2f}')
-
-            if selection == 3:
-                df = self.technical.calc_rsi()
-                print(u.delimeter('RSI', True))
-                print(f'Yesterday: {df[-1]:.2f}')
-
-            if selection == 4:
-                df = self.technical.calc_vwap()
-                print(u.delimeter('VWAP', True))
-                print(f'Yesterday: {df[-1]:.2f}')
-
-            if selection == 5:
-                df = self.technical.calc_macd()
-                print(u.delimeter('MACD', True))
-                print(f'Diff: {df.iloc[-1]["Diff"]:.2f}')
-                print(f'MACD: {df.iloc[-1]["MACD"]:.2f}')
-                print(f'Sig:  {df.iloc[-1]["Signal"]:.2f}')
-
-            if selection == 6:
-                df = self.technical.calc_bb()
-                print(u.delimeter('Bollinger Band', True))
-                print(f'High: {df.iloc[-1]["High"]:.2f}')
-                print(f'Mid:  {df.iloc[-1]["Mid"]:.2f}')
-                print(f'Low:  {df.iloc[-1]["Low"]:.2f}')
-
-            if selection == 0:
-                break
-
-    def get_trend_parameters(self):
-        days = 1000
-        filename = ''
-        show = False
-
-        while True:
-            name = filename if filename else 'none'
-            menu_items = {
-                '1': f'Number of Days ({days})',
-                '2': f'Plot File Name ({name})',
-                '3': f'Show Window ({show})',
-                '4': 'Analyze',
-                '0': 'Cancel'
-            }
-
-            selection = self._menu(menu_items, 'Select option', 0, 4)
-
-            if selection == 1:
-                days = u.input_integer('Enter number of days (0=max): ', 0, 9999)
-
-            if selection == 2:
-                filename = input('Enter filename: ')
-
-            if selection == 3:
-                show = True if u.input_integer('Show Window? (1=Yes, 0=No): ', 0, 1) == 1 else False
-
-            if selection == 4:
-                start = None
-                if days > 0:
-                    start = datetime.datetime.today() - datetime.timedelta(days=days)
-
-                sr = SupportResistance(self.ticker, start=start)
-                sr.calculate()
-                sr.plot(filename=filename, show=show)
-
-                sup, res = sr.get_endpoints()
-                print(u.delimeter('Support and Resistance Levels', True))
-                for line in sup:
-                    print(f'Support:    ${line:.2f}')
-                for line in res:
-                    print(f'Resistance: ${line:.2f}')
-                break
-
-            if selection == 0:
-                break
 
     def select_chain(self):
         contract = ''
@@ -565,8 +446,6 @@ class Interface():
         return contract
 
     def select_settings(self):
-        '''TODO'''
-
         while True:
             menu_items = {
                 '1': f'Pricing Method ({self.strategy.legs[0].pricing_method.title()})',
@@ -581,8 +460,6 @@ class Interface():
                 break
 
     def select_method(self):
-        '''TODO'''
-
         menu_items = {
             '1': 'Black-Scholes',
             '2': 'Monte Carlo',
