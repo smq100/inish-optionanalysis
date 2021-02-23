@@ -42,13 +42,11 @@ class Option():
         self.contract_size = ''
         self.currency = ''
 
-        if self.expiry is None:
-            self.expiry = datetime.datetime.today() + datetime.timedelta(days=10)
-
-        logger.debug('Initialized Option')
+        logger.debug(f'{__class__}: Initialized')
 
     def __str__(self):
-        return f'Contract:{self.contract_symbol}\n'\
+        symbol = self.contract_symbol if self.contract_symbol else 'No contract selected'
+        return f'Contract:{symbol}\n'\
             f'Ticker: {self.ticker}\n'\
             f'Product: {self.product.title()}\n'\
             f'Expiry: {self.expiry:%Y-%m-%d} ({self.time_to_maturity*365:.0f}/{self.time_to_maturity:.5f})\n'\
@@ -103,6 +101,11 @@ class Option():
             self.currency = contract['currency']
             self.decorator = ''
 
+            if self.last_price > 0.0:
+                diff = self.calc_price / self.last_price
+                if diff > 1.25 or diff < 0.75:
+                    logger.debug(f'{__name__}: The calculated price is significantly different than the last traded price')
+
         else:
             ret = False
 
@@ -145,21 +148,3 @@ def _parse_contract_name(contract_name):
     strike = float(parsed[3][:5]) + (float(parsed[3][5:]) / 1000.0)
 
     return {'ticker':ticker, 'expiry':expiry, 'product':product, 'strike':strike}
-
-
-''' Available Yahoo option fields (Pandas dataframe)
-contractSymbol
-lastTradeDate
-strike
-lastPrice
-bid
-ask
-change
-percentChange
-volume
-openInterest
-impliedVolatility
-inTheMoney
-contractSize
-currency
-'''

@@ -13,7 +13,12 @@ class Vertical(Strategy):
         super().__init__(ticker, product, direction)
 
         self.name = 'vertical'
-        expiry = datetime.datetime.today() + datetime.timedelta(days=14)
+
+        # Default to a week from Friday as expiry
+        d = datetime.datetime.today()
+        while d.weekday() != 4:
+            d += datetime.timedelta(1)
+        expiry = d + datetime.timedelta(days=6)
 
         # Add legs (long leg is always first)
         if product == 'call':
@@ -31,7 +36,7 @@ class Vertical(Strategy):
                 self.add_leg(1, product, 'long', self.initial_spot, expiry)
                 self.add_leg(1, product, 'short', self.initial_spot + 2.0, expiry)
 
-        logger.debug('Initialized Vertical')
+        logger.debug(f'{__class__}: Initialized')
 
     def __str__(self):
         return f'{self.name} {self.product} {self.analysis.credit_debit} spread'

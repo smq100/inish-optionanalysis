@@ -19,7 +19,7 @@ class BlackScholes(Pricing):
     def __init__(self, ticker, expiry, strike, dividend=0.0):
         super().__init__(ticker, expiry, strike, dividend=dividend)
 
-        logger.debug('Initialized BlackScholes')
+        logger.debug(f'{__class__}: Initialized')
 
     def calculate_price(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         ''' Calculate Call and Put option prices based on the below equations from Black-Scholes.
@@ -42,15 +42,11 @@ class BlackScholes(Pricing):
         d1 = self._calculate_d1(spot_price, time_to_maturity, volatility)
         d2 = self._calculate_d2(spot_price, time_to_maturity, volatility)
 
-        self.price_call = ((spot_price * np.exp(-1 * self.dividend * time_to_maturity)) *
-            stats.norm.cdf(d1, 0.0, 1.0) -
-            (self.strike_price * np.exp(-1 * self.risk_free_rate * time_to_maturity) *
-            stats.norm.cdf(d2, 0.0, 1.0)))
+        self.price_call = ((spot_price * np.exp(-1 * self.dividend * time_to_maturity)) * stats.norm.cdf(d1, 0.0, 1.0) -
+            (self.strike_price * np.exp(-1 * self.risk_free_rate * time_to_maturity) * stats.norm.cdf(d2, 0.0, 1.0)))
 
-        self.price_put = (self.strike_price * np.exp(-1 * self.risk_free_rate * time_to_maturity) *
-            stats.norm.cdf(-1 * d2, 0.0, 1.0) -
-            (spot_price * np.exp(-1 * self.dividend * time_to_maturity)) *
-            stats.norm.cdf(-1 * d1, 0.0, 1.0))
+        self.price_put = (self.strike_price * np.exp(-1 * self.risk_free_rate * time_to_maturity) * stats.norm.cdf(-1 * d2, 0.0, 1.0) -
+            (spot_price * np.exp(-1 * self.dividend * time_to_maturity)) * stats.norm.cdf(-1 * d1, 0.0, 1.0))
 
         return self.price_call, self.price_put
 

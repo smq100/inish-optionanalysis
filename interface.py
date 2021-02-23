@@ -1,4 +1,5 @@
 import sys, os, json
+import logging
 import datetime
 
 import pandas as pd
@@ -16,13 +17,11 @@ from utils import utils as u
 MAX_ROWS = 50
 MAX_COLS = 18
 
-logger = u.get_logger()
+logger = u.get_logger(logging.DEBUG)
 
 
 class Interface():
     def __init__(self, ticker, strategy, direction, autoload=None, script=None, exit=False):
-        logger.info('Initializing Interface...')
-
         pd.options.display.float_format = '{:,.2f}'.format
 
         ticker = ticker.upper()
@@ -35,6 +34,8 @@ class Interface():
         self.dirty_analyze = True
 
         if valid:
+            logger.debug(f'{__name__}: Initialized')
+
             self.chain = Chain(ticker)
 
             if autoload is not None:
@@ -68,16 +69,22 @@ class Interface():
             menu_items = {
                 '1': f'Change Symbol ({self.strategy.ticker})',
                 '2': f'Change Strategy ({self.strategy})',
-                '3': 'Technical Analysis',
-                '4': 'Select Options',
+                '3': 'Select Options',
+                '4': 'Technical Analysis',
                 '5': 'Calculate Values',
                 '6': 'Analyze Stategy',
-                '7': 'Modify Leg',
-                '8': 'View Options',
-                '9': 'View Values',
-                '10': 'Settings',
+                '7': 'View Options',
+                '8': 'View Values',
+                '9': 'Settings',
                 '0': 'Exit'
             }
+
+            if self.strategy.name == 'vertical':
+                menu_items['3'] += f' '\
+                    f'(L:${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator}'\
+                    f' S:${self.strategy.legs[1].option.strike:.2f}{self.strategy.legs[1].option.decorator})'
+            else:
+                menu_items['3'] += f' (${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator})'
 
             if self.dirty_calculate:
                 menu_items['5'] += ' *'
@@ -85,27 +92,20 @@ class Interface():
             if self.dirty_analyze:
                 menu_items['6'] += ' *'
 
-            if self.strategy.name == 'vertical':
-                menu_items['4'] += f' '\
-                    f'(L:${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator}'\
-                    f' S:${self.strategy.legs[1].option.strike:.2f}{self.strategy.legs[1].option.decorator})'
-            else:
-                menu_items['4'] += f' (${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator})'
-
             self.view_legs()
 
-            selection = self._menu(menu_items, 'Select Operation', 0, 10)
+            selection = self._menu(menu_items, 'Select Operation', 0, 9)
 
             if selection == 1:
                 self.select_symbol()
             elif selection == 2:
                 self.select_strategy()
             elif selection == 3:
-                self.select_technical()
-            elif selection == 4:
                 if self.select_chain():
                     self.calculate()
                     self.view_options(0)
+            elif selection == 4:
+                self.select_technical()
             elif selection == 5:
                 if len(self.strategy.legs) > 0:
                     if self.calculate():
@@ -117,22 +117,10 @@ class Interface():
                     print('No legs configured')
                 elif len(self.strategy.legs) > 1:
                     leg = u.input_integer('Enter Leg: ', 1, 2) - 1
-                    if self.modify_leg(leg) > 0:
-                        if self.calculate():
-                            self.plot_value(leg)
-                else:
-                    if self.modify_leg(0):
-                        if self.calculate():
-                            self.plot_value(0)
-            elif selection == 8:
-                if len(self.strategy.legs) < 1:
-                    print('No legs configured')
-                elif len(self.strategy.legs) > 1:
-                    leg = u.input_integer('Enter Leg: ', 1, 2) - 1
                     self.view_options(leg)
                 else:
                     self.view_options(0)
-            elif selection == 9:
+            elif selection == 8:
                 if len(self.strategy.legs) < 1:
                     print('No legs configured')
                 elif len(self.strategy.legs) > 1:
@@ -140,7 +128,7 @@ class Interface():
                     self.plot_value(leg)
                 else:
                     self.plot_value(0)
-            elif selection == 10:
+            elif selection == 9:
                 self.select_settings()
             elif selection == 0:
                 break
@@ -243,7 +231,7 @@ class Interface():
 
     def view_options(self, leg=-1, delimeter=True):
         if delimeter:
-            print(u.delimeter('Option Specs', True))
+            print(u.delimeter('Option Values', True))
 
         if len(self.strategy.legs) < 1:
             print('No legs configured')
@@ -358,7 +346,7 @@ class Interface():
         }
 
         while True:
-            selection = self._menu(menu_items, 'Select Indicator', 0, 5)
+            selection = self._menu(menu_items, 'Select Indicator', 0, 6)
 
             if selection == 1:
                 self.get_trend_parameters()
@@ -398,13 +386,14 @@ class Interface():
 
     def get_trend_parameters(self):
         days = 1000
-        filename = 'plot.png'
+        filename = ''
         show = False
 
         while True:
+            name = filename if filename else 'none'
             menu_items = {
                 '1': f'Number of Days ({days})',
-                '2': f'Plot File Name ({filename})',
+                '2': f'Plot File Name ({name})',
                 '3': f'Show Window ({show})',
                 '4': 'Analyze',
                 '0': 'Cancel'
@@ -430,9 +419,8 @@ class Interface():
                 sr.calculate()
                 sr.plot(filename=filename, show=show)
 
-                print(u.delimeter('Support and Resistance Levels', True))
                 sup, res = sr.get_endpoints()
-                print(len(sup), len(res))
+                print(u.delimeter('Support and Resistance Levels', True))
                 for line in sup:
                     print(f'Support:    ${line:.2f}')
                 for line in res:
@@ -578,58 +566,6 @@ class Interface():
 
         return contract
 
-    def modify_leg(self, leg):
-        '''TODO'''
-
-        quantity = self.strategy.legs[leg].quantity
-        product = self.strategy.legs[leg].product
-        direction = self.strategy.legs[leg].direction
-        strike = self.strategy.legs[leg].option.strike
-
-        changed = False
-
-        while True:
-            menu_items = {
-                '1': f'Quantity ({quantity})',
-                '2': f'Call/Put ({product})',
-                '3': f'Buy/Write ({direction})',
-                '4': f'Strike (${strike:.2f})',
-                '5': 'Done',
-                '6': 'Cancel',
-            }
-
-            self.view_legs()
-
-            selection = self._menu(menu_items, 'Select Leg', 1, 6)
-
-            if selection == 1:
-                quantity = u.input_integer('Enter Quantity: ', 1, 100)
-            elif selection == 2:
-                choice = u.input_integer('Call (1) or Put (2): ', 1, 2)
-                if choice == 1:
-                    product = 'call'
-                elif choice == 2:
-                    product = 'put'
-            elif selection == 3:
-                choice = u.input_integer('Buy (1) or Write (2): ', 1, 2)
-                if choice == 1:
-                    direction = 'long'
-                elif choice == 2:
-                    direction = 'short'
-                else:
-                    print('Invalid option')
-            elif selection == 4:
-                strike = u.input_float('Enter Strike: ', 0.01, 999.0)
-            elif selection == 5:
-                changed = self.strategy.legs[leg].modify_values(quantity, product, direction, strike)
-                self.dirty_calculate = True
-                self.dirty_analyze = True
-                break
-            elif selection == 6:
-                break
-
-        return changed
-
     def select_settings(self):
         '''TODO'''
 
@@ -660,15 +596,13 @@ class Interface():
             selection = self._menu(menu_items, 'Select Method', 0, 2)
 
             if selection == 1:
-                self.strategy.pricing_method = 'black-scholes'
-                self.strategy.set_pricing_method(self.strategy.pricing_method)
+                self.strategy.set_pricing_method('black-scholes')
                 self.dirty_calculate = True
                 self.dirty_analyze = True
                 break
 
             if selection == 2:
-                self.strategy.pricing_method = 'monte-carlo'
-                self.strategy.set_pricing_method(self.strategy.pricing_method)
+                self.strategy.set_pricing_method('monte-carlo')
                 self.dirty_calculate = True
                 self.dirty_analyze = True
                 break

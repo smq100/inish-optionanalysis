@@ -22,7 +22,7 @@ class MonteCarlo(Pricing):
     def __init__(self, ticker, expiry, strike, dividend=0.0):
         super().__init__(ticker, expiry, strike, dividend=dividend)
 
-        logger.debug('Initialized MonteCarlo')
+        logger.debug(f'{__class__}: Initialized')
 
     def calculate_price(self, spot_price=-1.0, time_to_maturity=-1.0):
         ''' Calculate present-value of of expected payoffs and their average becomes the price of the respective option.

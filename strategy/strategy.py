@@ -26,7 +26,7 @@ class Strategy(ABC):
         self.initial_spot = 0.0
         self.initial_spot = self.get_current_spot(ticker, True)
 
-        logger.debug('Initialized Strategy')
+        logger.debug(f'{__class__}: Initialized')
 
     def __str__(self):
         return 'Strategy abstract base class'
@@ -77,10 +77,10 @@ class Strategy(ABC):
         return spot
 
     def set_pricing_method(self, method):
-        if method != 'black-scholes':
+        if method == 'black-scholes':
             for leg in self.legs:
                 leg.pricing_method = method
-        elif method != 'monte-carlo':
+        elif method == 'monte-carlo':
             for leg in self.legs:
                 leg.pricing_method = method
 
@@ -136,32 +136,32 @@ class Leg:
         self.pricer = None
         self.table = None
 
+        logger.debug(f'{__class__}: Initialized')
+
     def __str__(self):
         if self.option.calc_price > 0.0:
-            output = f'{self.quantity} '\
+            output = f'{self.quantity:2d} '\
             f'{self.symbol.ticker}@${self.symbol.spot:.2f} '\
-            f'{self.direction:5s} '\
-            f'{self.product:5s} '\
+            f'{self.direction} '\
+            f'{self.product} '\
             f'${self.option.strike:.2f} for '\
             f'{str(self.option.expiry)[:10]}'\
-            f' = ${self.option.calc_price * self.quantity:.2f}'
-
-            if self.quantity > 1:
-                output += f' (${self.option.calc_price:.2f} each)'
+            f' = ${self.option.last_price:.2f} each (${self.option.calc_price:.2f} {self.pricing_method})'
 
             if not self.option.contract_symbol:
-                output += ' (specific option not selected)'
+                output += '; actual option not selected'
 
+            if self.option.last_price > 0.0:
+                diff = self.option.calc_price / self.option.last_price
+                if diff > 1.25 or diff < 0.75:
+                    output += '\n      *** Warning: The calculated price is significantly different than the last traded price'
         else:
-            output = f'{self.symbol.ticker} leg not yet calculated'
+            output = 'Leg not yet calculated'
 
         return output
 
-    def calculate(self, pricing_method='black-scholes', greeks=True):
+    def calculate(self, greeks=True):
         '''TODO'''
-
-        if pricing_method is not None:
-            self.pricing_method = pricing_method
 
         price = 0.0
 
@@ -172,11 +172,15 @@ class Leg:
             else:
                 self.pricer = BlackScholes(self.symbol.ticker, self.option.expiry, self.option.strike)
 
+            logger.debug(f'{__name__}: Calculating price using {self.pricing_method}')
+
             # Calculate prices
             if self.option.implied_volatility > 0.0:
                 self.pricer.calculate_price(volatility=self.option.implied_volatility)
+                logger.debug(f'{__name__}: Using implied volatility = {self.option.implied_volatility:.4f}')
             else:
                 self.pricer.calculate_price()
+                logger.debug(f'{__name__}: Using calculated volatility')
 
             if self.product == 'call':
                 self.option.calc_price = price = self.pricer.price_call
@@ -187,6 +191,8 @@ class Leg:
             self.option.rate = self.pricer.risk_free_rate
             self.option.calc_volatility = self.symbol.volatility = self.pricer.volatility
             self.option.time_to_maturity = self.pricer.time_to_maturity
+
+            logger.debug(f'{__name__}: Volatility = {self.option.implied_volatility:.4f}, Spot = ${self.option.spot:.2f}')
 
             # Generate the values table
             self.table = self.generate_value_table()
@@ -210,8 +216,8 @@ class Leg:
                     self.option.theta = self.pricer.theta_put
                     self.option.vega = self.pricer.vega_put
                     self.option.rho = self.pricer.rho_put
-
-            logger.info('Option price = ${:.2f} '.format(price))
+        else:
+            logger.error('Validation error')
 
         return price
 

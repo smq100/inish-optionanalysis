@@ -25,9 +25,9 @@ class TechnicalAnalysis():
             else:
                 self.history = yf.Ticker(ticker).history(start=f'{start:%Y-%m-%d}', rounding=True)
 
-            logger.debug('Initialized TechnicalAnalysis')
+            logger.debug(f'{__class__}: Initialized')
         else:
-            logger.error('Error initializing TechnicalAnalysis')
+            logger.error(f'Error initializing {__class__}')
 
     def __str__(self):
         return f'Technical analysis for {self.ticker}'

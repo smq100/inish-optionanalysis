@@ -14,10 +14,16 @@ class Call(Strategy):
         super().__init__(ticker, product, direction)
 
         self.name = 'call'
-        expiry = datetime.datetime.today() + datetime.timedelta(days=14)
+
+        # Default to a week from Friday as expiry
+        d = datetime.datetime.today()
+        while d.weekday() != 4:
+            d += datetime.timedelta(1)
+        expiry = d + datetime.timedelta(days=6)
+
         self.add_leg(1, product, direction, self.initial_spot, expiry)
 
-        logger.debug('Initialized Call')
+        logger.debug(f'{__class__}: Initialized')
 
     def __str__(self):
         return f'{self.legs[0].direction} {self.name}'

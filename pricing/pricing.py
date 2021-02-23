@@ -66,7 +66,7 @@ class Pricing(ABC):
         else:
             raise IOError('Problem fetching ticker information')
 
-        logger.debug('Initialized Pricing')
+        logger.debug(f'{__class__}: Initialized')
 
     @abc.abstractmethod
     def calculate_price(self, spot_price=-1.0, time_to_maturity=-1.0):
@@ -151,13 +151,27 @@ class Pricing(ABC):
 
         return bool(round(lhs) == round(rhs))
 
+    def _calc_underlying_asset_data(self):
+        '''
+        Scan through the web to get historical prices of the underlying asset.
+        Please check module stock_analyzer.data_fetcher for details
+        :return:
+        '''
+        if self._underlying_asset_data.empty:
+            self._underlying_asset_data = get_ranged_data(self.ticker, self._start_date, None)
+
+            if self._underlying_asset_data.empty:
+                logger.error('Unable to get historical stock data')
+                raise IOError(f'Unable to get historical stock data for {self.ticker}!')
+
     def _calc_risk_free_rate(self):
         '''
         Fetch 3-month Treasury Bill Rate from the web. Please check module stock_analyzer.data_fetcher for details
 
         :return: <void>
         '''
-        self.risk_free_rate = get_treasury_rate()  # / 100?
+        self.risk_free_rate = get_treasury_rate()
+        logger.debug(f'{__name__}: Calculated risk-free rate = {self.risk_free_rate:.4f}')
 
     def _calc_time_to_maturity(self):
         '''
@@ -171,19 +185,7 @@ class Pricing(ABC):
             raise ValueError('Expiry/Maturity Date is in the past. Please check')
 
         self.time_to_maturity = (self.expiry - datetime.datetime.today()).days / 365.0
-
-    def _calc_underlying_asset_data(self):
-        '''
-        Scan through the web to get historical prices of the underlying asset.
-        Please check module stock_analyzer.data_fetcher for details
-        :return:
-        '''
-        if self._underlying_asset_data.empty:
-            self._underlying_asset_data = get_ranged_data(self.ticker, self._start_date, None)
-
-            if self._underlying_asset_data.empty:
-                logger.error('Unable to get historical stock data')
-                raise IOError(f'Unable to get historical stock data for {self.ticker}!')
+        logger.debug(f'{__name__}: Calculated time to maturity = {self.time_to_maturity:.5f}')
 
     def _calc_volatility(self):
         '''
@@ -199,6 +201,7 @@ class Pricing(ABC):
         std = d_std * 252 ** 0.5
 
         self.volatility = std
+        logger.debug(f'{__name__}: Calculated volatility = {self.volatility:.4f}')
 
     def _calc_spot_price(self):
         '''
@@ -207,3 +210,4 @@ class Pricing(ABC):
         '''
         self._calc_underlying_asset_data()
         self.spot_price = self._underlying_asset_data['Close'][-1]
+        logger.debug(f'{__name__}: Calculated spot price = {self.spot_price:.2f}')

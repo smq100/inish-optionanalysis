@@ -12,9 +12,9 @@ class Symbol:
             # Fetch YFinance opbject
             self.company = get_company(ticker)
 
-            logger.debug('Initialized Symbol')
+            logger.debug(f'{__class__}: Initialized')
         else:
-            logger.error('Error initializing Symbol')
+            logger.error(f'Error initializing {__class__}')
 
 
     def __str__(self):
@@ -33,8 +33,7 @@ class Symbol:
     "phone":"425-882-8080",
     "state":"WA",
     "country":"United States",
-    "companyOfficers":[
-    ],
+    "companyOfficers":[],
     "website":"http://www.microsoft.com",
     "maxAge":1,
     "address1":"One Microsoft Way",

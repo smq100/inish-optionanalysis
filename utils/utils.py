@@ -44,7 +44,9 @@ def input_integer(message, min_, max_):
     val = min_ - 1
     while val < min_:
         val = input(message)
-        if not val.isnumeric():
+        if val == '':
+            val = min_ - 1
+        elif not isnumeric(val):
             print_error(f'Invalid value. Enter an integer between {min_} and {max_}')
             val = min_ - 1
         elif int(val) < min_:
@@ -62,7 +64,9 @@ def input_float(message, min_, max_):
     val = min_ - 1
     while val < min_:
         val = input(message)
-        if not isnumeric(val):
+        if val == '':
+            val = min_ - 1
+        elif not isnumeric(val):
             print_error(f'Invalid value. Enter an integer between {min_} and {max_}')
             val = min_ - 1
         elif float(val) < min_:

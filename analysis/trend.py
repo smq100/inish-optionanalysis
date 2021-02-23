@@ -32,6 +32,8 @@ class Line:
         self.age = 0.0
         self.proximity = 0.0
 
+        logger.debug(f'{__class__}: Initialized')
+
     def __str__(self):
         dates = []
         for point in self.points:
@@ -75,8 +77,9 @@ class SupportResistance:
             self.points = len(self.history)
             self.price = get_current_price(ticker)
 
-            logger.debug(f'Initialized SupportResitance for {ticker} (${self.price:.2f})')
-            logger.debug(f'{self.points} points from {self.history.iloc[0].name} to {self.history.iloc[-1].name}')
+            logger.debug(f'{__name__}: Initialized')
+            logger.info(f'Initialized SupportResitance for {ticker} (${self.price:.2f})')
+            logger.info(f'{self.points} points from {self.history.iloc[0].name} to {self.history.iloc[-1].name}')
         else:
             logger.error('Error initializing SupportResitance')
 
@@ -209,7 +212,7 @@ class SupportResistance:
 
     def plot(self, show=True, filename='', legend=False, srlines=False, trendlines=False):
         fig, ax = plt.subplots()
-        plt.style.use('seaborn-deep')
+        plt.style.use('seaborn')
         plt.grid()
         plt.title(f'{self.ticker} History with Support & Resistance Lines')
 

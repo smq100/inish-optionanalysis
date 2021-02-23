@@ -10,7 +10,7 @@ class Chain():
         self.expire = None
         self.width = 1
 
-        logger.debug('Initialized Chain')
+        logger.debug(f'{__class__}: Initialized')
 
     def get_expiry(self):
         value = self.company = None

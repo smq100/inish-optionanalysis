@@ -101,7 +101,7 @@ def get_treasury_rate(ticker='DTB3'):
         logger.error('Unable to get Treasury Rates from Quandl. Please check connection')
         raise IOError('Unable to get Treasury Rate from Quandl')
 
-    return df['Value'][0]
+    return df['Value'][0] / 100.0
 
 
 if __name__ == '__main__':

@@ -37,7 +37,7 @@ class StrategyAnalysis:
         else:
             output = 'Not yet analyzed'
 
-        logger.debug('Initialized StrategyAnalysis')
+        logger.debug(f'{__class__}: Initialized')
 
         return output
 
