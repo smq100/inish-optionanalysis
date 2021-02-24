@@ -86,7 +86,7 @@ class Interface():
 
             self.view_legs()
 
-            selection = self._menu(menu_items, 'Select Operation', 0, 8)
+            selection = u.menu(menu_items, 'Select Operation', 0, 8)
 
             if selection == 1:
                 self.select_symbol()
@@ -267,7 +267,7 @@ class Interface():
         strategy = ''
         modified = False
         while True:
-            selection = self._menu(menu_items, 'Select Strategy', 0, 4)
+            selection = u.menu(menu_items, 'Select Strategy', 0, 4)
 
             if selection == 1:
                 direction = u.input_integer('Long (1), or short (2): ', 1, 2)
@@ -354,7 +354,7 @@ class Interface():
                 else:
                     menu_items['2'] += f' (${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator})'
 
-                selection = self._menu(menu_items, 'Select Operation', 0, 3)
+                selection = u.menu(menu_items, 'Select Operation', 0, 3)
 
                 ret = True
                 if selection == 1:
@@ -452,7 +452,7 @@ class Interface():
                 '0': 'Done',
             }
 
-            selection = self._menu(menu_items, 'Select Setting', 0, 1)
+            selection = u.menu(menu_items, 'Select Setting', 0, 1)
 
             if selection == 1:
                 self.select_method()
@@ -468,7 +468,7 @@ class Interface():
 
         modified = True
         while True:
-            selection = self._menu(menu_items, 'Select Method', 0, 2)
+            selection = u.menu(menu_items, 'Select Method', 0, 2)
 
             if selection == 1:
                 self.strategy.set_pricing_method('black-scholes')

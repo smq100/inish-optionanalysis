@@ -20,6 +20,16 @@ def get_logger(level=None):
 
     return logger
 
+def menu(menu_items, header, minvalue, maxvalue):
+    print(f'\n{header}')
+    print('-----------------------------')
+
+    option = menu_items.keys()
+    for entry in option:
+        print(f'{entry})\t{menu_items[entry]}')
+
+    return input_integer('Please select: ', minvalue, maxvalue)
+
 def delimeter(message, creturn=False):
     '''Common delimeter to bracket output'''
     if creturn:

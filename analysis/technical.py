@@ -83,10 +83,7 @@ class TechnicalAnalysis():
 if __name__ == '__main__':
     start = datetime.datetime.today() - datetime.timedelta(days=365)
     ta = TechnicalAnalysis('AAPL', start)
-    # data = ta.calc_macd()
-    # data = ta.calc_ema(20)
     data = ta.calc_bb()
-    # data = ta.calc_vwap()
 
-    print(data.iloc[-1]['High'])
+    # print(data.iloc[-1]['High'])
     # print(data)

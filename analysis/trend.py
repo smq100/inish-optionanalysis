@@ -214,10 +214,10 @@ class SupportResistance:
         plt.grid()
         plt.title(f'{self.ticker} History with Support & Resistance Lines')
 
-        if self.price > 30.0:
-            ax.yaxis.set_major_formatter('${x:.0f}')
-        else:
+        if self.price < 30.0:
             ax.yaxis.set_major_formatter('${x:.2f}')
+        else:
+            ax.yaxis.set_major_formatter('${x:.0f}')
 
         # High & Lows
         dates = []
@@ -345,7 +345,7 @@ class SupportResistance:
             dates += [date.date().strftime('%Y-%m-%d')]
             values += [self.slope_res * self.points + self.intercept_res]
 
-            ax.plot(dates, values, '-g', label='Avg Res', linewidth=2.0)
+            ax.plot(dates, values, '-', color='darkgreen', label='Avg Res', linewidth=2.0)
 
             index = 0
             date = self.history.iloc[index].name
@@ -356,7 +356,7 @@ class SupportResistance:
             dates += [date.date().strftime('%Y-%m-%d')]
             values += [self.slope_sup * self.points + self.intercept_sup]
 
-            ax.plot(dates, values, '-r', label='Avg Sup', linewidth=2.0)
+            ax.plot(dates, values, '-', color='darkred', label='Avg Sup', linewidth=2.0)
 
         if legend:
             plt.legend()
@@ -372,18 +372,10 @@ class SupportResistance:
 
 
 if __name__ == '__main__':
-    import logging
-    u.get_logger(logging.INFO)
+    # import logging
+    # u.get_logger(logging.INFO)
 
     start = datetime.datetime.today() - datetime.timedelta(days=1000)
     sr = SupportResistance('IBM', start=start)
     sr.calculate()
-    sr.plot()
-
-''' Plot styles
-'Solarize_Light2', '_classic_test_patch', 'bmh', 'classic', 'dark_background', 'fast',
-'fivethirtyeight', 'ggplot', 'grayscale', 'seaborn', 'seaborn-bright', 'seaborn-colorblind',
-'seaborn-dark', 'seaborn-dark-palette', 'seaborn-darkgrid', 'seaborn-deep', 'seaborn-muted',
-'seaborn-notebook', 'seaborn-paper', 'seaborn-pastel', 'seaborn-poster', 'seaborn-talk',
-'seaborn-ticks', 'seaborn-white', 'seaborn-whitegrid', 'tableau-colorblind10'
-'''
+    sr.plot(legend=True, trendlines=True)

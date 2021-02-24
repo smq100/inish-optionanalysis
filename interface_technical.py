@@ -10,7 +10,6 @@ from utils import utils as u
 
 logger = u.get_logger(logging.WARNING)
 
-
 class Interface():
     def __init__(self, ticker, script=None):
         ticker = ticker.upper()
@@ -41,7 +40,7 @@ class Interface():
                 '0': 'Exit'
             }
 
-            selection = self._menu(menu_items, 'Select Operation', 0, 2)
+            selection = u.menu(menu_items, 'Select Operation', 0, 2)
 
             if selection == 1:
                 self.select_symbol()
@@ -77,7 +76,7 @@ class Interface():
         }
 
         while True:
-            selection = self._menu(menu_items, 'Select Indicator', 0, 6)
+            selection = u.menu(menu_items, 'Select Indicator', 0, 6)
 
             if selection == 1:
                 self.get_trend_parameters()
@@ -130,7 +129,7 @@ class Interface():
                 '0': 'Cancel'
             }
 
-            selection = self._menu(menu_items, 'Select option', 0, 4)
+            selection = u.menu(menu_items, 'Select option', 0, 4)
 
             if selection == 1:
                 days = u.input_integer('Enter number of days (0=max): ', 0, 9999)
@@ -160,20 +159,6 @@ class Interface():
 
             if selection == 0:
                 break
-
-    def _menu(self, menu_items, header, minvalue, maxvalue):
-        print(f'\n{header}')
-        print('-----------------------------')
-
-        option = menu_items.keys()
-        for entry in option:
-            print(f'{entry})\t{menu_items[entry]}')
-
-        return u.input_integer('Please select: ', minvalue, maxvalue)
-
-    def _validate(self):
-        '''TODO'''
-        return True
 
 
 if __name__ == '__main__':
