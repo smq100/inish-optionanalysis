@@ -15,7 +15,7 @@ from utils import utils as u
 MAX_ROWS = 50
 MAX_COLS = 18
 
-logger = u.get_logger(logging.WARNING)
+logger = u.get_logger(logging.INFO)
 
 
 class Interface():

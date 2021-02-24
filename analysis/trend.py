@@ -84,7 +84,7 @@ class SupportResistance:
     def __str__(self):
         return f'Support and resistance analysis for {self.ticker} (${self.price:.2f})'
 
-    def calculate(self, best=5):
+    def calculate(self):
         if self.history is not None:
             self.lines = []
 
@@ -165,13 +165,6 @@ class SupportResistance:
                 line.score /= max_
                 line.score *= 10.0
 
-            # Sort and Prune
-            sup = sorted(self.get_support(), reverse=True, key=lambda l: l.score)
-            sup = sup[:best]
-            res = sorted(self.get_resistance(), reverse=True, key=lambda l: l.score)
-            res = res[:best]
-            self.lines = res + sup
-
             # Log the line details
             for line in self.get_resistance():
                 line = f'{__name__}: Res:{line}'
@@ -181,38 +174,38 @@ class SupportResistance:
                 line = f'{__name__}: Sup:{line}'
                 logger.debug(line)
 
-    def get_resistance(self):
-        resistance = []
+    def get_resistance(self, best=5):
+        if best < 1:
+            raise AssertionError("'best' value must be >= 1")
+
+        res = []
         for line in self.lines:
             if not line.support:
-                resistance += [line]
+                res += [line]
 
-        return resistance
+        resistance = sorted(res, reverse=True, key=lambda l: l.score)
+        return resistance[:best]
 
-    def get_support(self):
-        support = []
+    def get_support(self, best=5):
+        if best < 1:
+            raise AssertionError("'best' value must be >= 1")
+
+        sup = []
         for line in self.lines:
             if line.support:
-                support += [line]
+                sup += [line]
 
-        return support
+        support = sorted(sup, reverse=True, key=lambda l: l.score)
+        return support[:best]
 
-    def get_endpoints(self):
-        support = []
-        resistance = []
-        for line in self.lines:
-            if line.support:
-                support += [line.end_point]
-            else:
-                resistance += [line.end_point]
+    def plot(self, best=5, show=True, filename='', legend=True, srlines=False, trendlines=True):
+        if best < 1:
+            raise AssertionError("'best' value must be >= 1")
 
-        return support, resistance
-
-    def plot(self, show=True, filename='', legend=False, srlines=False, trendlines=False):
         fig, ax = plt.subplots()
         plt.style.use('seaborn')
         plt.grid()
-        plt.title(f'{self.ticker} History with Support & Resistance Lines')
+        plt.title(f'{self.ticker} History with Support & Resistance')
 
         if self.price < 30.0:
             ax.yaxis.set_major_formatter('${x:.2f}')
@@ -228,7 +221,7 @@ class SupportResistance:
 
         plt.xticks(range(0, length+1, int(length/12)))
         plt.xticks(rotation=45)
-        plt.subplots_adjust(bottom=0.20)
+        plt.subplots_adjust(bottom=0.15)
 
         ax.plot(dates, self.history.High, '-g', label='High Price', linewidth=0.5)
         ax.plot(dates, self.history.Low, '-r', label='Low Price', linewidth=0.5)
@@ -236,7 +229,7 @@ class SupportResistance:
         # Pivot points
         dates = []
         values = []
-        for line in self.get_resistance():
+        for line in self.get_resistance(best=best):
             for point in line.points:
                 index = point['index']
                 date = self.history.iloc[index].name
@@ -246,7 +239,7 @@ class SupportResistance:
 
         dates = []
         values = []
-        for line in self.get_support():
+        for line in self.get_support(best=best):
             for point in line.points:
                 index = point['index']
                 date = self.history.iloc[index].name
@@ -257,7 +250,7 @@ class SupportResistance:
         # Trend lines
         dates = []
         values = []
-        for line in self.get_resistance():
+        for line in self.get_resistance(best=best):
             index = line.points[0]['index']
             date = self.history.iloc[index].name
             dates = [date.date().strftime('%Y-%m-%d')]
@@ -273,7 +266,7 @@ class SupportResistance:
 
         dates = []
         values = []
-        for line in self.get_support():
+        for line in self.get_support(best=best):
             index = line.points[0]['index']
             date = self.history.iloc[index].name
             dates = [date.date().strftime('%Y-%m-%d')]
@@ -290,7 +283,7 @@ class SupportResistance:
         # Trend line extensions
         dates = []
         values = []
-        for line in self.get_resistance():
+        for line in self.get_resistance(best=best):
             index = line.points[-1]['index']
             date = self.history.iloc[index].name
             dates = [date.date().strftime('%Y-%m-%d')]
@@ -306,7 +299,7 @@ class SupportResistance:
 
         dates = []
         values = []
-        for line in self.get_support():
+        for line in self.get_support(best=best):
             index = line.points[-1]['index']
             date = self.history.iloc[index].name
             dates = [date.date().strftime('%Y-%m-%d')]
@@ -325,12 +318,12 @@ class SupportResistance:
 
         # Current support and resistance levels
         if srlines:
-            for line in self.get_support():
+            for line in self.get_support(best=best):
                 width = line.score / 5.0
                 if width < 0.5: width = 0.5
                 plt.axhline(y=line.end_point, color='r', linestyle='-', linewidth=width)
 
-            for line in self.get_resistance():
+            for line in self.get_resistance(best=best):
                 width = line.score / 5.0
                 if width < 0.5: width = 0.5
                 plt.axhline(y=line.end_point, color='g', linestyle='-', linewidth=width)
