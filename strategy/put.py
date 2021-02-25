@@ -2,7 +2,7 @@ import datetime
 
 import pandas as pd
 
-from strategy.strategy import Strategy
+from strategy.strategy import Strategy, STRATEGIES
 from analysis.strategy import StrategyAnalysis
 from utils import utils as u
 
@@ -13,7 +13,7 @@ class Put(Strategy):
         product = 'put'
         super().__init__(ticker, product, direction)
 
-        self.name = 'put'
+        self.name = STRATEGIES[1]
 
         # Default to a week from Friday as expiry
         d = datetime.datetime.today()

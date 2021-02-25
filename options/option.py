@@ -4,7 +4,11 @@ import re
 from pricing.fetcher import validate_ticker, get_company
 from utils import utils as u
 
+PRODUCTS = ('call', 'put')
+DIRECTIONS = ('long', 'short')
+
 logger = u.get_logger()
+
 
 class Option():
     def __init__(self, ticker, product, strike, expiry):

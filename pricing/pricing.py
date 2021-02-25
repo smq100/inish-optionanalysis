@@ -17,6 +17,9 @@ from pandas.tseries.offsets import BDay
 from .fetcher import validate_ticker, get_ranged_data, get_treasury_rate
 from utils import utils as u
 
+
+METHODS = ('black-scholes', 'monte-carlo')
+
 logger = u.get_logger()
 
 
@@ -31,7 +34,7 @@ class Pricing(ABC):
         buy underlying asset (for call option) or sell underlying asset (for put option).
         :param dividend: <float> If the underlying asset is paying dividend to stock-holders.
         '''
-
+        self.name = ''
         self.ticker = ticker
         self.expiry = expiry
         self.strike_price = strike

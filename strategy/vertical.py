@@ -2,7 +2,7 @@ import datetime
 
 import pandas as pd
 
-from strategy.strategy import Strategy
+from strategy.strategy import Strategy, STRATEGIES
 from analysis.strategy import StrategyAnalysis
 from utils import utils as u
 
@@ -12,7 +12,7 @@ class Vertical(Strategy):
     def __init__(self, ticker, product, direction):
         super().__init__(ticker, product, direction)
 
-        self.name = 'vertical'
+        self.name = STRATEGIES[3]
 
         # Default to a week from Friday as expiry
         d = datetime.datetime.today()

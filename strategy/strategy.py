@@ -7,18 +7,27 @@ import math
 import pandas as pd
 
 from .symbol import Symbol
-from options.option import Option
+from options.option import PRODUCTS, DIRECTIONS, Option
+from pricing import METHODS
 from pricing.blackscholes import BlackScholes
 from pricing.montecarlo import MonteCarlo
 from analysis.strategy import StrategyAnalysis
 from utils import utils as u
 
+
+IV_CUTOFF = 0.020
+STRATEGIES = ('call', 'put', 'vertical')
+
 logger = u.get_logger()
 
-IV_CUTOFF = 0.02
 
 class Strategy(ABC):
     def __init__(self, ticker, product, direction):
+        if product not in PRODUCTS:
+            raise AssertionError('Invalid product')
+        if direction not in DIRECTIONS:
+            raise AssertionError('Invalid direction')
+
         self.name = ''
         self.ticker = ticker
         self.product = product
@@ -32,7 +41,6 @@ class Strategy(ABC):
         return 'Strategy abstract base class'
 
     def calculate(self):
-        # Calculate all legs
         for leg in self.legs:
             leg.calculate()
 
@@ -69,14 +77,11 @@ class Strategy(ABC):
         return spot
 
     def set_pricing_method(self, method):
-        if method == 'black-scholes':
-            for leg in self.legs:
-                leg.pricing_method = method
-        elif method == 'monte-carlo':
+        if method in METHODS:
             for leg in self.legs:
                 leg.pricing_method = method
         else:
-            raise ValueError('Invalid pricing model')
+            raise AssertionError('Invalid pricing method')
 
     @abc.abstractmethod
     def generate_profit_table(self):
@@ -114,6 +119,11 @@ class Strategy(ABC):
 
 class Leg:
     def __init__(self, strategy, ticker, quantity, product, direction, strike, expiry):
+        if product not in PRODUCTS:
+            raise AssertionError('Invalid product')
+        if direction not in DIRECTIONS:
+            raise AssertionError('Invalid direction')
+
         self.symbol = Symbol(ticker)
         self.option = Option(ticker, product, strike, expiry)
         self.strategy = strategy
