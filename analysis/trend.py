@@ -19,6 +19,7 @@ logger = u.get_logger()
 class Line:
     def __init__(self):
         self.support = False
+        self.rank = 0
         self.score = 0.0
         self.end_point = 0.0
         self.points = []
@@ -37,25 +38,27 @@ class Line:
         for point in self.points:
             dates += point['date']
 
-        output = f'score={self.score:.4f}, '\
+        output = f'score={self.score:.2f}, '\
+                 f'rank={self.rank} '\
+                 f'points={len(dates)} '\
                  f'width={self.width} '\
                  f'prox={self.proximity:.1f} '\
                  f'age={self.age} '\
                  f'end={self.end_point:.2f} '\
                  f'ssr={self.ssr:.1e}, '\
-                 f'area={self.area_avg:.3f}, '\
-                 f'dates={dates}'
+                 f'area={self.area_avg:.3f}'
 
         return output
 
     def calculate_score(self, price):
         self.proximity = abs(self.end_point - price)
-        self.score = ((self.area_avg * self.width * len(self.points)) / (self.proximity))
+        self.score = (self.width * len(self.points)) / (self.proximity * self.rank)
 
 class SupportResistance:
     def __init__(self, ticker, start=None):
         if (validate_ticker(ticker)):
             self.ticker = ticker.upper()
+            self.start = start
             self.history = None
             self.price = 0.0
             self.lines = []
@@ -63,21 +66,8 @@ class SupportResistance:
             self.intercept_sup = 0.0
             self.slope_res = 0.0
             self.intercept_res = 0.0
-
             self.extmethod = trendln.METHOD_NUMDIFF # METHOD_NAIVE, METHOD_NAIVECONSEC, METHOD_NUMDIFF*
             self.method = trendln.METHOD_NSQUREDLOGN # METHOD_NCUBED, METHOD_NSQUREDLOGN*, METHOD_HOUGHPOINTS, METHOD_HOUGHLINES, METHOD_PROBHOUGH
-
-            if start is None:
-                self.history = yf.Ticker(ticker).history(period="max", rounding=True)
-            else:
-                self.history = yf.Ticker(ticker).history(start=f'{start:%Y-%m-%d}', rounding=True)
-
-            self.points = len(self.history)
-            self.price = get_current_price(ticker)
-
-            logger.debug(f'{__name__}: Initialized')
-            logger.info(f'{__name__}: Initialized SupportResitance for {ticker} (${self.price:.2f})')
-            logger.info(f'{__name__}: {self.points} points from {self.history.iloc[0].name} to {self.history.iloc[-1].name}')
         else:
             logger.error('{__name__}: Error initializing {__class__}')
 
@@ -85,94 +75,115 @@ class SupportResistance:
         return f'Support and resistance analysis for {self.ticker} (${self.price:.2f})'
 
     def calculate(self):
-        if self.history is not None:
-            self.lines = []
+        self.lines = []
 
-            # Calculate support and resistance lines
-            maxs = trendln.calc_support_resistance((None, self.history.High), extmethod=self.extmethod, method=self.method, accuracy=2) #resistance
-            mins = trendln.calc_support_resistance((self.history.Low, None), extmethod=self.extmethod, method=self.method, accuracy=2)  #support
+        if self.start is None:
+            self.history = yf.Ticker(self.ticker).history(period="max", rounding=True)
+        else:
+            self.history = yf.Ticker(self.ticker).history(start=f'{start:%Y-%m-%d}', rounding=True)
 
-            maximaIdxs, pmax, maxtrend, maxwindows = maxs
-            minimaIdxs, pmin, mintrend, minwindows = mins
+        self.points = len(self.history)
+        self.price = get_current_price(self.ticker)
 
-            self.slope_res = pmax[0]
-            self.intercept_res = pmax[1]
+        logger.info(f'{__name__}: {self.points} pivot points identified from {self.history.iloc[0].name} to {self.history.iloc[-1].name}')
 
-            for line in maxtrend:
-                newline = Line()
-                newline.support = False
-                newline.score = 0.0
-                newline.end_point = 0.0
-                newline.points = []
-                newline.slope = line[1][0]
-                newline.intercept = line[1][1]
-                newline.ssr = line[1][2]
-                newline.slope_err = line[1][3]
-                newline.intercept_err = line[1][4]
-                newline.area_avg = line[1][5]
+        # Calculate support and resistance lines
+        maxs = trendln.calc_support_resistance((None, self.history.High), extmethod=self.extmethod, method=self.method, accuracy=2) #resistance
+        mins = trendln.calc_support_resistance((self.history.Low, None), extmethod=self.extmethod, method=self.method, accuracy=2)  #support
 
-                for point in line[0]:
-                    newline.points += [{'index':point, 'date':''}]
-                newline.width = newline.points[-1]['index'] - newline.points[0]['index']
-                newline.age = self.points - newline.points[-1]['index']
+        maximaIdxs, pmax, maxtrend, maxwindows = maxs
+        minimaIdxs, pmin, mintrend, minwindows = mins
 
-                self.lines += [newline]
+        self.slope_res = pmax[0]
+        self.intercept_res = pmax[1]
 
-            self.slope_sup = pmin[0]
-            self.intercept_sup = pmin[1]
+        for line in maxtrend:
+            newline = Line()
+            newline.support = False
+            newline.score = 0.0
+            newline.end_point = 0.0
+            newline.points = []
+            newline.slope = line[1][0]
+            newline.intercept = line[1][1]
+            newline.ssr = line[1][2]
+            newline.slope_err = line[1][3]
+            newline.intercept_err = line[1][4]
+            newline.area_avg = line[1][5]
 
-            for line in mintrend:
-                newline = Line()
-                newline.support = True
-                newline.score = 0.0
-                newline.end_point = 0.0
-                newline.points = []
-                newline.slope = line[1][0]
-                newline.intercept = line[1][1]
-                newline.ssr = line[1][2]
-                newline.slope_err = line[1][3]
-                newline.intercept_err = line[1][4]
-                newline.area_avg = line[1][5]
+            for point in line[0]:
+                newline.points += [{'index':point, 'date':''}]
+            newline.width = newline.points[-1]['index'] - newline.points[0]['index']
+            newline.age = self.points - newline.points[-1]['index']
 
-                for point in line[0]:
-                    newline.points += [{'index':point, 'date':''}]
-                newline.width = newline.points[-1]['index'] - newline.points[0]['index']
-                newline.age = self.points - newline.points[-1]['index']
+            self.lines += [newline]
 
-                self.lines += [newline]
+        self.slope_sup = pmin[0]
+        self.intercept_sup = pmin[1]
 
-            logger.info(f'{__name__}: {len(self.get_resistance())} total resistance lines')
-            logger.info(f'{__name__}: {len(self.get_support())} total support lines')
+        for line in mintrend:
+            newline = Line()
+            newline.support = True
+            newline.score = 0.0
+            newline.end_point = 0.0
+            newline.points = []
+            newline.slope = line[1][0]
+            newline.intercept = line[1][1]
+            newline.ssr = line[1][2]
+            newline.slope_err = line[1][3]
+            newline.intercept_err = line[1][4]
+            newline.area_avg = line[1][5]
 
-            # Calculate dates of pivot points
-            for line in self.lines:
-                for point in line.points:
-                    date = self.history.iloc[point['index']].name
-                    point['date'] = [date.date().strftime('%Y-%m-%d')]
+            for point in line[0]:
+                newline.points += [{'index':point, 'date':''}]
+            newline.width = newline.points[-1]['index'] - newline.points[0]['index']
+            newline.age = self.points - newline.points[-1]['index']
 
-            # Calculate end point extension
-            for line in self.lines:
-                line.end_point = (self.points * line.slope) + line.intercept
+            self.lines += [newline]
 
-            # Calculate scores and normalize to a max of 10.0
-            max_ = 0.0
-            for line in self.lines:
-                line.calculate_score(self.price)
-                if line.score > max_:
-                    max_ = line.score
+        # Calculate dates of pivot points
+        for line in self.lines:
+            for point in line.points:
+                date = self.history.iloc[point['index']].name
+                point['date'] = [date.date().strftime('%Y-%m-%d')]
 
-            for line in self.lines:
-                line.score /= max_
-                line.score *= 10.0
+        # Calculate end point extension (y = mx + b)
+        for line in self.lines:
+            line.end_point = (self.points * line.slope) + line.intercept
 
-            # Log the line details
-            for line in self.get_resistance():
-                line = f'{__name__}: Res:{line}'
-                logger.debug(line)
+        # Sort lines based on mathematical fit (ssr) and set the line ranking
+        self.lines = sorted(self.lines, key=lambda l: l.ssr)
+        for index, line in enumerate(self.lines):
+            line.rank = index + 1
 
-            for line in self.get_support():
-                line = f'{__name__}: Sup:{line}'
-                logger.debug(line)
+        # Calculate scores
+        max_ = 0.0
+        for line in self.lines:
+            line.calculate_score(self.price)
+            if line.score > max_:
+                max_ = line.score
+
+        # Normalize scores to a max of 10.0
+        for line in self.lines:
+            line.score /= max_
+            line.score *= 10.0
+
+        # Log the line details
+        countr = counts = 0
+        for line in self.lines:
+            if line.support:
+                counts += 1
+            else:
+                countr += 1
+
+        logger.info(f'{__name__}: {countr} resistance lines identified')
+        for line in self.get_resistance():
+            line = f'{__name__}: Res:{line}'
+            logger.debug(line)
+
+        logger.info(f'{__name__}: {counts} support lines identified')
+        for line in self.get_support():
+            line = f'{__name__}: Sup:{line}'
+            logger.debug(line)
 
     def get_resistance(self, best=5):
         if best < 1:
@@ -184,6 +195,7 @@ class SupportResistance:
                 res += [line]
 
         resistance = sorted(res, reverse=True, key=lambda l: l.score)
+
         return resistance[:best]
 
     def get_support(self, best=5):
@@ -196,6 +208,7 @@ class SupportResistance:
                 sup += [line]
 
         support = sorted(sup, reverse=True, key=lambda l: l.score)
+
         return support[:best]
 
     def plot(self, best=5, show=True, filename='', legend=True, srlines=False, trendlines=True):
@@ -365,10 +378,15 @@ class SupportResistance:
 
 
 if __name__ == '__main__':
-    # import logging
-    # u.get_logger(logging.INFO)
+    import sys
+    import logging
+    u.get_logger(logging.DEBUG)
 
     start = datetime.datetime.today() - datetime.timedelta(days=1000)
-    sr = SupportResistance('IBM', start=start)
+    if len(sys.argv) > 1:
+        sr = SupportResistance(sys.argv[1], start=start)
+    else:
+        sr = SupportResistance('IBM', start=start)
+
     sr.calculate()
-    sr.plot(legend=True, trendlines=True)
+    sr.plot()

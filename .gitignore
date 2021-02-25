@@ -6,6 +6,7 @@ venv
 *._*
 .ropeproject
 .ipynb_checkpoints
+.pylintrc
 
 # Other file types
 *.code-workspace
