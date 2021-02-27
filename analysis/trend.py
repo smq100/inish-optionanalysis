@@ -19,8 +19,7 @@ logger = u.get_logger()
 class Line:
     def __init__(self):
         self.support = False
-        self.score = 0.0
-        self.rank = 0
+        self.fit = 0
         self.end_point = 0.0
         self.points = []
         self.slope = 0.0
@@ -34,20 +33,20 @@ class Line:
         self.proximity = 0.0
 
         class Score:
-            self.rank = 0.0
+            self.fit = 0.0
             self.width = 0.0
             self.proximity = 0.0
             self.points = 0.0
 
-        self.normalized = Score()
+        self.score = Score()
 
     def get_score(self):
         score = (
-            (self.normalized.rank *      0.20) +
-            (self.normalized.width *     0.20) +
-            (self.normalized.proximity * 0.20) +
-            (self.normalized.points *    0.20) +
-            (self.normalized.age *       0.20))
+            (self.score.fit *       0.20) +
+            (self.score.width *     0.20) +
+            (self.score.proximity * 0.20) +
+            (self.score.points *    0.20) +
+            (self.score.age *       0.20))
 
         return score
 
@@ -57,23 +56,23 @@ class Line:
             dates += point['date']
 
         output = f'score={self.get_score():.2f}, '\
-                 f'rank={self.rank:4n} '\
-                 f'*rank={self.normalized.rank:5.2f} '\
-                 f'width={self.width:4n} '\
-                 f'*width={self.normalized.width:5.2f} '\
-                 f'prox={self.proximity:.1f} '\
-                 f'*prox={self.normalized.proximity:5.1f} '\
-                 f'points={len(dates)} '\
-                 f'*points={self.normalized.points:5.2f} '\
+                 f'fit={self.fit:4n} '\
+                 f'*fit={self.score.fit:5.2f} '\
+                 f'wid={self.width:4n} '\
+                 f'*wid={self.score.width:5.2f} '\
+                 f'prox={self.proximity:5.1f} '\
+                 f'*prox={self.score.proximity:5.2f} '\
+                 f'pnts={len(dates)} '\
+                 f'*pnts={self.score.points:5.2f} '\
                  f'age={self.age:4n} '\
-                 f'*age={self.normalized.age:5.2f}'
+                 f'*age={self.score.age:5.2f}'
 
         return output
 
 class SupportResistance:
     def __init__(self, ticker, best=5, start=None):
         if best < 1:
-            raise AssertionError("'best' value must be >= 1")
+            raise AssertionError("'best' value must be > 0")
 
         if (validate_ticker(ticker)):
             self.ticker = ticker.upper()
@@ -120,7 +119,6 @@ class SupportResistance:
         for line in maxtrend:
             newline = Line()
             newline.support = False
-            newline.score = 0.0
             newline.end_point = 0.0
             newline.points = []
             newline.slope = line[1][0]
@@ -143,7 +141,6 @@ class SupportResistance:
         for line in mintrend:
             newline = Line()
             newline.support = True
-            newline.score = 0.0
             newline.end_point = 0.0
             newline.points = []
             newline.slope = line[1][0]
@@ -173,25 +170,25 @@ class SupportResistance:
         # Sort lines based on mathematical fit (ssr) and set the line ranking
         self.lines = sorted(self.lines, key=lambda l: l.ssr)
         for index, line in enumerate(self.lines):
-            line.rank = index + 1
+            line.fit = index + 1
 
         # Normalize scoring criteria to 10.0 scale
         #    Rank
         max_ = 0.0
         for line in self.lines:
-            if line.rank > max_: max_ = line.rank
+            if line.fit > max_: max_ = line.fit
         for line in self.lines:
-            line.normalized.rank = line.rank / max_
-            line.normalized.rank *= 10.0
-            line.normalized.rank = 10.0 - line.normalized.rank # Lower is better
+            line.score.fit = line.fit / max_
+            line.score.fit *= 10.0
+            line.score.fit = 10.0 - line.score.fit # Lower is better
 
         #    Width
         max_ = 0.0
         for line in self.lines:
             if line.width > max_: max_ = line.width
         for line in self.lines:
-            line.normalized.width = line.width / max_
-            line.normalized.width *= 10.0
+            line.score.width = line.width / max_
+            line.score.width *= 10.0
 
         #    Proximity
         max_ = 0.0
@@ -199,26 +196,26 @@ class SupportResistance:
             line.proximity = abs(line.end_point - self.price)
             if line.proximity > max_: max_ = line.proximity
         for line in self.lines:
-            line.normalized.proximity = line.proximity / max_
-            line.normalized.proximity *= 10.0
-            line.normalized.proximity = 10.0 - line.normalized.proximity # Lower is better
+            line.score.proximity = line.proximity / max_
+            line.score.proximity *= 10.0
+            line.score.proximity = 10.0 - line.score.proximity # Lower is better
 
         #    Points
         max_ = 0.0
         for line in self.lines:
             if len(line.points) > max_: max_ = len(line.points)
         for line in self.lines:
-            line.normalized.points = len(line.points) / max_
-            line.normalized.points *= 10.0
+            line.score.points = len(line.points) / max_
+            line.score.points *= 10.0
 
         #    Age
         max_ = 0.0
         for line in self.lines:
             if line.age > max_: max_ = line.age
         for line in self.lines:
-            line.normalized.age = line.age / max_
-            line.normalized.age *= 10.0
-            line.normalized.age = 10.0 - line.normalized.age # Lower is better
+            line.score.age = line.age / max_
+            line.score.age *= 10.0
+            line.score.age = 10.0 - line.score.age # Lower is better
 
         # Sort lines based on total score
         self.lines = sorted(self.lines, reverse=True, key=lambda l: l.get_score())
@@ -266,6 +263,7 @@ class SupportResistance:
         plt.style.use('seaborn')
         plt.grid()
         plt.title(f'{self.ticker} History with Support & Resistance')
+        width = 1.0
 
         if self.price < 30.0:
             ax.yaxis.set_major_formatter('${x:.2f}')
@@ -283,8 +281,8 @@ class SupportResistance:
         plt.xticks(rotation=45)
         plt.subplots_adjust(bottom=0.15)
 
-        ax.plot(dates, self.history.High, '-g', label='High Price', linewidth=0.5)
-        ax.plot(dates, self.history.Low, '-r', label='Low Price', linewidth=0.5)
+        ax.plot(dates, self.history.High, '-g', linewidth=0.5)
+        ax.plot(dates, self.history.Low, '-r', linewidth=0.5)
 
         # Pivot points
         dates = []
@@ -320,8 +318,6 @@ class SupportResistance:
             dates += [date.date().strftime('%Y-%m-%d')]
             values += [self.history.iloc[index].High]
 
-            width = line.score / 5.0
-            if width < 0.5: width = 0.5
             ax.plot(dates, values, '-g', linewidth=width)
 
         dates = []
@@ -336,8 +332,6 @@ class SupportResistance:
             dates += [date.date().strftime('%Y-%m-%d')]
             values += [self.history.iloc[index].Low]
 
-            width = line.score / 5.0
-            if width < 0.5: width = 0.5
             ax.plot(dates, values, '-r', linewidth=width)
 
         # Trend line extensions
@@ -353,8 +347,6 @@ class SupportResistance:
             dates += [date.date().strftime('%Y-%m-%d')]
             values += [line.end_point]
 
-            width = line.score / 5.0
-            if width < 0.5: width = 0.5
             ax.plot(dates, values, ':g', linewidth=width)
 
         dates = []
@@ -369,8 +361,6 @@ class SupportResistance:
             dates += [date.date().strftime('%Y-%m-%d')]
             values += [line.end_point]
 
-            width = line.score / 5.0
-            if width < 0.5: width = 0.5
             ax.plot(dates, values, ':r', linewidth=width)
 
         # Price line
@@ -379,13 +369,9 @@ class SupportResistance:
         # Current support and resistance levels
         if srlines:
             for line in self.get_support():
-                width = line.score / 5.0
-                if width < 0.5: width = 0.5
                 plt.axhline(y=line.end_point, color='r', linestyle='-', linewidth=width)
 
             for line in self.get_resistance():
-                width = line.score / 5.0
-                if width < 0.5: width = 0.5
                 plt.axhline(y=line.end_point, color='g', linestyle='-', linewidth=width)
 
         if trendlines:
