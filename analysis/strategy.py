@@ -1,5 +1,3 @@
-import math
-
 import pandas as pd
 from utils import utils as u
 
@@ -38,22 +36,3 @@ class StrategyAnalysis:
             output = 'Not yet analyzed'
 
         return output
-
-    def compress_table(self, rows, cols):
-        if self.table is not None:
-            table = self.table
-            srows, scols = table.shape
-
-            if cols > 0 and cols < scols:
-                # thin out cols
-                step = int(math.ceil(scols/cols))
-                end = table[table.columns[-2::]]        # Save the last two cols
-                table = table[table.columns[:-2:step]]  # Thin the table (less the last two cols)
-                table = pd.concat([table, end], axis=1) # Add back the last two cols
-
-            if rows > 0 and rows < srows:
-                # Thin out rows
-                step = int(math.ceil(srows/rows))
-                table = table.iloc[::step]
-
-        return table

@@ -1,6 +1,8 @@
 import logging
+import math
 
 import numpy as np
+import pandas as pd
 
 def get_logger(level=None):
     logger = logging.getLogger('analysis')
@@ -19,6 +21,32 @@ def get_logger(level=None):
         logger.addHandler(handler)
 
     return logger
+
+def compress_table(table, rows, cols):
+    if not isinstance(table, pd.DataFrame):
+        raise AssertionError("'table' must be a Pandas DataFrame")
+    else:
+        srows, scols = table.shape
+
+        if cols > 0 and cols < scols:
+            # thin out cols
+            step = int(math.ceil(scols/cols))
+            end = table[table.columns[-2::]]        # Save the last two cols
+            table = table[table.columns[:-2:step]]  # Thin the table (less the last two cols)
+            table = pd.concat([table, end], axis=1) # Add back the last two cols
+
+        if rows > 0 and rows < srows:
+            # Thin out rows
+            step = int(math.ceil(srows/rows))
+            table = table.iloc[::step]
+
+    return table
+
+def mround(n, precision):
+    val = round(n / precision) * precision
+    if val < 0.01: val = 0.01
+
+    return val
 
 def menu(menu_items, header, minvalue, maxvalue):
     print(f'\n{header}')
@@ -43,12 +71,6 @@ def delimeter(message, creturn=False):
         output += '*****'
 
     return output
-
-def mround(n, precision):
-    val = round(n / precision) * precision
-    if val < 0.01: val = 0.01
-
-    return val
 
 def input_integer(message, min_, max_):
     val = min_ - 1

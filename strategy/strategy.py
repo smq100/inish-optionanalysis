@@ -8,7 +8,7 @@ import pandas as pd
 
 from .symbol import Symbol
 from options.option import PRODUCTS, DIRECTIONS, Option
-from pricing import METHODS
+from pricing.pricing import METHODS
 from pricing.blackscholes import BlackScholes
 from pricing.montecarlo import MonteCarlo
 from analysis.strategy import StrategyAnalysis
@@ -342,29 +342,10 @@ class Leg:
 
                 # Finally, create the Pandas dataframe then reverse the row order
                 col_index[-1] = 'Exp'
-                dframe = pd.DataFrame(
-                    table, index=row_index, columns=col_index)
+                dframe = pd.DataFrame(table, index=row_index, columns=col_index)
                 dframe = dframe.iloc[::-1]
 
         return dframe
-
-    def compress_table(self, rows, cols):
-        table = self.table
-        srows, scols = table.shape
-
-        if cols > 0 and cols < scols:
-            # thin out cols
-            step = int(math.ceil(scols/cols))
-            end = table[table.columns[-2::]]        # Save the last two rows
-            table = table[table.columns[:-2:step]]  # Thin the table (less the last two rows: Last day and exp)
-            table = pd.concat([table, end], axis=1) # Add back the last two rows
-
-        if rows > 0 and rows < srows:
-            # Thin out rows
-            step = int(math.ceil(srows/rows))
-            table = table.iloc[::step]
-
-        return table
 
     def _calc_date_step(self):
         cols = int(math.ceil(self.option.time_to_maturity * 365))

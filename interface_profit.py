@@ -15,7 +15,7 @@ from utils import utils as u
 MAX_ROWS = 50
 MAX_COLS = 18
 
-logger = u.get_logger(logging.INFO)
+logger = u.get_logger()
 
 
 class Interface():
@@ -163,7 +163,8 @@ class Interface():
 
                 # We need to compress the table
                 if rows > 0 or cols > 0:
-                    table = self.strategy.legs[leg].compress_table(rows, cols)
+                    table = self.strategy.legs[leg].table
+                    table = u.compress_table(table, rows, cols)
 
                 print(table)
             else:
@@ -190,7 +191,8 @@ class Interface():
 
             # See if we need to compress the table
             if rows > 0 or cols > 0:
-                table = self.strategy.analysis.compress_table(rows, cols)
+                table = self.strategy.analysis.table
+                table = u.compress_table(table, rows, cols)
 
             print(table)
             print(self.strategy.analysis)

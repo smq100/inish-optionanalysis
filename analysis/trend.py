@@ -45,8 +45,8 @@ class Line:
             (self.score.fit *       0.20) +
             (self.score.width *     0.20) +
             (self.score.proximity * 0.20) +
-            (self.score.points *    0.20) +
-            (self.score.age *       0.20))
+            (self.score.points *    0.30) +
+            (self.score.age *       0.10))
 
         return score
 
@@ -369,6 +369,7 @@ class SupportResistance:
             ax1.plot(dates, values, ':r', linewidth=width)
 
         # End points
+        text = []
         dates = []
         values = []
         for index, line in enumerate(self.get_resistance()):
@@ -377,7 +378,7 @@ class SupportResistance:
                 date = self.history.iloc[-1].name
                 dates += [date.date().strftime('%Y-%m-%d')]
                 values += [ep]
-            ax1.text(self.points+5, line.end_point, f'{index+1}:{line.end_point:.2f}', color='g', va='center', size='x-small')
+                text += [{'text':f'{line.end_point:.2f}:{index+1}', 'value':line.end_point, 'color':'green'}]
         ax1.plot(dates, values, '.g', marker='.')
 
         dates = []
@@ -388,12 +389,29 @@ class SupportResistance:
                 date = self.history.iloc[-1].name
                 dates += [date.date().strftime('%Y-%m-%d')]
                 values += [ep]
-            ax1.text(self.points+5, line.end_point, f'{index+1}:{line.end_point:.2f}', color='r', va='center', size='x-small')
+                text += [{'text':f'{line.end_point:.2f}:{index+1}', 'value':line.end_point, 'color':'red'}]
         ax1.plot(dates, values, '.r', marker='.')
 
+        # End point text
+        ylimits = ax1.get_ylim()
+        inc = (ylimits[1] - ylimits[0]) / 33.0
+        text = sorted(text, key=lambda t: t['value'])
+        index = 1
+        for txt in text:
+            if txt['value'] > self.price:
+                ax1.text(self.points+5, self.price+(index*inc), txt['text'], color=txt['color'], va='center', size='small')
+                index += 1
+
+        text = sorted(text, reverse=True, key=lambda t: t['value'])
+        index = 1
+        for txt in text:
+            if txt['value'] < self.price:
+                ax1.text(self.points+5, self.price-(index*inc), txt['text'], color=txt['color'], va='center', size='small')
+                index += 1
+
         # Price line
-        ax1.hlines(self.price, 0, self.points, color='b', linestyle='--', label='Current Price', linewidth=1.0)
-        ax1.text(self.points+5, self.price, f'{self.price:.2f}', color='b', va='center', size='x-small')
+        ax1.hlines(self.price, 0, self.points, color='blue', linestyle='--', label='Current Price', linewidth=1.0)
+        ax1.text(self.points+5, self.price, f'{self.price:.2f}', color='blue', va='center', size='small')
 
         # Current support and resistance levels
         if srlines:
