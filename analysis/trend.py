@@ -107,8 +107,8 @@ class SupportResistance:
         logger.info(f'{__name__}: {self.points} pivot points identified from {self.history.iloc[0].name} to {self.history.iloc[-1].name}')
 
         # Calculate support and resistance lines
-        maxs = trendln.calc_support_resistance((None, self.history.High), extmethod=self.extmethod, method=self.method, accuracy=2) #resistance
-        mins = trendln.calc_support_resistance((self.history.Low, None), extmethod=self.extmethod, method=self.method, accuracy=2)  #support
+        maxs = trendln.calc_support_resistance((None, self.history.High), extmethod=self.extmethod, method=self.method, accuracy=8) #resistance
+        mins = trendln.calc_support_resistance((self.history.Low, None), extmethod=self.extmethod, method=self.method, accuracy=8)  #support
 
         maximaIdxs, pmax, maxtrend, maxwindows = maxs
         minimaIdxs, pmin, mintrend, minwindows = mins
@@ -259,16 +259,20 @@ class SupportResistance:
         return support[:self.best]
 
     def plot(self, show=True, filename='', legend=True, srlines=False, trendlines=True):
-        fig, ax = plt.subplots()
+        fig, ax1 = plt.subplots()
+        ax2 = ax1.secondary_yaxis('right')
         plt.style.use('seaborn')
         plt.grid()
+        plt.margins(x=0.1)
         plt.title(f'{self.ticker} History with Support & Resistance')
         width = 1.0
 
         if self.price < 30.0:
-            ax.yaxis.set_major_formatter('${x:.2f}')
+            ax1.yaxis.set_major_formatter('${x:.2f}')
+            ax2.yaxis.set_major_formatter('${x:.2f}')
         else:
-            ax.yaxis.set_major_formatter('${x:.0f}')
+            ax1.yaxis.set_major_formatter('${x:.0f}')
+            ax2.yaxis.set_major_formatter('${x:.0f}')
 
         # High & Lows
         dates = []
@@ -281,8 +285,9 @@ class SupportResistance:
         plt.xticks(rotation=45)
         plt.subplots_adjust(bottom=0.15)
 
-        ax.plot(dates, self.history.High, '-g', linewidth=0.5)
-        ax.plot(dates, self.history.Low, '-r', linewidth=0.5)
+        ax1.plot(dates, self.history.High, '-g', linewidth=0.5)
+        ax1.plot(dates, self.history.Low, '-r', linewidth=0.5)
+        ax1.fill_between(dates, self.history.High, self.history.Low, facecolor='gray', alpha=0.4)
 
         # Pivot points
         dates = []
@@ -293,7 +298,7 @@ class SupportResistance:
                 date = self.history.iloc[index].name
                 dates += [date.date().strftime('%Y-%m-%d')]
                 values += [self.history.iloc[index].High]
-        ax.plot(dates, values, '.g')
+        ax1.plot(dates, values, '.g')
 
         dates = []
         values = []
@@ -303,7 +308,7 @@ class SupportResistance:
                 date = self.history.iloc[index].name
                 dates += [date.date().strftime('%Y-%m-%d')]
                 values += [self.history.iloc[index].Low]
-        ax.plot(dates, values, '.r')
+        ax1.plot(dates, values, '.r')
 
         # Trend lines
         dates = []
@@ -318,7 +323,7 @@ class SupportResistance:
             dates += [date.date().strftime('%Y-%m-%d')]
             values += [self.history.iloc[index].High]
 
-            ax.plot(dates, values, '-g', linewidth=width)
+            ax1.plot(dates, values, '-g', linewidth=width)
 
         dates = []
         values = []
@@ -332,7 +337,7 @@ class SupportResistance:
             dates += [date.date().strftime('%Y-%m-%d')]
             values += [self.history.iloc[index].Low]
 
-            ax.plot(dates, values, '-r', linewidth=width)
+            ax1.plot(dates, values, '-r', linewidth=width)
 
         # Trend line extensions
         dates = []
@@ -347,7 +352,7 @@ class SupportResistance:
             dates += [date.date().strftime('%Y-%m-%d')]
             values += [line.end_point]
 
-            ax.plot(dates, values, ':g', linewidth=width)
+            ax1.plot(dates, values, ':g', linewidth=width)
 
         dates = []
         values = []
@@ -361,10 +366,34 @@ class SupportResistance:
             dates += [date.date().strftime('%Y-%m-%d')]
             values += [line.end_point]
 
-            ax.plot(dates, values, ':r', linewidth=width)
+            ax1.plot(dates, values, ':r', linewidth=width)
+
+        # End points
+        dates = []
+        values = []
+        for index, line in enumerate(self.get_resistance()):
+            ep = u.mround(line.end_point, 0.1)
+            if ep not in values:
+                date = self.history.iloc[-1].name
+                dates += [date.date().strftime('%Y-%m-%d')]
+                values += [ep]
+            ax1.text(self.points+5, line.end_point, f'{index+1}:{line.end_point:.2f}', color='g', va='center', size='x-small')
+        ax1.plot(dates, values, '.g', marker='.')
+
+        dates = []
+        values = []
+        for index, line in enumerate(self.get_support()):
+            ep = u.mround(line.end_point, 0.1)
+            if ep not in values:
+                date = self.history.iloc[-1].name
+                dates += [date.date().strftime('%Y-%m-%d')]
+                values += [ep]
+            ax1.text(self.points+5, line.end_point, f'{index+1}:{line.end_point:.2f}', color='r', va='center', size='x-small')
+        ax1.plot(dates, values, '.r', marker='.')
 
         # Price line
-        plt.axhline(y=self.price, color='b', linestyle='--', label='Current Price', linewidth=1.0)
+        ax1.hlines(self.price, 0, self.points, color='b', linestyle='--', label='Current Price', linewidth=1.0)
+        ax1.text(self.points+5, self.price, f'{self.price:.2f}', color='b', va='center', size='x-small')
 
         # Current support and resistance levels
         if srlines:
@@ -384,7 +413,7 @@ class SupportResistance:
             dates += [date.date().strftime('%Y-%m-%d')]
             values += [self.slope_res * self.points + self.intercept_res]
 
-            ax.plot(dates, values, '-', color='darkgreen', label='Avg Res', linewidth=2.0)
+            ax1.plot(dates, values, '--', color='darkgreen', label='Avg Resistance', linewidth=1.7)
 
             index = 0
             date = self.history.iloc[index].name
@@ -395,7 +424,7 @@ class SupportResistance:
             dates += [date.date().strftime('%Y-%m-%d')]
             values += [self.slope_sup * self.points + self.intercept_sup]
 
-            ax.plot(dates, values, '-', color='darkred', label='Avg Sup', linewidth=2.0)
+            ax1.plot(dates, values, '--', color='darkred', label='Avg Support', linewidth=1.7)
 
         if legend:
             plt.legend()
@@ -407,19 +436,20 @@ class SupportResistance:
         if show:
             plt.show()
 
+        # fig.tight_layout()
         return fig
 
 
 if __name__ == '__main__':
     import sys
-    import logging
-    u.get_logger(logging.DEBUG)
+    # import logging
+    # u.get_logger(logging.DEBUG)
 
-    start = datetime.datetime.today() - datetime.timedelta(days=1000)
+    start = datetime.datetime.today() - datetime.timedelta(days=500)
     if len(sys.argv) > 1:
-        sr = SupportResistance(sys.argv[1], best=10, start=start)
+        sr = SupportResistance(sys.argv[1], best=5, start=start)
     else:
-        sr = SupportResistance('IBM', best=10, start=start)
+        sr = SupportResistance('IBM', best=5, start=start)
 
     sr.calculate()
     sr.plot()
