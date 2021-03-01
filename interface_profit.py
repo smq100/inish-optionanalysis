@@ -555,7 +555,7 @@ class Interface():
                 yy += [row[0]]
                 values += [abs(x)]
 
-            ax1.scatter(xx, yy, s=values)
+            ax1.scatter(xx, yy, s=values, cmap='nipy_spectral')
 
         plt.show()
 
