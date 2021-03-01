@@ -454,7 +454,6 @@ class SupportResistance:
         if show:
             plt.show()
 
-        # fig.tight_layout()
         return fig
 
 

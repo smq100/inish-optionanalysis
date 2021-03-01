@@ -3,6 +3,7 @@ import logging
 import datetime
 
 import pandas as pd
+import matplotlib.pyplot as plt
 
 from strategy.strategy import Leg
 from strategy.call import Call
@@ -143,9 +144,10 @@ class Interface():
         else:
             u.print_error(errors)
 
-    def plot_value(self, leg):
+    def plot_value(self, leg, terminal=True, plot=True):
         if leg < len(self.strategy.legs):
-            print(u.delimeter(f'Value: {self.strategy.legs[leg].symbol}', True) + '\n')
+            title = f'Value: {self.strategy.legs[leg].symbol}'
+            print(u.delimeter(title, True) + '\n')
 
             table = self.strategy.legs[leg].table
             if table is not None:
@@ -166,14 +168,20 @@ class Interface():
                     table = self.strategy.legs[leg].table
                     table = u.compress_table(table, rows, cols)
 
-                print(table)
+                if terminal:
+                    print(table)
+                    print(table.shape)
+
+                if plot:
+                    self._chart(table, title)
             else:
                 u.print_error('No table')
         else:
             u.print_error('Invalid leg')
 
-    def plot_analysis(self):
-        print(u.delimeter(f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].symbol}) {str(self.strategy).title()}', True) + '\n')
+    def plot_analysis(self, terminal=True, plot=True):
+        title = f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].symbol}) {str(self.strategy).title()}'
+        print(u.delimeter(title, True) + '\n')
 
         table = self.strategy.analysis.table
         if table is not None:
@@ -194,8 +202,13 @@ class Interface():
                 table = self.strategy.analysis.table
                 table = u.compress_table(table, rows, cols)
 
-            print(table)
+            if terminal:
+                print(table)
+
             print(self.strategy.analysis)
+
+            if plot:
+                self._chart(table, title)
         else:
             u.print_error('No table')
 
@@ -521,6 +534,30 @@ class Interface():
         #     return False
 
         return modified
+
+    def _chart(self, table, title):
+        if not isinstance(table, pd.DataFrame):
+            raise AssertionError("'table' must be a Pandas DataFrame")
+
+        fig, ax1 = plt.subplots()
+        plt.style.use('seaborn')
+        plt.title(title)
+        ax1.xaxis.tick_top()
+        ax1.yaxis.set_major_formatter('${x:.2f}')
+
+        xx = table.columns
+        yy = []
+        values = []
+        for row in table.itertuples(name=None):
+            yy = []
+            values = []
+            for x in row[1:]:
+                yy += [row[0]]
+                values += [abs(x)]
+
+            ax1.scatter(xx, yy, s=values)
+
+        plt.show()
 
     def _menu(self, menu_items, header, minvalue, maxvalue):
         print(f'\n{header}')
