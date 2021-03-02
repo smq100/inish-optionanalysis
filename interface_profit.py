@@ -545,18 +545,24 @@ class Interface():
         ax1.xaxis.tick_top()
         ax1.yaxis.set_major_formatter('${x:.2f}')
 
+        min_ = min(table.min())
+        max_ = max(table.max())
+        max_ -= min_
+        min_ -= min_
+
         xx = table.columns
-        yy = []
-        values = []
+        spot = table.index
         for row in table.itertuples(name=None):
             yy = []
             values = []
+            colors = []
             for x in row[1:]:
                 yy += [row[0]]
-                values += [abs(x)]
+                colors += [100.0 - (x / max_)]
 
-            ax1.scatter(xx, yy, s=values, cmap='nipy_spectral')
+            ax1.scatter(xx, yy, c=colors, marker='s', cmap='RdYlGn')
 
+        # plt.colorbar()
         plt.show()
 
     def _menu(self, menu_items, header, minvalue, maxvalue):
@@ -568,10 +574,6 @@ class Interface():
             print(f'{entry})\t{menu_items[entry]}')
 
         return u.input_integer('Please select: ', minvalue, maxvalue)
-
-    def _validate(self):
-        '''TODO'''
-        return True
 
 
 if __name__ == '__main__':
