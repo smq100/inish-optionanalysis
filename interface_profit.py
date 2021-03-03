@@ -3,6 +3,7 @@ import logging
 import datetime
 
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as clrs
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter, AutoMinorLocator
@@ -175,6 +176,7 @@ class Interface():
 
                 if plot:
                     self._show_chart(table, title)
+                    self._show_contour(table, title)
             else:
                 u.print_error('No table')
         else:
@@ -210,6 +212,7 @@ class Interface():
 
             if plot:
                 self._show_chart(table, title)
+                self._show_contour(table, title)
         else:
             u.print_error('No table')
 
@@ -540,20 +543,21 @@ class Interface():
         if not isinstance(table, pd.DataFrame):
             raise AssertionError("'table' must be a Pandas DataFrame")
 
-        fig, ax1 = plt.subplots()
+        fig, ax = plt.subplots()
         plt.style.use('seaborn')
         plt.title(title)
-        ax1.xaxis.tick_top()
+        ax.xaxis.tick_top()
+
+        ax.yaxis.set_major_formatter('${x:.2f}')
 
         width = table.index[0] - table.index[-1]
         major, minor = u.calc_major_minor_ticks(width)
-
-        ax1.yaxis.set_major_formatter('${x:.2f}')
-
         if major > 0:
-            ax1.yaxis.set_major_locator(MultipleLocator(major))
+            ax.yaxis.set_major_locator(MultipleLocator(major))
         if minor > 0:
-            ax1.yaxis.set_minor_locator(MultipleLocator(minor))
+            ax.yaxis.set_minor_locator(MultipleLocator(minor))
+
+        ax.set_xticklabels(table.columns)
 
         min_ = min(table.min())
         max_ = max(table.max())
@@ -564,25 +568,65 @@ class Interface():
         else:
             cmap = clrs.LinearSegmentedColormap.from_list(name='value', colors =['lightgray', 'green'], N=15)
 
-        xx = table.columns
-        spot = table.index
-        for row in table.itertuples(name=None):
-            yy = []
-            values = []
-            colors = []
-            for x in row[1:]:
-                yy += [row[0]]
-                colors += [x]
+        table.columns = range(len(table.columns))
+        x = table.columns
+        y = table.index
+        X, Y = np.meshgrid(x, y)
+        Z = table
 
-            if min_ < 0.0:
-                ax1.scatter(xx, yy, c=colors, snap=False, norm=norm, marker='s', cmap=cmap)
-            else:
-                ax1.scatter(xx, yy, c=colors, snap=False, vmin=min_, vmax=max_, marker='s', cmap=cmap)
+        ax.scatter(X, Y, c=Z, vmin=min_, vmax=max_, marker='s', cmap=cmap)
 
         breakeven = self.strategy.analysis.breakeven
-        ax1.axhline(breakeven, color='k', linestyle='-', linewidth=0.5)
+        ax.axhline(breakeven, color='k', linestyle='-', linewidth=0.5)
+
+        # plt.show()
+
+    def _show_contour(self, table, title):
+        if not isinstance(table, pd.DataFrame):
+            raise AssertionError("'table' must be a Pandas DataFrame")
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.xaxis.tick_top()
+        ax.yaxis.set_major_formatter('${x:.2f}')
+        ax.xaxis.set_major_locator(MultipleLocator(1))
+        plt.style.use('seaborn')
+        plt.title(title)
+
+        width = table.index[0] - table.index[-1]
+        major, minor = u.calc_major_minor_ticks(width)
+        if major > 0:
+            ax.yaxis.set_major_locator(MultipleLocator(major))
+        if minor > 0:
+            ax.yaxis.set_minor_locator(MultipleLocator(minor))
+
+        ax.set_xticklabels(table.columns)
+
+        min_ = min(table.min())
+        max_ = max(table.max())
+
+        if min_ < 0.0:
+            norm = clrs.TwoSlopeNorm(0.0, vmin=min_, vmax=max_)
+            cmap = clrs.LinearSegmentedColormap.from_list(name='analysis', colors =['red', 'lightgray', 'green'], N=15)
+        else:
+            cmap = clrs.LinearSegmentedColormap.from_list(name='value', colors =['lightgray', 'green'], N=15)
+
+        table.columns = range(len(table.columns))
+        x = table.columns
+        y = table.index
+        X, Y = np.meshgrid(x, y)
+        Z = table
+
+        if min_ < 0.0:
+            cp = ax.contourf(X, Y, Z, norm=norm, cmap=cmap)
+        else:
+            cp = ax.contourf(X, Y, Z, cmap=cmap)
+
+        breakeven = self.strategy.analysis.breakeven
+        ax.axhline(breakeven, color='k', linestyle='-', linewidth=0.5)
 
         plt.show()
+
 
     def _menu(self, menu_items, header, minvalue, maxvalue):
         print(f'\n{header}')

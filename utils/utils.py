@@ -61,7 +61,7 @@ def calc_major_minor_ticks(width):
     elif width > 100:
         major = 10
         minor = 2
-    elif width > 50:
+    elif width > 40:
         major = 5
         minor = 1
     elif width > 20:
