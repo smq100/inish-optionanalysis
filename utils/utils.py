@@ -48,6 +48,38 @@ def mround(n, precision):
 
     return val
 
+def calc_major_minor_ticks(width):
+    if width <= 0.0:
+        major = 0
+        minor = 0
+    elif width > 1000:
+        major = 100
+        minor = 20
+    elif width > 500:
+        major = 50
+        minor = 10
+    elif width > 100:
+        major = 10
+        minor = 2
+    elif width > 50:
+        major = 5
+        minor = 1
+    elif width > 20:
+        major = 2
+        minor = 0
+    elif width > 10:
+        major = 1
+        minor = 0
+    elif width > 1:
+        major = 0.5
+        minor = 0
+    else:
+        major = .1
+        minor = 0
+
+    return major, minor
+
+
 def menu(menu_items, header, minvalue, maxvalue):
     print(f'\n{header}')
     print('-----------------------------')

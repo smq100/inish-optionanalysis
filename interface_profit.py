@@ -4,6 +4,8 @@ import datetime
 
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.colors as clrs
+from matplotlib.ticker import MultipleLocator, FormatStrFormatter, AutoMinorLocator
 
 from strategy.strategy import Leg
 from strategy.call import Call
@@ -170,10 +172,9 @@ class Interface():
 
                 if terminal:
                     print(table)
-                    print(table.shape)
 
                 if plot:
-                    self._chart(table, title)
+                    self._show_chart(table, title)
             else:
                 u.print_error('No table')
         else:
@@ -208,7 +209,7 @@ class Interface():
             print(self.strategy.analysis)
 
             if plot:
-                self._chart(table, title)
+                self._show_chart(table, title)
         else:
             u.print_error('No table')
 
@@ -535,7 +536,7 @@ class Interface():
 
         return modified
 
-    def _chart(self, table, title):
+    def _show_chart(self, table, title):
         if not isinstance(table, pd.DataFrame):
             raise AssertionError("'table' must be a Pandas DataFrame")
 
@@ -543,12 +544,25 @@ class Interface():
         plt.style.use('seaborn')
         plt.title(title)
         ax1.xaxis.tick_top()
+
+        width = table.index[0] - table.index[-1]
+        major, minor = u.calc_major_minor_ticks(width)
+
         ax1.yaxis.set_major_formatter('${x:.2f}')
+
+        if major > 0:
+            ax1.yaxis.set_major_locator(MultipleLocator(major))
+        if minor > 0:
+            ax1.yaxis.set_minor_locator(MultipleLocator(minor))
 
         min_ = min(table.min())
         max_ = max(table.max())
-        max_ -= min_
-        min_ -= min_
+
+        if min_ < 0.0:
+            norm = clrs.TwoSlopeNorm(0.0, vmin=min_, vmax=max_)
+            cmap = clrs.LinearSegmentedColormap.from_list(name='analysis', colors =['red', 'lightgray', 'green'], N=15)
+        else:
+            cmap = clrs.LinearSegmentedColormap.from_list(name='value', colors =['lightgray', 'green'], N=15)
 
         xx = table.columns
         spot = table.index
@@ -558,11 +572,16 @@ class Interface():
             colors = []
             for x in row[1:]:
                 yy += [row[0]]
-                colors += [100.0 - (x / max_)]
+                colors += [x]
 
-            ax1.scatter(xx, yy, c=colors, marker='s', cmap='RdYlGn')
+            if min_ < 0.0:
+                ax1.scatter(xx, yy, c=colors, snap=False, norm=norm, marker='s', cmap=cmap)
+            else:
+                ax1.scatter(xx, yy, c=colors, snap=False, vmin=min_, vmax=max_, marker='s', cmap=cmap)
 
-        # plt.colorbar()
+        breakeven = self.strategy.analysis.breakeven
+        ax1.axhline(breakeven, color='k', linestyle='-', linewidth=0.5)
+
         plt.show()
 
     def _menu(self, menu_items, header, minvalue, maxvalue):
