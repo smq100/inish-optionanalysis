@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as clrs
-from matplotlib.ticker import MultipleLocator, FormatStrFormatter, AutoMinorLocator
+import matplotlib.ticker as mticker
 
 from strategy.strategy import Leg
 from strategy.call import Call
@@ -166,17 +166,16 @@ class Interface():
                 else:
                     cols = -1
 
-                # We need to compress the table
                 if rows > 0 or cols > 0:
-                    table = self.strategy.legs[leg].table
+                    # compress the table rows and columns
                     table = u.compress_table(table, rows, cols)
 
                 if terminal:
                     print(table)
 
                 if plot:
-                    self._show_chart(table, title)
-                    self._show_contour(table, title)
+                    # self._show_chart(table, title, charttype='chart')
+                    self._show_chart(table, title, charttype='contour')
             else:
                 u.print_error('No table')
         else:
@@ -200,19 +199,17 @@ class Interface():
             else:
                 cols = -1
 
-            # See if we need to compress the table
             if rows > 0 or cols > 0:
-                table = self.strategy.analysis.table
+                # compress the table rows and columns
                 table = u.compress_table(table, rows, cols)
 
             if terminal:
                 print(table)
-
-            print(self.strategy.analysis)
+                print(self.strategy.analysis)
 
             if plot:
-                self._show_chart(table, title)
-                self._show_contour(table, title)
+                # self._show_chart(table, title, charttype='chart')
+                self._show_chart(table, title, charttype='contour')
         else:
             u.print_error('No table')
 
@@ -539,76 +536,37 @@ class Interface():
 
         return modified
 
-    def _show_chart(self, table, title):
-        if not isinstance(table, pd.DataFrame):
-            raise AssertionError("'table' must be a Pandas DataFrame")
-
-        fig, ax = plt.subplots()
-        plt.style.use('seaborn')
-        plt.title(title)
-        ax.xaxis.tick_top()
-
-        ax.yaxis.set_major_formatter('${x:.2f}')
-
-        width = table.index[0] - table.index[-1]
-        major, minor = u.calc_major_minor_ticks(width)
-        if major > 0:
-            ax.yaxis.set_major_locator(MultipleLocator(major))
-        if minor > 0:
-            ax.yaxis.set_minor_locator(MultipleLocator(minor))
-
-        ax.set_xticklabels(table.columns)
-
-        min_ = min(table.min())
-        max_ = max(table.max())
-
-        if min_ < 0.0:
-            norm = clrs.TwoSlopeNorm(0.0, vmin=min_, vmax=max_)
-            cmap = clrs.LinearSegmentedColormap.from_list(name='analysis', colors =['red', 'lightgray', 'green'], N=15)
-        else:
-            cmap = clrs.LinearSegmentedColormap.from_list(name='value', colors =['lightgray', 'green'], N=15)
-
-        table.columns = range(len(table.columns))
-        x = table.columns
-        y = table.index
-        X, Y = np.meshgrid(x, y)
-        Z = table
-
-        ax.scatter(X, Y, c=Z, vmin=min_, vmax=max_, marker='s', cmap=cmap)
-
-        breakeven = self.strategy.analysis.breakeven
-        ax.axhline(breakeven, color='k', linestyle='-', linewidth=0.5)
-
-        # plt.show()
-
-    def _show_contour(self, table, title):
+    def _show_chart(self, table, title, charttype):
         if not isinstance(table, pd.DataFrame):
             raise AssertionError("'table' must be a Pandas DataFrame")
 
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        ax.xaxis.tick_top()
-        ax.yaxis.set_major_formatter('${x:.2f}')
-        ax.xaxis.set_major_locator(MultipleLocator(1))
         plt.style.use('seaborn')
         plt.title(title)
 
-        width = table.index[0] - table.index[-1]
-        major, minor = u.calc_major_minor_ticks(width)
-        if major > 0:
-            ax.yaxis.set_major_locator(MultipleLocator(major))
-        if minor > 0:
-            ax.yaxis.set_minor_locator(MultipleLocator(minor))
+        ax.xaxis.tick_top()
+        ax.set_xticks(range(len(table.columns)))
+        ax.set_xticklabels(table.columns.tolist())
 
-        ax.set_xticklabels(table.columns)
+        ax.xaxis.set_major_locator(mticker.MultipleLocator(1))
+        ax.yaxis.set_major_formatter('${x:.2f}')
 
         min_ = min(table.min())
         max_ = max(table.max())
+        height = table.index[0] - table.index[-1]
+
+        major, minor = u.calc_major_minor_ticks(height)
+        if major > 0:
+            ax.yaxis.set_major_locator(mticker.MultipleLocator(major))
+        if minor > 0:
+            ax.yaxis.set_minor_locator(mticker.MultipleLocator(minor))
 
         if min_ < 0.0:
             norm = clrs.TwoSlopeNorm(0.0, vmin=min_, vmax=max_)
             cmap = clrs.LinearSegmentedColormap.from_list(name='analysis', colors =['red', 'lightgray', 'green'], N=15)
         else:
+            norm=None
             cmap = clrs.LinearSegmentedColormap.from_list(name='value', colors =['lightgray', 'green'], N=15)
 
         table.columns = range(len(table.columns))
@@ -617,10 +575,12 @@ class Interface():
         X, Y = np.meshgrid(x, y)
         Z = table
 
-        if min_ < 0.0:
-            cp = ax.contourf(X, Y, Z, norm=norm, cmap=cmap)
+        if charttype == 'chart':
+            ax.scatter(X, Y, c=Z, norm=norm, marker='s', cmap=cmap)
+        elif charttype == 'contour':
+            ax.contourf(X, Y, Z, norm=norm, cmap=cmap)
         else:
-            cp = ax.contourf(X, Y, Z, cmap=cmap)
+            raise AssertionError('Bad chart type')
 
         breakeven = self.strategy.analysis.breakeven
         ax.axhline(breakeven, color='k', linestyle='-', linewidth=0.5)
