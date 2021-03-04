@@ -67,11 +67,12 @@ class Interface():
                 '1': f'Change Symbol ({self.strategy.ticker})',
                 '2': f'Change Strategy ({self.strategy})',
                 '3': 'Select Options',
-                '4': 'Calculate Values',
-                '5': 'Analyze Stategy',
-                '6': 'View Options',
-                '7': 'View Values',
-                '8': 'Settings',
+                '4': 'View Option Details',
+                '5': 'Calculate Value',
+                '6': 'View Value',
+                '7': 'Analyze Stategy',
+                '8': 'View Analysis',
+                '9': 'Settings',
                 '0': 'Exit'
             }
 
@@ -83,14 +84,14 @@ class Interface():
                 menu_items['3'] += f' (${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator})'
 
             if self.dirty_calculate:
-                menu_items['4'] += ' *'
-
-            if self.dirty_analyze:
                 menu_items['5'] += ' *'
 
-            self.view_legs()
+            if self.dirty_analyze:
+                menu_items['7'] += ' *'
 
-            selection = u.menu(menu_items, 'Select Operation', 0, 8)
+            self.show_legs()
+
+            selection = u.menu(menu_items, 'Select Operation', 0, 9)
 
             if selection == 1:
                 self.select_symbol()
@@ -99,33 +100,141 @@ class Interface():
             elif selection == 3:
                 if self.select_chain():
                     self.calculate()
-                    self.view_options(0)
+                    self.show_options()
             elif selection == 4:
-                if len(self.strategy.legs) > 0:
-                    if self.calculate():
-                        self.plot_value(0)
+                self.show_options()
             elif selection == 5:
-                self.analyze()
+                self.calculate()
             elif selection == 6:
-                if len(self.strategy.legs) < 1:
-                    print('No legs configured')
-                elif len(self.strategy.legs) > 1:
-                    leg = u.input_integer('Enter Leg: ', 1, 2) - 1
-                    self.view_options(leg)
-                else:
-                    self.view_options(0)
+                self.show_value()
             elif selection == 7:
-                if len(self.strategy.legs) < 1:
-                    print('No legs configured')
-                elif len(self.strategy.legs) > 1:
-                    leg = u.input_integer('Enter Leg: ', 1, 2) - 1
-                    self.plot_value(leg)
-                else:
-                    self.plot_value(0)
+                self.analyze()
             elif selection == 8:
+                self.show_analysis()
+            elif selection == 9:
                 self.select_settings()
             elif selection == 0:
                 break
+
+    def show_value(self, val=0):
+        if not self.dirty_calculate:
+            if len(self.strategy.legs) > 1:
+                leg = u.input_integer('Enter Leg: ', 1, 2) - 1
+            else:
+                leg = 0
+
+            table_ = self.strategy.legs[leg].table
+            if table_ is not None:
+                if val == 0:
+                    val = u.input_integer('Table (1), Chart(2), Contour (3), Surface (4), or Cancel (0): ', 0, 4)
+                if val > 0:
+                        title = f'Value: {self.strategy.legs[leg].symbol}'
+                        rows, cols = table_.shape
+
+                        if rows > MAX_ROWS:
+                            rows = MAX_ROWS
+                        else:
+                            rows = -1
+
+                        if cols > MAX_COLS:
+                            cols = MAX_COLS
+                        else:
+                            cols = -1
+
+                        if rows > 0 or cols > 0:
+                            # compress the table rows and columns
+                            table_ = u.compress_table(table_, rows, cols)
+
+                        if val == 1:
+                            print(u.delimeter(title, True) + '\n')
+                            print(table_)
+
+                        if val == 2:
+                            self._show_chart(table_, title, charttype='chart')
+                        elif val == 3:
+                            self._show_chart(table_, title, charttype='contour')
+                        elif val == 4:
+                            self._show_chart(table_, title, charttype='surface')
+            else:
+                u.print_error('No tables calculated')
+        else:
+            u.print_error('Please first perform calculation')
+
+    def show_analysis(self, val=0):
+        if not self.dirty_analyze:
+            table_ = self.strategy.analysis.table
+            if table_ is not None:
+                if val == 0:
+                    val = u.input_integer('Summary (1), Table (2), Chart(3), Contour (4), Surface (5), or Cancel (0): ', 0, 5)
+                if val > 0:
+                    title = f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].symbol}) {str(self.strategy).title()}'
+                    rows, cols = table_.shape
+
+                    if rows > MAX_ROWS:
+                        rows = MAX_ROWS
+                    else:
+                        rows = -1
+
+                    if cols > MAX_COLS:
+                        cols = MAX_COLS
+                    else:
+                        cols = -1
+
+                    if rows > 0 or cols > 0:
+                        table_ = u.compress_table(table_, rows, cols)
+
+                    if val == 1:
+                        print(u.delimeter(title, True))
+                        print(self.strategy.analysis)
+                    elif val == 2:
+                        print(u.delimeter(title, True))
+                        print(table_)
+                    elif val == 3:
+                        self._show_chart(table_, title, charttype='chart')
+                    elif val == 4:
+                        self._show_chart(table_, title, charttype='contour')
+                    elif val == 5:
+                        self._show_chart(table_, title, charttype='surface')
+            else:
+                u.print_error('No tables calculated')
+        else:
+            u.print_error('Please first perform analysis')
+
+    def show_options(self):
+        if len(self.strategy.legs) > 0:
+            if len(self.strategy.legs) > 1:
+                leg = u.input_integer('Enter Leg (0=all): ', 0, 2) - 1
+            else:
+                leg = 0
+
+            if leg < 0:
+                print(u.delimeter('Leg 1 Option Metrics', True))
+            else:
+                print(u.delimeter(f'Leg {leg+1} Option Metrics', True))
+            if leg < 0:
+                print(f'{self.strategy.legs[0].option}')
+                print(u.delimeter('Leg 2 Option Metrics', True))
+                print(f'{self.strategy.legs[1].option}')
+            else:
+                print(f'{self.strategy.legs[leg].option}')
+        else:
+            print('No option legs configured')
+
+    def show_legs(self, leg=-1, delimeter=True):
+        if delimeter:
+            print(u.delimeter('Option Leg Values', True))
+
+        if len(self.strategy.legs) < 1:
+            print('No legs configured')
+        elif leg < 0:
+            for index in range(len(self.strategy.legs)):
+                # Recursive call to output each leg
+                self.show_legs(index, False)
+        elif leg < len(self.strategy.legs):
+            output = f'{leg+1}: {self.strategy.legs[leg]}'
+            print(output)
+        else:
+            u.print_error('Invalid leg')
 
     def calculate(self):
         try:
@@ -139,111 +248,13 @@ class Interface():
         errors = self.strategy.get_errors()
         if not errors:
             self.strategy.analyze()
-            self.view_legs()
-            self.plot_analysis()
 
             self.dirty_calculate = False
             self.dirty_analyze = False
+
+            self.show_analysis(val=1)
         else:
             u.print_error(errors)
-
-    def plot_value(self, leg, terminal=True, plot=True):
-        if leg < len(self.strategy.legs):
-            title = f'Value: {self.strategy.legs[leg].symbol}'
-            print(u.delimeter(title, True) + '\n')
-
-            table = self.strategy.legs[leg].table
-            if table is not None:
-                rows, cols = table.shape
-
-                if rows > MAX_ROWS:
-                    rows = MAX_ROWS
-                else:
-                    rows = -1
-
-                if cols > MAX_COLS:
-                    cols = MAX_COLS
-                else:
-                    cols = -1
-
-                if rows > 0 or cols > 0:
-                    # compress the table rows and columns
-                    table = u.compress_table(table, rows, cols)
-
-                if terminal:
-                    print(table)
-
-                if plot:
-                    # self._show_chart(table, title, charttype='chart')
-                    self._show_chart(table, title, charttype='contour')
-            else:
-                u.print_error('No table')
-        else:
-            u.print_error('Invalid leg')
-
-    def plot_analysis(self, terminal=True, plot=True):
-        title = f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].symbol}) {str(self.strategy).title()}'
-        print(u.delimeter(title, True) + '\n')
-
-        table = self.strategy.analysis.table
-        if table is not None:
-            rows, cols = table.shape
-
-            if rows > MAX_ROWS:
-                rows = MAX_ROWS
-            else:
-                rows = -1
-
-            if cols > MAX_COLS:
-                cols = MAX_COLS
-            else:
-                cols = -1
-
-            if rows > 0 or cols > 0:
-                # compress the table rows and columns
-                table = u.compress_table(table, rows, cols)
-
-            if terminal:
-                print(table)
-                print(self.strategy.analysis)
-
-            if plot:
-                # self._show_chart(table, title, charttype='chart')
-                self._show_chart(table, title, charttype='contour')
-        else:
-            u.print_error('No table')
-
-    def view_legs(self, leg=-1, delimeter=True):
-        if delimeter:
-            print(u.delimeter('Option Leg Values', True))
-
-        if len(self.strategy.legs) < 1:
-            print('No legs configured')
-        elif leg < 0:
-            for index in range(0, len(self.strategy.legs), 1):
-                # Recursive call to output each leg
-                self.view_legs(index, False)
-        elif leg < len(self.strategy.legs):
-            output = f'{leg+1}: {self.strategy.legs[leg]}'
-            print(output)
-        else:
-            u.print_error('Invalid leg')
-
-    def view_options(self, leg=-1, delimeter=True):
-        if delimeter:
-            print(u.delimeter('Option Values', True))
-
-        if len(self.strategy.legs) < 1:
-            print('No legs configured')
-        elif leg < 0:
-            for index in range(0, len(self.strategy.legs), 1):
-                # Recursive call to output each leg
-                self.view_legs(index, False)
-        elif leg < len(self.strategy.legs):
-            output = f'{self.strategy.legs[leg].option}'
-            print(output)
-        else:
-            u.print_error('Invalid leg')
 
     def reset(self):
         self.strategy.reset()
@@ -540,28 +551,47 @@ class Interface():
         if not isinstance(table, pd.DataFrame):
             raise AssertionError("'table' must be a Pandas DataFrame")
 
+        if charttype == 'surface':
+            dim = 3
+        else:
+            dim = 2
+
+        # The plot
         fig = plt.figure()
-        ax = fig.add_subplot(111)
+
+        if dim == 3:
+            ax = fig.add_subplot(111, projection='3d')
+        else:
+            ax = fig.add_subplot(111)
+
         plt.style.use('seaborn')
         plt.title(title)
 
+        # X Axis
         ax.xaxis.tick_top()
         ax.set_xticks(range(len(table.columns)))
         ax.set_xticklabels(table.columns.tolist())
-
         ax.xaxis.set_major_locator(mticker.MultipleLocator(1))
+
+        # Y Axis
         ax.yaxis.set_major_formatter('${x:.2f}')
-
-        min_ = min(table.min())
-        max_ = max(table.max())
         height = table.index[0] - table.index[-1]
-
         major, minor = u.calc_major_minor_ticks(height)
         if major > 0:
             ax.yaxis.set_major_locator(mticker.MultipleLocator(major))
         if minor > 0:
             ax.yaxis.set_minor_locator(mticker.MultipleLocator(minor))
 
+        ax.set_xlabel('Date')
+        if dim == 2:
+            ax.set_ylabel('Value')
+        else:
+            ax.set_ylabel('Price')
+            ax.set_zlabel('Value')
+
+        # Color distributions
+        min_ = min(table.min())
+        max_ = max(table.max())
         if min_ < 0.0:
             norm = clrs.TwoSlopeNorm(0.0, vmin=min_, vmax=max_)
             cmap = clrs.LinearSegmentedColormap.from_list(name='analysis', colors =['red', 'lightgray', 'green'], N=15)
@@ -569,16 +599,20 @@ class Interface():
             norm=None
             cmap = clrs.LinearSegmentedColormap.from_list(name='value', colors =['lightgray', 'green'], N=15)
 
+        # Data
         table.columns = range(len(table.columns))
         x = table.columns
         y = table.index
         X, Y = np.meshgrid(x, y)
         Z = table
 
+        # Plot
         if charttype == 'chart':
             ax.scatter(X, Y, c=Z, norm=norm, marker='s', cmap=cmap)
         elif charttype == 'contour':
             ax.contourf(X, Y, Z, norm=norm, cmap=cmap)
+        elif charttype == 'surface':
+            ax.plot_surface(X, Y, Z, norm=norm, cmap=cmap)
         else:
             raise AssertionError('Bad chart type')
 
@@ -586,7 +620,6 @@ class Interface():
         ax.axhline(breakeven, color='k', linestyle='-', linewidth=0.5)
 
         plt.show()
-
 
     def _menu(self, menu_items, header, minvalue, maxvalue):
         print(f'\n{header}')

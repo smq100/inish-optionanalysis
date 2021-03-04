@@ -98,17 +98,13 @@ class Vertical(Strategy):
     def calc_breakeven(self):
         if self.analysis.credit_debit == 'debit':
             if self.product == 'call':
-                print('1')
                 breakeven = self.legs[1].option.strike + self.analysis.amount
             else:
-                print('2')
                 breakeven = self.legs[1].option.strike + self.analysis.amount
         else:
             if self.product == 'call':
-                print('3')
                 breakeven = self.legs[1].option.strike - self.analysis.amount
             else:
-                print('4')
                 breakeven = self.legs[1].option.strike - self.analysis.amount
 
         return breakeven
