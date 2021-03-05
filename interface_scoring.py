@@ -47,7 +47,7 @@ class Interface():
             if selection == 1:
                 self.select_symbol()
             elif selection == 2:
-                self.scoring()
+                self.get_scoring()
             elif selection == 0:
                 break
 
@@ -66,7 +66,7 @@ class Interface():
             else:
                 break
 
-    def scoring(self):
+    def get_scoring(self):
         pass
 
 

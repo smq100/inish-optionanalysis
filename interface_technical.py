@@ -150,11 +150,11 @@ class Interface():
                 sup = sr.get_support()
                 print(u.delimeter(f'{sr.ticker} Support & Resistance Levels (${sr.price:.2f})', True))
                 for line in sup:
-                    print(f'Support:    ${line.end_point:.2f} ({line.score:.2f})')
+                    print(f'Support:    ${line.end_point:.2f} ({line.get_score():.2f})')
 
                 res = sr.get_resistance()
                 for line in res:
-                    print(f'Resistance: ${line.end_point:.2f} ({line.score:.2f})')
+                    print(f'Resistance: ${line.end_point:.2f} ({line.get_score():.2f})')
 
                 sr.plot(filename=filename, show=show)
                 break

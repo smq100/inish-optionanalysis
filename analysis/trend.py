@@ -99,7 +99,7 @@ class SupportResistance:
         if self.start is None:
             self.history = yf.Ticker(self.ticker).history(period="max", rounding=True)
         else:
-            self.history = yf.Ticker(self.ticker).history(start=f'{start:%Y-%m-%d}', rounding=True)
+            self.history = yf.Ticker(self.ticker).history(start=f'{self.start:%Y-%m-%d}', rounding=True)
 
         self.points = len(self.history)
         self.price = get_current_price(self.ticker)
