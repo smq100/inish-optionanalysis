@@ -17,6 +17,7 @@ class Interface():
         ticker = ticker.upper()
         if validate_ticker(ticker):
             start = datetime.datetime.today() - datetime.timedelta(days=365)
+            self.technical = TechnicalAnalysis(ticker, start=start)
             self.scoring = ScoringAnalysis(ticker)
 
             if script is not None:
@@ -30,6 +31,7 @@ class Interface():
                 else:
                     u.print_error(f'File "{script}" not found')
             else:
+                self.calculate(True)
                 self.main_menu()
         else:
             u.print_error('Invalid ticker symbol specified')
@@ -38,7 +40,7 @@ class Interface():
         while True:
             menu_items = {
                 '1': f'Change Symbol ({self.scoring.ticker})',
-                '2': 'Scoring',
+                '2': 'Calculate',
                 '0': 'Exit'
             }
 
@@ -47,7 +49,7 @@ class Interface():
             if selection == 1:
                 self.select_symbol()
             elif selection == 2:
-                self.get_scoring()
+                self.calculate(True)
             elif selection == 0:
                 break
 
@@ -66,8 +68,47 @@ class Interface():
             else:
                 break
 
-    def get_scoring(self):
-        pass
+    def calculate(self, show=False):
+        # EMA
+        self.scoring.ema = {}
+        df1 = self.technical.calc_ema(21)
+        df2 = self.technical.calc_ema(50)
+        df3 = self.technical.calc_ema(200)
+        self.scoring.ema = {'21': df1, '50':df2, '200':df3}
+
+        # RSA
+        self.scoring.rsa = None
+        df = self.technical.calc_rsi()
+        self.scoring.rsa = df
+
+        # VWAP
+        self.scoring.vwap = None
+        df = self.technical.calc_vwap()
+        self.scoring.vwap = df
+
+        # MACD
+        self.scoring.macd = None
+        df = self.technical.calc_macd()
+        self.scoring.macd = df
+
+        # Bollinger Bands
+        self.scoring.bb = None
+        df = self.technical.calc_bb()
+        self.scoring.bb = df
+
+        if show:
+            print(u.delimeter(f"Yesterday's {self.scoring.ticker} Technicals", True))
+            print(f'EMA 21:    {self.scoring.ema["21"][-1]:.2f}')
+            print(f'EMA 50:    {self.scoring.ema["50"][-1]:.2f}')
+            print(f'EMA 200:   {self.scoring.ema["200"][-1]:.2f}')
+            print(f'RSA:       {self.scoring.rsa[-1]:.2f}')
+            print(f'VWAP:      {self.scoring.vwap[-1]:.2f}')
+            print(f'MACD Diff: {self.scoring.macd.iloc[-1]["Diff"]:.2f}')
+            print(f'MACD:      {self.scoring.macd.iloc[-1]["MACD"]:.2f}')
+            print(f'MACD Sig:  {self.scoring.macd.iloc[-1]["Signal"]:.2f}')
+            print(f'MACD Diff: {self.scoring.bb.iloc[-1]["High"]:.2f}')
+            print(f'MACD:      {self.scoring.bb.iloc[-1]["Mid"]:.2f}')
+            print(f'MACD Sig:  {self.scoring.bb.iloc[-1]["Low"]:.2f}')
 
 
 if __name__ == '__main__':
@@ -92,4 +133,4 @@ if __name__ == '__main__':
     elif 'ticker' in command.keys():
         Interface(command['ticker'])
     else:
-        Interface('MSFT')
+        Interface('IBM')

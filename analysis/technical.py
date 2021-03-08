@@ -1,7 +1,5 @@
 '''
     ta:      https://technical-analysis-library-in-python.readthedocs.io/en/latest/index.html
-    trendln: https://towardsdatascience.com/programmatic-identification-of-support-resistance-trend-lines-with-python-d797a4a90530,
-             https://github.com/GregoryMorse/trendln
 '''
 
 import datetime
@@ -13,7 +11,9 @@ from ta import trend, momentum, volatility, volume
 from pricing.fetcher import validate_ticker
 from utils import utils as u
 
+
 logger = u.get_logger()
+
 
 class TechnicalAnalysis():
     def __init__(self, ticker, start=None):
