@@ -2,6 +2,8 @@ import sys, os, json
 import logging
 import datetime
 
+import matplotlib.pyplot as plt
+
 from pricing.fetcher import validate_ticker
 from analysis.technical import TechnicalAnalysis
 from analysis.trend import SupportResistance, Line
@@ -10,11 +12,11 @@ from utils import utils as u
 
 logger = u.get_logger(logging.WARNING)
 
-class Interface():
+class Interface:
     def __init__(self, ticker, script=None):
         ticker = ticker.upper()
         if validate_ticker(ticker):
-            start = datetime.datetime.today() - datetime.timedelta(days=365)
+            start = datetime.datetime.today() - datetime.timedelta(days=90)
             self.technical = TechnicalAnalysis(ticker, start=start)
 
             if script is not None:
@@ -36,19 +38,22 @@ class Interface():
         while True:
             menu_items = {
                 '1': f'Change Symbol ({self.technical.ticker})',
-                '2': 'Support & Resistance Chart',
-                '3': 'Technical Analysis',
+                '2': 'Technical Analysis',
+                '3': 'Support & Resistance Chart',
+                '4': 'Plot All',
                 '0': 'Exit'
             }
 
-            selection = u.menu(menu_items, 'Select Operation', 0, 3)
+            selection = u.menu(menu_items, 'Select Operation', 0, 4)
 
             if selection == 1:
                 self.select_symbol()
             elif selection == 2:
-                self.get_trend_parameters()
-            elif selection == 3:
                 self.select_technical()
+            elif selection == 3:
+                self.get_trend_parameters()
+            elif selection == 4:
+                self.plot_all()
             elif selection == 0:
                 break
 
@@ -85,6 +90,7 @@ class Interface():
                 df = self.technical.calc_ema(interval)
                 print(u.delimeter(f'EMA {interval}', True))
                 print(f'Yesterday: {df[-1]:.2f}')
+                self.plot(df, f'EMA {interval}')
 
             if selection == 2:
                 df = self.technical.calc_rsi()
@@ -161,6 +167,32 @@ class Interface():
 
             if selection == 0:
                 break
+
+    def plot_all(self):
+        df1 = self.technical.calc_ema(21)
+        df2 = self.technical.calc_rsi()
+        df3 = self.technical.calc_vwap()
+        df4 = self.technical.calc_macd()
+        df5 = self.technical.calc_bb()
+        df1.plot(label='EMA')
+        df2.plot(label='RSI')
+        df3.plot(label='VWAP')
+        df4.plot(label='MACD')
+        df5.plot(label='BB')
+        plt.legend()
+        plt.show()
+
+
+    def plot(self, df, title=''):
+        if df is not None:
+            plt.style.use('seaborn-whitegrid')
+            plt.grid()
+            plt.margins(x=0.1)
+            plt.legend()
+            if title:
+                plt.title(title)
+            df.plot()
+            plt.show()
 
 
 if __name__ == '__main__':

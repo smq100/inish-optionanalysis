@@ -55,6 +55,8 @@ class TechnicalAnalysis():
         return df
 
     def calc_macd(self, slow=26, fast=12, signal=9):
+        df = pd.DataFrame()
+
         macd = trend.MACD(self.history['Close'], window_slow=slow, window_fast=fast, window_sign=signal, fillna=True)
         diff = macd.macd_diff()
         macd_ = macd.macd()

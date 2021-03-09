@@ -12,7 +12,7 @@ from utils import utils as u
 logger = u.get_logger(logging.WARNING)
 
 
-class Interface():
+class Interface:
     def __init__(self, ticker, script=None):
         ticker = ticker.upper()
         if validate_ticker(ticker):
@@ -77,24 +77,16 @@ class Interface():
         self.scoring.ema = {'21': df1, '50':df2, '200':df3}
 
         # RSA
-        self.scoring.rsa = None
-        df = self.technical.calc_rsi()
-        self.scoring.rsa = df
+        self.scoring.rsa = self.technical.calc_rsi()
 
         # VWAP
-        self.scoring.vwap = None
-        df = self.technical.calc_vwap()
-        self.scoring.vwap = df
+        self.scoring.vwap = self.technical.calc_vwap()
 
         # MACD
-        self.scoring.macd = None
-        df = self.technical.calc_macd()
-        self.scoring.macd = df
+        self.scoring.macd = self.technical.calc_macd()
 
         # Bollinger Bands
-        self.scoring.bb = None
-        df = self.technical.calc_bb()
-        self.scoring.bb = df
+        self.scoring.bb = self.technical.calc_bb()
 
         if show:
             print(u.delimeter(f"Yesterday's {self.scoring.ticker} Technicals", True))

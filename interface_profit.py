@@ -22,7 +22,7 @@ MAX_COLS = 18
 logger = u.get_logger()
 
 
-class Interface():
+class Interface:
     def __init__(self, ticker, strategy, direction, autoload=None, script=None, exit=False):
         pd.options.display.float_format = '{:,.2f}'.format
 
