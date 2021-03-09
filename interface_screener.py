@@ -50,17 +50,18 @@ class Interface:
                 break
 
     def select_table(self):
-        valid = False
-        while not valid:
+        loop = True
+        while loop:
             table = input('Please enter valid table name, or 0 to cancel: ').upper()
-            if table != '0':
-                self.screener = Screener(table)
-                if not self.screener.valid:
-                    u.print_error('Invalid table name. Try again or select "0" to cancel')
-                else:
-                    valid = True
+            if table == '0':
+                loop = False
             else:
-                valid = True
+                self.screener = Screener(table)
+                if self.screener.valid:
+                    self.table_name = table
+                    loop = False
+                else:
+                    u.print_error('Invalid table name. Try again or select "0" to cancel')
 
     def fetch_symbols(self):
         self.symbols = self.screener.get_symbols()
@@ -75,7 +76,7 @@ if __name__ == '__main__':
     subparser = parser.add_subparsers(help='Specify the desired command')
 
     # Create the parser for the "load" command
-    parser_a = subparser.add_parser('load', help='Load an operation')
+    parser_a = subparser.add_parser('load', help='Load a symbol table')
     parser_a.add_argument('-t', '--table', help='Specify the symbol table', required=False, default='SP500')
 
     # Create the parser for the "execute" command

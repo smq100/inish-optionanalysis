@@ -4,23 +4,27 @@ from utils import utils as u
 
 logger = u.get_logger()
 
+VALID_TABLES = ('SP500', 'DOW', 'NASDAQ')
+
 
 class Screener:
     def __init__(self, table_name):
-        self.sheet = Sheets()
-        self.table_name = table_name
-        self.symbols = None
-        self.valid = False
-
-        self.open_table(self.table_name)
+        if table_name in VALID_TABLES:
+            self.sheet = Sheets()
+            self.table_name = table_name
+            self.symbols = None
+            self.valid = False
+            self.open_table(self.table_name)
 
     def open_table(self, table=None):
         self.valid = False
         if table is None:
             if self.sheet.open(self.table_name):
                 self.valid = True
-        elif self.sheet.open(table):
-            self.valid = True
+        elif table in VALID_TABLES:
+            if self.sheet.open(table):
+                self.table_name = table
+                self.valid = True
 
         return self.valid
 
