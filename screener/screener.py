@@ -4,44 +4,46 @@ from utils import utils as u
 
 logger = u.get_logger()
 
-VALID_TABLES = ('SP500', 'DOW', 'NASDAQ')
+VALID_LISTS = ('SP500', 'DOW', 'NASDAQ')
 
 
 class Screener:
     def __init__(self, table_name):
-        if table_name in VALID_TABLES:
-            self.sheet = Sheets()
-            self.table_name = table_name
+        if table_name.upper() in VALID_LISTS:
+            self.list = Sheets()
+            self.list_name = ''
             self.symbols = None
-            self.valid = False
-            self.open_table(self.table_name)
+            if self._open_table(table_name):
+                self.list_name = table_name.upper()
 
-    def open_table(self, table=None):
-        self.valid = False
-        if table is None:
-            if self.sheet.open(self.table_name):
-                self.valid = True
-        elif table in VALID_TABLES:
-            if self.sheet.open(table):
-                self.table_name = table
-                self.valid = True
+    def __str__(self):
+        return self.list_name
 
-        return self.valid
+    def valid(self):
+        return bool(self.list_name)
 
-    def get_symbols(self):
-        if self.valid:
-            self.symbols = self.sheet.sheet.col_values(1)
+    def _open_table(self, table):
+        if table in VALID_LISTS:
+            if self.list.open(table):
+                self.list_name = table
+                self._get_symbols()
+            else:
+                self.list_name = ''
+
+        return bool(self.list_name)
+
+    def _get_symbols(self):
+        if self.list_name:
+            self.symbols = self.list.get_column(1)
         else:
-            raise AssertionError('Invalid table')
+            self.symbols = []
 
         return self.symbols
-
 
 if __name__ == '__main__':
     import logging
     u.get_logger(logging.DEBUG)
 
-    screener = Screener()
-    screener.sheet.open('SP500')
-    c = screener.sheet.lookup_cell(10,1)
+    screener = Screener('sp500')
+    c = screener.list.get_cell(1,1)
     print(c)

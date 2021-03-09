@@ -30,6 +30,15 @@ class TechnicalAnalysis():
     def __str__(self):
         return f'Technical analysis for {self.ticker}'
 
+    def get_current_price(self):
+        return self.history['Close'][-1]
+
+    def get_close(self):
+        return self.history['Close']
+
+    def get_volumn(self):
+        return self.history['Volume']
+
     def calc_ema(self, interval):
         df = pd.DataFrame()
 
@@ -85,7 +94,7 @@ class TechnicalAnalysis():
 if __name__ == '__main__':
     start = datetime.datetime.today() - datetime.timedelta(days=365)
     ta = TechnicalAnalysis('AAPL', start)
-    data = ta.calc_bb()
+    print(ta.get_close()[-1])
 
     # print(data.iloc[-1]['High'])
     # print(data)

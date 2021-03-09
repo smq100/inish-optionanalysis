@@ -17,15 +17,19 @@ class Sheets:
         self.row = 0
         self.col = 0
 
+    def __str__(self):
+        return self.spreadsheet
+
     def open(self, tab):
-        self.tab = tab
-        self.sheet = None
-        self.opened = False
+        if tab:
+            self.tab = tab
+            self.sheet = None
+            self.opened = False
 
         scope = [
-            'https://spreadsheets.google.com/feeds',
+            # 'https://spreadsheets.google.com/feeds',
             'https://www.googleapis.com/auth/spreadsheets',
-            "https://www.googleapis.com/auth/drive.file",
+            # "https://www.googleapis.com/auth/drive.file",
             "https://www.googleapis.com/auth/drive"
         ]
 
@@ -46,7 +50,14 @@ class Sheets:
 
         return self.opened
 
-    def lookup_cell(self, row, col):
+    def get_column(self, column):
+        col = []
+        if self.opened and column > 0:
+            col = self.sheet.col_values(column)
+
+        return col
+
+    def get_cell(self, row, col):
         if self.opened:
             self.row = row
             self.col = col

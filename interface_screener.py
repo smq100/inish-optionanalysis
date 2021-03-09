@@ -16,7 +16,7 @@ class Interface:
         self.screener = Screener(self.table_name)
         self.symbols = None
 
-        if self.screener.valid:
+        if self.screener is not None:
             if script is not None:
                 if os.path.exists(script):
                     try:
@@ -57,14 +57,14 @@ class Interface:
                 loop = False
             else:
                 self.screener = Screener(table)
-                if self.screener.valid:
+                if self.screener.valid():
                     self.table_name = table
                     loop = False
                 else:
                     u.print_error('Invalid table name. Try again or select "0" to cancel')
 
     def fetch_symbols(self):
-        self.symbols = self.screener.get_symbols()
+        self.symbols = self.screener.symbols
         u.print_message(f'{len(self.symbols)} symbols fetched: {self.symbols[:3]} to {self.symbols[-3:]}')
 
 
