@@ -47,6 +47,14 @@ class TechnicalAnalysis():
 
         return df
 
+    def calc_sma(self, interval):
+        df = pd.DataFrame()
+
+        if interval > 5:
+            df = trend.sma_indicator(self.history['Close'], window=interval, fillna=True)
+
+        return df
+
     def calc_rsi(self, interval=14):
         df = pd.DataFrame()
 

@@ -3,7 +3,7 @@ import logging
 import datetime
 
 from pricing.fetcher import validate_ticker
-from screener.screener import Screener
+from screener.screener import Screener, VALID_SCREENS
 from utils import utils as u
 
 
@@ -15,6 +15,7 @@ class Interface:
         self.table_name = table_name
         self.screener = Screener(self.table_name)
         self.symbols = None
+        self.located = []
 
         if self.screener is not None:
             if script is not None:
@@ -36,15 +37,18 @@ class Interface:
         while True:
             menu_items = {
                 '1': f'Select Table ({self.table_name})',
-                '2': 'Fetch Symbols',
+                '2': 'Run Screen',
+                '3': 'Fetch Symbols',
                 '0': 'Exit'
             }
 
-            selection = u.menu(menu_items, 'Select Operation', 0, 2)
+            selection = u.menu(menu_items, 'Select Operation', 0, 3)
 
             if selection == 1:
                 self.select_table()
             elif selection == 2:
+                self.select_screen()
+            elif selection == 3:
                 self.fetch_symbols()
             elif selection == 0:
                 break
@@ -63,9 +67,37 @@ class Interface:
                 else:
                     u.print_error('Invalid table name. Try again or select "0" to cancel')
 
+    def select_screen(self):
+        if self.screener.valid():
+            menu_items = {
+                '1': f'{VALID_SCREENS[0].title()}',
+                '0': 'Cancel',
+            }
+
+            while True:
+                selection = u.menu(menu_items, 'Select Screen', 0, 1)
+
+                if selection == 1:
+                    self.located = self.screener.run_screen(menu_items['1'])
+                    self.print_located()
+                    break
+
+                if selection == 0:
+                    break
+        else:
+            u.print_error('No table selected')
+
     def fetch_symbols(self):
         self.symbols = self.screener.symbols
         u.print_message(f'{len(self.symbols)} symbols fetched: {self.symbols[:3]} to {self.symbols[-3:]}')
+
+    def print_located(self):
+        if len(self.located) > 0:
+            u.print_message('Symbols Identified', True)
+            for symbol in self.located:
+                print(symbol)
+        else:
+            u.print_error('No symbols were located')
 
 
 if __name__ == '__main__':

@@ -16,7 +16,7 @@ from utils import utils as u
 
 
 IV_CUTOFF = 0.020
-STRATEGIES = ('call', 'put', 'vertical')
+STRATEGIES = ['call', 'put', 'vertical']
 
 logger = u.get_logger()
 

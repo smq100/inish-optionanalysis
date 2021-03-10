@@ -91,32 +91,27 @@ class Interface:
                 print(u.delimeter(f'EMA {interval}', True))
                 print(f'Yesterday: {df[-1]:.2f}')
                 self.plot(df, f'EMA {interval}')
-
-            if selection == 2:
+            elif selection == 2:
                 df = self.technical.calc_rsi()
                 print(u.delimeter('RSI', True))
                 print(f'Yesterday: {df[-1]:.2f}')
-
-            if selection == 3:
+            elif selection == 3:
                 df = self.technical.calc_vwap()
                 print(u.delimeter('VWAP', True))
                 print(f'Yesterday: {df[-1]:.2f}')
-
-            if selection == 4:
+            elif selection == 4:
                 df = self.technical.calc_macd()
                 print(u.delimeter('MACD', True))
                 print(f'Diff: {df.iloc[-1]["Diff"]:.2f}')
                 print(f'MACD: {df.iloc[-1]["MACD"]:.2f}')
                 print(f'Sig:  {df.iloc[-1]["Signal"]:.2f}')
-
-            if selection == 5:
+            elif selection == 5:
                 df = self.technical.calc_bb()
                 print(u.delimeter('Bollinger Band', True))
                 print(f'High: {df.iloc[-1]["High"]:.2f}')
                 print(f'Mid:  {df.iloc[-1]["Mid"]:.2f}')
                 print(f'Low:  {df.iloc[-1]["Low"]:.2f}')
-
-            if selection == 0:
+            elif selection == 0:
                 break
 
     def get_trend_parameters(self):
