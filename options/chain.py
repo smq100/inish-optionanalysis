@@ -3,7 +3,7 @@ from utils import utils as u
 
 logger = u.get_logger()
 
-class Chain():
+class Chain:
     def __init__(self, ticker):
         if not validate_ticker(ticker):
             logger.error(f'Error initializing {__class__}')

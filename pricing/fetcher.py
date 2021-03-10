@@ -17,6 +17,9 @@ quandl_config.read('config.ini')
 quandl.ApiConfig.api_key = quandl_config['DEFAULT']['APIKEY']
 
 
+def validate_ticker(ticker):
+    return len(yf.Ticker(ticker).history(period="1d")) > 0
+
 def get_company(ticker):
     '''
     Retrieves a company object that may be used to gather numerous data about the company and security.
@@ -41,16 +44,6 @@ def get_company(ticker):
     else:
         return None
 
-def validate_ticker(ticker):
-    '''Perform quick check to see if a ticker is valid'''
-
-    try:
-        data = yf.Ticker(ticker)
-        return True
-    except:
-        logger.error(f'Ticker {ticker} not valid')
-        return False
-
 def get_current_price(ticker):
     if validate_ticker(ticker):
         start = datetime.datetime.today() - datetime.timedelta(days=5)
@@ -63,8 +56,6 @@ def get_current_price(ticker):
     return price
 
 def get_ranged_data(ticker, start, end=None):
-    ''' TODO '''
-
     df = pd.DataFrame()
 
     if not end:
@@ -78,8 +69,6 @@ def get_ranged_data(ticker, start, end=None):
     return df
 
 def get_data(ticker):
-    ''' TODO '''
-
     df = pd.DataFrame()
 
     if validate_ticker(ticker):
@@ -90,8 +79,6 @@ def get_data(ticker):
     return df
 
 def get_treasury_rate(ticker='DTB3'):
-    ''' TODO '''
-
     # DTB3: Default to 3-Month Treasury Rate
     df = pd.DataFrame()
     prev_business_date = datetime.datetime.today() - BDay(1)

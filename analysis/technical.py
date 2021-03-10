@@ -15,9 +15,9 @@ from utils import utils as u
 logger = u.get_logger()
 
 
-class TechnicalAnalysis():
+class TechnicalAnalysis:
     def __init__(self, ticker, start=None):
-        if (validate_ticker(ticker)):
+        if validate_ticker(ticker):
             self.ticker = ticker.upper()
 
             if start is None:
@@ -25,7 +25,7 @@ class TechnicalAnalysis():
             else:
                 self.history = yf.Ticker(ticker).history(start=f'{start:%Y-%m-%d}', rounding=True)
         else:
-            logger.error(f'Error initializing {__class__}')
+            raise AssertionError('No such symbol')
 
     def __str__(self):
         return f'Technical analysis for {self.ticker}'

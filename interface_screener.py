@@ -14,7 +14,6 @@ class Interface:
     def __init__(self, table_name, script=None):
         self.table_name = table_name
         self.screener = Screener(self.table_name)
-        self.symbols = None
         self.located = []
 
         if self.screener is not None:
@@ -36,9 +35,9 @@ class Interface:
     def main_menu(self):
         while True:
             menu_items = {
-                '1': f'Select Table ({self.table_name})',
+                '1': f'Select Table ({self.table_name}, {len(self.screener.symbols)} Symbols)',
                 '2': 'Run Screen',
-                '3': 'Fetch Symbols',
+                '3': 'Show Results',
                 '0': 'Exit'
             }
 
@@ -49,7 +48,7 @@ class Interface:
             elif selection == 2:
                 self.select_screen()
             elif selection == 3:
-                self.fetch_symbols()
+                self.print_identified()
             elif selection == 0:
                 break
 
@@ -71,15 +70,21 @@ class Interface:
         if self.screener.valid():
             menu_items = {
                 '1': f'{VALID_SCREENS[0].title()}',
+                '2': f'{VALID_SCREENS[1].title()}',
                 '0': 'Cancel',
             }
 
             while True:
-                selection = u.menu(menu_items, 'Select Screen', 0, 1)
+                selection = u.menu(menu_items, 'Select Screen', 0, 2)
 
                 if selection == 1:
                     self.located = self.screener.run_screen(menu_items['1'])
-                    self.print_located()
+                    u.print_message(f'{len(self.located)} Symbols Identified', True)
+                    break
+
+                if selection == 2:
+                    self.located = self.screener.run_screen(menu_items['2'])
+                    u.print_message(f'{len(self.located)} Symbols Identified', True)
                     break
 
                 if selection == 0:
@@ -87,17 +92,13 @@ class Interface:
         else:
             u.print_error('No table selected')
 
-    def fetch_symbols(self):
-        self.symbols = self.screener.symbols
-        u.print_message(f'{len(self.symbols)} symbols fetched: {self.symbols[:3]} to {self.symbols[-3:]}')
-
-    def print_located(self):
+    def print_identified(self):
         if len(self.located) > 0:
             u.print_message('Symbols Identified', True)
             for symbol in self.located:
                 print(symbol)
         else:
-            u.print_error('No symbols were located')
+            u.print_message('No symbols were located', True)
 
 
 if __name__ == '__main__':
@@ -118,8 +119,8 @@ if __name__ == '__main__':
     command = vars(parser.parse_args())
 
     if 'script' in command.keys():
-        Interface('SP500', script=command['script'])
+        Interface('TEST', script=command['script'])
     elif 'table' in command.keys():
         Interface(command['table'])
     else:
-        Interface('SP500')
+        Interface('TEST')

@@ -8,7 +8,7 @@ from utils import utils as u
 logger = u.get_logger()
 
 
-class ScoringAnalysis():
+class ScoringAnalysis:
     def __init__(self, ticker):
         if (validate_ticker(ticker)):
             self.ticker = ticker.upper()

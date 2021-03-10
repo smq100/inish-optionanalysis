@@ -10,7 +10,7 @@ DIRECTIONS = ('long', 'short')
 logger = u.get_logger()
 
 
-class Option():
+class Option:
     def __init__(self, ticker, product, strike, expiry):
         # Specified
         self.ticker = ticker
