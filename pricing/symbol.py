@@ -16,12 +16,12 @@ class Symbol:
 
 
     def __str__(self):
-        output = f'{self.company.info["shortName"]}'
+        output = f'{self.ticker} ({self.company.info["shortName"]}) ${self.company.info["regularMarketPrice"]:.2f}'
 
         return output
 
 
-''' YFinance .info object:
+''' Example YFinance .info object:
 {
     "zip":"98052-6399",
     "sector":"Technology",

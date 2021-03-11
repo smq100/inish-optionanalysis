@@ -6,7 +6,7 @@ import math
 
 import pandas as pd
 
-from .symbol import Symbol
+from pricing.symbol import Symbol
 from options.option import PRODUCTS, DIRECTIONS, Option
 from pricing.pricing import METHODS
 from pricing.blackscholes import BlackScholes

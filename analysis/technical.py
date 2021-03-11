@@ -25,7 +25,7 @@ class TechnicalAnalysis:
             else:
                 self.history = yf.Ticker(ticker).history(start=f'{start:%Y-%m-%d}', rounding=True)
         else:
-            raise AssertionError('No such symbol')
+            raise ValueError('No such symbol')
 
     def __str__(self):
         return f'Technical analysis for {self.ticker}'
