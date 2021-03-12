@@ -21,3 +21,6 @@ venv
 *.session.*
 *.png
 *.bak
+
+# App files
+*.screen

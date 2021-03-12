@@ -21,7 +21,7 @@ class Screener:
             self.symbols = None
             self.items_total = 0
             self.items_completed = 0
-            self.results = {}
+            self.results = []
             if self._open_table(list_name):
                 self.table_name = list_name.upper()
                 self.screen_name = VALID_SCREENS[0]

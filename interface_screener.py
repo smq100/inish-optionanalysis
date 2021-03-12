@@ -14,6 +14,8 @@ class Interface:
     def __init__(self, table_name, script=None):
         self.table_name = table_name
         self.screener = Screener(self.table_name)
+        self.screen_name = ''
+        self.screens = []
         self.results = []
 
         if self.screener is not None:
@@ -36,18 +38,21 @@ class Interface:
         while True:
             menu_items = {
                 '1': f'Select Table ({self.table_name}, {len(self.screener.symbols)} Symbols)',
-                '2': 'Run Screen',
-                '3': 'Show Results',
+                '2': f'Select Screen ({self.screen_name})',
+                '3': 'Run Screen',
+                '4': 'Show Results',
                 '0': 'Exit'
             }
 
-            selection = u.menu(menu_items, 'Select Operation', 0, 3)
+            selection = u.menu(menu_items, 'Select Operation', 0, 4)
 
             if selection == 1:
                 self.select_table()
             elif selection == 2:
                 self.select_screen()
             elif selection == 3:
+                self.run_screen()
+            elif selection == 4:
                 self.print_identified()
             elif selection == 0:
                 break
@@ -67,6 +72,29 @@ class Interface:
                     u.print_error('Invalid table name. Try again or select "0" to cancel')
 
     def select_screen(self):
+        self.screens = []
+        basepath = '.'
+        with os.scandir(basepath) as entries:
+            for entry in entries:
+                if entry.is_file():
+                    if '.screen' in entry.name:
+                        head, sep, tail = entry.name.partition('.')
+                        self.screens += [head]
+
+        if len(self.screens) > 0:
+            self.screens.sort()
+            menu_items = {}
+            for index, item in enumerate(self.screens):
+                menu_items[f'{index+1}'] = f'{item}'
+
+            menu_items['0'] = 'Cancel'
+            selection = u.menu(menu_items, 'Select Screen', 0, index+1)
+            if selection > 0:
+                self.screen_name = self.screens[selection-1]
+        else:
+            u.print_message('No screen files found')
+
+    def run_screen(self):
         if self.screener.valid():
             menu_items = {
                 '1': f'{VALID_SCREENS[0].title()}',
@@ -87,7 +115,6 @@ class Interface:
                     while task.is_alive(): pass
 
                     self.results = self.screener.results
-
                     u.print_message(f'{len(self.results)} Symbols Identified', True)
                     break
 
@@ -113,11 +140,11 @@ class Interface:
         total = self.screener.items_total
         completed = self.screener.items_completed
 
-        u.progress_bar(completed, total, prefix='Progress:', suffix='Symbols completed', length=50)
+        u.progress_bar(completed, total, prefix='Progress:', suffix='Completed', length=50)
         while completed < total:
             time.sleep(0.1)
             completed = self.screener.items_completed
-            u.progress_bar(completed, total, prefix='Progress:', suffix='Symbols completed', length=50)
+            u.progress_bar(completed, total, prefix='Progress:', suffix='Completed', length=50)
 
 
 if __name__ == '__main__':
