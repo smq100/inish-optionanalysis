@@ -3,7 +3,7 @@ import logging
 import datetime
 
 from pricing.fetcher import validate_ticker
-from screener.screener import Screener, VALID_SCREENS
+from screener.screener import Screener, VALID_LISTS, VALID_SCREENS
 from utils import utils as u
 
 
@@ -14,8 +14,8 @@ class Interface:
     def __init__(self, table_name, script=None):
         self.table_name = table_name
         self.screener = Screener(self.table_name)
-        self.screen_name = ''
-        self.screens = []
+        self.script_name = ''
+        self.script = []
         self.results = []
 
         if self.screener is not None:
@@ -36,74 +36,94 @@ class Interface:
 
     def main_menu(self):
         while True:
+
             menu_items = {
                 '1': f'Select Table ({self.table_name}, {len(self.screener.symbols)} Symbols)',
-                '2': f'Select Screen ({self.screen_name})',
-                '3': 'Run Screen',
-                '4': 'Show Results',
+                '2': 'Select Script',
+                '3': 'Run Script',
+                '4': 'Run Screen',
+                '5': 'Show Results',
                 '0': 'Exit'
             }
 
-            selection = u.menu(menu_items, 'Select Operation', 0, 4)
+            if self.script_name:
+                filename = os.path.basename(self.script_name)
+                head, sep, tail = filename.partition('.')
+                menu_items['3'] = f'Run Script ({head})'
+
+            selection = u.menu(menu_items, 'Select Operation', 0, 5)
 
             if selection == 1:
                 self.select_table()
             elif selection == 2:
-                self.select_screen()
+                self.select_script()
             elif selection == 3:
-                self.run_screen()
+                self.run_script()
             elif selection == 4:
+                self.run_screen()
+            elif selection == 5:
                 self.print_identified()
             elif selection == 0:
                 break
 
     def select_table(self):
-        loop = True
-        while loop:
-            table = input('Please enter valid table name, or 0 to cancel: ').upper()
-            if table == '0':
-                loop = False
-            else:
-                self.screener = Screener(table)
-                if self.screener.valid():
-                    self.table_name = table
-                    loop = False
-                else:
-                    u.print_error('Invalid table name. Try again or select "0" to cancel')
+        menu_items = {}
+        for index, item in enumerate(VALID_LISTS):
+            menu_items[f'{index+1}'] = f'{item}'
+        menu_items['0'] = 'Cancel'
 
-    def select_screen(self):
-        self.screens = []
-        basepath = '.'
+        selection = u.menu(menu_items, 'Select Table', 0, len(VALID_LISTS))
+        if selection > 0:
+            self.screener = Screener(VALID_LISTS[selection-1])
+            if self.screener.valid():
+                self.table_name = VALID_LISTS[selection-1]
+
+    def select_script(self):
+        self.script = []
+        paths = []
+        basepath = os.getcwd()+'/screener/scripts'
         with os.scandir(basepath) as entries:
             for entry in entries:
                 if entry.is_file():
-                    if '.screen' in entry.name:
+                    if '.script' in entry.name:
+                        self.script += [entry.path]
                         head, sep, tail = entry.name.partition('.')
-                        self.screens += [head]
+                        paths += [head.title()]
 
-        if len(self.screens) > 0:
-            self.screens.sort()
+        if len(self.script) > 0:
+            self.script.sort()
+            paths.sort()
+
             menu_items = {}
-            for index, item in enumerate(self.screens):
+            for index, item in enumerate(paths):
                 menu_items[f'{index+1}'] = f'{item}'
-
             menu_items['0'] = 'Cancel'
-            selection = u.menu(menu_items, 'Select Screen', 0, index+1)
+
+            selection = u.menu(menu_items, 'Select Script', 0, index+1)
             if selection > 0:
-                self.screen_name = self.screens[selection-1]
+                self.script_name = self.script[selection-1]
+
+                if not self.screener.load_script(self.script_name):
+                    u.print_error('Error in script file')
+
         else:
-            u.print_message('No screen files found')
+            u.print_message('No script files found')
+
+    def run_script(self):
+        try:
+            self.screener.run_script()
+        except Exception as e:
+            u.print_error(f'Error running script: {str(e)}')
 
     def run_screen(self):
         if self.screener.valid():
-            menu_items = {
-                '1': f'{VALID_SCREENS[0].title()}',
-                '2': f'{VALID_SCREENS[1].title()}',
-                '0': 'Cancel',
-            }
+            menu_items = {}
+            for index, item in enumerate(VALID_SCREENS):
+                menu_items[f'{index+1}'] = f'{item.title()}'
+            menu_items['0'] = 'Cancel'
 
             while True:
-                selection = u.menu(menu_items, 'Select Screen', 0, 2)
+                selection = u.menu(menu_items, 'Select Screen', 0, len(VALID_SCREENS))
 
                 if selection == 1:
                     task = threading.Thread(target=self.screener.run_screen, args=(menu_items['1'],))

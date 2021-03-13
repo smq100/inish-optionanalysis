@@ -1,23 +1,25 @@
-import datetime, time
+import os, datetime, time, json
 
 from analysis.technical import TechnicalAnalysis
 from pricing.symbol import Symbol
 from .sheets import Sheets
+from .interpreter import Interpreter
 from utils import utils as u
 
 
 logger = u.get_logger()
 
-VALID_LISTS = ['SP500', 'DOW', 'NASDAQ', 'TEST']
-VALID_SCREENS = ['test', 'minervini']
+VALID_LISTS = ('SP500', 'DOW', 'NASDAQ', 'TEST')
+VALID_SCREENS = ('test', 'minervini')
 
 
 class Screener:
     def __init__(self, list_name):
         if list_name.upper() in VALID_LISTS:
-            self.table_name = ''
             self.screen_name = ''
             self.table = Sheets()
+            self.table_name = ''
+            self.script = []
             self.symbols = None
             self.items_total = 0
             self.items_completed = 0
@@ -25,9 +27,38 @@ class Screener:
             if self._open_table(list_name):
                 self.table_name = list_name.upper()
                 self.screen_name = VALID_SCREENS[0]
+        else:
+            raise ValueError ('Invalid list')
 
     def __str__(self):
         return self.table_name
+
+    def load_script(self, script):
+        valid = False
+        if os.path.exists(script):
+            try:
+                with open(script) as f:
+                    self.script = json.load(f)
+                    valid = True
+            except:
+                logger.error(f'{__name__}: File format error')
+        else:
+            logger.warning(f'{__name__}: File "{script}" not found')
+
+        return valid
+
+    def run_script(self):
+        result = []
+        if len(self.script) > 0:
+            for index, condition in enumerate(self.script):
+                i = Interpreter(condition)
+                result += [i.run()]
+                logger.debug(f'{__name__}: {i}')
+        else:
+            valid = False
+            logger.error(f'{__name__}: Illegal script')
+
+        return all(result)
 
     def run_screen(self, screen):
         self.results = []
@@ -97,6 +128,6 @@ if __name__ == '__main__':
     import logging
     u.get_logger(logging.DEBUG)
 
-    screener = Screener('sp500')
-    c = screener.list.get_cell(1,1)
-    print(c)
+    s = Screener('test')
+    s.load_script('/Users/steve/Documents/Source Code/Personal/OptionAnalysis/screener/scripts/test1.script')
+    s.run_script()

@@ -160,7 +160,7 @@ def print_warning(message, creturn=False):
 def print_error(message, creturn=False):
     print(delimeter(f'Error: {message}', creturn))
 
-def progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█', end='\r', percent=True):
+def progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█', end='\r', percent=False):
     """
     Call in a loop to create terminal progress bar
     @params:
