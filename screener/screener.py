@@ -48,7 +48,7 @@ class Screener:
 
     def run_script(self):
         self.results = []
-        result = []
+        self.items_completed = 0
         if len(self.symbols) == 0:
             logger.warning(f'{__name__}: No symbols')
         elif len(self.script) == 0:
@@ -56,11 +56,14 @@ class Screener:
         else:
             for symbol in self.symbols:
                 if validate_ticker(symbol.ticker):
+                    result = []
                     for condition in self.script:
                         i = Interpreter(symbol, condition)
                         result += [i.run()]
                     if all(result):
                         self.results += [symbol]
+
+                self.items_completed += 1
 
         return self.results
 
@@ -86,26 +89,6 @@ class Screener:
 
         return self.items_total > 0
 
-    def _process_test(self):
-        results = []
-        if self.screen_name == VALID_SCREENS[0]:
-            start = datetime.datetime.today() - datetime.timedelta(days=30)
-            for s in self.symbols:
-                try:
-                    ta = TechnicalAnalysis(s, start)
-                    price = ta.get_current_price()
-
-                    # Condition 1: The current stock price is above a value
-                    if price > 150.0:
-                        results += [Symbol(s)]
-
-                    self.items_completed += 1
-                    time.sleep(0.1)
-                except ValueError:
-                    self.items_completed += 1
-                    time.sleep(0.1)
-
-        return results
 
     # Minevini
     # Condition 1: The current stock price is above both the 150-day (30-week) and the 200-day (40-week) moving average price lines.

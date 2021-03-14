@@ -1,3 +1,6 @@
+import datetime
+
+from analysis.technical import TechnicalAnalysis
 from utils import utils as u
 
 
@@ -24,6 +27,7 @@ class Interpreter:
         return output
 
     def run(self):
+        result = False
         if self.condition['start']['technical'] not in VALID_TECHNICALS:
             raise ValueError ('Invalid technical specified in script')
         elif self.condition['criteria']['test'] not in VALID_TESTS:
@@ -37,9 +41,22 @@ class Interpreter:
             self.criteria_value = self.condition['criteria']['value']
             self.next = self.condition['next']
 
-        return self._calculate()
+            result = self._calculate()
+
+        logger.debug(f'{__name__}: Calculated {self.symbol.ticker}: {result}')
+        return result
 
 
     def _calculate(self):
-        logger.debug(f'{__name__}: {self.symbol.ticker}:\t{self.condition}')
-        return True
+        result = False
+        if self.start_technical == VALID_TECHNICALS[0]: # price
+            start = datetime.datetime.today() - datetime.timedelta(days=30)
+            try:
+                ta = TechnicalAnalysis(self.symbol.ticker, start)
+                price = ta.get_current_price()
+                if price > self.criteria_value:
+                    result = True
+            except ValueError:
+                logger.error(f'{__name__}: Invalid symbol {self.symbol.ticker}')
+
+        return result
