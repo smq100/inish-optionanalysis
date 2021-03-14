@@ -2,6 +2,7 @@ import os, datetime, time, json
 
 from analysis.technical import TechnicalAnalysis
 from pricing.symbol import Symbol
+from pricing.fetcher import validate_ticker
 from .sheets import Sheets
 from .interpreter import Interpreter
 from utils import utils as u
@@ -10,23 +11,21 @@ from utils import utils as u
 logger = u.get_logger()
 
 VALID_LISTS = ('SP500', 'DOW', 'NASDAQ', 'TEST')
-VALID_SCREENS = ('test', 'minervini')
 
 
 class Screener:
     def __init__(self, list_name):
-        if list_name.upper() in VALID_LISTS:
-            self.screen_name = ''
-            self.table = Sheets()
+        list_name = list_name.upper()
+        if list_name in VALID_LISTS:
             self.table_name = ''
+            self.table = Sheets()
             self.script = []
-            self.symbols = None
+            self.symbols = []
             self.items_total = 0
             self.items_completed = 0
             self.results = []
             if self._open_table(list_name):
-                self.table_name = list_name.upper()
-                self.screen_name = VALID_SCREENS[0]
+                self.table_name = list_name
         else:
             raise ValueError ('Invalid list')
 
@@ -48,30 +47,20 @@ class Screener:
         return valid
 
     def run_script(self):
-        result = []
-        if len(self.script) > 0:
-            for index, condition in enumerate(self.script):
-                i = Interpreter(condition)
-                result += [i.run()]
-                logger.debug(f'{__name__}: {i}')
-        else:
-            valid = False
-            logger.error(f'{__name__}: Illegal script')
-
-        return all(result)
-
-    def run_screen(self, screen):
         self.results = []
-        if screen.lower() == VALID_SCREENS[0]:
-            self.screen_name = VALID_SCREENS[0]
-            self.items_total = len(self.symbols)
-            self.items_completed = 0
-            self.results = self._process_test()
-        elif screen.lower() == VALID_SCREENS[1]:
-            self.screen_name = VALID_SCREENS[1]
-            self.items_total = len(self.symbols)
-            self.items_completed = 0
-            self.results = self._process_minervini()
+        result = []
+        if len(self.symbols) == 0:
+            logger.warning(f'{__name__}: No symbols')
+        elif len(self.script) == 0:
+            logger.error(f'{__name__}: Illegal script')
+        else:
+            for symbol in self.symbols:
+                if validate_ticker(symbol.ticker):
+                    for condition in self.script:
+                        i = Interpreter(symbol, condition)
+                        result += [i.run()]
+                    if all(result):
+                        self.results += [symbol]
 
         return self.results
 
@@ -79,16 +68,23 @@ class Screener:
         return bool(self.table_name)
 
     def _open_table(self, table):
+        table = table.upper()
+        self.table_name = ''
+        self.items_total = 0
+        self.items_completed = 0
         if table in VALID_LISTS:
             if self.table.open(table):
                 self.table_name = table
-                self.symbols = self.table.get_column(1)
-                self.items_total = len(self.symbols)
-                self.items_completed = 0
-            else:
-                self.table_name = ''
+                symbols = self.table.get_column(1)
+                for s in symbols:
+                    if validate_ticker(s):
+                        self.symbols += [Symbol(s)]
+                    else:
+                        logger.warning(f'{__name__}: Invalid ticker {s.ticker}')
 
-        return bool(self.table_name)
+                self.items_total = len(self.symbols)
+
+        return self.items_total > 0
 
     def _process_test(self):
         results = []
@@ -111,9 +107,7 @@ class Screener:
 
         return results
 
-    def _process_minervini(self):
-        return []
-
+    # Minevini
     # Condition 1: The current stock price is above both the 150-day (30-week) and the 200-day (40-week) moving average price lines.
     # Condition 2: The 150-day moving average is above the 200-day moving average.
     # Condition 3: The 200-day moving average line is trending up for at least 1 month (preferably 4–5 months minimum in most cases).

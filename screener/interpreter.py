@@ -1,11 +1,15 @@
+from utils import utils as u
 
+
+logger = u.get_logger()
 
 VALID_TECHNICALS = ('price',)
 VALID_TESTS = ('gt', 'lt', 'eq')
 VALID_NEXT = ('end',)
 
 class Interpreter:
-    def __init__(self, condition):
+    def __init__(self, symbol, condition):
+        self.symbol = symbol
         self.condition = condition
         self.start_technical = ''
         self.start_level = 0.0
@@ -33,8 +37,9 @@ class Interpreter:
             self.criteria_value = self.condition['criteria']['value']
             self.next = self.condition['next']
 
-            return self._calculate()
+        return self._calculate()
 
 
     def _calculate(self):
+        logger.debug(f'{__name__}: {self.symbol.ticker}:\t{self.condition}')
         return True

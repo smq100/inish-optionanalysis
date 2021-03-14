@@ -3,11 +3,11 @@ import logging
 import datetime
 
 from pricing.fetcher import validate_ticker
-from screener.screener import Screener, VALID_LISTS, VALID_SCREENS
+from screener.screener import Screener, VALID_LISTS
 from utils import utils as u
 
 
-logger = u.get_logger(logging.WARNING)
+logger = u.get_logger(logging.DEBUG)
 
 
 class Interface:
@@ -41,8 +41,7 @@ class Interface:
                 '1': f'Select Table ({self.table_name}, {len(self.screener.symbols)} Symbols)',
                 '2': 'Select Script',
                 '3': 'Run Script',
-                '4': 'Run Screen',
-                '5': 'Show Results',
+                '4': 'Show Results',
                 '0': 'Exit'
             }
 
@@ -51,7 +50,7 @@ class Interface:
                 head, sep, tail = filename.partition('.')
                 menu_items['3'] = f'Run Script ({head})'
 
-            selection = u.menu(menu_items, 'Select Operation', 0, 5)
+            selection = u.menu(menu_items, 'Select Operation', 0, 4)
 
             if selection == 1:
                 self.select_table()
@@ -60,8 +59,6 @@ class Interface:
             elif selection == 3:
                 self.run_script()
             elif selection == 4:
-                self.run_screen()
-            elif selection == 5:
                 self.print_identified()
             elif selection == 0:
                 break
