@@ -1,14 +1,18 @@
 import datetime
 
-from analysis.technical import TechnicalAnalysis
 from utils import utils as u
 
 
 logger = u.get_logger()
 
 VALID_TECHNICALS = ('price',)
-VALID_TESTS = ('gt', 'lt', 'eq')
-VALID_NEXT = ('end',)
+VALID_TESTS = ('lt', 'eq', 'gt')
+VALID_CONDITIONALS = ('and', 'or')
+
+class SyntaxError(Exception):
+    def __init__(self, message):
+        super().__init__(message)
+
 
 class Interpreter:
     def __init__(self, symbol, condition):
@@ -19,29 +23,29 @@ class Interpreter:
         self.criteria_test = ''
         self.criteria_value = 0.0
         self.result = False
-        self.next = ''
+        self.conditional = ''
 
     def __str__(self):
-        output = f'{self.start_technical}, {self.start_level}, {self.criteria_test}, {self.criteria_value}, {self.next}'
+        output = f'{self.start_technical}, {self.start_level}, {self.criteria_test}, {self.criteria_value}, {self.condition}'
 
         return output
 
     def run(self):
         result = False
         if self.condition['start']['technical'] not in VALID_TECHNICALS:
-            raise ValueError ('Invalid technical specified in script')
-        elif self.condition['criteria']['test'] not in VALID_TESTS:
-            raise ValueError ('Invalid test specified in script')
-        elif self.condition['next'] not in VALID_NEXT:
-            raise ValueError ('Invalid next specified in script')
-        else:
-            self.start_technical = self.condition['start']['technical']
-            self.start_level = self.condition['start']['level']
-            self.criteria_test = self.condition['criteria']['test']
-            self.criteria_value = self.condition['criteria']['value']
-            self.next = self.condition['next']
+            raise SyntaxError('Invalid "technical" specified in script')
+        if self.condition['criteria']['test'] not in VALID_TESTS:
+            raise SyntaxError('Invalid "test" specified in script')
+        if self.condition['conditional'] not in VALID_CONDITIONALS:
+            raise SyntaxError('Invalid "conditional" specified in script')
 
-            result = self._calculate()
+        self.start_technical = self.condition['start']['technical']
+        self.start_level = self.condition['start']['level']
+        self.criteria_test = self.condition['criteria']['test']
+        self.criteria_value = self.condition['criteria']['value']
+        self.conditional = self.condition['conditional']
+
+        result = self._calculate()
 
         logger.debug(f'{__name__}: Calculated {self.symbol.ticker}: {result}')
         return result
@@ -49,14 +53,18 @@ class Interpreter:
 
     def _calculate(self):
         result = False
-        if self.start_technical == VALID_TECHNICALS[0]: # price
-            start = datetime.datetime.today() - datetime.timedelta(days=30)
-            try:
-                ta = TechnicalAnalysis(self.symbol.ticker, start)
-                price = ta.get_current_price()
+
+        ### Price
+        if self.start_technical == VALID_TECHNICALS[0]:
+            price = self.symbol.ta.get_current_price()
+            if self.criteria_test == VALID_TESTS[0]: # lt
+                if price < self.criteria_value:
+                    result = True
+            elif self.criteria_test == VALID_TESTS[1]: # eq
+                if price == self.criteria_value:
+                    result = True
+            elif self.criteria_test == VALID_TESTS[2]: # eq
                 if price > self.criteria_value:
                     result = True
-            except ValueError:
-                logger.error(f'{__name__}: Invalid symbol {self.symbol.ticker}')
 
         return result

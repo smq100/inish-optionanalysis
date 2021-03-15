@@ -4,11 +4,10 @@
 
 import datetime
 
-import yfinance as yf
 import pandas as pd
 from ta import trend, momentum, volatility, volume
 
-from pricing.fetcher import validate_ticker
+from pricing.fetcher import validate_ticker, get_company
 from utils import utils as u
 
 
@@ -21,9 +20,9 @@ class TechnicalAnalysis:
             self.ticker = ticker.upper()
 
             if start is None:
-                self.history = yf.Ticker(ticker).history(period="max", rounding=True)
+                self.history = get_company(ticker).history(period="max", rounding=True)
             else:
-                self.history = yf.Ticker(ticker).history(start=f'{start:%Y-%m-%d}', rounding=True)
+                self.history = get_company(ticker).history(start=f'{start:%Y-%m-%d}', rounding=True)
         else:
             raise ValueError('No such symbol')
 

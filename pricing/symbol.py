@@ -1,16 +1,24 @@
+
+import datetime
+
+from analysis.technical import TechnicalAnalysis
 from pricing.fetcher import validate_ticker, get_company
 from utils import utils as u
 
 logger = u.get_logger()
 
 class Symbol:
-    def __init__(self, ticker):
+    def __init__(self, ticker, history=0):
         self.company = None
         self.ticker = ticker
+        self.history = history
+        self.ta = None
 
         if validate_ticker(ticker):
-            # Fetch YFinance opbject
             self.company = get_company(ticker)
+            if history > 0:
+                start = datetime.datetime.today() - datetime.timedelta(days=self.history)
+                self.ta = TechnicalAnalysis(self.ticker, start)
         else:
             logger.error(f'Error initializing {__class__}')
 

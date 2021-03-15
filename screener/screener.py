@@ -1,10 +1,9 @@
 import os, datetime, time, json
 
-from analysis.technical import TechnicalAnalysis
 from pricing.symbol import Symbol
 from pricing.fetcher import validate_ticker
 from .sheets import Sheets
-from .interpreter import Interpreter
+from .interpreter import Interpreter, SyntaxError
 from utils import utils as u
 
 
@@ -14,20 +13,24 @@ VALID_LISTS = ('SP500', 'DOW', 'NASDAQ', 'TEST')
 
 
 class Screener:
-    def __init__(self, list_name):
+    def __init__(self, list_name, days=365):
         list_name = list_name.upper()
-        if list_name in VALID_LISTS:
-            self.table_name = ''
-            self.table = Sheets()
-            self.script = []
-            self.symbols = []
-            self.items_total = 0
-            self.items_completed = 0
-            self.results = []
-            if self._open_table(list_name):
-                self.table_name = list_name
-        else:
+        if list_name not in VALID_LISTS:
             raise ValueError ('Invalid list')
+        if days < 30:
+            raise ValueError ('Invalid number of days')
+
+        self.days = days
+        self.table_name = ''
+        self.table = Sheets()
+        self.script = []
+        self.symbols = []
+        self.items_total = 0
+        self.items_completed = 0
+        self.results = []
+        self.error = ''
+        if self._open_table(list_name):
+            self.table_name = list_name
 
     def __str__(self):
         return self.table_name
@@ -55,15 +58,24 @@ class Screener:
             logger.error(f'{__name__}: Illegal script')
         else:
             for symbol in self.symbols:
-                if validate_ticker(symbol.ticker):
-                    result = []
-                    for condition in self.script:
-                        i = Interpreter(symbol, condition)
+                result = []
+                for condition in self.script:
+                    i = Interpreter(symbol, condition)
+                    try:
                         result += [i.run()]
+                    except SyntaxError as e:
+                        self.error = str(e)
+                        break
+
+                if not self.error:
+                    self.items_completed += 1
                     if all(result):
                         self.results += [symbol]
+                else:
+                    self.items_completed = self.items_total
+                    self.results = []
+                    break
 
-                self.items_completed += 1
 
         return self.results
 
@@ -81,7 +93,7 @@ class Screener:
                 symbols = self.table.get_column(1)
                 for s in symbols:
                     if validate_ticker(s):
-                        self.symbols += [Symbol(s)]
+                        self.symbols += [Symbol(s, self.days)]
                     else:
                         logger.warning(f'{__name__}: Invalid ticker {s.ticker}')
 

@@ -13,7 +13,7 @@ BASEPATH = os.getcwd()+'/screener/screens/'
 
 class Interface:
     def __init__(self, table, screen=None, script=None):
-        self.table_name = table
+        self.table_name = table.upper()
         self.screener = Screener(self.table_name)
         self.script = []
         self.results = []
@@ -115,27 +115,21 @@ class Interface:
             u.print_message('No script files found')
 
     def run_script(self):
-        try:
-            task = threading.Thread(target=self.screener.run_script)
-            task.start()
+        task = threading.Thread(target=self.screener.run_script)
+        task.start()
 
-            self._show_progress()
+        self._show_progress()
 
-            # Wait for thread to finish
-            while task.is_alive(): pass
+        # Wait for thread to finish
+        while task.is_alive(): pass
 
+        if not self.screener.error:
             self.results = self.screener.results
             u.print_message(f'{len(self.results)} Symbols Identified', True)
-        except Exception as e:
-            u.print_error(f'Error running script: {str(e)}')
-
-    def print_results(self):
-        if len(self.results) > 0:
-            u.print_message('Symbols Identified', True)
-            for index, symbol in enumerate(self.results):
-                print(f'{index:3n}: {symbol}')
         else:
-            u.print_message('No symbols were located', True)
+            self.results = []
+            u.print_error(self.screener.error, True)
+
 
     def _show_progress(self):
         total = self.screener.items_total
@@ -146,6 +140,14 @@ class Interface:
             time.sleep(0.1)
             completed = self.screener.items_completed
             u.progress_bar(completed, total, prefix='Progress:', suffix='Completed', length=50)
+
+    def print_results(self):
+        if len(self.results) > 0:
+            u.print_message('Symbols Identified', True)
+            for index, symbol in enumerate(self.results):
+                print(f'{index:3n}: {symbol}')
+        else:
+            u.print_message('No symbols were located', True)
 
 
 if __name__ == '__main__':
