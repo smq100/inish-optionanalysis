@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from pricing.fetcher import validate_ticker
 from analysis.technical import TechnicalAnalysis
 from analysis.trend import SupportResistance, Line
+from pricing import fetcher as f
 from utils import utils as u
 
 
@@ -15,7 +16,7 @@ logger = u.get_logger(logging.WARNING)
 class Interface:
     def __init__(self, ticker, script=None):
         ticker = ticker.upper()
-        if validate_ticker(ticker):
+        if f.validate_ticker(ticker):
             start = datetime.datetime.today() - datetime.timedelta(days=90)
             self.technical = TechnicalAnalysis(ticker, start=start)
 
@@ -63,7 +64,7 @@ class Interface:
         while not valid:
             ticker = input('Please enter symbol, or 0 to cancel: ').upper()
             if ticker != '0':
-                valid = validate_ticker(ticker)
+                valid = f.validate_ticker(ticker)
                 if valid:
                     start = datetime.datetime.today() - datetime.timedelta(days=365)
                     self.technical = TechnicalAnalysis(ticker, start=start)

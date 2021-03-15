@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 from pandas.tseries.offsets import BDay
 
-from .fetcher import validate_ticker, get_ranged_data, get_treasury_rate
+from pricing import fetcher as f
 from utils import utils as u
 
 
@@ -64,7 +64,7 @@ class Pricing(ABC):
         self.expiry = self.expiry.replace(hour=0, minute=0, second=0, microsecond=0)
 
         # Initialize
-        if validate_ticker(ticker):
+        if f.validate_ticker(ticker):
             self.initialize_variables()
         else:
             raise IOError('Problem fetching ticker information')
@@ -134,7 +134,7 @@ class Pricing(ABC):
         :return:
         '''
         if self._underlying_asset_data.empty:
-            self._underlying_asset_data = get_ranged_data(self.ticker, self._start_date, None)
+            self._underlying_asset_data = f.get_ranged_data(self.ticker, self._start_date, None)
 
             if self._underlying_asset_data.empty:
                 logger.error(f'{__name__}: Unable to get historical stock data')
@@ -146,7 +146,7 @@ class Pricing(ABC):
 
         :return: <void>
         '''
-        self.risk_free_rate = get_treasury_rate()
+        self.risk_free_rate = f.get_treasury_rate()
         logger.info(f'{__name__}: Risk-free rate = {self.risk_free_rate:.4f}')
 
     def _calc_time_to_maturity(self):

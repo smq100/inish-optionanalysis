@@ -7,7 +7,7 @@ import datetime
 import pandas as pd
 from ta import trend, momentum, volatility, volume
 
-from pricing.fetcher import validate_ticker, get_company
+from pricing import fetcher as f
 from utils import utils as u
 
 
@@ -15,14 +15,14 @@ logger = u.get_logger()
 
 
 class TechnicalAnalysis:
-    def __init__(self, ticker, start=None):
-        if validate_ticker(ticker):
+    def __init__(self, ticker, start=None, lazy=True):
+        if f.validate_ticker(ticker):
             self.ticker = ticker.upper()
+            self.start = start
+            self.history = None
 
-            if start is None:
-                self.history = get_company(ticker).history(period="max", rounding=True)
-            else:
-                self.history = get_company(ticker).history(start=f'{start:%Y-%m-%d}', rounding=True)
+            if not lazy:
+                self._load_history()
         else:
             raise ValueError('No such symbol')
 
@@ -30,15 +30,24 @@ class TechnicalAnalysis:
         return f'Technical analysis for {self.ticker}'
 
     def get_current_price(self):
+        if self.history is None:
+            self._load_history()
         return self.history['Close'][-1]
 
     def get_close(self):
+        if self.history is None:
+            self._load_history()
         return self.history['Close']
 
     def get_volumn(self):
+        if self.history is None:
+            self._load_history()
         return self.history['Volume']
 
     def calc_ema(self, interval):
+        if self.history is None:
+            self._load_history()
+
         df = pd.DataFrame()
 
         if interval > 5:
@@ -47,6 +56,9 @@ class TechnicalAnalysis:
         return df
 
     def calc_sma(self, interval):
+        if self.history is None:
+            self._load_history()
+
         df = pd.DataFrame()
 
         if interval > 5:
@@ -55,6 +67,9 @@ class TechnicalAnalysis:
         return df
 
     def calc_rsi(self, interval=14):
+        if self.history is None:
+            self._load_history()
+
         df = pd.DataFrame()
 
         if interval > 5:
@@ -63,6 +78,9 @@ class TechnicalAnalysis:
         return df
 
     def calc_vwap(self):
+        if self.history is None:
+            self._load_history()
+
         df = pd.DataFrame()
 
         vwap = volume.VolumeWeightedAveragePrice(self.history['High'], self.history['Low'], self.history['Close'], self.history['Volume'], fillna=True)
@@ -71,6 +89,9 @@ class TechnicalAnalysis:
         return df
 
     def calc_macd(self, slow=26, fast=12, signal=9):
+        if self.history is None:
+            self._load_history()
+
         df = pd.DataFrame()
 
         macd = trend.MACD(self.history['Close'], window_slow=slow, window_fast=fast, window_sign=signal, fillna=True)
@@ -84,6 +105,9 @@ class TechnicalAnalysis:
         return df
 
     def calc_bb(self, interval=14, std=2):
+        if self.history is None:
+            self._load_history()
+
         df = pd.DataFrame()
 
         if interval > 5:
@@ -96,6 +120,12 @@ class TechnicalAnalysis:
             df.columns = ['High', 'Mid', 'Low']
 
         return df
+
+    def _load_history(self):
+        if self.start is None:
+            self.history = f.get_company(self.ticker).history(period="max", rounding=True)
+        else:
+            self.history = f.get_company(self.ticker).history(start=f'{self.start:%Y-%m-%d}', rounding=True)
 
 
 if __name__ == '__main__':

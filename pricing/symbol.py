@@ -2,7 +2,7 @@
 import datetime
 
 from analysis.technical import TechnicalAnalysis
-from pricing.fetcher import validate_ticker, get_company
+from pricing import fetcher as f
 from utils import utils as u
 
 logger = u.get_logger()
@@ -14,8 +14,8 @@ class Symbol:
         self.history = history
         self.ta = None
 
-        if validate_ticker(ticker):
-            self.company = get_company(ticker)
+        if f.validate_ticker(ticker):
+            self.company = f.get_company(ticker)
             if history > 0:
                 start = datetime.datetime.today() - datetime.timedelta(days=self.history)
                 self.ta = TechnicalAnalysis(self.ticker, start)
@@ -25,7 +25,6 @@ class Symbol:
 
     def __str__(self):
         output = f'{self.ticker} ({self.company.info["shortName"]}) ${self.company.info["regularMarketPrice"]:.2f}'
-
         return output
 
 

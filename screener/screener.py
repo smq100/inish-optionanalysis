@@ -1,9 +1,9 @@
 import os, datetime, time, json
 
-from pricing.symbol import Symbol
-from pricing.fetcher import validate_ticker
 from .sheets import Sheets
 from .interpreter import Interpreter, SyntaxError
+from pricing.symbol import Symbol
+from pricing import fetcher as f
 from utils import utils as u
 
 
@@ -13,12 +13,12 @@ VALID_LISTS = ('SP500', 'DOW', 'NASDAQ', 'TEST')
 
 
 class Screener:
-    def __init__(self, list_name, days=365):
+    def __init__(self, list_name, script=None, days=365):
         list_name = list_name.upper()
         if list_name not in VALID_LISTS:
-            raise ValueError ('Invalid list')
+            raise ValueError('Invalid list')
         if days < 30:
-            raise ValueError ('Invalid number of days')
+            raise ValueError('Invalid number of days')
 
         self.days = days
         self.table_name = ''
@@ -29,14 +29,18 @@ class Screener:
         self.items_completed = 0
         self.results = []
         self.error = ''
+
         if self._open_table(list_name):
             self.table_name = list_name
+
+        if script is not None:
+            self.load_script(script)
 
     def __str__(self):
         return self.table_name
 
     def load_script(self, script):
-        valid = False
+        self.script = None
         if os.path.exists(script):
             try:
                 with open(script) as f:
@@ -47,14 +51,18 @@ class Screener:
         else:
             logger.warning(f'{__name__}: File "{script}" not found')
 
-        return valid
+        return self.script is not None
 
     def run_script(self):
         self.results = []
         self.items_completed = 0
         if len(self.symbols) == 0:
+            self.items_completed = self.items_total
+            self.results = []
             logger.warning(f'{__name__}: No symbols')
         elif len(self.script) == 0:
+            self.items_completed = self.items_total
+            self.results = []
             logger.error(f'{__name__}: Illegal script')
         else:
             for symbol in self.symbols:
@@ -92,7 +100,7 @@ class Screener:
                 self.table_name = table
                 symbols = self.table.get_column(1)
                 for s in symbols:
-                    if validate_ticker(s):
+                    if f.validate_ticker(s):
                         self.symbols += [Symbol(s, self.days)]
                     else:
                         logger.warning(f'{__name__}: Invalid ticker {s.ticker}')

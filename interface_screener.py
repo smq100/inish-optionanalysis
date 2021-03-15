@@ -2,7 +2,6 @@ import sys, os, json, time, threading
 import logging
 import datetime
 
-from pricing.fetcher import validate_ticker
 from screener.screener import Screener, VALID_LISTS
 from utils import utils as u
 
@@ -24,8 +23,6 @@ class Interface:
             self.script_name = BASEPATH + screen + SCREEN_SUFFIX
         else:
             self.script_name = ''
-
-        print(self.script_name)
 
         if self.screener is not None:
             if script is not None:
@@ -80,7 +77,7 @@ class Interface:
 
         selection = u.menu(menu_items, 'Select Table', 0, len(VALID_LISTS))
         if selection > 0:
-            self.screener = Screener(VALID_LISTS[selection-1])
+            self.screener = Screener(VALID_LISTS[selection-1], script=self.script_name)
             if self.screener.valid():
                 self.table_name = VALID_LISTS[selection-1]
 

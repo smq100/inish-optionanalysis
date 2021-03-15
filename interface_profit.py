@@ -12,8 +12,8 @@ from strategy.strategy import Leg
 from strategy.call import Call
 from strategy.put import Put
 from strategy.vertical import Vertical
-from pricing.fetcher import validate_ticker
 from options.chain import Chain
+from pricing import fetcher as f
 from utils import utils as u
 
 MAX_ROWS = 50
@@ -27,7 +27,7 @@ class Interface:
         pd.options.display.float_format = '{:,.2f}'.format
 
         ticker = ticker.upper()
-        valid = validate_ticker(ticker)
+        valid = f.validate_ticker(ticker)
 
         self.ticker = ticker
         self.strategy = None
@@ -267,7 +267,7 @@ class Interface:
         while not valid:
             ticker = input('Please enter symbol, or 0 to cancel: ').upper()
             if ticker != '0':
-                valid = validate_ticker(ticker)
+                valid = f.validate_ticker(ticker)
                 if not valid:
                     u.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
             else:
