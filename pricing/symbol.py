@@ -24,7 +24,7 @@ class Symbol:
 
 
     def __str__(self):
-        output = f'{self.ticker} ({self.company.info["shortName"]}) ${self.company.info["regularMarketPrice"]:.2f}'
+        output = f'{self.ticker}'
         return output
 
 

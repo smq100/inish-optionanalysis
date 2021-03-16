@@ -6,7 +6,7 @@ from screener.screener import Screener, VALID_LISTS
 from utils import utils as u
 
 
-logger = u.get_logger(logging.WARNING)
+logger = u.get_logger(logging.DEBUG)
 SCREEN_SUFFIX = '.screen'
 BASEPATH = os.getcwd()+'/screener/screens/'
 
@@ -63,7 +63,7 @@ class Interface:
             elif selection == 2:
                 self.select_script()
             elif selection == 3:
-                self.run_script()
+                self.run_script(False)
             elif selection == 4:
                 self.print_results()
             elif selection == 0:
@@ -111,18 +111,19 @@ class Interface:
         else:
             u.print_message('No script files found')
 
-    def run_script(self):
+    def run_script(self, progressbar):
         task = threading.Thread(target=self.screener.run_script)
         task.start()
 
-        self._show_progress()
+        if progressbar:
+            self._show_progress()
 
         # Wait for thread to finish
         while task.is_alive(): pass
 
         if not self.screener.error:
             self.results = self.screener.results
-            u.print_message(f'{len(self.results)} Symbols Identified', True)
+            u.print_message(f'{len(self.results)} Symbol(s) Identified', True)
         else:
             self.results = []
             u.print_error(self.screener.error, True)
@@ -134,7 +135,7 @@ class Interface:
 
         u.progress_bar(completed, total, prefix='Progress:', suffix='Completed', length=50)
         while completed < total:
-            time.sleep(0.1)
+            time.sleep(0.25)
             completed = self.screener.items_completed
             u.progress_bar(completed, total, prefix='Progress:', suffix='Completed', length=50)
 
