@@ -47,7 +47,7 @@ class Interface:
                         with open(script) as file_:
                             data = json.load(file_)
                             print(data)
-                    except:
+                    except Exception as e:
                         u.print_error('File read error')
                 else:
                     u.print_error(f'File "{script}" not found')
@@ -241,7 +241,7 @@ class Interface:
             self.strategy.calculate()
             self.dirty_calculate = False
             return True
-        except:
+        except Exception as e:
             return False
 
     def analyze(self):
@@ -517,33 +517,33 @@ class Interface:
     def load_strategy(self, ticker, name, direction, analyze=True):
         modified = False
 
-        # try:
-        if name.lower() == 'call':
-            modified = True
-            self.strategy = Call(ticker, 'call', direction)
-            if analyze:
-                self.analyze()
-        elif name.lower() == 'put':
-            modified = True
-            self.strategy = Put(ticker, 'put', direction)
-            if analyze:
-                self.analyze()
-        elif name.lower() == 'vertc':
-            modified = True
-            self.strategy = Vertical(ticker, 'call', direction)
-            if analyze:
-                self.analyze()
-        elif name.lower() == 'vertp':
-            modified = True
-            self.strategy = Vertical(ticker, 'put', direction)
-            if analyze:
-                self.analyze()
-        else:
-            u.print_error('Unknown argument')
+        try:
+            if name.lower() == 'call':
+                modified = True
+                self.strategy = Call(ticker, 'call', direction)
+                if analyze:
+                    self.analyze()
+            elif name.lower() == 'put':
+                modified = True
+                self.strategy = Put(ticker, 'put', direction)
+                if analyze:
+                    self.analyze()
+            elif name.lower() == 'vertc':
+                modified = True
+                self.strategy = Vertical(ticker, 'call', direction)
+                if analyze:
+                    self.analyze()
+            elif name.lower() == 'vertp':
+                modified = True
+                self.strategy = Vertical(ticker, 'put', direction)
+                if analyze:
+                    self.analyze()
+            else:
+                u.print_error('Unknown argument')
 
-        # except:
-        #     u.print_error(sys.exc_info()[1], True)
-        #     return False
+        except Exception as e:
+            u.print_error(sys.exc_info()[1], True)
+            return False
 
         return modified
 

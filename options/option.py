@@ -131,7 +131,7 @@ def get_contract(contract_symbol):
 
         contract = chain.loc[chain['contractSymbol'] == contract_symbol]
         return contract.iloc[0]
-    except:
+    except Exception as e:
         return None
 
 def _parse_contract_name(contract_name):

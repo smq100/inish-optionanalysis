@@ -41,7 +41,7 @@ class Sheets:
         except gspread.exceptions.SpreadsheetNotFound:
             logger.debug(f'{__name__}: Unable to open file {self.spreadsheet}/{self.tab}')
             self.result = '<File not found>'
-        except:
+        except Exception as e:
             logger.error(f'{__name__}: Error opening file {self.spreadsheet}/{self.tab}')
             self.result = '<An error occured>'
         else:

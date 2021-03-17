@@ -38,7 +38,7 @@ class Interface:
                         with open(script) as file_:
                             data = json.load(file_)
                             print(data)
-                    except:
+                    except Exception as e:
                         u.print_error('File read error')
                 else:
                     u.print_error(f'File "{script}" not found')

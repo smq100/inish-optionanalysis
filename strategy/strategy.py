@@ -255,7 +255,7 @@ class Leg:
             self.option.strike = self.strategy.get_current_spot(ticker, True)
             self.reset()
             return True
-        except:
+        except Exception as e:
             self.symbol = symbol
             u.print_error(sys.exc_info()[1])
             return False

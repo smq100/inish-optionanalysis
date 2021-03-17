@@ -34,6 +34,16 @@ class TechnicalAnalysis:
             self._load_history()
         return self.history['Close'][-1]
 
+    def get_high(self):
+        if self.history is None:
+            self._load_history()
+        return self.history['High']
+
+    def get_low(self):
+        if self.history is None:
+            self._load_history()
+        return self.history['Low']
+
     def get_close(self):
         if self.history is None:
             self._load_history()
@@ -44,17 +54,6 @@ class TechnicalAnalysis:
             self._load_history()
         return self.history['Volume']
 
-    def calc_ema(self, interval):
-        if self.history is None:
-            self._load_history()
-
-        df = pd.DataFrame()
-
-        if interval > 5:
-            df = trend.ema_indicator(self.history['Close'], window=interval, fillna=True)
-
-        return df
-
     def calc_sma(self, interval):
         if self.history is None:
             self._load_history()
@@ -63,6 +62,17 @@ class TechnicalAnalysis:
 
         if interval > 5:
             df = trend.sma_indicator(self.history['Close'], window=interval, fillna=True)
+
+        return df
+
+    def calc_ema(self, interval):
+        if self.history is None:
+            self._load_history()
+
+        df = pd.DataFrame()
+
+        if interval > 5:
+            df = trend.ema_indicator(self.history['Close'], window=interval, fillna=True)
 
         return df
 

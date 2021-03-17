@@ -12,11 +12,11 @@
        "criteria":{
           "conditional":"gt",
           "technical":"sma",
-          "value":100.0,
+          "value":120.0,
           "length":150,
           "start":-30,
           "stop":0,
-          "series":"na",
+          "series":"min",
           "factor":1.0
        }
     }
