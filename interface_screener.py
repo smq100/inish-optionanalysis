@@ -1,4 +1,8 @@
-import sys, os, json, time, threading
+import sys
+import os
+import json
+import time
+import threading
 import logging
 import datetime
 
@@ -7,8 +11,9 @@ from utils import utils as u
 
 
 logger = u.get_logger(logging.DEBUG)
-SCREEN_SUFFIX = '.screen'
+
 BASEPATH = os.getcwd()+'/screener/screens/'
+SCREEN_SUFFIX = '.screen'
 
 class Interface:
     def __init__(self, table, screen=None, script=None):
@@ -19,9 +24,11 @@ class Interface:
 
         if screen is None:
             self.script_name = ''
-        elif self.screener.load_script(BASEPATH+screen+SCREEN_SUFFIX):
+        elif os.path.exists(BASEPATH+screen+SCREEN_SUFFIX):
+            self.screener.load_script(BASEPATH+screen+SCREEN_SUFFIX)
             self.script_name = BASEPATH + screen + SCREEN_SUFFIX
         else:
+            u.print_error('Specified screen file does not exist')
             self.script_name = ''
 
         if self.screener is not None:
@@ -55,6 +62,9 @@ class Interface:
                 filename = os.path.basename(self.script_name)
                 head, sep, tail = filename.partition('.')
                 menu_items['3'] = f'Run Script ({head})'
+
+            if len(self.results) > 0:
+                menu_items['4'] = f'Show Results ({len(self.results)})'
 
             selection = u.menu(menu_items, 'Select Operation', 0, 4)
 
@@ -104,6 +114,7 @@ class Interface:
             selection = u.menu(menu_items, 'Select Screen', 0, index+1)
             if selection > 0:
                 self.script_name = self.script[selection-1]
+                self.results = []
 
                 if not self.screener.load_script(self.script_name):
                     u.print_error('Error in script file')
