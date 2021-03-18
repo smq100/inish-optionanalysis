@@ -7,7 +7,7 @@ from utils import utils as u
 
 logger = u.get_logger()
 
-VALID_TECHNICALS = ('high', 'low', 'close', 'sma', 'none')
+VALID_TECHNICALS = ('high', 'low', 'close', 'sma', 'value')
 VALID_CONDITIONALS = ('lt', 'eq', 'gt')
 VALID_SERIES = ('min', 'max', 'na')
 
@@ -75,7 +75,7 @@ class Interpreter:
             raise SyntaxError('Invalid "base technical" specified in script')
 
         # Criteria
-        if self.criteria_technical == VALID_TECHNICALS[-1]: # none
+        if self.criteria_technical == VALID_TECHNICALS[-1]: # value
             self.value = self._get_value()
         elif self.criteria_technical == VALID_TECHNICALS[0]: # high
             self.value = self._get_value_high()

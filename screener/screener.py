@@ -39,6 +39,17 @@ class Screener:
     def __str__(self):
         return self.table_name
 
+    class Result:
+        def __init__(self, symbol, result):
+            self.symbol = symbol
+            self.values = result
+
+        def __str__(self):
+            return self.symbol
+
+        def __bool__(self):
+            return all(self.values)
+
     def load_script(self, script):
         self.script = None
         if os.path.exists(script):
@@ -77,8 +88,7 @@ class Screener:
 
                 if not self.error:
                     self.items_completed += 1
-                    if all(result):
-                        self.results += [symbol]
+                    self.results += [self.Result(symbol.ticker, result)]
                 else:
                     self.items_completed = self.items_total
                     self.results = []

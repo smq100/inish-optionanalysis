@@ -10,7 +10,7 @@ from screener.screener import Screener, VALID_LISTS
 from utils import utils as u
 
 
-logger = u.get_logger(logging.WARNING)
+logger = u.get_logger(logging.DEBUG)
 
 BASEPATH = os.getcwd()+'/screener/screens/'
 SCREEN_SUFFIX = '.screen'
@@ -21,6 +21,7 @@ class Interface:
         self.screener = Screener(self.table_name)
         self.script = []
         self.results = []
+        self.valids = 0
 
         if screen is None:
             self.script_name = ''
@@ -64,7 +65,7 @@ class Interface:
                 menu_items['3'] = f'Run Script ({head})'
 
             if len(self.results) > 0:
-                menu_items['4'] = f'Show Results ({len(self.results)})'
+                menu_items['4'] = f'Show Results ({self.valids})'
 
             selection = u.menu(menu_items, 'Select Operation', 0, 4)
 
@@ -73,7 +74,7 @@ class Interface:
             elif selection == 2:
                 self.select_script()
             elif selection == 3:
-                self.run_script(True)
+                self.run_script(False)
             elif selection == 4:
                 self.print_results()
             elif selection == 0:
@@ -134,11 +135,25 @@ class Interface:
 
         if not self.screener.error:
             self.results = self.screener.results
-            u.print_message(f'{len(self.results)} Symbol(s) Identified', True)
+            for result in self.results:
+                if result:
+                    self.valids += 1
+
+            u.print_message(f'{self.valids} Symbol(s) Identified', True)
         else:
             self.results = []
             u.print_error(self.screener.error, True)
 
+    def print_results(self, all=False):
+        if len(self.results) > 0:
+            u.print_message('Symbols Identified', True)
+            for index, result in enumerate(self.results):
+                if all:
+                    print(f'{index:3n}: {result} ({sum(result.values)})')
+                elif result:
+                    print(f'{index:3n}: {result}')
+        else:
+            u.print_message('No symbols were located', True)
 
     def _show_progress(self):
         total = self.screener.items_total
@@ -149,14 +164,6 @@ class Interface:
             time.sleep(0.25)
             completed = self.screener.items_completed
             u.progress_bar(completed, total, prefix='Progress:', suffix='Completed', length=50)
-
-    def print_results(self):
-        if len(self.results) > 0:
-            u.print_message('Symbols Identified', True)
-            for index, symbol in enumerate(self.results):
-                print(f'{index:3n}: {symbol}')
-        else:
-            u.print_message('No symbols were located', True)
 
 
 if __name__ == '__main__':
