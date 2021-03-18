@@ -10,7 +10,7 @@ from screener.screener import Screener, VALID_LISTS
 from utils import utils as u
 
 
-logger = u.get_logger(logging.DEBUG)
+logger = u.get_logger(logging.WARNING)
 
 BASEPATH = os.getcwd()+'/screener/screens/'
 SCREEN_SUFFIX = '.screen'
@@ -73,7 +73,7 @@ class Interface:
             elif selection == 2:
                 self.select_script()
             elif selection == 3:
-                self.run_script(False)
+                self.run_script(True)
             elif selection == 4:
                 self.print_results()
             elif selection == 0:

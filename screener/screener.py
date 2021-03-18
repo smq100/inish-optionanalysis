@@ -84,7 +84,6 @@ class Screener:
                     self.results = []
                     break
 
-
         return self.results
 
     def valid(self):
@@ -103,7 +102,7 @@ class Screener:
                     if f.validate_ticker(s):
                         self.symbols += [Symbol(s, self.days)]
                     else:
-                        logger.warning(f'{__name__}: Invalid ticker {s.ticker}')
+                        logger.warning(f'{__name__}: Invalid ticker {s}')
 
                 self.items_total = len(self.symbols)
 

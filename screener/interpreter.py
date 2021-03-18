@@ -11,10 +11,6 @@ VALID_TECHNICALS = ('high', 'low', 'close', 'sma', 'none')
 VALID_CONDITIONALS = ('lt', 'eq', 'gt')
 VALID_SERIES = ('min', 'max', 'na')
 
-class SyntaxError(Exception):
-    def __init__(self, message):
-        super().__init__(message)
-
 
 class Interpreter:
     def __init__(self, symbol, filter):
@@ -70,11 +66,10 @@ class Interpreter:
         return self._calculate()
 
     def _calculate(self):
+        # base value
         if self.base_technical == VALID_TECHNICALS[2]: # close
-            # base value
             self.base = self._get_base_close()
         elif self.base_technical == VALID_TECHNICALS[3]: # sma
-            # base value
             self.base = self._get_base_sma()
         else:
             raise SyntaxError('Invalid "base technical" specified in script')
@@ -82,10 +77,12 @@ class Interpreter:
         # Criteria
         if self.criteria_technical == VALID_TECHNICALS[-1]: # none
             self.value = self._get_value()
-        elif self.criteria_technical == VALID_TECHNICALS[0]: # sma
+        elif self.criteria_technical == VALID_TECHNICALS[0]: # high
             self.value = self._get_value_high()
-        elif self.criteria_technical == VALID_TECHNICALS[1]: # sma
+        elif self.criteria_technical == VALID_TECHNICALS[1]: # low
             self.value = self._get_value_low()
+        elif self.criteria_technical == VALID_TECHNICALS[2]: # close
+            self.value = self._get_value_close()
         elif self.criteria_technical == VALID_TECHNICALS[3]: # sma
             self.value = self._get_value_sma()
         else:
@@ -95,79 +92,90 @@ class Interpreter:
 
     def _calc_comparison(self):
         result = False
-        base = self.base.iloc[-1]
+        base = self.base.iloc[-1] * self.base_factor
 
         if self.criteria_conditional == VALID_CONDITIONALS[0]: # lt
             if self.criteria_series == VALID_SERIES[-1]: # na
-                value = self.value.iloc[-1]
+                value = self.value.iloc[-1] * self.criteria_factor
                 if base < value:
                     result = True
             elif self.criteria_series == VALID_SERIES[0]: # min
-                value = self.value.min()
+                value = self.value.min() * self.criteria_factor
                 if base < value.min():
                     result = True
             elif self.criteria_series == VALID_SERIES[1]: # max
-                value = self.value.max()
+                value = self.value.max() * self.criteria_factor
                 if base < value:
                     result = True
 
         elif self.criteria_conditional == VALID_CONDITIONALS[1]: # eq
-            value = self.value.min()
+            value = self.value.min() * self.criteria_factor
             if base == value:
                 result = True
 
         elif self.criteria_conditional == VALID_CONDITIONALS[2]: # gt
             if self.criteria_series == VALID_SERIES[-1]: # na
-                value = self.value.iloc[-1]
+                value = self.value.iloc[-1] * self.criteria_factor
                 if base > value:
                     result = True
             elif self.criteria_series == VALID_SERIES[0]: # min
-                value = self.value.min()
+                value = self.value.min() * self.criteria_factor
                 if base > value:
                     result = True
             elif self.criteria_series == VALID_SERIES[1]: # max
-                value = self.value.max()
+                value = self.value.max() * self.criteria_factor
                 if base > value:
                     result = True
 
-        logger.debug(f'{__name__}: ' +
+        logger.info(
             f'{self.note}: {str(self.symbol)}:{str(result)} ' +
-            f'{self.base_technical}/{base:6.2f} ' +
+            f'{self.base_technical}{self.base_length}/{base:.2f}*{self.base_factor:.2f} ' +
             f'{self.criteria_conditional} ' +
-            f'{self.criteria_technical}/{self.criteria_start}/{self.criteria_series}/{value:6.2f}')
+            f'{self.criteria_technical}{self.criteria_length}/{self.criteria_start}/{self.criteria_series}/{value:.2f}*{self.criteria_factor:.2f}')
 
         return result
 
     def _get_base_close(self):
         start = None if self.base_start == 0 else self.base_start
         stop = None if self.base_stop == 0 else self.base_stop
-        sl = slice(start, stop, None)
-        return self.symbol.ta.get_close()[sl] * self.base_factor
+        sl = slice(start, stop)
+        return self.symbol.ta.get_close()[sl]
 
     def _get_base_sma(self):
         start = None if self.base_start == 0 else self.base_start
         stop = None if self.base_stop == 0 else self.base_stop
-        sl = slice(start, stop, None)
-        return self.symbol.ta.calc_sma(self.criteria_length)[sl] * self.criteria_factor
+        sl = slice(start, stop)
+        return self.symbol.ta.calc_sma(self.criteria_length)[sl]
 
     def _get_value(self):
-        value = self.criteria_value * self.criteria_factor
+        value = self.criteria_value
         return pd.Series([value])
 
     def _get_value_high(self):
         start = None if self.criteria_start == 0 else self.criteria_start
         stop = None if self.criteria_stop == 0 else self.criteria_stop
-        sl = slice(start, stop, None)
-        return self.symbol.ta.get_high()[sl] * self.criteria_factor
+        sl = slice(start, stop)
+        return self.symbol.ta.get_high()[sl]
 
     def _get_value_low(self):
         start = None if self.criteria_start == 0 else self.criteria_start
         stop = None if self.criteria_stop == 0 else self.criteria_stop
-        sl = slice(start, stop, None)
-        return self.symbol.ta.get_low()[sl] * self.criteria_factor
+        sl = slice(start, stop)
+        return self.symbol.ta.get_low()[sl]
+
+    def _get_value_close(self):
+        start = None if self.criteria_start == 0 else self.criteria_start
+        stop = None if self.criteria_stop == 0 else self.criteria_stop
+        sl = slice(start, stop)
+        return self.symbol.ta.get_close()[sl]
 
     def _get_value_sma(self):
         start = None if self.criteria_start == 0 else self.criteria_start
         stop = None if self.criteria_stop == 0 else self.criteria_stop
-        sl = slice(start, stop, None)
-        return self.symbol.ta.calc_sma(self.criteria_length)[sl] * self.criteria_factor
+        sl = slice(start, stop)
+        return self.symbol.ta.calc_sma(self.criteria_length)[sl]
+
+
+class SyntaxError(Exception):
+    def __init__(self, message):
+        super().__init__(message)
