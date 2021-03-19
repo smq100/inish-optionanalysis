@@ -15,14 +15,15 @@ logger = u.get_logger()
 
 
 class TechnicalAnalysis:
-    def __init__(self, ticker, start=None, lazy=True):
-        if f.validate_ticker(ticker):
+    def __init__(self, ticker, start=None, valid=False):
+        if valid:
             self.ticker = ticker.upper()
             self.start = start
             self.history = None
-
-            if not lazy:
-                self._load_history()
+        elif f.validate_ticker(ticker):
+            self.ticker = ticker.upper()
+            self.start = start
+            self.history = None
         else:
             raise ValueError('No such symbol')
 

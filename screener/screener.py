@@ -13,9 +13,9 @@ VALID_LISTS = ('SP500', 'DOW', 'NASDAQ', 'TEST')
 
 
 class Screener:
-    def __init__(self, list_name, script=None, days=365):
-        list_name = list_name.upper()
-        if list_name not in VALID_LISTS:
+    def __init__(self, table, script=None, days=365):
+        table = table.upper()
+        if table not in VALID_LISTS:
             raise ValueError('Invalid list')
         if days < 30:
             raise ValueError('Invalid number of days')
@@ -30,8 +30,8 @@ class Screener:
         self.results = []
         self.error = ''
 
-        if self._open_table(list_name):
-            self.table_name = list_name
+        if self._open_table(table):
+            self.table_name = table
 
         if script is not None:
             self.load_script(script)
@@ -109,9 +109,9 @@ class Screener:
                 self.table_name = table
                 symbols = self.table.get_column(1)
                 for s in symbols:
-                    if f.validate_ticker(s):
+                    try:
                         self.symbols += [Symbol(s, self.days)]
-                    else:
+                    except ValueError as e:
                         logger.warning(f'{__name__}: Invalid ticker {s}')
 
                 self.items_total = len(self.symbols)

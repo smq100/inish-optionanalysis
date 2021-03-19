@@ -10,7 +10,7 @@ from screener.screener import Screener, VALID_LISTS
 from utils import utils as u
 
 
-logger = u.get_logger(logging.DEBUG)
+logger = u.get_logger(logging.WARNING)
 
 BASEPATH = os.getcwd()+'/screener/screens/'
 SCREEN_SUFFIX = '.screen'
@@ -88,7 +88,10 @@ class Interface:
 
         selection = u.menu(menu_items, 'Select Table', 0, len(VALID_LISTS))
         if selection > 0:
+            t0 = time.time()
             self.screener = Screener(VALID_LISTS[selection-1], script=self.script_name)
+            t1 = time.time()
+            print(t1-t0)
             if self.screener.valid():
                 self.table_name = VALID_LISTS[selection-1]
 
@@ -142,6 +145,7 @@ class Interface:
             u.print_message(f'{self.valids} Symbol(s) Identified', True)
         else:
             self.results = []
+            self.valids = 0
             u.print_error(self.screener.error, True)
 
     def print_results(self, all=False):
