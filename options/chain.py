@@ -1,4 +1,4 @@
-from pricing import fetcher as f
+from company import fetcher as f
 from utils import utils as u
 
 logger = u.get_logger()

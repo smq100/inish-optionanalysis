@@ -1,7 +1,7 @@
 import datetime
 import re
 
-from pricing import fetcher as f
+from company import fetcher as f
 from utils import utils as u
 
 PRODUCTS = ('call', 'put')

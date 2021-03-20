@@ -2,8 +2,8 @@ import os, datetime, time, json
 
 from .sheets import Sheets
 from .interpreter import Interpreter, SyntaxError
-from pricing.symbol import Symbol
-from pricing import fetcher as f
+from company.symbol import Symbol
+from company import fetcher as f
 from utils import utils as u
 
 

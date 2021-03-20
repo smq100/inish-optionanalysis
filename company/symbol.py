@@ -2,7 +2,7 @@
 import datetime
 
 from analysis.technical import TechnicalAnalysis
-from pricing import fetcher as f
+from . import fetcher as f
 from utils import utils as u
 
 logger = u.get_logger()

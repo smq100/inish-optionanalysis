@@ -13,7 +13,7 @@ from strategy.call import Call
 from strategy.put import Put
 from strategy.vertical import Vertical
 from options.chain import Chain
-from pricing import fetcher as f
+from company import fetcher as f
 from utils import utils as u
 
 MAX_ROWS = 50
@@ -126,7 +126,7 @@ class Interface:
             table_ = self.strategy.legs[leg].table
             if table_ is not None:
                 if val == 0:
-                    val = u.input_integer('Table (1), Chart(2), Contour (3), Surface (4), or Cancel (0): ', 0, 4)
+                    val = u.input_integer('(1) Table, (2) Chart, (3) Contour, (4) Surface, or (0) Cancel: ', 0, 4)
                 if val > 0:
                         title = f'Value: {self.strategy.legs[leg].symbol}'
                         rows, cols = table_.shape
@@ -165,7 +165,7 @@ class Interface:
             table_ = self.strategy.analysis.table
             if table_ is not None:
                 if val == 0:
-                    val = u.input_integer('Summary (1), Table (2), Chart(3), Contour (4), Surface (5), or Cancel (0): ', 0, 5)
+                    val = u.input_integer('(1) Summary, (2) Table, (3) Chart, (4) Contour, (5) Surface, or (0) Cancel: ', 0, 5)
                 if val > 0:
                     title = f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].symbol}) {str(self.strategy).title()}'
                     rows, cols = table_.shape

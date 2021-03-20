@@ -1,7 +1,7 @@
 import logging
 import datetime
 
-from pricing.fetcher import validate_ticker
+from company import fetcher as f
 from utils import utils as u
 
 
@@ -10,7 +10,7 @@ logger = u.get_logger()
 
 class ScoringAnalysis:
     def __init__(self, ticker):
-        if (validate_ticker(ticker)):
+        if (f.validate_ticker(ticker)):
             self.ticker = ticker.upper()
             self.ema = {}
             self.rsa = None

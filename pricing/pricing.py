@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 from pandas.tseries.offsets import BDay
 
-from pricing import fetcher as f
+from company import fetcher as f
 from utils import utils as u
 
 

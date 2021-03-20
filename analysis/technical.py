@@ -7,7 +7,7 @@ import datetime
 import pandas as pd
 from ta import trend, momentum, volatility, volume
 
-from pricing import fetcher as f
+from company import fetcher as f
 from utils import utils as u
 
 

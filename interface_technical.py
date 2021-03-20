@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from pricing.fetcher import validate_ticker
 from analysis.technical import TechnicalAnalysis
 from analysis.trend import SupportResistance, Line
-from pricing import fetcher as f
+from company import fetcher as f
 from utils import utils as u
 
 
