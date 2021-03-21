@@ -19,11 +19,89 @@ quandl_config.read('config.ini')
 quandl.ApiConfig.api_key = quandl_config['DEFAULT']['APIKEY']
 
 
+_ticker1 = ''
+_ticker2 = ''
+_company = None
+
 def validate_ticker(ticker):
-    print('Validating...')
-    return len(yf.Ticker(ticker).history(period='1d')) > 0
+    global _ticker1
+    if not _ticker1:
+        t = yf.Ticker(ticker).history(period='1d')
+        if len(t) > 0:
+            _ticker1 = ticker
+            _valid = True
+    elif ticker != _ticker1:
+        _ticker1 = ''
+        t = yf.Ticker(ticker).history(period='1d')
+        if len(t) > 0:
+            _ticker1 = ticker
+
+    return bool(_ticker1)
 
 def get_company(ticker):
+    global _ticker2
+    global _company
+    if _company is None:
+        _ticker2 = ''
+        if validate_ticker(ticker):
+            _company = yf.Ticker(ticker)
+            _ticker2 = ticker
+    elif ticker != _ticker2:
+        _ticker2 = ''
+        _company = None
+        if validate_ticker(ticker):
+            _company = yf.Ticker(ticker)
+            _ticker2 = ticker
+
+    return _company
+
+def get_current_price(ticker):
+    if validate_ticker(ticker):
+        start = datetime.datetime.today() - datetime.timedelta(days=5)
+        df = get_ranged_data(ticker, start)
+        price = df.iloc[-1]['Close']
+    else:
+        logger.error(f'Ticker {ticker} not valid')
+        price = -1.0
+
+    return price
+
+def get_ranged_data(ticker, start, end=None):
+    df = pd.DataFrame()
+
+    if not end:
+        end = datetime.date.today()
+
+    if validate_ticker(ticker):
+        company = get_company(ticker)
+        info = company.history(start=f'{start:%Y-%m-%d}', end=f'{end:%Y-%m-%d}')
+        df = pd.DataFrame(info)
+
+    return df
+
+def get_treasury_rate(ticker='DTB3'):
+    # DTB3: Default to 3-Month Treasury Rate
+    df = pd.DataFrame()
+    prev_business_date = datetime.datetime.today() - BDay(1)
+
+    df = quandl.get('FRED/' + ticker)
+    if df.empty:
+        logger.error('Unable to get Treasury Rates from Quandl. Please check connection')
+        raise IOError('Unable to get Treasury Rate from Quandl')
+
+    return df['Value'][0] / 100.0
+
+
+if __name__ == '__main__':
+    start = datetime.datetime.today() - datetime.timedelta(days=10)
+    end = datetime.datetime.today() - datetime.timedelta(days=5)
+
+    df = get_ranged_data('AAPL', start, end)
+    print(df.tail())
+
+    rate = get_treasury_rate()
+    print(rate)
+
     '''
     Retrieves a company object that may be used to gather numerous data about the company and security.
 
@@ -176,55 +254,3 @@ def get_company(ticker):
         "logo_url":"https://logo.clearbit.com/microsoft.com"
     }
     '''
-
-    if validate_ticker(ticker):
-        return yf.Ticker(ticker)
-    else:
-        return None
-
-def get_current_price(ticker):
-    if validate_ticker(ticker):
-        start = datetime.datetime.today() - datetime.timedelta(days=5)
-        df = get_ranged_data(ticker, start)
-        price = df.iloc[-1]['Close']
-    else:
-        logger.error(f'Ticker {ticker} not valid')
-        price = -1.0
-
-    return price
-
-def get_ranged_data(ticker, start, end=None):
-    df = pd.DataFrame()
-
-    if not end:
-        end = datetime.date.today()
-
-    if validate_ticker(ticker):
-        company = get_company(ticker)
-        info = company.history(start=f'{start:%Y-%m-%d}', end=f'{end:%Y-%m-%d}')
-        df = pd.DataFrame(info)
-
-    return df
-
-def get_treasury_rate(ticker='DTB3'):
-    # DTB3: Default to 3-Month Treasury Rate
-    df = pd.DataFrame()
-    prev_business_date = datetime.datetime.today() - BDay(1)
-
-    df = quandl.get('FRED/' + ticker)
-    if df.empty:
-        logger.error('Unable to get Treasury Rates from Quandl. Please check connection')
-        raise IOError('Unable to get Treasury Rate from Quandl')
-
-    return df['Value'][0] / 100.0
-
-
-if __name__ == '__main__':
-    start = datetime.datetime.today() - datetime.timedelta(days=10)
-    end = datetime.datetime.today() - datetime.timedelta(days=5)
-
-    df = get_ranged_data('AAPL', start, end)
-    print(df.tail())
-
-    rate = get_treasury_rate()
-    print(rate)

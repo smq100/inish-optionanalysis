@@ -23,7 +23,7 @@ logger = u.get_logger()
 
 
 class Interface:
-    def __init__(self, ticker, strategy, direction, autoload=None, script=None, exit=False):
+    def __init__(self, ticker, strategy, direction, autoload='', script='', exit=False):
         pd.options.display.float_format = '{:,.2f}'.format
 
         ticker = ticker.upper()
@@ -37,11 +37,11 @@ class Interface:
         if valid:
             self.chain = Chain(ticker)
 
-            if autoload is not None:
+            if autoload:
                 if self.load_strategy(ticker, autoload, direction):
                     if not exit:
                         self.main_menu()
-            elif script is not None:
+            elif script:
                 if os.path.exists(script):
                     try:
                         with open(script) as file_:

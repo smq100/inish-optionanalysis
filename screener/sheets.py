@@ -1,3 +1,7 @@
+'''
+https://gspread.readthedocs.io/en/latest/
+'''
+
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -74,10 +78,14 @@ class Sheets:
             self.sheet.update_cell(self.row, self.col, value)
             self.result = self.sheet.cell(self.row, self.col).value
 
-            # data = sheet.get_all_records()  # Get a list of all records
-            # row = sheet.row_values(3)  # Get a specific row
-            # col = sheet.col_values(3)  # Get a specific column
-            # cell = sheet.cell(1,2).value  # Get the value of a specific cell
-            # insertRow = ["hello", 5, "red", "blue"]
-            # sheet.add_rows(insertRow, 4)  # Insert the list as a row at index 4
-            # numRows = sheet.row_count  # Get the number of rows in the sheet
+
+'''
+Examples:
+data = sheet.get_all_records()  # Get a list of all records
+row = sheet.row_values(3)  # Get a specific row
+col = sheet.col_values(3)  # Get a specific column
+cell = sheet.cell(1,2).value  # Get the value of a specific cell
+insertRow = ["hello", 5, "red", "blue"]
+sheet.add_rows(insertRow, 4)  # Insert the list as a row at index 4
+numRows = sheet.row_count  # Get the number of rows in the sheet
+'''

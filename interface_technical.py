@@ -4,7 +4,6 @@ import datetime
 
 import matplotlib.pyplot as plt
 
-from pricing.fetcher import validate_ticker
 from analysis.technical import TechnicalAnalysis
 from analysis.trend import SupportResistance, Line
 from company import fetcher as f
@@ -14,13 +13,13 @@ from utils import utils as u
 logger = u.get_logger(logging.WARNING)
 
 class Interface:
-    def __init__(self, ticker, script=None):
+    def __init__(self, ticker, script=''):
         ticker = ticker.upper()
         if f.validate_ticker(ticker):
             start = datetime.datetime.today() - datetime.timedelta(days=90)
             self.technical = TechnicalAnalysis(ticker, start=start)
 
-            if script is not None:
+            if script:
                 if os.path.exists(script):
                     try:
                         with open(script) as file_:

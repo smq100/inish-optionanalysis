@@ -13,15 +13,17 @@ VALID_LISTS = ('SP500', 'DOW', 'NASDAQ', 'TEST')
 
 
 class Screener:
-    def __init__(self, table, script=None, days=365):
-        table = table.upper()
-        if table not in VALID_LISTS:
-            raise ValueError('Invalid list')
+    def __init__(self, table_name='', script_name='', days=365):
+        table_name = table_name.upper()
+        if table_name:
+            if table_name not in VALID_LISTS:
+                raise ValueError('Invalid table')
+
         if days < 30:
             raise ValueError('Invalid number of days')
 
         self.days = days
-        self.table_name = ''
+        self.table_name = table_name
         self.table = Sheets()
         self.script = []
         self.symbols = []
@@ -29,12 +31,11 @@ class Screener:
         self.items_completed = 0
         self.results = []
         self.error = ''
+        self.running = False
 
-        if self._open_table(table):
-            self.table_name = table
-
-        if script is not None:
-            self.load_script(script)
+        if script_name:
+            if not self.load_script(script_name):
+                raise ValueError(f'Script not found: {script_name}')
 
     def __str__(self):
         return self.table_name
@@ -49,6 +50,30 @@ class Screener:
 
         def __bool__(self):
             return all(self.values)
+
+    def open(self):
+        self.items_total = 0
+        self.items_completed = 0
+        self.error = ''
+        if self.table_name in VALID_LISTS:
+            if self.table.open(self.table_name):
+                symbols = self.table.get_column(1)
+                self.items_total = len(symbols)
+                self.running = True
+                for s in symbols:
+                    try:
+                        self.symbols += [Symbol(s, self.days)]
+                    except ValueError as e:
+                        logger.warning(f'{__name__}: Invalid ticker {s}')
+
+                    self.items_completed += 1
+
+                self.items_total = len(self.symbols)
+        else:
+            self.error = 'Invalid table name'
+
+        self.running = False
+        return self.items_total > 0
 
     def load_script(self, script):
         self.script = None
@@ -67,6 +92,7 @@ class Screener:
     def run_script(self):
         self.results = []
         self.items_completed = 0
+        self.error = ''
         if len(self.symbols) == 0:
             self.items_completed = self.items_total
             self.results = []
@@ -76,6 +102,7 @@ class Screener:
             self.results = []
             logger.error(f'{__name__}: Illegal script')
         else:
+            self.running = True
             for symbol in self.symbols:
                 result = []
                 for condition in self.script:
@@ -94,29 +121,11 @@ class Screener:
                     self.results = []
                     break
 
+        self.running = False
         return self.results
 
     def valid(self):
         return bool(self.table_name)
-
-    def _open_table(self, table):
-        table = table.upper()
-        self.table_name = ''
-        self.items_total = 0
-        self.items_completed = 0
-        if table in VALID_LISTS:
-            if self.table.open(table):
-                self.table_name = table
-                symbols = self.table.get_column(1)
-                for s in symbols:
-                    try:
-                        self.symbols += [Symbol(s, self.days)]
-                    except ValueError as e:
-                        logger.warning(f'{__name__}: Invalid ticker {s}')
-
-                self.items_total = len(self.symbols)
-
-        return self.items_total > 0
 
 
     # Minevini

@@ -13,14 +13,14 @@ logger = u.get_logger(logging.WARNING)
 
 
 class Interface:
-    def __init__(self, ticker, script=None):
+    def __init__(self, ticker, script=''):
         ticker = ticker.upper()
         if f.validate_ticker(ticker):
             start = datetime.datetime.today() - datetime.timedelta(days=365)
             self.technical = TechnicalAnalysis(ticker, start=start)
             self.scoring = ScoringAnalysis(ticker)
 
-            if script is not None:
+            if script:
                 if os.path.exists(script):
                     try:
                         with open(script) as file_:
