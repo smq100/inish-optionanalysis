@@ -26,6 +26,9 @@ class Interface:
     def __init__(self, ticker, strategy, direction, autoload='', script='', exit=False):
         pd.options.display.float_format = '{:,.2f}'.format
 
+        # Initialize data fetcher
+        f.initialize()
+
         ticker = ticker.upper()
         valid = f.validate_ticker(ticker)
 

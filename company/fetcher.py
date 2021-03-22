@@ -2,6 +2,8 @@
 https://pypi.org/project/yfinance/
 '''
 
+import os
+import json
 import datetime
 import configparser
 
@@ -18,46 +20,58 @@ quandl_config = configparser.ConfigParser()
 quandl_config.read('config.ini')
 quandl.ApiConfig.api_key = quandl_config['DEFAULT']['APIKEY']
 
+VALID_SYMBOLS = 'valid.json'
+valid_symbols = []
 
-_ticker1 = ''
-_ticker2 = ''
-_company = None
+def initialize():
+    global valid_symbols
+    if os.path.exists(VALID_SYMBOLS):
+        try:
+            with open(VALID_SYMBOLS) as file_:
+                v = json.load(file_)
+                valid_symbols = set(v)
+        except Exception as e:
+            u.print_error('File read error: ' + str(e))
+    else:
+        u.print_error(f'File "{VALID_SYMBOLS}" not found')
+
+def _dump_valid():
+    global valid_symbols
+    if os.path.exists(VALID_SYMBOLS):
+        try:
+            with open(VALID_SYMBOLS, 'w') as file_:
+                l = list(valid_symbols)
+                json.dump(l, file_, indent=2)
+        except Exception as e:
+            u.print_error('File read error: ' + str(e))
+    else:
+        u.print_error(f'File "{VALID_SYMBOLS}" not found')
 
 def validate_ticker(ticker):
-    global _ticker1
-    if not _ticker1:
-        print(f'1 {ticker}')
+    global valid_symbols
+    valid = False
+    if ticker in valid_symbols:
+        valid = True
+    else:
         t = yf.Ticker(ticker).history(period='1d')
         if len(t) > 0:
-            _ticker1 = ticker
-            _valid = True
-    elif ticker != _ticker1:
-        _ticker1 = ''
-        print(f'2 {ticker}')
-        t = yf.Ticker(ticker).history(period='1d')
-        if len(t) > 0:
-            _ticker1 = ticker
+            valid_symbols.add(ticker)
+            _dump_valid()
+            valid = True
 
-    return bool(_ticker1)
+    return valid
 
 def get_company(ticker):
-    global _ticker2
-    global _company
-    if _company is None:
-        _ticker2 = ''
-        if validate_ticker(ticker):
-            print(f'3 {ticker}')
-            _company = yf.Ticker(ticker)
-            _ticker2 = ticker
-    elif ticker != _ticker2:
-        _ticker2 = ''
-        _company = None
-        if validate_ticker(ticker):
-            print(f'4 {ticker}')
-            _company = yf.Ticker(ticker)
-            _ticker2 = ticker
+    global valid_symbols
+    company = None
+    if ticker in valid_symbols:
+        print(f'2 {ticker}')
+        company = yf.Ticker(ticker)
+    elif validate_ticker(ticker):
+        print(f'3 {ticker}')
+        company = yf.Ticker(ticker)
 
-    return _company
+    return company
 
 def get_current_price(ticker):
     if validate_ticker(ticker):

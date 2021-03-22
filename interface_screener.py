@@ -7,6 +7,7 @@ import logging
 import datetime
 
 from screener.screener import Screener, VALID_LISTS
+from company import fetcher as f
 from utils import utils as u
 
 
@@ -23,6 +24,9 @@ class Interface:
         self.results = []
         self.valids = 0
         self.screener = None
+
+        # Initialize data fetcher
+        f.initialize()
 
         if self.table_name:
             try:
@@ -61,6 +65,7 @@ class Interface:
             self.main_menu()
 
     def main_menu(self):
+
         while True:
             menu_items = {
                 '1': 'Select Table',

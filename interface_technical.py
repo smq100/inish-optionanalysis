@@ -15,6 +15,10 @@ logger = u.get_logger(logging.WARNING)
 class Interface:
     def __init__(self, ticker, script=''):
         ticker = ticker.upper()
+
+        # Initialize data fetcher
+        f.initialize()
+
         if f.validate_ticker(ticker):
             start = datetime.datetime.today() - datetime.timedelta(days=90)
             self.technical = TechnicalAnalysis(ticker, start=start)
