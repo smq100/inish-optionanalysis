@@ -17,7 +17,7 @@ class Screener:
         table_name = table_name.upper()
         if table_name:
             if table_name not in VALID_LISTS:
-                raise ValueError('Invalid table')
+                raise ValueError(f'Table not found: {table_name}')
 
         if days < 30:
             raise ValueError('Invalid number of days')
@@ -83,6 +83,7 @@ class Screener:
                     self.script = json.load(f)
                     valid = True
             except:
+                self.script = None
                 logger.error(f'{__name__}: File format error')
         else:
             logger.warning(f'{__name__}: File "{script}" not found')

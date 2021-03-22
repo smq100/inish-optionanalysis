@@ -15,12 +15,8 @@ logger = u.get_logger()
 
 
 class TechnicalAnalysis:
-    def __init__(self, ticker, start=None, valid=False):
-        if valid:
-            self.ticker = ticker.upper()
-            self.start = start
-            self.history = None
-        elif f.validate_ticker(ticker):
+    def __init__(self, ticker, start=None):
+        if f.validate_ticker(ticker):
             self.ticker = ticker.upper()
             self.start = start
             self.history = None
@@ -50,7 +46,7 @@ class TechnicalAnalysis:
             self._load_history()
         return self.history['Close']
 
-    def get_volumn(self):
+    def get_volume(self):
         if self.history is None:
             self._load_history()
         return self.history['Volume']

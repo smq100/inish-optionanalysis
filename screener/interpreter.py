@@ -7,7 +7,7 @@ from utils import utils as u
 
 logger = u.get_logger()
 
-VALID_TECHNICALS = ('high', 'low', 'close', 'sma', 'value')
+VALID_TECHNICALS = ('high', 'low', 'close', 'volume', 'sma', 'value')
 VALID_CONDITIONALS = ('lt', 'eq', 'gt')
 VALID_SERIES = ('min', 'max', 'na')
 
@@ -69,7 +69,9 @@ class Interpreter:
         # base value
         if self.base_technical == VALID_TECHNICALS[2]: # close
             self.base = self._get_base_close()
-        elif self.base_technical == VALID_TECHNICALS[3]: # sma
+        elif self.base_technical == VALID_TECHNICALS[3]: # volume
+            self.base = self._get_base_volume()
+        elif self.base_technical == VALID_TECHNICALS[4]: # sma
             self.base = self._get_base_sma()
         else:
             raise SyntaxError('Invalid "base technical" specified in script')
@@ -83,7 +85,9 @@ class Interpreter:
             self.value = self._get_value_low()
         elif self.criteria_technical == VALID_TECHNICALS[2]: # close
             self.value = self._get_value_close()
-        elif self.criteria_technical == VALID_TECHNICALS[3]: # sma
+        elif self.criteria_technical == VALID_TECHNICALS[2]: # volume
+            self.value = self._get_value_volume()
+        elif self.criteria_technical == VALID_TECHNICALS[4]: # sma
             self.value = self._get_value_sma()
         else:
             raise SyntaxError('Invalid "criteria technical" specified in script')
@@ -141,6 +145,12 @@ class Interpreter:
         sl = slice(start, stop)
         return self.symbol.ta.get_close()[sl]
 
+    def _get_base_volume(self):
+        start = None if self.base_start == 0 else self.base_start
+        stop = None if self.base_stop == 0 else self.base_stop
+        sl = slice(start, stop)
+        return self.symbol.ta.get_volume()[sl]
+
     def _get_base_sma(self):
         start = None if self.base_start == 0 else self.base_start
         stop = None if self.base_stop == 0 else self.base_stop
@@ -168,6 +178,12 @@ class Interpreter:
         stop = None if self.criteria_stop == 0 else self.criteria_stop
         sl = slice(start, stop)
         return self.symbol.ta.get_close()[sl]
+
+    def _get_value_volume(self):
+        start = None if self.criteria_start == 0 else self.criteria_start
+        stop = None if self.criteria_stop == 0 else self.criteria_stop
+        sl = slice(start, stop)
+        return self.symbol.ta.get_volume()[sl]
 
     def _get_value_sma(self):
         start = None if self.criteria_start == 0 else self.criteria_start

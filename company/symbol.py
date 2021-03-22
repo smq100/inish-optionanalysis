@@ -18,7 +18,7 @@ class Symbol:
         if self.company is not None:
             if history > 0:
                 start = datetime.datetime.today() - datetime.timedelta(days=self.history)
-                self.ta = TechnicalAnalysis(self.ticker, start, valid=True)
+                self.ta = TechnicalAnalysis(self.ticker, start)
         else:
             raise ValueError
 

@@ -26,12 +26,14 @@ _company = None
 def validate_ticker(ticker):
     global _ticker1
     if not _ticker1:
+        print(f'1 {ticker}')
         t = yf.Ticker(ticker).history(period='1d')
         if len(t) > 0:
             _ticker1 = ticker
             _valid = True
     elif ticker != _ticker1:
         _ticker1 = ''
+        print(f'2 {ticker}')
         t = yf.Ticker(ticker).history(period='1d')
         if len(t) > 0:
             _ticker1 = ticker
@@ -44,12 +46,14 @@ def get_company(ticker):
     if _company is None:
         _ticker2 = ''
         if validate_ticker(ticker):
+            print(f'3 {ticker}')
             _company = yf.Ticker(ticker)
             _ticker2 = ticker
     elif ticker != _ticker2:
         _ticker2 = ''
         _company = None
         if validate_ticker(ticker):
+            print(f'4 {ticker}')
             _company = yf.Ticker(ticker)
             _ticker2 = ticker
 

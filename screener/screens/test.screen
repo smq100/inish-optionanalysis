@@ -2,6 +2,27 @@
    {
       "note":"1",
       "base":{
+         "technical":"volume",
+         "length":0,
+         "start":-1,
+         "stop":0,
+         "series":"na",
+         "factor":1.0
+      },
+      "criteria":{
+         "conditional":"gt",
+         "technical":"value",
+         "value":5000000,
+         "length":0,
+         "start":-1,
+         "stop":0,
+         "series":"na",
+         "factor":1.0
+      }
+   },
+   {
+      "note":"1",
+      "base":{
          "technical":"close",
          "length":0,
          "start":-1,
@@ -12,8 +33,71 @@
       "criteria":{
          "conditional":"gt",
          "technical":"value",
-         "value":120.0,
+         "value":100,
          "length":0,
+         "start":-1,
+         "stop":0,
+         "series":"na",
+         "factor":1.0
+      }
+   },
+   {
+      "note":"1",
+      "base":{
+         "technical":"close",
+         "length":0,
+         "start":-1,
+         "stop":0,
+         "series":"na",
+         "factor":1.0
+      },
+      "criteria":{
+         "conditional":"gt",
+         "technical":"sma",
+         "value":0.0,
+         "length":20,
+         "start":-1,
+         "stop":0,
+         "series":"na",
+         "factor":1.0
+      }
+   },
+   {
+      "note":"1",
+      "base":{
+         "technical":"close",
+         "length":0,
+         "start":-1,
+         "stop":0,
+         "series":"na",
+         "factor":1.0
+      },
+      "criteria":{
+         "conditional":"gt",
+         "technical":"sma",
+         "value":0.0,
+         "length":50,
+         "start":-1,
+         "stop":0,
+         "series":"na",
+         "factor":1.0
+      }
+   },
+   {
+      "note":"1",
+      "base":{
+         "technical":"close",
+         "length":0,
+         "start":-1,
+         "stop":0,
+         "series":"na",
+         "factor":1.0
+      },
+      "criteria":{
+         "conditional":"gt",
+         "technical":"sma",
+         "value":0.0,
+         "length":200,
          "start":-1,
          "stop":0,
          "series":"na",

@@ -18,21 +18,34 @@ SCREEN_SUFFIX = '.screen'
 class Interface:
     def __init__(self, table='', screen='', script=''):
         self.table_name = table.upper()
+        self.screen_name = screen
         self.script = []
         self.results = []
         self.valids = 0
-        self.screen_name = screen
         self.screener = None
 
-        if screen:
-            if os.path.exists(BASEPATH+screen+SCREEN_SUFFIX):
-                self.screener.load_script(BASEPATH+screen+SCREEN_SUFFIX)
-                self.screen_name = BASEPATH + screen + SCREEN_SUFFIX
-            else:
-                u.print_error('Specified screen file does not exist')
-                self.screen_name = ''
+        if self.table_name:
+            try:
+                self.screener = Screener(self.table_name)
+                if not self.screener.open():
+                    self.table_name = ''
+                    self.screener = Screener()
+            except ValueError as e:
+                u.print_error(f'Table "{self.table_name}" not found')
+                self.table_name = ''
+                self.screener = Screener()
         else:
             self.screener = Screener()
+
+        if self.screen_name:
+            if os.path.exists(BASEPATH+screen+SCREEN_SUFFIX):
+                self.screen_name = BASEPATH + self.screen_name + SCREEN_SUFFIX
+                if not self.screener.load_script(self.screen_name):
+                    self.screen_name = ''
+                    u.print_error('Invalid screen script')
+            else:
+                u.print_error(f'File "{self.screen_name}" not found')
+                self.screen_name = ''
 
         if script:
             if os.path.exists(script):
@@ -71,11 +84,11 @@ class Interface:
             selection = u.menu(menu_items, 'Select Operation', 0, 4)
 
             if selection == 1:
-                self.select_table(True)
+                self.select_table(False)
             elif selection == 2:
                 self.select_script()
             elif selection == 3:
-                self.run_script(True)
+                self.run_script(False)
             elif selection == 4:
                 self.print_results()
             elif selection == 0:
@@ -199,8 +212,8 @@ if __name__ == '__main__':
 
     # Create the parser for the "load" command
     parser_a = subparser.add_parser('load', help='Load a symbol table')
-    parser_a.add_argument('-t', '--table', help='Specify a symbol table', required=False, default='TEST')
-    parser_a.add_argument('-s', '--screen', help='Specify a screening script', required=False, default='test1.screen')
+    parser_a.add_argument('-t', '--table', help='Specify a symbol table', required=False, default='')
+    parser_a.add_argument('-s', '--screen', help='Specify a screening script', required=False, default='')
 
     # Create the parser for the "execute" command
     parser_b = subparser.add_parser('execute', help='Execute a JSON command script')
