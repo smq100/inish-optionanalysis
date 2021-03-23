@@ -31,7 +31,8 @@ class Interface:
         if self.table_name:
             try:
                 self.screener = Screener(self.table_name)
-                if not self.screener.open():
+                self._open_table(True)
+                if not self.screener.valid():
                     self.table_name = ''
                     self.screener = Screener()
             except ValueError as e:
@@ -65,7 +66,6 @@ class Interface:
             self.main_menu()
 
     def main_menu(self):
-
         while True:
             menu_items = {
                 '1': 'Select Table',
@@ -108,14 +108,8 @@ class Interface:
         selection = u.menu(menu_items, 'Select Table', 0, len(VALID_LISTS))
         if selection > 0:
             self.screener = Screener(VALID_LISTS[selection-1], script_name=self.screen_name)
-            task = threading.Thread(target=self.screener.open)
-            task.start()
 
-            if progressbar:
-                self._show_progress('Progress', 'Symbols Fetched')
-
-            # Wait for thread to finish
-            while task.is_alive(): pass
+            self._open_table(progressbar)
 
             if self.screener.valid():
                 self.table_name = VALID_LISTS[selection-1]
@@ -192,6 +186,16 @@ class Interface:
                     print(f'{index:3n}: {result} ({sum(result.values)})')
                 elif result:
                     print(f'{index:3n}: {result}')
+
+    def _open_table(self, progressbar):
+        task = threading.Thread(target=self.screener.open)
+        task.start()
+
+        if progressbar:
+            self._show_progress('Progress', 'Symbols Fetched')
+
+        # Wait for thread to finish
+        while task.is_alive(): pass
 
     def _show_progress(self, prefix, suffix):
         # Wait for either and error or running to start the progress bar

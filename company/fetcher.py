@@ -65,6 +65,7 @@ def _dump_valid():
         try:
             with open(VALID_SYMBOLS, 'w') as file_:
                 l = list(valid_symbols)
+                l.sort()
                 json.dump(l, file_, indent=2)
         except Exception as e:
             u.print_error('File read error: ' + str(e))
