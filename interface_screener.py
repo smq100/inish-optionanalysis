@@ -89,11 +89,11 @@ class Interface:
             selection = u.menu(menu_items, 'Select Operation', 0, 4)
 
             if selection == 1:
-                self.select_table(False)
+                self.select_table(True)
             elif selection == 2:
                 self.select_script()
             elif selection == 3:
-                self.run_script(False)
+                self.run_script(True)
             elif selection == 4:
                 self.print_results()
             elif selection == 0:

@@ -35,18 +35,6 @@ def initialize():
     else:
         u.print_error(f'File "{VALID_SYMBOLS}" not found')
 
-def _dump_valid():
-    global valid_symbols
-    if os.path.exists(VALID_SYMBOLS):
-        try:
-            with open(VALID_SYMBOLS, 'w') as file_:
-                l = list(valid_symbols)
-                json.dump(l, file_, indent=2)
-        except Exception as e:
-            u.print_error('File read error: ' + str(e))
-    else:
-        u.print_error(f'File "{VALID_SYMBOLS}" not found')
-
 def validate_ticker(ticker):
     global valid_symbols
     valid = False
@@ -65,13 +53,23 @@ def get_company(ticker):
     global valid_symbols
     company = None
     if ticker in valid_symbols:
-        print(f'2 {ticker}')
         company = yf.Ticker(ticker)
     elif validate_ticker(ticker):
-        print(f'3 {ticker}')
         company = yf.Ticker(ticker)
 
     return company
+
+def _dump_valid():
+    global valid_symbols
+    if os.path.exists(VALID_SYMBOLS):
+        try:
+            with open(VALID_SYMBOLS, 'w') as file_:
+                l = list(valid_symbols)
+                json.dump(l, file_, indent=2)
+        except Exception as e:
+            u.print_error('File read error: ' + str(e))
+    else:
+        u.print_error(f'File "{VALID_SYMBOLS}" not found')
 
 def get_current_price(ticker):
     if validate_ticker(ticker):
