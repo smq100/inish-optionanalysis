@@ -1,10 +1,8 @@
-import sys
 import os
 import json
 import time
 import threading
 import logging
-import datetime
 
 from screener.screener import Screener, VALID_LISTS
 from company import fetcher as f
@@ -192,19 +190,18 @@ class Interface:
         task.start()
 
         if progressbar:
-            self._show_progress('Progress', 'Symbols Fetched')
+            self._show_progress('Progress', 'Symbols loaded')
 
         # Wait for thread to finish
         while task.is_alive(): pass
 
     def _show_progress(self, prefix, suffix):
-        # Wait for either and error or running to start the progress bar
+        # Wait for either an error or running to start, or not, the progress bar
         while not self.screener.error and not self.screener.running: pass
 
-        total = self.screener.items_total
-        completed = self.screener.items_completed
-
         if not self.screener.error:
+            total = self.screener.items_total
+            completed = self.screener.items_completed
             u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50)
             while completed < total:
                 time.sleep(0.25)

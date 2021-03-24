@@ -1,4 +1,5 @@
-import os, datetime, time, json
+import os
+import json
 
 from .sheets import Sheets
 from .interpreter import Interpreter, SyntaxError
@@ -68,7 +69,10 @@ class Screener:
 
                     self.items_completed += 1
 
+                self.error = 'None'
                 self.items_total = len(self.symbols)
+            else:
+                self.error = 'Unable to open spreadsheet'
         else:
             self.error = 'Invalid table name'
 

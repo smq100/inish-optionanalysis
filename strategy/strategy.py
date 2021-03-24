@@ -256,7 +256,7 @@ class Leg:
             self.reset()
             return True
         except Exception as e:
-            self.symbol = symbol
+            self.symbol = ticker
             u.print_error(sys.exc_info()[1])
             return False
 

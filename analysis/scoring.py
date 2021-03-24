@@ -1,6 +1,3 @@
-import logging
-import datetime
-
 from company import fetcher as f
 from utils import utils as u
 

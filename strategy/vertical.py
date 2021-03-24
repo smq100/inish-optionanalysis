@@ -3,7 +3,6 @@ import datetime
 import pandas as pd
 
 from strategy.strategy import Strategy, STRATEGIES
-from analysis.strategy import StrategyAnalysis
 from utils import utils as u
 
 logger = u.get_logger()
