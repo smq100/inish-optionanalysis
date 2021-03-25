@@ -148,7 +148,7 @@ class Interface:
             u.print_error('No table specified', True)
         elif not self.screen_name:
             u.print_error('No script specified', True)
-        else:
+        elif self.screener.load_script(self.screen_name):
             task = threading.Thread(target=self.screener.run_script)
             task.start()
 
@@ -169,6 +169,8 @@ class Interface:
                 self.results = []
                 self.valids = 0
                 u.print_error(self.screener.error, True)
+        else:
+            u.print_error('Script error', True)
 
     def print_results(self, all=False):
         if not self.table_name:
@@ -181,9 +183,9 @@ class Interface:
             u.print_message('Symbols Identified', True)
             for index, result in enumerate(self.results):
                 if all:
-                    print(f'{index:3n}: {result} ({sum(result.values)})')
+                    print(f'{result} ({sum(result.values)})')
                 elif result:
-                    print(f'{index:3n}: {result}')
+                    print(f'{result}')
 
     def _open_table(self, progressbar):
         task = threading.Thread(target=self.screener.open)

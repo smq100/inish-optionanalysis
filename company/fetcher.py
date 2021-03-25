@@ -15,16 +15,16 @@ from pandas.tseries.offsets import BDay
 from utils import utils as u
 
 logger = u.get_logger()
-
-quandl_config = configparser.ConfigParser()
-quandl_config.read('config.ini')
-quandl.ApiConfig.api_key = quandl_config['DEFAULT']['APIKEY']
-
 VALID_SYMBOLS = 'valid.json'
 valid_symbols = []
 
 def initialize():
     global valid_symbols
+
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+    quandl.ApiConfig.api_key = config['DEFAULT']['APIKEY']
+
     if os.path.exists(VALID_SYMBOLS):
         try:
             with open(VALID_SYMBOLS) as file_:
@@ -38,6 +38,7 @@ def initialize():
 def validate_ticker(ticker):
     global valid_symbols
     valid = False
+
     if ticker in valid_symbols:
         valid = True
     else:
@@ -52,6 +53,7 @@ def validate_ticker(ticker):
 def get_company(ticker):
     global valid_symbols
     company = None
+
     if ticker in valid_symbols:
         company = yf.Ticker(ticker)
     elif validate_ticker(ticker):
@@ -61,6 +63,7 @@ def get_company(ticker):
 
 def _dump_valid():
     global valid_symbols
+
     if os.path.exists(VALID_SYMBOLS):
         try:
             with open(VALID_SYMBOLS, 'w') as file_:
@@ -86,7 +89,7 @@ def get_current_price(ticker):
 def get_ranged_data(ticker, start, end=None):
     df = pd.DataFrame()
 
-    if not end:
+    if end is None:
         end = datetime.date.today()
 
     if validate_ticker(ticker):

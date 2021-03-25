@@ -47,7 +47,7 @@ class Screener:
             self.values = result
 
         def __str__(self):
-            return self.symbol
+            return self.symbol.ticker
 
         def __bool__(self):
             return all(self.values)
@@ -120,7 +120,7 @@ class Screener:
 
                 if not self.error:
                     self.items_completed += 1
-                    self.results += [self.Result(symbol.ticker, result)]
+                    self.results += [self.Result(symbol, result)]
                 else:
                     self.items_completed = self.items_total
                     self.results = []
@@ -133,7 +133,7 @@ class Screener:
         return bool(self.table_name)
 
 
-    # Minevini
+    # Minevini:
     # Condition 1: The current stock price is above both the 150-day (30-week) and the 200-day (40-week) moving average price lines.
     # Condition 2: The 150-day moving average is above the 200-day moving average.
     # Condition 3: The 200-day moving average line is trending up for at least 1 month (preferably 4–5 months minimum in most cases).
@@ -149,5 +149,5 @@ if __name__ == '__main__':
     u.get_logger(logging.DEBUG)
 
     s = Screener('test')
-    s.load_script('/Users/steve/Documents/Source Code/Personal/OptionAnalysis/screener/scripts/test1.script')
+    s.load_script('/Users/steve/Documents/Source Code/Personal/OptionAnalysis/screener/scripts/test.screen')
     s.run_script()
