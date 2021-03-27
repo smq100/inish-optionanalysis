@@ -83,7 +83,7 @@ class Interpreter:
             self.value = self._get_value_low()
         elif self.criteria_technical == VALID_TECHNICALS[2]: # close
             self.value = self._get_value_close()
-        elif self.criteria_technical == VALID_TECHNICALS[2]: # volume
+        elif self.criteria_technical == VALID_TECHNICALS[3]: # volume
             self.value = self._get_value_volume()
         elif self.criteria_technical == VALID_TECHNICALS[4]: # sma
             self.value = self._get_value_sma()
@@ -95,39 +95,47 @@ class Interpreter:
     def _calc_comparison(self):
         result = False
         base = self.base.iloc[-1] * self.base_factor
+        value = 0.0
 
         if self.criteria_conditional == VALID_CONDITIONALS[0]: # lt
             if self.criteria_series == VALID_SERIES[-1]: # na
-                value = self.value.iloc[-1] * self.criteria_factor
-                if base < value:
-                    result = True
+                if len(self.value) > 0:
+                    value = self.value.iloc[-1] * self.criteria_factor
+                    if base < value:
+                        result = True
             elif self.criteria_series == VALID_SERIES[0]: # min
-                value = self.value.min() * self.criteria_factor
-                if base < value.min():
-                    result = True
+                if len(self.value) > 0:
+                    value = self.value.min() * self.criteria_factor
+                    if base < value.min():
+                        result = True
             elif self.criteria_series == VALID_SERIES[1]: # max
-                value = self.value.max() * self.criteria_factor
-                if base < value:
-                    result = True
+                if len(self.value) > 0:
+                    value = self.value.max() * self.criteria_factor
+                    if base < value:
+                        result = True
 
         elif self.criteria_conditional == VALID_CONDITIONALS[1]: # eq
-            value = self.value.min() * self.criteria_factor
-            if base == value:
-                result = True
+            if len(self.value) > 0:
+                value = self.value.min() * self.criteria_factor
+                if base == value:
+                    result = True
 
         elif self.criteria_conditional == VALID_CONDITIONALS[2]: # gt
             if self.criteria_series == VALID_SERIES[-1]: # na
-                value = self.value.iloc[-1] * self.criteria_factor
-                if base > value:
-                    result = True
+                if len(self.value) > 0:
+                    value = self.value.iloc[-1] * self.criteria_factor
+                    if base > value:
+                        result = True
             elif self.criteria_series == VALID_SERIES[0]: # min
-                value = self.value.min() * self.criteria_factor
-                if base > value:
-                    result = True
+                if len(self.value) > 0:
+                    value = self.value.min() * self.criteria_factor
+                    if base > value:
+                        result = True
             elif self.criteria_series == VALID_SERIES[1]: # max
-                value = self.value.max() * self.criteria_factor
-                if base > value:
-                    result = True
+                if len(self.value) > 0:
+                    value = self.value.max() * self.criteria_factor
+                    if base > value:
+                        result = True
 
         logger.info(
             f'{self.note}: {str(self.symbol)}:{str(result)} ' +

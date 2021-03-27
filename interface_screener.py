@@ -114,6 +114,8 @@ class Interface:
 
     def select_script(self):
         self.script = []
+        self.results = []
+        self.valids = 0
         paths = []
         with os.scandir(BASEPATH) as entries:
             for entry in entries:
@@ -149,6 +151,8 @@ class Interface:
         elif not self.screen_name:
             u.print_error('No script specified', True)
         elif self.screener.load_script(self.screen_name):
+            self.results = []
+            self.valids = 0
             task = threading.Thread(target=self.screener.run_script)
             task.start()
 
@@ -158,7 +162,7 @@ class Interface:
             # Wait for thread to finish
             while task.is_alive(): pass
 
-            if not self.screener.error:
+            if self.screener.error == 'None':
                 self.results = self.screener.results
                 for result in self.results:
                     if result:
@@ -199,16 +203,17 @@ class Interface:
 
     def _show_progress(self, prefix, suffix):
         # Wait for either an error or running to start, or not, the progress bar
-        while not self.screener.error and not self.screener.running: pass
+        while not self.screener.error: pass
 
-        if not self.screener.error:
+        if self.screener.error == 'None':
             total = self.screener.items_total
             completed = self.screener.items_completed
             u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50)
             while completed < total:
                 time.sleep(0.25)
+                sfx = f'{self.screener.active_symbol} ' + suffix + f' ({self.screener.matches})' + '    '
                 completed = self.screener.items_completed
-                u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50)
+                u.progress_bar(completed, total, prefix=prefix, suffix=sfx, length=50)
 
 
 if __name__ == '__main__':

@@ -32,7 +32,8 @@ class Screener:
         self.items_completed = 0
         self.results = []
         self.error = ''
-        self.running = False
+        self.active_symbol = ''
+        self.matches = 0
 
         if script_name:
             if not self.load_script(script_name):
@@ -56,11 +57,12 @@ class Screener:
         self.items_total = 0
         self.items_completed = 0
         self.error = ''
+        self.active_symbol = ''
         if self.table_name in VALID_LISTS:
             if self.table.open(self.table_name):
                 symbols = self.table.get_column(1)
                 self.items_total = len(symbols)
-                self.running = True
+                self.error = 'None'
                 for s in symbols:
                     try:
                         self.symbols += [Symbol(s, self.days)]
@@ -69,14 +71,12 @@ class Screener:
 
                     self.items_completed += 1
 
-                self.error = 'None'
                 self.items_total = len(self.symbols)
             else:
                 self.error = 'Unable to open spreadsheet'
         else:
             self.error = 'Invalid table name'
 
-        self.running = False
         return self.items_total > 0
 
     def load_script(self, script):
@@ -98,42 +98,48 @@ class Screener:
         self.results = []
         self.items_completed = 0
         self.error = ''
+        self.matches = 0
+
         if len(self.symbols) == 0:
             self.items_completed = self.items_total
             self.results = []
-            logger.warning(f'{__name__}: No symbols')
+            self.error = 'No symbols'
+            logger.warning(f'{__name__}: {self.error}')
         elif len(self.script) == 0:
             self.items_completed = self.items_total
             self.results = []
-            logger.error(f'{__name__}: Illegal script')
+            self.error = 'Illegal script'
+            logger.warning(f'{__name__}: {self.error}')
         else:
-            self.running = True
+            self.error = 'None'
             for symbol in self.symbols:
                 result = []
                 for condition in self.script:
                     i = Interpreter(symbol, condition)
+                    self.active_symbol = symbol.ticker
                     try:
                         result += [i.run()]
                     except SyntaxError as e:
                         self.error = str(e)
                         break
 
-                if not self.error:
+                if self.error == 'None':
                     self.items_completed += 1
                     self.results += [self.Result(symbol, result)]
+                    if (bool(self.results[-1])):
+                        self.matches += 1
                 else:
                     self.items_completed = self.items_total
                     self.results = []
                     break
 
-        self.running = False
         return self.results
 
     def valid(self):
         return bool(self.table_name)
 
 
-    # Minevini:
+    # Minervini:
     # Condition 1: The current stock price is above both the 150-day (30-week) and the 200-day (40-week) moving average price lines.
     # Condition 2: The 150-day moving average is above the 200-day moving average.
     # Condition 3: The 200-day moving average line is trending up for at least 1 month (preferably 4–5 months minimum in most cases).
