@@ -5,7 +5,7 @@ import threading
 import logging
 
 from screener.screener import Screener, VALID_LISTS
-from company import fetcher as f
+from fetcher import fetcher as f
 from utils import utils as u
 
 
@@ -27,30 +27,6 @@ class Interface:
         # Initialize data fetcher
         f.initialize()
 
-        if self.table_name:
-            try:
-                self.screener = Screener(self.table_name)
-                self._open_table(True)
-                if not self.screener.valid():
-                    self.table_name = ''
-                    self.screener = Screener()
-            except ValueError as e:
-                u.print_error(f'Table "{self.table_name}" not found')
-                self.table_name = ''
-                self.screener = Screener()
-        else:
-            self.screener = Screener()
-
-        if self.screen_name:
-            if os.path.exists(BASEPATH+screen+SCREEN_SUFFIX):
-                self.screen_name = BASEPATH + self.screen_name + SCREEN_SUFFIX
-                if not self.screener.load_script(self.screen_name):
-                    self.screen_name = ''
-                    u.print_error('Invalid screen script')
-            else:
-                u.print_error(f'File "{self.screen_name}" not found')
-                self.screen_name = ''
-
         if script:
             if os.path.exists(script):
                 try:
@@ -62,9 +38,35 @@ class Interface:
             else:
                 u.print_error(f'File "{script}" not found')
         else:
+            if self.table_name:
+                try:
+                    self.screener = Screener(self.table_name)
+                    self._open_table(True)
+                    if not self.screener.valid():
+                        self.table_name = ''
+                        self.screener = None
+                except ValueError as e:
+                    self.screener = None
+                    self.table_name = ''
+                    u.print_error(f'Table "{self.table_name}" not found')
+
+            if self.screen_name:
+                if os.path.exists(BASEPATH+screen+SCREEN_SUFFIX):
+                    self.screen_name = BASEPATH + self.screen_name + SCREEN_SUFFIX
+                    if not self.screener.load_script(self.screen_name):
+                        self.screen_name = ''
+                        u.print_error('Invalid screen script')
+                else:
+                    self.screen_name = ''
+                    u.print_error(f'File "{self.screen_name}" not found')
+
             self.main_menu()
 
+
     def main_menu(self):
+        if self.screener is None:
+            self.screener = Screener()
+
         while True:
             menu_items = {
                 '1': 'Select Table',
@@ -247,7 +249,7 @@ if __name__ == '__main__':
 
     # Create the parser for the "execute" command
     parser_b = subparser.add_parser('execute', help='Execute a JSON command script')
-    parser_b.add_argument('-f', '--script', help='Specify a script', required=False, default='script.json')
+    parser_b.add_argument('-f', '--script', help='Specify a script', required=False, default='scripts/script.json')
 
     command = vars(parser.parse_args())
 

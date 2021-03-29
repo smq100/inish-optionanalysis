@@ -9,7 +9,7 @@ import yfinance as yf
 import trendln
 import matplotlib.pyplot as plt
 
-from company import fetcher as f
+from fetcher import fetcher as f
 from utils import utils as u
 
 logger = u.get_logger()

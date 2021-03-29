@@ -38,7 +38,7 @@ class Sheets:
         ]
 
         try:
-            creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
+            creds = ServiceAccountCredentials.from_json_keyfile_name('fetcher/google.json', scope)
             client = gspread.authorize(creds)
             sheet = client.open(self.spreadsheet)
             self.sheet = sheet.worksheet(self.tab)

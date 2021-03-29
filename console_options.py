@@ -1,5 +1,4 @@
 import sys, os, json
-import logging
 import datetime
 
 import pandas as pd
@@ -8,12 +7,11 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as clrs
 import matplotlib.ticker as mticker
 
-from strategy.strategy import Leg
 from strategy.call import Call
 from strategy.put import Put
 from strategy.vertical import Vertical
 from options.chain import Chain
-from company import fetcher as f
+from fetcher import fetcher as f
 from utils import utils as u
 
 MAX_ROWS = 50
@@ -29,31 +27,28 @@ class Interface:
         # Initialize data fetcher
         f.initialize()
 
-        ticker = ticker.upper()
-        valid = f.validate_ticker(ticker)
-
         self.ticker = ticker
         self.strategy = None
         self.dirty_calculate = True
         self.dirty_analyze = True
 
-        if valid:
+        if script:
+            if os.path.exists(script):
+                try:
+                    with open(script) as file_:
+                        data = json.load(file_)
+                        print(data)
+                except Exception as e:
+                    u.print_error('File read error')
+            else:
+                u.print_error(f'File "{script}" not found')
+        elif f.validate_ticker(ticker):
             self.chain = Chain(ticker)
 
             if autoload:
                 if self.load_strategy(ticker, autoload, direction):
                     if not exit:
                         self.main_menu()
-            elif script:
-                if os.path.exists(script):
-                    try:
-                        with open(script) as file_:
-                            data = json.load(file_)
-                            print(data)
-                    except Exception as e:
-                        u.print_error('File read error')
-                else:
-                    u.print_error(f'File "{script}" not found')
             else:
                 if not exit:
                     self.strategy = Call(ticker, strategy, direction)
@@ -652,7 +647,7 @@ if __name__ == '__main__':
 
     # Create the parser for the "execute" command
     parser_b = subparser.add_parser('execute', help='Execute a JSON command script')
-    parser_b.add_argument('-f', '--script', help='Specify a script', required=False, default='script.json')
+    parser_b.add_argument('-f', '--script', help='Specify a script', required=False, default='scripts/script.json')
 
     command = vars(parser.parse_args())
 

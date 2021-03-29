@@ -4,17 +4,15 @@ Pricing calculation based on https://github.com/shashank-khanna/Option-Pricing
 Greeks calculation based on https://aaronschlegel.me/measure-sensitivity-derivatives-greeks-python.html
 '''
 
-import sys
 import abc
 from abc import ABC
 import datetime
-import logging
 
 import numpy as np
 import pandas as pd
 from pandas.tseries.offsets import BDay
 
-from company import fetcher as f
+from fetcher import fetcher as f
 from utils import utils as u
 
 

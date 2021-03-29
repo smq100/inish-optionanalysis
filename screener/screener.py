@@ -1,10 +1,9 @@
 import os
 import json
 
-from .sheets import Sheets
+from fetcher.sheets import Sheets
 from .interpreter import Interpreter, SyntaxError
 from company.company import Company
-from company import fetcher as f
 from utils import utils as u
 
 

@@ -1,12 +1,12 @@
-import sys, os, json
+import os, json
 import logging
 import datetime
 
 import matplotlib.pyplot as plt
 
 from analysis.technical import Technical
-from analysis.trend import SupportResistance, Line
-from company import fetcher as f
+from analysis.trend import SupportResistance
+from fetcher import fetcher as f
 from utils import utils as u
 
 
@@ -19,22 +19,20 @@ class Interface:
         # Initialize data fetcher
         f.initialize()
 
-        if f.validate_ticker(ticker):
+        if script:
+            if os.path.exists(script):
+                try:
+                    with open(script) as file_:
+                        data = json.load(file_)
+                        print(data)
+                except Exception as e:
+                    u.print_error('File read error')
+            else:
+                u.print_error(f'File "{script}" not found')
+        elif f.validate_ticker(ticker):
             start = datetime.datetime.today() - datetime.timedelta(days=90)
             self.technical = Technical(ticker, start=start)
-
-            if script:
-                if os.path.exists(script):
-                    try:
-                        with open(script) as file_:
-                            data = json.load(file_)
-                            print(data)
-                    except Exception as e:
-                        u.print_error('File read error')
-                else:
-                    u.print_error(f'File "{script}" not found')
-            else:
-                self.main_menu()
+            self.main_menu()
         else:
             u.print_error('Invalid ticker symbol specified')
 
@@ -207,7 +205,7 @@ if __name__ == '__main__':
 
     # Create the parser for the "execute" command
     parser_b = subparser.add_parser('execute', help='Execute a JSON command script')
-    parser_b.add_argument('-f', '--script', help='Specify a script', required=False, default='script.json')
+    parser_b.add_argument('-f', '--script', help='Specify a script', required=False, default='scripts/script.json')
 
     command = vars(parser.parse_args())
 

@@ -1,4 +1,4 @@
-from company import fetcher as f
+from fetcher import fetcher as f
 from utils import utils as u
 
 
