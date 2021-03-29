@@ -149,13 +149,13 @@ class Interpreter:
         start = None if self.base_start == 0 else self.base_start
         stop = None if self.base_stop == 0 else self.base_stop
         sl = slice(start, stop)
-        return self.symbol.ta.get_close()[sl]
+        return self.symbol.get_close()[sl]
 
     def _get_base_volume(self):
         start = None if self.base_start == 0 else self.base_start
         stop = None if self.base_stop == 0 else self.base_stop
         sl = slice(start, stop)
-        return self.symbol.ta.get_volume()[sl]
+        return self.symbol.get_volume()[sl]
 
     def _get_base_sma(self):
         start = None if self.base_start == 0 else self.base_start
@@ -171,25 +171,25 @@ class Interpreter:
         start = None if self.criteria_start == 0 else self.criteria_start
         stop = None if self.criteria_stop == 0 else self.criteria_stop
         sl = slice(start, stop)
-        return self.symbol.ta.get_high()[sl]
+        return self.symbol.get_high()[sl]
 
     def _get_value_low(self):
         start = None if self.criteria_start == 0 else self.criteria_start
         stop = None if self.criteria_stop == 0 else self.criteria_stop
         sl = slice(start, stop)
-        return self.symbol.ta.get_low()[sl]
+        return self.symbol.get_low()[sl]
 
     def _get_value_close(self):
         start = None if self.criteria_start == 0 else self.criteria_start
         stop = None if self.criteria_stop == 0 else self.criteria_stop
         sl = slice(start, stop)
-        return self.symbol.ta.get_close()[sl]
+        return self.symbol.get_close()[sl]
 
     def _get_value_volume(self):
         start = None if self.criteria_start == 0 else self.criteria_start
         stop = None if self.criteria_stop == 0 else self.criteria_stop
         sl = slice(start, stop)
-        return self.symbol.ta.get_volume()[sl]
+        return self.symbol.get_volume()[sl]
 
     def _get_value_sma(self):
         start = None if self.criteria_start == 0 else self.criteria_start

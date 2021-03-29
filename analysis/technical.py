@@ -1,5 +1,5 @@
 '''
-    ta:      https://technical-analysis-library-in-python.readthedocs.io/en/latest/index.html
+ta: https://technical-analysis-library-in-python.readthedocs.io/en/latest/index.html
 '''
 
 import datetime
@@ -14,7 +14,7 @@ from utils import utils as u
 logger = u.get_logger()
 
 
-class TechnicalAnalysis:
+class Technical:
     def __init__(self, ticker, start=None):
         if f.validate_ticker(ticker):
             self.ticker = ticker.upper()
@@ -25,31 +25,6 @@ class TechnicalAnalysis:
 
     def __str__(self):
         return f'Technical analysis for {self.ticker}'
-
-    def get_current_price(self):
-        if self.history is None:
-            self._load_history()
-        return self.history['Close'][-1]
-
-    def get_high(self):
-        if self.history is None:
-            self._load_history()
-        return self.history['High']
-
-    def get_low(self):
-        if self.history is None:
-            self._load_history()
-        return self.history['Low']
-
-    def get_close(self):
-        if self.history is None:
-            self._load_history()
-        return self.history['Close']
-
-    def get_volume(self):
-        if self.history is None:
-            self._load_history()
-        return self.history['Volume']
 
     def calc_sma(self, interval):
         if self.history is None:
@@ -137,7 +112,7 @@ class TechnicalAnalysis:
 
 if __name__ == '__main__':
     start = datetime.datetime.today() - datetime.timedelta(days=365)
-    ta = TechnicalAnalysis('AAPL', start)
+    ta = Technical('AAPL', start)
     print(ta.get_close()[-1])
 
     # print(data.iloc[-1]['High'])

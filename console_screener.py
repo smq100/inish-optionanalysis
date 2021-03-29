@@ -22,6 +22,7 @@ class Interface:
         self.results = []
         self.valids = 0
         self.screener = None
+        self.time = 0.0
 
         # Initialize data fetcher
         f.initialize()
@@ -79,7 +80,7 @@ class Interface:
             if self.screen_name:
                 filename = os.path.basename(self.screen_name)
                 head, sep, tail = filename.partition('.')
-                menu_items['3'] = f'Run Script ({head})'
+                menu_items['2'] = f'Select Script ({head})'
 
             if len(self.results) > 0:
                 menu_items['4'] = f'Show Results ({self.valids})'
@@ -155,12 +156,16 @@ class Interface:
             self.valids = 0
             task = threading.Thread(target=self.screener.run_script)
             task.start()
+            tic = time.perf_counter()
 
             if progressbar:
-                self._show_progress('Progress', 'Completed')
+                self._show_progress('Progress', 'Completed', 1)
 
             # Wait for thread to finish
             while task.is_alive(): pass
+
+            toc = time.perf_counter()
+            self.time = toc - tic
 
             if self.screener.error == 'None':
                 self.results = self.screener.results
@@ -168,7 +173,7 @@ class Interface:
                     if result:
                         self.valids += 1
 
-                u.print_message(f'{self.valids} Symbol(s) Identified', True)
+                u.print_message(f'{self.valids} Symbols Identified in {self.time:.2f} seconds', True)
             else:
                 self.results = []
                 self.valids = 0
@@ -185,23 +190,32 @@ class Interface:
             u.print_message('No symbols were located', True)
         else:
             u.print_message('Symbols Identified', True)
-            for index, result in enumerate(self.results):
+            index = 0
+            for result in self.results:
                 if all:
+                    index += 1
                     print(f'{result} ({sum(result.values)})')
+                    if (index) % 10 == 0:
+                        print()
                 elif result:
-                    print(f'{result}')
+                    index += 1
+                    print(f'{result} ', end='')
+                    if (index) % 10 == 0:
+                        print()
+
+        print()
 
     def _open_table(self, progressbar):
         task = threading.Thread(target=self.screener.open)
         task.start()
 
         if progressbar:
-            self._show_progress('Progress', 'Symbols loaded')
+            self._show_progress('Progress', 'Symbols loaded', 2)
 
         # Wait for thread to finish
         while task.is_alive(): pass
 
-    def _show_progress(self, prefix, suffix):
+    def _show_progress(self, prefix, suffix, scheme):
         # Wait for either an error or running to start, or not, the progress bar
         while not self.screener.error: pass
 
@@ -211,7 +225,10 @@ class Interface:
             u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50)
             while completed < total:
                 time.sleep(0.25)
-                sfx = f'{self.screener.active_symbol} ' + suffix + f' ({self.screener.matches})' + '    '
+                if scheme == 1:
+                    sfx = suffix + f' - {self.screener.active_symbol} ({self.screener.matches})' + '    '
+                elif scheme == 2:
+                    sfx = suffix
                 completed = self.screener.items_completed
                 u.progress_bar(completed, total, prefix=prefix, suffix=sfx, length=50)
 

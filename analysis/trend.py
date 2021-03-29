@@ -1,13 +1,12 @@
 '''
-    trendln: https://towardsdatascience.com/programmatic-identification-of-support-resistance-trend-lines-with-python-d797a4a90530,
-             https://github.com/GregoryMorse/trendln
+trendln: https://github.com/GregoryMorse/trendln
+         https://towardsdatascience.com/programmatic-identification-of-support-resistance-trend-lines-with-python-d797a4a90530,
 '''
 
 import datetime
 
 import yfinance as yf
 import trendln
-import numpy as np
 import matplotlib.pyplot as plt
 
 from company import fetcher as f

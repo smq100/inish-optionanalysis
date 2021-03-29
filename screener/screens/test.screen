@@ -11,10 +11,10 @@
       },
       "criteria":{
          "conditional":"gt",
-         "technical":"low",
-         "value":0,
+         "technical":"value",
+         "value":150,
          "length":0,
-         "start":-100,
+         "start":-1,
          "stop":0,
          "series":"max",
          "factor":1.0

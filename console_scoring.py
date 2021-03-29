@@ -3,7 +3,7 @@ import logging
 import datetime
 
 from analysis.scoring import ScoringAnalysis
-from analysis.technical import TechnicalAnalysis
+from analysis.technical import Technical
 from analysis.trend import SupportResistance, Line
 from company import fetcher as f
 from utils import utils as u
@@ -21,7 +21,7 @@ class Interface:
 
         if f.validate_ticker(ticker):
             start = datetime.datetime.today() - datetime.timedelta(days=365)
-            self.technical = TechnicalAnalysis(ticker, start=start)
+            self.technical = Technical(ticker, start=start)
             self.scoring = ScoringAnalysis(ticker)
 
             if script:

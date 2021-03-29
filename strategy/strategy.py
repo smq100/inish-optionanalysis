@@ -6,7 +6,7 @@ import math
 
 import pandas as pd
 
-from company.symbol import Symbol
+from company.company import Company
 from options.option import PRODUCTS, DIRECTIONS, Option
 from pricing.pricing import METHODS
 from pricing.blackscholes import BlackScholes
@@ -124,7 +124,7 @@ class Leg:
         if direction not in DIRECTIONS:
             raise AssertionError('Invalid direction')
 
-        self.symbol = Symbol(ticker)
+        self.symbol = Company(ticker)
         self.option = Option(ticker, product, strike, expiry)
         self.strategy = strategy
         self.quantity = quantity
@@ -248,7 +248,7 @@ class Leg:
         return call, put
 
     def modify_symbol(self, ticker):
-        self.symbol = Symbol(ticker)
+        self.symbol = Company(ticker)
 
         try:
             # Reset strike to spot value

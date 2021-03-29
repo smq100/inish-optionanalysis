@@ -3,7 +3,7 @@ import json
 
 from .sheets import Sheets
 from .interpreter import Interpreter, SyntaxError
-from company.symbol import Symbol
+from company.company import Company
 from company import fetcher as f
 from utils import utils as u
 
@@ -65,7 +65,7 @@ class Screener:
                 self.error = 'None'
                 for s in symbols:
                     try:
-                        self.symbols += [Symbol(s, self.days)]
+                        self.symbols += [Company(s, self.days)]
                     except ValueError as e:
                         logger.warning(f'{__name__}: Invalid ticker {s}')
 

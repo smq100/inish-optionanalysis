@@ -1,5 +1,5 @@
 '''
-https://pypi.org/project/yfinance/
+yfinance: https://github.com/ranaroussi/yfinance
 '''
 
 import os
@@ -17,9 +17,11 @@ from utils import utils as u
 logger = u.get_logger()
 VALID_SYMBOLS = 'valid.json'
 valid_symbols = []
+_initialized = False
 
 def initialize():
     global valid_symbols
+    global _initialized
 
     config = configparser.ConfigParser()
     config.read('config.ini')
@@ -30,16 +32,24 @@ def initialize():
             with open(VALID_SYMBOLS) as file_:
                 v = json.load(file_)
                 valid_symbols = set(v)
+                _initialized = True
         except Exception as e:
             u.print_error('File read error: ' + str(e))
     else:
         u.print_error(f'File "{VALID_SYMBOLS}" not found')
 
-def validate_ticker(ticker):
+def validate_ticker(ticker, force=False):
     global valid_symbols
+    global _initialized
     valid = False
 
-    if ticker in valid_symbols:
+    if force:
+        t = yf.Ticker(ticker).history(period='1d')
+        if len(t) > 0:
+            valid = True
+    elif not _initialized:
+        raise AssertionError('Must first initialize fetcher module')
+    elif ticker in valid_symbols:
         valid = True
     else:
         t = yf.Ticker(ticker).history(period='1d')
@@ -50,30 +60,16 @@ def validate_ticker(ticker):
 
     return valid
 
-def get_company(ticker):
+def get_company(ticker, force=False):
     global valid_symbols
     company = None
 
     if ticker in valid_symbols:
         company = yf.Ticker(ticker)
-    elif validate_ticker(ticker):
+    elif validate_ticker(ticker, force):
         company = yf.Ticker(ticker)
 
     return company
-
-def _dump_valid():
-    global valid_symbols
-
-    if os.path.exists(VALID_SYMBOLS):
-        try:
-            with open(VALID_SYMBOLS, 'w') as file_:
-                l = list(valid_symbols)
-                l.sort()
-                json.dump(l, file_, indent=2)
-        except Exception as e:
-            u.print_error('File read error: ' + str(e))
-    else:
-        u.print_error(f'File "{VALID_SYMBOLS}" not found')
 
 def get_current_price(ticker):
     if validate_ticker(ticker):
@@ -111,16 +107,44 @@ def get_treasury_rate(ticker='DTB3'):
 
     return df['Value'][0] / 100.0
 
+def _dump_valid():
+    global valid_symbols
+
+    if os.path.exists(VALID_SYMBOLS):
+        try:
+            with open(VALID_SYMBOLS, 'w') as file_:
+                l = list(valid_symbols)
+                l.sort()
+                json.dump(l, file_, indent=2)
+        except Exception as e:
+            u.print_error('File read error: ' + str(e))
+    else:
+        u.print_error(f'File "{VALID_SYMBOLS}" not found')
+
 
 if __name__ == '__main__':
     start = datetime.datetime.today() - datetime.timedelta(days=10)
-    end = datetime.datetime.today() - datetime.timedelta(days=5)
 
-    df = get_ranged_data('AAPL', start, end)
-    print(df.tail())
+    # print(yf.download('AAPL'))
+    df = get_company('AAPL', True)
+    # print(df.history(start=f'{start:%Y-%m-%d}'))
+    # print(df.info)
+    # print(df.actions)
+    # print(df.dividends)
+    # print(df.splits)
+    # print(df.institutional_holders)
+    # print(df.quarterly_financials)
+    # print(df.quarterly_balancesheet)
+    # print(df.quarterly_balance_sheet)
+    # print(df.quarterly_cashflow)
+    # print(df.major_holders)
+    # print(df.sustainability)
+    # print(df.recommendations)
+    # print(df.calendar)
+    # print(df.isin)
+    # print(df.options)
+    # print(df.option_chain)
 
-    rate = get_treasury_rate()
-    print(rate)
 
     '''
     Retrieves a company object that may be used to gather numerous data about the company and security.

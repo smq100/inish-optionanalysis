@@ -4,7 +4,7 @@ import datetime
 
 import matplotlib.pyplot as plt
 
-from analysis.technical import TechnicalAnalysis
+from analysis.technical import Technical
 from analysis.trend import SupportResistance, Line
 from company import fetcher as f
 from utils import utils as u
@@ -21,7 +21,7 @@ class Interface:
 
         if f.validate_ticker(ticker):
             start = datetime.datetime.today() - datetime.timedelta(days=90)
-            self.technical = TechnicalAnalysis(ticker, start=start)
+            self.technical = Technical(ticker, start=start)
 
             if script:
                 if os.path.exists(script):
@@ -70,7 +70,7 @@ class Interface:
                 valid = f.validate_ticker(ticker)
                 if valid:
                     start = datetime.datetime.today() - datetime.timedelta(days=365)
-                    self.technical = TechnicalAnalysis(ticker, start=start)
+                    self.technical = Technical(ticker, start=start)
                 else:
                     u.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
             else:
