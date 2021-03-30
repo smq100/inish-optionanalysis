@@ -1,7 +1,8 @@
 import os
 import json
 
-from fetcher.sheets import Sheets
+from fetcher.google import Google
+from fetcher.excel import Excel
 from .interpreter import Interpreter, SyntaxError
 from company.company import Company
 from utils import utils as u
@@ -24,7 +25,8 @@ class Screener:
 
         self.days = days
         self.table_name = table_name
-        self.table = Sheets()
+        # self.table = Google('Symbols')
+        self.table = Excel('fetcher/symbols.xlsx')
         self.script = []
         self.symbols = []
         self.items_total = 0
