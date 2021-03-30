@@ -1,9 +1,12 @@
-import pandas as pd
+
+from openpyxl import load_workbook
 
 from .sheet import Sheet
 from utils import utils as u
 
 logger = u.get_logger()
+
+COLUMNS = ['','A','B','C','D','E','F']
 
 class Excel(Sheet):
     def __init__(self, sheet_name):
@@ -13,29 +16,30 @@ class Excel(Sheet):
         self.sheet = None
         self.opened = False
         if tab:
-            self.tab = tab
+            self.tab_name = tab
 
             try:
-                pd.read_excel(self.spreadsheet, sheet_name=self.tab, index_col=0)
-            except FileNotFoundError as e:
-                logger.debug(f'{__name__}: Unable to open file {self.spreadsheet}/{self.tab}')
-                self.result = f'File not found: {e}'
+                wb = load_workbook(filename=self.sheet_name, data_only=True)
+                self.sheet = wb[self.tab_name]
+            except Exception as e:
+                logger.debug(f'{__name__}: Unable to open file {self.sheet_name}/{self.tab_name}')
             else:
-                logger.info(f'{__name__}: Opened file {self.spreadsheet}/{self.tab}')
+                logger.info(f'{__name__}: Opened file {self.sheet_name}/{self.tab_name}')
                 self.opened = True
 
         return self.opened
 
     def get_column(self, column):
         self.col = []
-        column -= 1
-        if self.opened and column >= 0:
-            self.col = pd.read_excel(self.spreadsheet, sheet_name=self.tab, index_col=column).index.tolist()
+        if self.opened and column > 0:
+            col = self.sheet[COLUMNS[column]]
+            for cell in col:
+                self.col += [cell.value]
 
         return self.col
 
 if __name__ == '__main__':
-    xl = Excel()
+    xl = Excel('fetcher/symbols.xlsx')
     xl.open('TEST')
-    xl.get_column(0)
+    xl.get_column(1)
     print(xl.col)

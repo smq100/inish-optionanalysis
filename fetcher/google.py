@@ -20,7 +20,7 @@ class Google(Sheet):
         self.sheet = None
         self.opened = False
         if tab:
-            self.tab = tab
+            self.tab_name = tab
 
             scope = [
                 # 'https://spreadsheets.google.com/feeds',
@@ -32,16 +32,14 @@ class Google(Sheet):
             try:
                 creds = ServiceAccountCredentials.from_json_keyfile_name('fetcher/google.json', scope)
                 client = gspread.authorize(creds)
-                sheet = client.open(self.spreadsheet)
-                self.sheet = sheet.worksheet(self.tab)
+                sheet = client.open(self.sheet_name)
+                self.sheet = sheet.worksheet(self.tab_name)
             except gspread.exceptions.SpreadsheetNotFound:
-                logger.debug(f'{__name__}: Unable to open file {self.spreadsheet}/{self.tab}')
-                self.result = '<File not found>'
+                logger.debug(f'{__name__}: Unable to open file {self.sheet_name}/{self.tab_name}')
             except Exception as e:
-                logger.error(f'{__name__}: Error opening file {self.spreadsheet}/{self.tab}')
-                self.result = '<An error occured>'
+                logger.error(f'{__name__}: Error opening file {self.sheet_name}/{self.tab_name}')
             else:
-                logger.info(f'{__name__}: Opened file {self.spreadsheet}/{self.tab}')
+                logger.info(f'{__name__}: Opened file {self.sheet_name}/{self.tab_name}')
                 self.opened = True
 
         return self.opened

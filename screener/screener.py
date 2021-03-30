@@ -25,8 +25,8 @@ class Screener:
 
         self.days = days
         self.table_name = table_name
-        # self.table = Google('Symbols')
-        self.table = Excel('fetcher/symbols.xlsx')
+        self.table = Google('Symbols')
+        # self.table = Excel('fetcher/symbols.xlsx')
         self.script = []
         self.symbols = []
         self.items_total = 0

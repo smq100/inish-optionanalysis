@@ -3,15 +3,14 @@ from abc import ABC
 
 class Sheet(ABC):
     def __init__(self, sheet_name):
-        self.spreadsheet = sheet_name
-        self.opened = False
-        self.tab = ''
+        self.sheet_name = sheet_name
+        self.tab_name = ''
         self.sheet = None
-        self.result = ''
         self.col = None
+        self.opened = False
 
     def __str__(self):
-        return self.spreadsheet
+        return self.sheet_name
 
     @abc.abstractmethod
     def open(self, tab):
