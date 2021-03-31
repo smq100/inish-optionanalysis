@@ -10,23 +10,27 @@ from utils import utils as u
 
 logger = u.get_logger()
 
+VALID_TYPES = ('google', 'excel')
 VALID_LISTS = ('SP500', 'DOW', 'NASDAQ', 'TEST')
 
 
 class Screener:
-    def __init__(self, table_name='', script_name='', days=365):
+    def __init__(self, table_name='', table_type='google', script_name='', days=365):
         table_name = table_name.upper()
         if table_name:
             if table_name not in VALID_LISTS:
                 raise ValueError(f'Table not found: {table_name}')
+
+        if table_type:
+            if table_type not in VALID_TYPES:
+                raise ValueError(f'Table type not valid: {table_name}')
 
         if days < 30:
             raise ValueError('Invalid number of days')
 
         self.days = days
         self.table_name = table_name
-        self.table = Google('Symbols')
-        # self.table = Excel('fetcher/symbols.xlsx')
+        self.table_type = table_type
         self.script = []
         self.symbols = []
         self.items_total = 0
@@ -35,6 +39,11 @@ class Screener:
         self.error = ''
         self.active_symbol = ''
         self.matches = 0
+
+        if table_type == 'google':
+            self.table = Google('Symbols')
+        else:
+            self.table = Excel('fetcher/symbols.xlsx')
 
         if script_name:
             if not self.load_script(script_name):

@@ -11,6 +11,7 @@ from utils import utils as u
 
 logger = u.get_logger()
 
+CREDENTIALS = 'fetcher/google.json'
 
 class Google(Sheet):
     def __init__(self, sheet_name):
@@ -30,7 +31,7 @@ class Google(Sheet):
             ]
 
             try:
-                creds = ServiceAccountCredentials.from_json_keyfile_name('fetcher/google.json', scope)
+                creds = ServiceAccountCredentials.from_json_keyfile_name(CREDENTIALS, scope)
                 client = gspread.authorize(creds)
                 sheet = client.open(self.sheet_name)
                 self.sheet = sheet.worksheet(self.tab_name)

@@ -15,6 +15,8 @@ from pandas.tseries.offsets import BDay
 from utils import utils as u
 
 logger = u.get_logger()
+
+CREDENTIALS = 'fetcher/quandl.ini'
 VALID_SYMBOLS = 'fetcher/valid.json'
 valid_symbols = []
 _initialized = False
@@ -23,8 +25,9 @@ def initialize():
     global valid_symbols
     global _initialized
 
+    # Quandl credentials
     config = configparser.ConfigParser()
-    config.read('fetcher/quandl.ini')
+    config.read(CREDENTIALS)
     quandl.ApiConfig.api_key = config['DEFAULT']['APIKEY']
 
     if os.path.exists(VALID_SYMBOLS):
