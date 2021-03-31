@@ -18,6 +18,7 @@ logger = u.get_logger()
 
 CREDENTIALS = 'fetcher/quandl.ini'
 VALID_SYMBOLS = 'fetcher/valid.json'
+
 valid_symbols = []
 _initialized = False
 
@@ -44,6 +45,7 @@ def initialize():
 def validate_ticker(ticker, force=False):
     global valid_symbols
     global _initialized
+
     valid = False
 
     if force:

@@ -1,5 +1,5 @@
 '''
-https://gspread.readthedocs.io/en/latest/
+https://github.com/burnash/gspread
 '''
 
 import gspread
