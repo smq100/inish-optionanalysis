@@ -4,7 +4,6 @@ __pycache__
 # Other directories
 venv
 *._*
-.ropeproject
 .ipynb_checkpoints
 .pylintrc
 
@@ -22,5 +21,4 @@ venv
 *.png
 *.bak
 *.xlsx
-
-# App files
+*.csv

@@ -1,6 +1,6 @@
 import os, json
 import logging
-import datetime
+import datetime as dt
 
 import matplotlib.pyplot as plt
 
@@ -30,7 +30,7 @@ class Interface:
             else:
                 u.print_error(f'File "{script}" not found')
         elif f.validate_ticker(ticker):
-            start = datetime.datetime.today() - datetime.timedelta(days=90)
+            start = dt.datetime.today() - dt.timedelta(days=90)
             self.technical = Technical(ticker, start=start)
             self.main_menu()
         else:
@@ -67,7 +67,7 @@ class Interface:
             if ticker != '0':
                 valid = f.validate_ticker(ticker)
                 if valid:
-                    start = datetime.datetime.today() - datetime.timedelta(days=365)
+                    start = dt.datetime.today() - dt.timedelta(days=365)
                     self.technical = Technical(ticker, start=start)
                 else:
                     u.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
@@ -145,7 +145,7 @@ class Interface:
             if selection == 4:
                 start = None
                 if days > 0:
-                    start = datetime.datetime.today() - datetime.timedelta(days=days)
+                    start = dt.datetime.today() - dt.timedelta(days=days)
 
                 sr = SupportResistance(self.technical.ticker, start=start)
                 sr.calculate()

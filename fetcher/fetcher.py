@@ -4,7 +4,7 @@ yfinance: https://github.com/ranaroussi/yfinance
 
 import os
 import json
-import datetime
+import datetime as dt
 import configparser
 
 import quandl
@@ -17,7 +17,8 @@ from utils import utils as u
 logger = u.get_logger()
 
 CREDENTIALS = 'fetcher/quandl.ini'
-VALID_SYMBOLS = 'fetcher/valid.json'
+VALID_SYMBOLS = 'data/symbols/valid_symbols.json'
+HISTORY_DIR = 'data/history'
 
 valid_symbols = []
 _initialized = False
@@ -31,16 +32,17 @@ def initialize():
     config.read(CREDENTIALS)
     quandl.ApiConfig.api_key = config['DEFAULT']['APIKEY']
 
-    if os.path.exists(VALID_SYMBOLS):
-        try:
-            with open(VALID_SYMBOLS) as file_:
-                v = json.load(file_)
-                valid_symbols = set(v)
-                _initialized = True
-        except Exception as e:
-            u.print_error('File read error: ' + str(e))
-    else:
-        u.print_error(f'File "{VALID_SYMBOLS}" not found')
+    if not _initialized:
+        if os.path.exists(VALID_SYMBOLS):
+            try:
+                with open(VALID_SYMBOLS) as file_:
+                    v = json.load(file_)
+                    valid_symbols = set(v)
+                    _initialized = True
+            except Exception as e:
+                u.print_error('File read error: ' + str(e))
+        else:
+            u.print_error(f'File "{VALID_SYMBOLS}" not found')
 
 def validate_ticker(ticker, force=False):
     global valid_symbols
@@ -60,7 +62,7 @@ def validate_ticker(ticker, force=False):
         t = yf.Ticker(ticker).history(period='1d')
         if len(t) > 0:
             valid_symbols.add(ticker)
-            _dump_valid()
+            _save_valid_symbols()
             valid = True
 
     return valid
@@ -76,9 +78,39 @@ def get_company(ticker, force=False):
 
     return company
 
+def get_history(ticker, days):
+    global valid_symbols
+    history = None
+
+    filename = f'{HISTORY_DIR}/{ticker.lower()}.csv'
+    if os.path.exists(filename):
+        with open(filename) as f:
+            logger.info(f'Using history file: {filename}')
+            history = pd.read_csv(f)
+    else:
+        history = refresh_history(ticker, days)
+
+    return history
+
+def refresh_history(ticker, days):
+    global valid_symbols
+    history = None
+
+    company = get_company(ticker)
+    if company is not None and days > 30:
+        start = dt.datetime.today() - dt.timedelta(days=days)
+        history = company.history(start=f'{start:%Y-%m-%d}')
+
+        filename = f'{HISTORY_DIR}/{ticker.lower()}.csv'
+        logger.info(f'Created history file: {filename}')
+        with open(filename, 'w') as f:
+            history.to_csv(f)
+
+    return history
+
 def get_current_price(ticker):
     if validate_ticker(ticker):
-        start = datetime.datetime.today() - datetime.timedelta(days=5)
+        start = dt.datetime.today() - dt.timedelta(days=5)
         df = get_ranged_data(ticker, start)
         price = df.iloc[-1]['Close']
     else:
@@ -91,7 +123,7 @@ def get_ranged_data(ticker, start, end=None):
     df = pd.DataFrame()
 
     if end is None:
-        end = datetime.date.today()
+        end = dt.date.today()
 
     if validate_ticker(ticker):
         company = get_company(ticker)
@@ -103,7 +135,7 @@ def get_ranged_data(ticker, start, end=None):
 def get_treasury_rate(ticker='DTB3'):
     # DTB3: Default to 3-Month Treasury Rate
     df = pd.DataFrame()
-    prev_business_date = datetime.datetime.today() - BDay(1)
+    prev_business_date = dt.datetime.today() - BDay(1)
 
     df = quandl.get('FRED/' + ticker)
     if df.empty:
@@ -112,7 +144,7 @@ def get_treasury_rate(ticker='DTB3'):
 
     return df['Value'][0] / 100.0
 
-def _dump_valid():
+def _save_valid_symbols():
     global valid_symbols
 
     if os.path.exists(VALID_SYMBOLS):
@@ -128,10 +160,17 @@ def _dump_valid():
 
 
 if __name__ == '__main__':
-    start = datetime.datetime.today() - datetime.timedelta(days=10)
+    from logging import DEBUG
+    logger = u.get_logger(DEBUG)
+
+    # start = dt.datetime.today() - dt.timedelta(days=10)
+
+    initialize()
+    # df = refresh_history('AAPL', 60)
+    history = get_history('AAPL', 60)
+    print(history)
 
     # print(yf.download('AAPL'))
-    df = get_company('AAPL', True)
     # print(df.history(start=f'{start:%Y-%m-%d}'))
     # print(df.info)
     # print(df.actions)

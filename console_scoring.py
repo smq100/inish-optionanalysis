@@ -1,6 +1,6 @@
 import os, json
 import logging
-import datetime
+import datetime as dt
 
 from analysis.scoring import ScoringAnalysis
 from analysis.technical import Technical
@@ -29,7 +29,7 @@ class Interface:
             else:
                 u.print_error(f'File "{script}" not found')
         elif f.validate_ticker(ticker):
-            start = datetime.datetime.today() - datetime.timedelta(days=365)
+            start = dt.datetime.today() - dt.timedelta(days=365)
             self.technical = Technical(ticker, start=start)
             self.scoring = ScoringAnalysis(ticker)
 
@@ -63,7 +63,7 @@ class Interface:
             if ticker != '0':
                 valid = f.validate_ticker(ticker)
                 if valid:
-                    start = datetime.datetime.today() - datetime.timedelta(days=365)
+                    start = dt.datetime.today() - dt.timedelta(days=365)
                     self.scoring = ScoringAnalysis(ticker)
                 else:
                     u.print_error('Invalid ticker symbol. Try again or select "0" to cancel')

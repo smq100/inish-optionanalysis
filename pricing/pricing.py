@@ -6,7 +6,7 @@ Greeks calculation based on https://aaronschlegel.me/measure-sensitivity-derivat
 
 import abc
 from abc import ABC
-import datetime
+import datetime as dt
 
 import numpy as np
 import pandas as pd
@@ -56,7 +56,7 @@ class Pricing(ABC):
         self.rho_put = 0.0
 
         self._underlying_asset_data = pd.DataFrame()
-        self._start_date = datetime.datetime.today() - BDay(self.LOOK_BACK_WINDOW)  # How far we need to go to get historical prices
+        self._start_date = dt.datetime.today() - BDay(self.LOOK_BACK_WINDOW)  # How far we need to go to get historical prices
 
         # Convert time to midnight
         self.expiry = self.expiry.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -154,11 +154,11 @@ class Pricing(ABC):
             (ExpiryDate - CurrentDate).days / 365
         :return: <void>
         '''
-        if self.expiry < datetime.datetime.today():
+        if self.expiry < dt.datetime.today():
             logger.error(f'{__name__}: Expiry/Maturity Date is in the past. Please check')
             raise ValueError('Expiry/Maturity Date is in the past. Please check')
 
-        self.time_to_maturity = (self.expiry - datetime.datetime.today()).days / 365.0
+        self.time_to_maturity = (self.expiry - dt.datetime.today()).days / 365.0
         logger.info(f'{__name__}: Time to maturity = {self.time_to_maturity:.5f}')
 
     def _calc_volatility(self):

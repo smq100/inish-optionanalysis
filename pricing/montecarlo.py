@@ -1,6 +1,5 @@
 '''American Pricing Class'''
 
-import datetime
 from random import gauss
 
 import numpy as np
@@ -113,5 +112,7 @@ class MonteCarlo(Pricing):
 
 
 if __name__ == '__main__':
-    pricer_ = MonteCarlo('TSLA', datetime.datetime(2021, 8, 31), 1000)
+    import datetime as dt
+
+    pricer_ = MonteCarlo('TSLA', dt.datetime(2021, 8, 31), 1000)
     call_price, put_price = pricer_.calculate_prices()

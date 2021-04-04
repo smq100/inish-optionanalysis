@@ -5,13 +5,11 @@ from fetcher.google import Google
 from fetcher.excel import Excel
 from .interpreter import Interpreter, SyntaxError
 from company.company import Company
+from data.history import VALID_LISTS, VALID_TYPES, GOOGLE_SHEETNAME, EXCEL_SHEETNAME
 from utils import utils as u
 
 
 logger = u.get_logger()
-
-VALID_TYPES = ('google', 'excel')
-VALID_LISTS = ('SP500', 'DOW', 'NASDAQ', 'TEST')
 
 
 class Screener:
@@ -41,9 +39,11 @@ class Screener:
         self.matches = 0
 
         if table_type == 'google':
-            self.table = Google('Symbols')
+            self.table = Google(GOOGLE_SHEETNAME)
+        elif table_type == 'excel':
+            self.table = Excel(EXCEL_SHEETNAME)
         else:
-            self.table = Excel('fetcher/symbols.xlsx')
+            raise ValueError('Invalid table type')
 
         if script_name:
             if not self.load_script(script_name):
@@ -162,8 +162,13 @@ class Screener:
 
 if __name__ == '__main__':
     import logging
+    from fetcher import fetcher as f
+
     u.get_logger(logging.DEBUG)
+    f.initialize()
 
     s = Screener('test')
-    s.load_script('/Users/steve/Documents/Source Code/Personal/OptionAnalysis/screener/scripts/test.screen')
+    # s = Screener('test', table_type='excel')
+    s.open()
+    s.load_script('/Users/steve/Documents/Source Code/Personal/OptionAnalysis/screener/screens/test.screen')
     s.run_script()

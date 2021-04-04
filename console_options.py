@@ -1,5 +1,5 @@
 import sys, os, json
-import datetime
+import datetime as dt
 
 import pandas as pd
 import numpy as np
@@ -428,7 +428,7 @@ class Interface:
         select = u.input_integer('Select expiration date, or 0 to cancel: ', 0, index+1)
         if select > 0:
             self.chain.expire = expiry[select-1]
-            expiry = datetime.datetime.strptime(self.chain.expire, '%Y-%m-%d')
+            expiry = dt.datetime.strptime(self.chain.expire, '%Y-%m-%d')
 
             self.dirty_calculate = True
             self.dirty_analyze = True

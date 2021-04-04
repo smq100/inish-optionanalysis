@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 
 from strategy.strategy import Strategy, STRATEGIES
 from utils import utils as u
@@ -13,10 +13,10 @@ class Put(Strategy):
         self.name = STRATEGIES[1]
 
         # Default to a week from Friday as expiry
-        d = datetime.datetime.today()
+        d = dt.datetime.today()
         while d.weekday() != 4:
-            d += datetime.timedelta(1)
-        expiry = d + datetime.timedelta(days=6)
+            d += dt.timedelta(1)
+        expiry = d + dt.timedelta(days=6)
 
         self.add_leg(1, product, direction, self.initial_spot, expiry)
 

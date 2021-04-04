@@ -1,5 +1,5 @@
 
-import datetime
+import datetime as dt
 
 from analysis.technical import Technical
 from fetcher import fetcher as f
@@ -74,7 +74,7 @@ class Company:
     def _load_history(self):
         valid = False
         if self.days > 1:
-            start = datetime.datetime.today() - datetime.timedelta(days=self.days)
+            start = dt.datetime.today() - dt.timedelta(days=self.days)
             self.history = self.company.history(start=f'{start:%Y-%m-%d}')
             self.ta = Technical(self.ticker, start)
             valid = True

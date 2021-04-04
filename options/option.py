@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 import re
 
 from fetcher import fetcher as f
@@ -81,7 +81,7 @@ class Option:
 
         self.ticker = parsed['ticker']
         self.product = parsed['product']
-        self.expiry = datetime.datetime.strptime(parsed['expiry'], '%Y-%m-%d')
+        self.expiry = dt.datetime.strptime(parsed['expiry'], '%Y-%m-%d')
         self.strike = parsed['strike']
 
         contract = get_contract(contract_name)
@@ -142,10 +142,7 @@ def _parse_contract_name(contract_name):
     ticker = parsed[0]
     expiry = f'20{parsed[1][:2]}-{parsed[1][2:4]}-{parsed[1][4:]}'
 
-    if 'C' in parsed[2].upper():
-        product = 'call'
-    else:
-        product = 'put'
+    product = 'call' if 'C' in parsed[2].upper() else 'put'
 
     strike = float(parsed[3][:5]) + (float(parsed[3][5:]) / 1000.0)
 

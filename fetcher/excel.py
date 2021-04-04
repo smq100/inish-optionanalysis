@@ -1,6 +1,6 @@
 
 '''
-https://github.com/burnash/gspread
+https://github.com/chronossc/openpyxl
 '''
 
 from openpyxl import load_workbook
@@ -43,7 +43,7 @@ class Excel(Sheet):
         return self.col
 
 if __name__ == '__main__':
-    xl = Excel('fetcher/symbols.xlsx')
+    xl = Excel('data/symbols/symbols.xlsx')
     xl.open('TEST')
     xl.get_column(1)
     print(xl.col)

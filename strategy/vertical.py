@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 
 from strategy.strategy import Strategy, STRATEGIES
 from utils import utils as u
@@ -12,10 +12,10 @@ class Vertical(Strategy):
         self.name = STRATEGIES[2]
 
         # Default to a week from Friday as expiry
-        d = datetime.datetime.today()
+        d = dt.datetime.today()
         while d.weekday() != 4:
-            d += datetime.timedelta(1)
-        expiry = d + datetime.timedelta(days=6)
+            d += dt.timedelta(1)
+        expiry = d + dt.timedelta(days=6)
 
         # Add legs (long leg is always first)
         if product == 'call':
