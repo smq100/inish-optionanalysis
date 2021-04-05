@@ -4,7 +4,8 @@ import time
 import threading
 import logging
 
-from screener.screener import Screener, VALID_LISTS
+from screener.screener import Screener
+from data import history as h
 from fetcher import fetcher as f
 from utils import utils as u
 
@@ -102,18 +103,18 @@ class Interface:
 
     def select_table(self, progressbar):
         menu_items = {}
-        for index, item in enumerate(VALID_LISTS):
+        for index, item in enumerate(h.VALID_LISTS):
             menu_items[f'{index+1}'] = f'{item}'
         menu_items['0'] = 'Cancel'
 
-        selection = u.menu(menu_items, 'Select Table', 0, len(VALID_LISTS))
+        selection = u.menu(menu_items, 'Select Table', 0, len(h.VALID_LISTS))
         if selection > 0:
-            self.screener = Screener(VALID_LISTS[selection-1], script_name=self.screen_name)
+            self.screener = Screener(h.VALID_LISTS[selection-1], script_name=self.screen_name)
 
             self._open_table(progressbar)
 
             if self.screener.valid():
-                self.table_name = VALID_LISTS[selection-1]
+                self.table_name = h.VALID_LISTS[selection-1]
 
     def select_script(self):
         self.script = []

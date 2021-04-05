@@ -85,8 +85,14 @@ def get_history(ticker, days):
     filename = f'{HISTORY_DIR}/{ticker.lower()}.csv'
     if os.path.exists(filename):
         with open(filename) as f:
-            logger.info(f'Using history file: {filename}')
             history = pd.read_csv(f)
+            date = history.iloc[-1]['Date']
+            date = dt.datetime.strptime(date, '%Y-%m-%d').date()
+            prev = (dt.datetime.today() - BDay(2)).date()
+            if date < prev:
+                history = refresh_history(ticker, days)
+            else:
+                logger.info(f'Using history file: {filename}')
     else:
         history = refresh_history(ticker, days)
 
@@ -163,13 +169,12 @@ if __name__ == '__main__':
     from logging import DEBUG
     logger = u.get_logger(DEBUG)
 
-    # start = dt.datetime.today() - dt.timedelta(days=10)
-
     initialize()
-    # df = refresh_history('AAPL', 60)
     history = get_history('AAPL', 60)
     print(history)
 
+    # start = dt.datetime.today() - dt.timedelta(days=10)
+    # df = refresh_history('AAPL', 60)
     # print(yf.download('AAPL'))
     # print(df.history(start=f'{start:%Y-%m-%d}'))
     # print(df.info)

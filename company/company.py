@@ -74,8 +74,8 @@ class Company:
     def _load_history(self):
         valid = False
         if self.days > 1:
+            self.history = f.get_history(self.ticker, self.days)
             start = dt.datetime.today() - dt.timedelta(days=self.days)
-            self.history = self.company.history(start=f'{start:%Y-%m-%d}')
             self.ta = Technical(self.ticker, start)
             valid = True
 

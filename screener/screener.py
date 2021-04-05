@@ -3,10 +3,10 @@ import json
 
 from fetcher.google import Google
 from fetcher.excel import Excel
-from .interpreter import Interpreter, SyntaxError
 from company.company import Company
-from data.history import VALID_LISTS, VALID_TYPES, GOOGLE_SHEETNAME, EXCEL_SHEETNAME
+from data import history as h
 from utils import utils as u
+from .interpreter import Interpreter, SyntaxError
 
 
 logger = u.get_logger()
@@ -16,11 +16,11 @@ class Screener:
     def __init__(self, table_name='', table_type='google', script_name='', days=365):
         table_name = table_name.upper()
         if table_name:
-            if table_name not in VALID_LISTS:
+            if table_name not in h.VALID_LISTS:
                 raise ValueError(f'Table not found: {table_name}')
 
         if table_type:
-            if table_type not in VALID_TYPES:
+            if table_type not in h.VALID_TYPES:
                 raise ValueError(f'Table type not valid: {table_name}')
 
         if days < 30:
@@ -39,9 +39,9 @@ class Screener:
         self.matches = 0
 
         if table_type == 'google':
-            self.table = Google(GOOGLE_SHEETNAME)
+            self.table = Google(h.GOOGLE_SHEETNAME)
         elif table_type == 'excel':
-            self.table = Excel(EXCEL_SHEETNAME)
+            self.table = Excel(h.EXCEL_SHEETNAME)
         else:
             raise ValueError('Invalid table type')
 
@@ -68,7 +68,7 @@ class Screener:
         self.items_completed = 0
         self.error = ''
         self.active_symbol = ''
-        if self.table_name in VALID_LISTS:
+        if self.table_name in h.VALID_LISTS:
             if self.table.open(self.table_name):
                 symbols = self.table.get_column(1)
                 self.items_total = len(symbols)
