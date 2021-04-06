@@ -1,3 +1,5 @@
+import pandas as pd
+
 from fetcher.google import Google
 from fetcher.excel import Excel
 
@@ -39,6 +41,8 @@ class History:
         else:
             raise ValueError('Invalid table type')
 
+        self._open()
+
     def refresh(self):
         if self.items_total <= 0:
             self._open()
@@ -46,7 +50,24 @@ class History:
         if self.items_total > 0:
             f.initialize()
             for symbol in self.symbols:
-                f.get_history(symbol, self.days)
+                f.refresh_history(symbol, self.days)
+
+    def get_close(self):
+        df_close = pd.DataFrame()
+        print(len(self.symbols))
+        if self.items_total > 0:
+            for symbol in self.symbols:
+                df = f.get_history(symbol, 365)
+                df.set_index('Date')
+                df.rename(columns={'Close': symbol}, inplace=True)
+                df.drop(['Open','High','Low','Volume','Dividends','Stock Splits'], 1, inplace=True)
+
+                if df_close.empty:
+                    df_close = df
+                else:
+                    df_close = df_close.merge(df, how='outer')
+
+        return df_close
 
     def _open(self):
         self.active_symbol = ''
@@ -63,8 +84,10 @@ class History:
 
 
 if __name__ == '__main__':
-    from logging import DEBUG
-    logger = u.get_logger(DEBUG)
+    # from logging import DEBUG
+    # logger = u.get_logger(DEBUG)
 
     history = History('DOW')
-    history.refresh()
+    # history.refresh()
+    close = history.get_close()
+    print(close)

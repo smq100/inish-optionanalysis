@@ -86,6 +86,7 @@ def get_history(ticker, days):
     if os.path.exists(filename):
         with open(filename) as f:
             history = pd.read_csv(f)
+            print(len(history))
             date = history.iloc[-1]['Date']
             date = dt.datetime.strptime(date, '%Y-%m-%d').date()
             prev = (dt.datetime.today() - BDay(2)).date()
