@@ -4,7 +4,7 @@ from sqlalchemy import Column, ForeignKey, Boolean, String, Integer, BigInteger,
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy import Enum, UniqueConstraint
 
-engine = create_engine('sqlite:///data/test.db', echo=True)
+engine = create_engine('sqlite:///data/test.db')#, echo=True)
 Base = declarative_base()
 
 class Exchange(Base):
@@ -14,14 +14,29 @@ class Exchange(Base):
     acronym = Column('acronym', String(20))
     securities = relationship('Security', back_populates='exchange')
 
+    def __init__(self, acronym, name):
+        self.acronym = acronym
+        self.name = name
+
+    def __repr__(self):
+        return f'<Exchange({self.acronym})>'
+
 class Security(Base):
     __tablename__ = 'security'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    ticker = Column('ticker', String(12), nullable=False)
+    ticker = Column('ticker', String(12), nullable=False, unique=True)
     name = Column('name', String(200), nullable=False)
+    index = Column('index', String(12), default='')
     exchange_id = Column(Integer, ForeignKey('exchange.id', onupdate='CASCADE', ondelete='SET NULL'), nullable=False)
-    exchange = relationship('Exchange', back_populates='securities')
+    exchange = relationship('Exchange')
     # company = relationship('Company', back_populates='security')
+
+    def __init__(self, ticker, name):
+        self.ticker = ticker
+        self.name = name
+
+    def __repr__(self):
+        return f'<Security({self.ticker})>'
 
 # class Company(Base):
 #     __tablename__ = 'company'
@@ -61,14 +76,59 @@ class Security(Base):
 #     security_id = Column(Integer, ForeignKey('security.id', onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
 #     security = relationship('Security')
 
-if __name__ == '__main__':
-    # Base.metadata.create_all(engine)
-
+def add_security_to_exchange(ticker, name, exchange):
     Session = sessionmaker(bind=engine)
     session = Session()
-    # exc = Exchange(acronym='sp', name='SP500')
-    sec = Security(ticker='def',name='DEF')
-    sec.exchange_id = 1
-    # session.add(exc)
-    session.add(sec)
+
+    e = session.query(Exchange).filter(Exchange.acronym == exchange).first()
+    if e is not None:
+        sec = Security(ticker, name)
+        e.securities += [sec]
+        session.commit()
+    else:
+        raise ValueError('Unknown exchange')
+
+    session.close()
+
+def delete_security(ticker):
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    s = session.query(Security).filter(Security.ticker == ticker).first()
+    if s is not None:
+        session.delete(s)
+        session.commit()
+
+    session.close()
+
+def print_securities(exchange):
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    e = session.query(Exchange).filter(Exchange.acronym == exchange).first()
+    if e is not None:
+        for s in e.securities:
+            print(s)
+
+def _build_exchanges():
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    exc = Exchange(acronym='NASDAQ', name='National Association of Securities Dealers Automated Quotations')
+    session.add(exc)
+    exc = Exchange(acronym='NYSE', name='New York Stock Exchange')
+    session.add(exc)
+    exc = Exchange(acronym='AMEX', name='American Stock Exchange')
+    session.add(exc)
+
     session.commit()
+    session.close()
+
+
+if __name__ == '__main__':
+    # Base.metadata.create_all(engine)
+    # _build_exchanges()
+
+    # add_security_to_exchange('TSLA', 'Tesla', 'NASDAQ')
+    # delete_security('TSLA')
+    print_securities('NASDAQ')
