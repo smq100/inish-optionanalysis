@@ -7,7 +7,7 @@ import json
 import datetime as dt
 import configparser
 
-import quandl
+import quandl as qd
 import yfinance as yf
 import pandas as pd
 from pandas.tseries.offsets import BDay
@@ -30,7 +30,7 @@ def initialize():
     # Quandl credentials
     config = configparser.ConfigParser()
     config.read(CREDENTIALS)
-    quandl.ApiConfig.api_key = config['DEFAULT']['APIKEY']
+    qd.ApiConfig.api_key = config['DEFAULT']['APIKEY']
 
     if not _initialized:
         if os.path.exists(VALID_SYMBOLS):
@@ -82,36 +82,10 @@ def get_history(ticker, days):
     global valid_symbols
     history = None
 
-    filename = f'{HISTORY_DIR}/{ticker.lower()}.csv'
-    if os.path.exists(filename):
-        with open(filename) as f:
-            history = pd.read_csv(f)
-            print(len(history))
-            date = history.iloc[-1]['Date']
-            date = dt.datetime.strptime(date, '%Y-%m-%d').date()
-            prev = (dt.datetime.today() - BDay(2)).date()
-            if date < prev:
-                history = refresh_history(ticker, days)
-            else:
-                logger.info(f'Using history file: {filename}')
-    else:
-        history = refresh_history(ticker, days)
-
-    return history
-
-def refresh_history(ticker, days):
-    global valid_symbols
-    history = None
-
     company = get_company(ticker)
     if company is not None and days > 30:
         start = dt.datetime.today() - dt.timedelta(days=days)
         history = company.history(start=f'{start:%Y-%m-%d}')
-
-        filename = f'{HISTORY_DIR}/{ticker.lower()}.csv'
-        logger.info(f'Created history file: {filename}')
-        with open(filename, 'w') as f:
-            history.to_csv(f)
 
     return history
 
@@ -144,7 +118,7 @@ def get_treasury_rate(ticker='DTB3'):
     df = pd.DataFrame()
     prev_business_date = dt.datetime.today() - BDay(1)
 
-    df = quandl.get('FRED/' + ticker)
+    df = qd.get('FRED/' + ticker)
     if df.empty:
         logger.error('Unable to get Treasury Rates from Quandl. Please check connection')
         raise IOError('Unable to get Treasury Rate from Quandl')

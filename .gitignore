@@ -22,3 +22,4 @@ venv
 *.bak
 *.xlsx
 *.csv
+*.db

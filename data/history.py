@@ -1,3 +1,4 @@
+import sqlite3 as sql
 import pandas as pd
 
 from fetcher.google import Google
@@ -8,6 +9,8 @@ from utils import utils as u
 
 VALID_LISTS = ('SP500', 'DOW', 'NASDAQ', 'TEST')
 VALID_TYPES = ('google', 'excel')
+
+SQLITE_DIR = 'data'
 GOOGLE_SHEETNAME = 'Symbols'
 EXCEL_SHEETNAME = 'data/symbols/symbols.xlsx'
 
@@ -26,13 +29,13 @@ class History:
 
         if days < 30:
             raise ValueError('Invalid number of days')
+
         self.days = days
         self.table_name = table_name
         self.table_type = table_type
+        self.db_name = f'{SQLITE_DIR}/{self.table_name.lower()}.db'
+        self.db = None
         self.symbols = []
-        self.items_total = 0
-        self.items_completed = 0
-        self.active_symbol = ''
 
         if table_type == 'google':
             self.table = Google(GOOGLE_SHEETNAME)
@@ -43,51 +46,51 @@ class History:
 
         self._open()
 
-    def refresh(self):
-        if self.items_total <= 0:
-            self._open()
-
-        if self.items_total > 0:
-            f.initialize()
-            for symbol in self.symbols:
-                f.refresh_history(symbol, self.days)
-
-    def get_close(self):
+    def get_close(self, refresh=False):
         df_close = pd.DataFrame()
-        print(len(self.symbols))
-        if self.items_total > 0:
+        if not refresh:
+            self.db = sql.connect(self.db_name)
+            df_close = pd.read_sql_query("SELECT * from close", self.db)
+            self.db.close()
+        elif self.items > 0:
             for symbol in self.symbols:
-                df = f.get_history(symbol, 365)
-                df.set_index('Date')
-                df.rename(columns={'Close': symbol}, inplace=True)
-                df.drop(['Open','High','Low','Volume','Dividends','Stock Splits'], 1, inplace=True)
+                df = f.get_history(symbol, self.days)
+                df.rename(columns={'Close':symbol}, inplace=True)
+                df.drop(['Open', 'High', 'Low', 'Volume', 'Dividends', 'Stock Splits'], 1, inplace=True)
 
                 if df_close.empty:
                     df_close = df
                 else:
-                    df_close = df_close.merge(df, how='outer')
+                    df_close = df_close.join(df, how='outer')
+
+            if not df_close.empty:
+                self.db = sql.connect(self.db_name)
+                df_close.to_sql('close', self.db, if_exists='replace')
+                self.db.close()
 
         return df_close
 
+    @property
+    def items(self):
+        return len(self.symbols)
+
     def _open(self):
-        self.active_symbol = ''
         if self.table_name in VALID_LISTS:
             if self.table.open(self.table_name):
                 self.symbols = self.table.get_column(1)
-                self.items_total = len(self.symbols)
             else:
                 self.error = 'Unable to open spreadsheet'
         else:
             self.error = 'Invalid table name'
 
-        return self.items_total > 0
+        return self.items > 0
 
 
 if __name__ == '__main__':
     # from logging import DEBUG
     # logger = u.get_logger(DEBUG)
 
+    f.initialize()
     history = History('DOW')
-    # history.refresh()
-    close = history.get_close()
-    print(close)
+    h = history.get_close()
+    print(h)
