@@ -95,7 +95,7 @@ def get_current_price(ticker):
         df = get_ranged_data(ticker, start)
         price = df.iloc[-1]['Close']
     else:
-        logger.error(f'Ticker {ticker} not valid')
+        logger.error(f'{__name__}: Ticker {ticker} not valid')
         price = -1.0
 
     return price
@@ -120,7 +120,7 @@ def get_treasury_rate(ticker='DTB3'):
 
     df = qd.get('FRED/' + ticker)
     if df.empty:
-        logger.error('Unable to get Treasury Rates from Quandl. Please check connection')
+        logger.error(f'{__name__}: Unable to get Treasury Rates from Quandl. Please check connection')
         raise IOError('Unable to get Treasury Rate from Quandl')
 
     return df['Value'][0] / 100.0
