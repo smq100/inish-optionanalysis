@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from fetcher import fetcher as f
 from utils import utils as u
 from .history import History
-from .models import Base, Exchange, Security, Company
+from .models import Base, EXCHANGES, Exchange, Security, Company
 
 logger = u.get_logger()
 
@@ -20,17 +20,13 @@ class Manager:
         Session = sessionmaker(bind=self.engine)
         session = Session()
 
-        exc = Exchange(acronym='NASDAQ', name='National Association of Securities Dealers Automated Quotations')
-        session.add(exc)
-        exc = Exchange(acronym='NYSE', name='New York Stock Exchange')
-        session.add(exc)
-        exc = Exchange(acronym='AMEX', name='American Stock Exchange')
-        session.add(exc)
+        for exchange in EXCHANGES:
+            exc = Exchange(acronym=exchange['acronym'], name=exchange['name'])
+            session.add(exc)
+            logger.info(f'{__name__}: Added exchange {exchange["acronym"]}')
 
         session.commit()
         session.close()
-
-        logger.info(f'{__name__}: Built exchanges')
 
     def populate_exchange(self, exchange):
         Session = sessionmaker(bind=self.engine)
@@ -39,7 +35,7 @@ class Manager:
         e = session.query(Exchange).filter(Exchange.acronym==exchange).first()
         if e is not None:
             h = History(e.acronym)
-            self.add_securities_to_exchange(h.symbols[100:105], e.acronym)
+            self.add_securities_to_exchange(h.symbols[::500], e.acronym)
         else:
             session.close()
             raise ValueError('Unknown exchange')
@@ -60,6 +56,8 @@ class Manager:
 
                 self.add_company_to_security(sec)
                 session.commit()
+
+                logger.info(f'{__name__}: Added security {sec} to {exchange}')
         else:
             session.close()
             raise ValueError('Unknown exchange')
@@ -85,6 +83,8 @@ class Manager:
 
                         s.company += [c]
                         session.commit()
+
+                        logger.info(f'{__name__}: Added company {c.name} to {ticker}')
             except (ValueError, KeyError) as e:
                 logger.warning(f'{__name__}: Company info invalid: {ticker}: {str(e)}')
                 session.close()
@@ -135,4 +135,3 @@ if __name__ == '__main__':
     Base.metadata.create_all(manager.engine)
     manager.build_exchanges()
     manager.populate_exchange('NASDAQ')
-    manager.print_securities('NASDAQ')

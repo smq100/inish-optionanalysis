@@ -8,6 +8,10 @@ from utils import utils as u
 logger = u.get_logger()
 Base = declarative_base()
 
+EXCHANGES = ({'acronym':'NASDAQ', 'name':'National Association of Securities Dealers Automated Quotations'},
+             {'acronym':'NYSE',   'name':'New York Stock Exchange'},
+             {'acronym':'AMEX',   'name':'AMerican Stock Exchange'})
+
 class Exchange(Base):
     __tablename__ = 'exchange'
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -16,8 +20,8 @@ class Exchange(Base):
     securities = relationship('Security', back_populates='exchange')
 
     def __init__(self, acronym, name):
-        self.acronym = acronym
-        self.name = name.upper()
+        self.acronym = acronym.upper()
+        self.name = name
 
     def __repr__(self):
         return f'<Exchange({self.acronym})>'
