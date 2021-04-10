@@ -160,7 +160,8 @@ class Manager:
             try: # YFinance & Pandas throw a lot of exceptions for sketchy data
                 history = f.get_history(ticker, -1)
                 if history is not None:
-                    print(history)
+                    for date in history:
+                        print(history['Date'])
                     # p = m.Price()
 
                     logger.info(f'{__name__}: Added pricing to {ticker}')

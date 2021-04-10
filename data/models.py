@@ -55,6 +55,7 @@ class Security(Base):
     exchange = relationship('Exchange')
     index_id = Column(Integer, ForeignKey('index.id', onupdate='CASCADE', ondelete='SET NULL'))
     index = relationship('Index')
+    pricing = relationship('Price', back_populates='security')
     company = relationship('Company', back_populates='security')
 
     def __init__(self, ticker):
