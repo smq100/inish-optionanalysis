@@ -83,9 +83,12 @@ def get_history(ticker, days):
     history = None
 
     company = get_company(ticker)
-    if company is not None and days > 30:
-        start = dt.datetime.today() - dt.timedelta(days=days)
-        history = company.history(start=f'{start:%Y-%m-%d}')
+    if company is not None:
+        if days < 0:
+            history = company.history(period='max')
+        elif days > 1:
+            start = dt.datetime.today() - dt.timedelta(days=days)
+            history = company.history(start=f'{start:%Y-%m-%d}')
 
     return history
 
