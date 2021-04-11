@@ -1,4 +1,5 @@
 import os
+import datetime as dt
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -20,7 +21,7 @@ EXCEL_SHEETNAME_INDEXES = 'data/symbols/indexes.xlsx'
 
 class Manager:
     def __init__(self):
-        self.engine = create_engine(f'sqlite:///{SQLITE_DATABASE_PATH}')#, echo=True)
+        self.engine = create_engine(f'sqlite:///{SQLITE_DATABASE_PATH}', echo=False)
 
     def build_exchanges(self):
         Session = sessionmaker(bind=self.engine)
@@ -96,7 +97,7 @@ class Manager:
                 self.add_pricing_to_security(sec)
                 session.commit()
 
-                logger.info(f'{__name__}: Added security {sec} to exchange {exchange}')
+                logger.info(f'{__name__}: Added {sec} to exchange {exchange}')
         else:
             session.close()
             raise ValueError(f'Unknown exchange {exchange}')
@@ -111,10 +112,13 @@ class Manager:
         if ind is not None:
             for t in tickers:
                 s = session.query(m.Security).filter(m.Security.ticker == t).first()
-                s.index_id = ind.id
+                if s.index1_id is None:
+                    s.index1_id = ind.id
+                elif s.index2_id is None:
+                    s.index2_id = ind.id
                 session.commit()
 
-                logger.info(f'{__name__}: Added security {t} to index {index}')
+                logger.info(f'{__name__}: Added {t} to index {index}')
         else:
             session.close()
             raise ValueError(f'Unknown index {index}')
@@ -141,10 +145,10 @@ class Manager:
                         s.company = [c]
                         session.commit()
 
-                        logger.info(f'{__name__}: Added company {c.name} to {ticker}')
+                        logger.info(f'{__name__}: Added company information for {ticker}')
             except (ValueError, KeyError) as e:
-                logger.warning(f'{__name__}: Company info invalid: {ticker}: {str(e)}')
                 session.close()
+                logger.warning(f'{__name__}: Company info invalid: {ticker}: {str(e)}')
         else:
             session.close()
             raise ValueError(f'Unknown ticker {ticker}')
@@ -160,14 +164,22 @@ class Manager:
             try: # YFinance & Pandas throw a lot of exceptions for sketchy data
                 history = f.get_history(ticker, -1)
                 if history is not None:
-                    for date in history:
-                        print(history['Date'])
-                    # p = m.Price()
+                    history.reset_index(inplace=True)
+                    for index, price in history.iterrows():
+                        p = m.Price()
+                        p.date = price['Date']
+                        p.open = price['Open']
+                        p.high = price['High']
+                        p.low = price['Low']
+                        p.close = price['Close']
+                        p.volume = price['Volume']
+                        s.pricing += [p]
 
+                    session.commit()
                     logger.info(f'{__name__}: Added pricing to {ticker}')
             except (ValueError, KeyError) as e:
-                logger.warning(f'{__name__}: Company info invalid: {ticker}: {str(e)}')
                 session.close()
+                logger.warning(f'{__name__}: Company info invalid: {ticker}: {str(e)}')
         else:
             session.close()
             raise ValueError(f'Unknown ticker {ticker}')
@@ -178,7 +190,7 @@ class Manager:
         table = None
         symbols = []
 
-        if self._is_valid_exchange(exchange):
+        if self._is_exchange(exchange):
             if type == 'google':
                 table = Google(GOOGLE_SHEETNAME_EXCHANGES)
             elif type == 'excel':
@@ -199,13 +211,13 @@ class Manager:
         table = None
         symbols = []
 
-        if self._is_valid_index(index):
+        if self._is_index(index):
             if type == 'google':
                 table = Google(GOOGLE_SHEETNAME_INDEXES)
             elif type == 'excel':
                 table = Excel(EXCEL_SHEETNAME_INDEXES)
             else:
-                raise ValueError(f'Invalid table type: {type}')
+                raise ValueError(f'Invalid spreadsheet type: {type}')
 
             if table.open(index):
                 symbols = table.get_column(1)
@@ -227,25 +239,32 @@ class Manager:
 
         session.close()
 
-    def delete_database(self):
+    def delete_database(self, recreate=False):
         if os.path.exists(SQLITE_DATABASE_PATH):
             os.remove(SQLITE_DATABASE_PATH)
         else:
             logger.error(f'{__name__}: File does not exist: {SQLITE_DATABASE_PATH}')
 
-    def print_securities(self, exchange):
-        Session = sessionmaker(bind=self.engine)
-        session = Session()
+        if recreate:
+            m.Base.metadata.create_all(self.engine)
 
-        e = session.query(m.Exchange).filter(m.Exchange.abbreviation == exchange).first()
-        if e is not None:
-            for s in e.securities:
-                print(s)
+    def validate_list(self, list):
+        symbols = []
+        invalid = []
+        if self._is_exchange(list):
+            symbols = self.get_exchange_symbols(list)
+        elif self._is_index(list):
+            symbols = self.get_index_symbols(list)
 
-        session.close()
+        if len(symbols) > 0:
+            for s in symbols:
+                if not f.validate_ticker(s, force=True):
+                    invalid += [s]
+
+        return invalid
 
     @staticmethod
-    def _is_valid_exchange(exchange):
+    def _is_exchange(exchange):
         ret = False
         for e in m.EXCHANGES:
             if exchange == e['abbreviation']:
@@ -254,7 +273,7 @@ class Manager:
         return ret
 
     @staticmethod
-    def _is_valid_index(index):
+    def _is_index(index):
         ret = False
         for i in m.INDEXES:
             if index == i['abbreviation']:
@@ -269,9 +288,12 @@ if __name__ == '__main__':
     f.initialize()
 
     manager = Manager()
-    manager.delete_database()
-    m.Base.metadata.create_all(manager.engine)
-    manager.build_exchanges()
-    manager.build_indexes()
-    manager.populate_exchange('TEST')
-    manager.populate_index('TEST')
+    invalid = manager.validate_list('NYSE')
+    print (invalid)
+
+    # manager.delete_database(recreate=True)
+    # manager.build_exchanges()
+    # manager.build_indexes()
+    # manager.populate_exchange('TEST')
+    # manager.populate_index('SP500')
+    # manager.populate_index('DOW')

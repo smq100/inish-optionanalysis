@@ -8,8 +8,6 @@ from utils import utils as u
 logger = u.get_logger()
 Base = declarative_base()
 
-VALID_TYPES = ('google', 'excel')
-
 EXCHANGES = ({'abbreviation':'NASDAQ', 'name':'National Association of Securities Dealers Automated Quotations'},
              {'abbreviation':'NYSE',   'name':'New York Stock Exchange'},
              {'abbreviation':'AMEX',   'name':'American Stock Exchange'},
@@ -38,7 +36,6 @@ class Index(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     abbreviation = Column('abbreviation', String(20))
     name = Column('name', String(200), unique=True, nullable=False)
-    securities = relationship('Security', back_populates='index')
 
     def __init__(self, abbreviation, name):
         self.abbreviation = abbreviation.upper()
@@ -53,8 +50,10 @@ class Security(Base):
     ticker = Column('ticker', String(12), nullable=False, unique=True)
     exchange_id = Column(Integer, ForeignKey('exchange.id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
     exchange = relationship('Exchange')
-    index_id = Column(Integer, ForeignKey('index.id', onupdate='CASCADE', ondelete='SET NULL'))
-    index = relationship('Index')
+    index1_id = Column(Integer, ForeignKey('index.id', onupdate='CASCADE', ondelete='SET NULL'))
+    index2_id = Column(Integer, ForeignKey('index.id', onupdate='CASCADE', ondelete='SET NULL'))
+    index1 = relationship('Index', foreign_keys=[index1_id])
+    index2 = relationship('Index', foreign_keys=[index2_id])
     pricing = relationship('Price', back_populates='security')
     company = relationship('Company', back_populates='security')
 
@@ -87,7 +86,6 @@ class Price(Base):
     low = Column('low', Float)
     close = Column('close', Float)
     volume = Column('volume', BigInteger)
-    adj_close = Column('adj_close', Float)
     security_id = Column(Integer, ForeignKey('security.id', onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
     UniqueConstraint('date', 'security_id')
     security = relationship('Security')
