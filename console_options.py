@@ -24,9 +24,6 @@ class Interface:
     def __init__(self, ticker, strategy, direction, autoload='', script='', exit=False):
         pd.options.display.float_format = '{:,.2f}'.format
 
-        # Initialize data fetcher
-        f.initialize()
-
         self.ticker = ticker
         self.strategy = None
         self.dirty_calculate = True
@@ -619,16 +616,6 @@ class Interface:
 
         plt.show()
 
-    def _menu(self, menu_items, header, minvalue, maxvalue):
-        print(f'\n{header}')
-        print('-----------------------------')
-
-        option = menu_items.keys()
-        for entry in option:
-            print(f'{entry})\t{menu_items[entry]}')
-
-        return u.input_integer('Please select: ', minvalue, maxvalue)
-
 
 if __name__ == '__main__':
     import argparse
@@ -656,4 +643,4 @@ if __name__ == '__main__':
     elif 'script' in command.keys():
         Interface('FB', 'call', 'long', script=command['script'], exit=command['exit'])
     else:
-        Interface('MSFT', 'call', 'long', exit=command['exit'])
+        Interface('APT', 'call', 'long', exit=command['exit'])

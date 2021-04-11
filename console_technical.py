@@ -16,9 +16,6 @@ class Interface:
     def __init__(self, ticker, script=''):
         ticker = ticker.upper()
 
-        # Initialize data fetcher
-        f.initialize()
-
         if script:
             if os.path.exists(script):
                 try:

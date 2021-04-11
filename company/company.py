@@ -82,7 +82,6 @@ class Company:
         return valid
 
 if __name__ == '__main__':
-    f.initialize()
     company = Company('AAPL', history=365)
     val = company.get_info('marketCap')
     print(val)

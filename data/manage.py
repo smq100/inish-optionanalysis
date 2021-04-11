@@ -1,5 +1,4 @@
 import os
-import datetime as dt
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -13,21 +12,36 @@ from . import models as m
 
 logger = u.get_logger()
 
-SQLITE_DATABASE_PATH = 'data/test.db'
+SQLITE_DATABASE_PATH = 'data/securities.db'
 GOOGLE_SHEETNAME_EXCHANGES = 'Exchanges'
 GOOGLE_SHEETNAME_INDEXES = 'Indexes'
 EXCEL_SHEETNAME_EXCHANGES = 'data/symbols/exchanges.xlsx'
 EXCEL_SHEETNAME_INDEXES = 'data/symbols/indexes.xlsx'
 
+EXCHANGES = ({'abbreviation':'NASDAQ', 'name':'National Association of Securities Dealers Automated Quotations'},
+             {'abbreviation':'NYSE',   'name':'New York Stock Exchange'},
+             {'abbreviation':'AMEX',   'name':'American Stock Exchange'},
+             {'abbreviation':'TEST',   'name':'Test Exchange'})
+
+INDEXES = ({'abbreviation':'SP500', 'name':'Standard & Poors 500'},
+           {'abbreviation':'DOW',   'name':'DOW industrials'},
+           {'abbreviation':'TEST',  'name':'Test Index'})
+
+engine = create_engine(f'sqlite:///{SQLITE_DATABASE_PATH}', echo=False)
+
 class Manager:
     def __init__(self):
-        self.engine = create_engine(f'sqlite:///{SQLITE_DATABASE_PATH}', echo=False)
+        self.items_total = 0
+        self.items_completed = 0
+        self.exchange = ''
+        self.invalid_companies = []
+        self.error = ''
 
     def build_exchanges(self):
-        Session = sessionmaker(bind=self.engine)
+        Session = sessionmaker(bind=engine)
         session = Session()
 
-        for exchange in m.EXCHANGES:
+        for exchange in EXCHANGES:
             exc = m.Exchange(abbreviation=exchange['abbreviation'], name=exchange['name'])
             session.add(exc)
             logger.info(f'{__name__}: Added exchange {exchange["abbreviation"]}')
@@ -36,10 +50,10 @@ class Manager:
         session.close()
 
     def build_indexes(self):
-        Session = sessionmaker(bind=self.engine)
+        Session = sessionmaker(bind=engine)
         session = Session()
 
-        for index in m.INDEXES:
+        for index in INDEXES:
             exc = m.Index(abbreviation=index['abbreviation'], name=index['name'])
             session.add(exc)
             logger.info(f'{__name__}: Added index {index["abbreviation"]}')
@@ -48,13 +62,16 @@ class Manager:
         session.close()
 
     def populate_exchange(self, exchange):
-        Session = sessionmaker(bind=self.engine)
+        self.error = ''
+        self.invalid_companies = []
+
+        Session = sessionmaker(bind=engine)
         session = Session()
 
         e = session.query(m.Exchange).filter(m.Exchange.abbreviation==exchange).first()
         if e is not None:
             symbols = self.get_exchange_symbols(e.abbreviation)
-            self.add_securities_to_exchange(symbols[:5], e.abbreviation)
+            self.add_securities_to_exchange(symbols, e.abbreviation)
         else:
             session.close()
             raise ValueError(f'Unknown exchange {exchange}')
@@ -62,7 +79,9 @@ class Manager:
         session.close()
 
     def populate_index(self, index):
-        Session = sessionmaker(bind=self.engine)
+        self.error = ''
+
+        Session = sessionmaker(bind=engine)
         session = Session()
 
         valid = []
@@ -76,6 +95,8 @@ class Manager:
 
             if len(valid) > 0:
                 self.add_securities_to_index(valid, i.abbreviation)
+            else:
+                self.error = 'No symbols'
         else:
             session.close()
             raise ValueError(f'Unknown index {index}')
@@ -83,11 +104,16 @@ class Manager:
         session.close()
 
     def add_securities_to_exchange(self, tickers, exchange):
-        Session = sessionmaker(bind=self.engine)
+        self.items_total = 0
+        self.items_completed = 0
+
+        Session = sessionmaker(bind=engine)
         session = Session()
 
         exc = session.query(m.Exchange).filter(m.Exchange.abbreviation == exchange).first()
         if exc is not None:
+            self.items_total = len(tickers)
+            self.error = 'None'
             for sec in tickers:
                 s = m.Security(sec)
                 exc.securities += [s]
@@ -97,6 +123,8 @@ class Manager:
                 self.add_pricing_to_security(sec)
                 session.commit()
 
+                self.items_completed += 1
+
                 logger.info(f'{__name__}: Added {sec} to exchange {exchange}')
         else:
             session.close()
@@ -105,11 +133,16 @@ class Manager:
         session.close()
 
     def add_securities_to_index(self, tickers, index):
-        Session = sessionmaker(bind=self.engine)
+        self.items_total = 0
+        self.items_completed = 0
+
+        Session = sessionmaker(bind=engine)
         session = Session()
 
         ind = session.query(m.Index).filter(m.Index.abbreviation == index).first()
         if ind is not None:
+            self.items_total = len(tickers)
+            self.error = 'None'
             for t in tickers:
                 s = session.query(m.Security).filter(m.Security.ticker == t).first()
                 if s.index1_id is None:
@@ -117,6 +150,8 @@ class Manager:
                 elif s.index2_id is None:
                     s.index2_id = ind.id
                 session.commit()
+
+                self.items_completed += 1
 
                 logger.info(f'{__name__}: Added {t} to index {index}')
         else:
@@ -126,7 +161,7 @@ class Manager:
         session.close()
 
     def add_company_to_security(self, ticker):
-        Session = sessionmaker(bind=self.engine)
+        Session = sessionmaker(bind=engine)
         session = Session()
 
         s = session.query(m.Security).filter(m.Security.ticker == ticker).first()
@@ -148,7 +183,8 @@ class Manager:
                         logger.info(f'{__name__}: Added company information for {ticker}')
             except (ValueError, KeyError) as e:
                 session.close()
-                logger.warning(f'{__name__}: Company info invalid: {ticker}: {str(e)}')
+                self.invalid_companies += [ticker]
+                logger.info(f'{__name__}: Company info invalid: {ticker}: {str(e)}')
         else:
             session.close()
             raise ValueError(f'Unknown ticker {ticker}')
@@ -156,7 +192,7 @@ class Manager:
         session.close()
 
     def add_pricing_to_security(self, ticker):
-        Session = sessionmaker(bind=self.engine)
+        Session = sessionmaker(bind=engine)
         session = Session()
 
         s = session.query(m.Security).filter(m.Security.ticker == ticker).first()
@@ -179,7 +215,8 @@ class Manager:
                     logger.info(f'{__name__}: Added pricing to {ticker}')
             except (ValueError, KeyError) as e:
                 session.close()
-                logger.warning(f'{__name__}: Company info invalid: {ticker}: {str(e)}')
+                self.invalid_companies += [ticker]
+                logger.info(f'{__name__}: Pricing info invalid: {ticker}: {str(e)}')
         else:
             session.close()
             raise ValueError(f'Unknown ticker {ticker}')
@@ -190,7 +227,7 @@ class Manager:
         table = None
         symbols = []
 
-        if self._is_exchange(exchange):
+        if self.is_exchange(exchange):
             if type == 'google':
                 table = Google(GOOGLE_SHEETNAME_EXCHANGES)
             elif type == 'excel':
@@ -211,7 +248,7 @@ class Manager:
         table = None
         symbols = []
 
-        if self._is_index(index):
+        if self.is_index(index):
             if type == 'google':
                 table = Google(GOOGLE_SHEETNAME_INDEXES)
             elif type == 'excel':
@@ -229,7 +266,7 @@ class Manager:
         return symbols
 
     def delete_security(self, ticker):
-        Session = sessionmaker(bind=self.engine)
+        Session = sessionmaker(bind=engine)
         session = Session()
 
         s = session.query(m.Security).filter(m.Security.ticker == ticker).first()
@@ -239,21 +276,34 @@ class Manager:
 
         session.close()
 
+    def get_database_info(self):
+        info = []
+        Session = sessionmaker(bind=engine)
+        session = Session()
+
+        tables = m.Base.metadata.tables
+        for table in tables:
+            count = session.query(tables[table]).count()
+            info += [{'table':table, 'count':count}]
+
+        session.close()
+        return info
+
     def delete_database(self, recreate=False):
         if os.path.exists(SQLITE_DATABASE_PATH):
             os.remove(SQLITE_DATABASE_PATH)
         else:
-            logger.error(f'{__name__}: File does not exist: {SQLITE_DATABASE_PATH}')
+            logger.info(f'{__name__}: File does not exist: {SQLITE_DATABASE_PATH}')
 
         if recreate:
-            m.Base.metadata.create_all(self.engine)
+            m.Base.metadata.create_all(engine)
 
     def validate_list(self, list):
         symbols = []
         invalid = []
-        if self._is_exchange(list):
+        if self.is_exchange(list):
             symbols = self.get_exchange_symbols(list)
-        elif self._is_index(list):
+        elif self.is_index(list):
             symbols = self.get_index_symbols(list)
 
         if len(symbols) > 0:
@@ -264,18 +314,18 @@ class Manager:
         return invalid
 
     @staticmethod
-    def _is_exchange(exchange):
+    def is_exchange(exchange):
         ret = False
-        for e in m.EXCHANGES:
+        for e in EXCHANGES:
             if exchange == e['abbreviation']:
                 ret = True
                 break
         return ret
 
     @staticmethod
-    def _is_index(index):
+    def is_index(index):
         ret = False
-        for i in m.INDEXES:
+        for i in INDEXES:
             if index == i['abbreviation']:
                 ret = True
                 break
@@ -285,15 +335,15 @@ if __name__ == '__main__':
     from logging import DEBUG
     logger = u.get_logger(DEBUG)
 
-    f.initialize()
-
     manager = Manager()
-    invalid = manager.validate_list('NYSE')
-    print (invalid)
+    print(manager.get_database_info())
+
+    # invalid = manager.validate_list('NASDAQ')
+    # print (invalid)
 
     # manager.delete_database(recreate=True)
     # manager.build_exchanges()
     # manager.build_indexes()
-    # manager.populate_exchange('TEST')
+    # manager.populate_exchange('AMEX')
     # manager.populate_index('SP500')
     # manager.populate_index('DOW')

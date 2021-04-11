@@ -8,15 +8,6 @@ from utils import utils as u
 logger = u.get_logger()
 Base = declarative_base()
 
-EXCHANGES = ({'abbreviation':'NASDAQ', 'name':'National Association of Securities Dealers Automated Quotations'},
-             {'abbreviation':'NYSE',   'name':'New York Stock Exchange'},
-             {'abbreviation':'AMEX',   'name':'American Stock Exchange'},
-             {'abbreviation':'TEST',   'name':'Test Exchange'})
-
-INDEXES = ({'abbreviation':'SP500', 'name':'Standard & Poors 500'},
-           {'abbreviation':'DOW',   'name':'DOW industrials'},
-           {'abbreviation':'TEST',  'name':'Test Index'})
-
 class Exchange(Base):
     __tablename__ = 'exchange'
     id = Column(Integer, primary_key=True, autoincrement=True)

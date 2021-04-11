@@ -165,7 +165,6 @@ if __name__ == '__main__':
     from fetcher import fetcher as f
 
     u.get_logger(logging.DEBUG)
-    f.initialize()
 
     s = Screener('test')
     # s = Screener('test', table_type='excel')

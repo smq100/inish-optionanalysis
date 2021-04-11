@@ -2,8 +2,6 @@
 yfinance: https://github.com/ranaroussi/yfinance
 '''
 
-import os
-import json
 import datetime as dt
 import configparser
 
@@ -12,74 +10,39 @@ import yfinance as yf
 import pandas as pd
 from pandas.tseries.offsets import BDay
 
+from data import store as s
 from utils import utils as u
 
 logger = u.get_logger()
 
+# Quandl credentials
 CREDENTIALS = 'fetcher/quandl.ini'
-VALID_SYMBOLS = 'data/symbols/valid_symbols.json'
-HISTORY_DIR = 'data/history'
+config = configparser.ConfigParser()
+config.read(CREDENTIALS)
+qd.ApiConfig.api_key = config['DEFAULT']['APIKEY']
 
-valid_symbols = []
-_initialized = False
-
-def initialize():
-    global valid_symbols
-    global _initialized
-
-    # Quandl credentials
-    config = configparser.ConfigParser()
-    config.read(CREDENTIALS)
-    qd.ApiConfig.api_key = config['DEFAULT']['APIKEY']
-
-    if not _initialized:
-        if os.path.exists(VALID_SYMBOLS):
-            try:
-                with open(VALID_SYMBOLS) as file_:
-                    v = json.load(file_)
-                    valid_symbols = set(v)
-                    _initialized = True
-            except Exception as e:
-                u.print_error('File read error: ' + str(e))
-        else:
-            u.print_error(f'File "{VALID_SYMBOLS}" not found')
 
 def validate_ticker(ticker, force=False):
-    global valid_symbols
-    global _initialized
-
     valid = False
 
     if force:
         t = yf.Ticker(ticker).history(period='1d')
         if len(t) > 0:
             valid = True
-    elif not _initialized:
-        raise AssertionError('Must first initialize fetcher module')
-    elif ticker in valid_symbols:
-        valid = True
     else:
-        t = yf.Ticker(ticker).history(period='1d')
-        if len(t) > 0:
-            valid_symbols.add(ticker)
-            _save_valid_symbols()
-            valid = True
+        valid = s.is_symbol_valid(ticker)
 
     return valid
 
 def get_company(ticker, force=False):
-    global valid_symbols
     company = None
 
-    if ticker in valid_symbols:
-        company = yf.Ticker(ticker)
-    elif validate_ticker(ticker, force):
+    if validate_ticker(ticker, force):
         company = yf.Ticker(ticker)
 
     return company
 
 def get_history(ticker, days):
-    global valid_symbols
     history = None
 
     company = get_company(ticker)
@@ -128,26 +91,11 @@ def get_treasury_rate(ticker='DTB3'):
 
     return df['Value'][0] / 100.0
 
-def _save_valid_symbols():
-    global valid_symbols
-
-    if os.path.exists(VALID_SYMBOLS):
-        try:
-            with open(VALID_SYMBOLS, 'w') as file_:
-                l = list(valid_symbols)
-                l.sort()
-                json.dump(l, file_, indent=2)
-        except Exception as e:
-            u.print_error('File read error: ' + str(e))
-    else:
-        u.print_error(f'File "{VALID_SYMBOLS}" not found')
-
 
 if __name__ == '__main__':
     from logging import DEBUG
     logger = u.get_logger(DEBUG)
 
-    initialize()
     history = get_history('AAPL', 60)
     print(history)
 

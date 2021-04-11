@@ -25,9 +25,6 @@ class Interface:
         self.screener = None
         self.time = 0.0
 
-        # Initialize data fetcher
-        f.initialize()
-
         if script:
             if os.path.exists(script):
                 try:
