@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from utils import utils as u
-from data import manage as m
+from data import manager as m
 from data import models as o
 
 

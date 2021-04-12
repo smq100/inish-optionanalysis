@@ -3,8 +3,7 @@ import logging
 import time
 import threading
 
-from data import manage as m
-from fetcher import fetcher as f
+from data import manager as m
 from utils import utils as u
 
 logger = u.get_logger(logging.WARNING)
@@ -62,9 +61,9 @@ class Interface:
             elif selection == 2:
                 self.show_information()
             elif selection == 3:
-                self.populate_exchange('NYSE')
+                self.populate_exchange()
             elif selection == 4:
-                self.populate_index('DOW')
+                self.populate_index()
             elif selection == 5:
                 self.list_invalid()
             elif selection == 0:
@@ -82,40 +81,59 @@ class Interface:
         for i in info:
             print(f'{i["table"].title():>9}:\t{i["count"]} records')
 
-    def populate_exchange(self, exchange, progressbar=True):
-        task = threading.Thread(target=self.manager.populate_exchange, args=[exchange])
-        task.start()
-        tic = time.perf_counter()
+        u.print_message('Exchange Information', True)
+        info = self.manager.get_exchange_info()
+        for i in info:
+            print(f'{i["exchange"]:>9}:\t{i["count"]} symbols')
 
-        if progressbar:
-            self._show_progress('Progress', 'Completed', 1)
+    def populate_exchange(self, progressbar=True):
+        print('\nSelect Exchange')
+        print('-------------------------')
+        for i, exchange in enumerate(self.exchanges):
+            print(f'{i+1})\t{exchange}')
 
-        # Wait for thread to finish
-        while task.is_alive(): pass
+        select = u.input_integer('Select exchange, or 0 to cancel: ', 0, i+1)
+        if select > 0:
+            task = threading.Thread(target=self.manager.populate_exchange, args=[self.exchanges[select-1]])
+            task.start()
+            tic = time.perf_counter()
 
-        toc = time.perf_counter()
-        totaltime = toc - tic
+            if progressbar:
+                self._show_progress('Progress', 'Completed', 1)
 
-        if self.manager.error == 'None':
-            u.print_message(f'{self.manager.items_total} {exchange} \
-                Symbols populated in {totaltime:.2f} seconds with {len(self.manager.invalid_companies)} invalid symbols', True)
+            # Wait for thread to finish
+            while task.is_alive(): pass
 
-    def populate_index(self, index, progressbar=True):
-        task = threading.Thread(target=self.manager.populate_index, args=[index])
-        task.start()
-        tic = time.perf_counter()
+            toc = time.perf_counter()
+            totaltime = toc - tic
 
-        if progressbar:
-            self._show_progress('Progress', 'Completed', 1)
+            if self.manager.error == 'None':
+                u.print_message(f'{self.manager.items_total} {exchange} \
+                    Symbols populated in {totaltime:.2f} seconds with {len(self.manager.invalid_companies)} invalid symbols', True)
 
-        # Wait for thread to finish
-        while task.is_alive(): pass
+    def populate_index(self, progressbar=True):
+        print('\nSelect Index')
+        print('-------------------------')
+        for i, index in enumerate(self.indexes):
+            print(f'{i+1})\t{index}')
 
-        toc = time.perf_counter()
-        totaltime = toc - tic
+        select = u.input_integer('Select index, or 0 to cancel: ', 0, i+1)
+        if select > 0:
+            task = threading.Thread(target=self.manager.populate_index, args=[self.indexes[select-1]])
+            task.start()
+            tic = time.perf_counter()
 
-        if self.manager.error == 'None':
-            u.print_message(f'{self.manager.items_total} {index} Symbols populated in {totaltime:.2f} seconds', True)
+            if progressbar:
+                self._show_progress('Progress', 'Completed', 1)
+
+            # Wait for thread to finish
+            while task.is_alive(): pass
+
+            toc = time.perf_counter()
+            totaltime = toc - tic
+
+            if self.manager.error == 'None':
+                u.print_message(f'{self.manager.items_total} {index} Symbols populated in {totaltime:.2f} seconds', True)
 
     def list_invalid(self):
         u.print_message(f'Invalid: {self.manager.invalid_companies}', True)
