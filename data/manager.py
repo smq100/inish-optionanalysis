@@ -1,60 +1,45 @@
 import os
-
+from urllib.error import HTTPError
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.sql.operators import exists
 
 from fetcher.google import Google
 from fetcher.excel import Excel
 
+import data as d
 from fetcher import fetcher as f
 from utils import utils as u
-from . import models as m
+from data import models as m
 
 logger = u.get_logger()
 
-SQLITE_DATABASE_PATH = 'data/securities.db'
-GOOGLE_SHEETNAME_EXCHANGES = 'Exchanges'
-GOOGLE_SHEETNAME_INDEXES = 'Indexes'
-EXCEL_SHEETNAME_EXCHANGES = 'data/symbols/exchanges.xlsx'
-EXCEL_SHEETNAME_INDEXES = 'data/symbols/indexes.xlsx'
-
-EXCHANGES = ({'abbreviation':'NASDAQ', 'name':'National Association of Securities Dealers Automated Quotations'},
-             {'abbreviation':'NYSE',   'name':'New York Stock Exchange'},
-             {'abbreviation':'AMEX',   'name':'American Stock Exchange'},
-             {'abbreviation':'TEST',   'name':'Test Exchange'})
-
-INDEXES = ({'abbreviation':'SP500', 'name':'Standard & Poors 500'},
-           {'abbreviation':'DOW',   'name':'DOW industrials'},
-           {'abbreviation':'TEST',  'name':'Test Index'})
-
 class Manager:
     def __init__(self):
-        self.engine = create_engine(f'sqlite:///{SQLITE_DATABASE_PATH}', echo=False)
+        self.engine = create_engine(f'sqlite:///{d.SQLITE_DATABASE_PATH}', echo=False)
         self.session = sessionmaker(bind=self.engine)
         self.items_total = 0
         self.items_completed = 0
         self.exchange = ''
-        self.invalid_companies = []
+        self.invalid_symbols = []
         self.error = ''
 
     def build_exchanges(self):
         with self.session.begin() as session:
-            for exchange in EXCHANGES:
+            for exchange in d.EXCHANGES:
                 exc = m.Exchange(abbreviation=exchange['abbreviation'], name=exchange['name'])
                 session.add(exc)
                 logger.info(f'{__name__}: Added exchange {exchange["abbreviation"]}')
 
     def build_indexes(self):
         with self.session.begin() as session:
-            for index in INDEXES:
+            for index in d.INDEXES:
                 exc = m.Index(abbreviation=index['abbreviation'], name=index['name'])
                 session.add(exc)
                 logger.info(f'{__name__}: Added index {index["abbreviation"]}')
 
     def populate_exchange(self, exchange):
         self.error = ''
-        self.invalid_companies = []
+        self.invalid_symbols = []
 
         with self.session.begin() as session:
             exc = session.query(m.Exchange).filter(m.Exchange.abbreviation==exchange).first()
@@ -141,7 +126,7 @@ class Manager:
         with self.session() as session, session.begin():
             s = session.query(m.Security).filter(m.Security.ticker == ticker).first()
             if s is not None:
-                try: # YFinance & Pandas throw a lot of exceptions for sketchy data
+                try: # YFinance & Pandas throw a lot of exceptions for sketchy data and connection issues
                     company = f.get_company(ticker)
                     if company is not None:
                         if company.info is not None:
@@ -155,9 +140,12 @@ class Manager:
                             s.company = [c]
 
                             logger.info(f'{__name__}: Added company information for {ticker}')
-                except (ValueError, KeyError) as e:
-                    self.invalid_companies += [ticker]
+                except (ValueError, KeyError, IndexError) as e:
+                    self.invalid_symbols += [ticker]
                     logger.info(f'{__name__}: Company info invalid: {ticker}: {str(e)}')
+                except HTTPError as e:
+                    self.error = 'HTTP Error'
+                    logger.info(f'{__name__}: HTTP Error {str(e)}')
             else:
                 raise ValueError(f'Unknown ticker {ticker}')
 
@@ -167,7 +155,7 @@ class Manager:
         with self.session() as session, session.begin():
             s = session.query(m.Security).filter(m.Security.ticker == ticker).first()
             if s is not None:
-                try: # YFinance & Pandas throw a lot of exceptions for sketchy data
+                try: # YFinance & Pandas throw a lot of exceptions for sketchy data and connection issues
                     history = f.get_history(ticker, -1)
                     if history is not None:
                         history.reset_index(inplace=True)
@@ -182,9 +170,12 @@ class Manager:
                             s.pricing += [p]
 
                         logger.info(f'{__name__}: Added pricing to {ticker}')
-                except (ValueError, KeyError) as e:
-                    self.invalid_companies += [ticker]
+                except (ValueError, KeyError, IndexError) as e:
+                    self.invalid_symbols += [ticker]
                     logger.info(f'{__name__}: Pricing info invalid: {ticker}: {str(e)}')
+                except HTTPError as e:
+                    self.error = 'HTTP Error'
+                    logger.info(f'{__name__}: HTTP Error {str(e)}')
             else:
                 raise ValueError(f'Unknown ticker {ticker}')
 
@@ -196,9 +187,9 @@ class Manager:
 
         if self.is_exchange(exchange):
             if type == 'google':
-                table = Google(GOOGLE_SHEETNAME_EXCHANGES)
+                table = Google(d.GOOGLE_SHEETNAME_EXCHANGES)
             elif type == 'excel':
-                table = Excel(EXCEL_SHEETNAME_EXCHANGES)
+                table = Excel(d.EXCEL_SHEETNAME_EXCHANGES)
             else:
                 raise ValueError(f'Invalid table type: {type}')
 
@@ -217,9 +208,9 @@ class Manager:
 
         if self.is_index(index):
             if type == 'google':
-                table = Google(GOOGLE_SHEETNAME_INDEXES)
+                table = Google(d.GOOGLE_SHEETNAME_INDEXES)
             elif type == 'excel':
-                table = Excel(EXCEL_SHEETNAME_INDEXES)
+                table = Excel(d.EXCEL_SHEETNAME_INDEXES)
             else:
                 raise ValueError(f'Invalid spreadsheet type: {type}')
 
@@ -249,22 +240,27 @@ class Manager:
 
         return info
 
-    def get_exchange_info(self):
+    def get_exchange_info(self, exchange=''):
         info = []
 
         with self.session() as session:
-            exchanges = session.query(m.Exchange)
-            for e in exchanges:
+            if not exchange:
+                exchanges = session.query(m.Exchange)
+                for e in exchanges:
+                    s = session.query(m.Security).filter(m.Security.exchange_id == e.id)
+                    info += [{'exchange':e.abbreviation, 'count':s.count()}]
+            else:
+                e = session.query(m.Exchange).filter(m.Exchange.abbreviation == exchange).first()
                 s = session.query(m.Security).filter(m.Security.exchange_id == e.id)
-                info += [{'exchange':e.abbreviation, 'count':s.count()}]
+                info = [{'exchange':e.abbreviation, 'count':s.count()}]
 
         return info
 
     def delete_database(self, recreate=False):
-        if os.path.exists(SQLITE_DATABASE_PATH):
-            os.remove(SQLITE_DATABASE_PATH)
+        if os.path.exists(d.SQLITE_DATABASE_PATH):
+            os.remove(d.SQLITE_DATABASE_PATH)
         else:
-            logger.info(f'{__name__}: File does not exist: {SQLITE_DATABASE_PATH}')
+            logger.info(f'{__name__}: File does not exist: {d.SQLITE_DATABASE_PATH}')
 
         if recreate:
             m.Base.metadata.create_all(self.engine)
@@ -287,7 +283,7 @@ class Manager:
     @staticmethod
     def is_exchange(exchange):
         ret = False
-        for e in EXCHANGES:
+        for e in d.EXCHANGES:
             if exchange == e['abbreviation']:
                 ret = True
                 break
@@ -296,7 +292,7 @@ class Manager:
     @staticmethod
     def is_index(index):
         ret = False
-        for i in INDEXES:
+        for i in d.INDEXES:
             if index == i['abbreviation']:
                 ret = True
                 break
@@ -307,7 +303,7 @@ if __name__ == '__main__':
     logger = u.get_logger(DEBUG)
 
     manager = Manager()
-    print(manager.get_exchange_info())
+    print(manager.get_exchange_info('AMEX'))
 
     # invalid = manager.validate_list('NASDAQ')
     # print (invalid)

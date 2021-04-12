@@ -3,6 +3,7 @@ import logging
 import time
 import threading
 
+import data as d
 from data import manager as m
 from utils import utils as u
 
@@ -16,10 +17,10 @@ class Interface:
         self.indexes = []
 
         self.manager = m.Manager()
-        for e in m.EXCHANGES:
+        for e in d.EXCHANGES:
             self.exchanges += [e['abbreviation']]
 
-        for i in m.INDEXES:
+        for i in d.INDEXES:
             self.indexes += [i['abbreviation']]
 
         if script:
@@ -73,10 +74,10 @@ class Interface:
         self.manager.delete_database(recreate=True)
         self.manager.build_exchanges()
         self.manager.build_indexes()
-        u.print_message(f'Reset database "{m.SQLITE_DATABASE_PATH}"')
+        u.print_message(f'Reset database "{d.SQLITE_DATABASE_PATH}"')
 
     def show_information(self):
-        u.print_message(f'Information for database "./{m.SQLITE_DATABASE_PATH}"', True)
+        u.print_message(f'Information for database "./{d.SQLITE_DATABASE_PATH}"', True)
         info = self.manager.get_database_info()
         for i in info:
             print(f'{i["table"].title():>9}:\t{i["count"]} records')
@@ -94,22 +95,27 @@ class Interface:
 
         select = u.input_integer('Select exchange, or 0 to cancel: ', 0, i+1)
         if select > 0:
-            task = threading.Thread(target=self.manager.populate_exchange, args=[self.exchanges[select-1]])
-            task.start()
-            tic = time.perf_counter()
+            exc = self.exchanges[select-1]
+            info = self.manager.get_exchange_info(exc)
+            if True: #info[0]['count'] == 0:
+                task = threading.Thread(target=self.manager.populate_exchange, args=[exc])
+                task.start()
+                tic = time.perf_counter()
 
-            if progressbar:
-                self._show_progress('Progress', 'Completed', 1)
+                if progressbar:
+                    self._show_progress('Progress', 'Completed', 1)
 
-            # Wait for thread to finish
-            while task.is_alive(): pass
+                # Wait for thread to finish
+                while task.is_alive(): pass
 
-            toc = time.perf_counter()
-            totaltime = toc - tic
+                toc = time.perf_counter()
+                totaltime = toc - tic
 
-            if self.manager.error == 'None':
-                u.print_message(f'{self.manager.items_total} {exchange} \
-                    Symbols populated in {totaltime:.2f} seconds with {len(self.manager.invalid_companies)} invalid symbols', True)
+                if self.manager.error == 'None':
+                    u.print_message(f'{self.manager.items_total} {exc} '\
+                        f'Symbols populated in {totaltime:.2f} seconds with {len(self.manager.invalid_symbols)} invalid symbols', True)
+            else:
+                u.print_error('Exchange already populated', True)
 
     def populate_index(self, progressbar=True):
         print('\nSelect Index')
@@ -136,7 +142,7 @@ class Interface:
                 u.print_message(f'{self.manager.items_total} {index} Symbols populated in {totaltime:.2f} seconds', True)
 
     def list_invalid(self):
-        u.print_message(f'Invalid: {self.manager.invalid_companies}', True)
+        u.print_message(f'Invalid: {self.manager.invalid_symbols}', True)
 
     def _show_progress(self, prefix, suffix, scheme):
         while not self.manager.error: pass
@@ -146,9 +152,11 @@ class Interface:
             completed = self.manager.items_completed
 
             u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50)
-            while completed < total:
+            while completed < total and self.manager.error == 'None':
                 time.sleep(0.25)
                 completed = self.manager.items_completed
+                errors = len(self.manager.invalid_symbols)
+                if errors > 0: suffix += f' ({errors})'
                 u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50)
         else:
             u.print_message(f'{self.manager.error}', True)
