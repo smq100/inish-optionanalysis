@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 from analysis.technical import Technical
 from analysis.trend import SupportResistance
-from fetcher import fetcher as f
+from data import store as o
 from utils import utils as u
 
 
@@ -26,9 +26,8 @@ class Interface:
                     u.print_error('File read error')
             else:
                 u.print_error(f'File "{script}" not found')
-        elif f.validate_ticker(ticker):
-            start = dt.datetime.today() - dt.timedelta(days=90)
-            self.technical = Technical(ticker, start=start)
+        elif o.is_symbol_valid(ticker):
+            self.technical = Technical(ticker, 365)
             self.main_menu()
         else:
             u.print_error('Invalid ticker symbol specified')
@@ -62,10 +61,9 @@ class Interface:
         while not valid:
             ticker = input('Please enter symbol, or 0 to cancel: ').upper()
             if ticker != '0':
-                valid = f.validate_ticker(ticker)
+                valid = o.is_symbol_valid(ticker)
                 if valid:
-                    start = dt.datetime.today() - dt.timedelta(days=365)
-                    self.technical = Technical(ticker, start=start)
+                    self.technical = Technical(ticker, 365)
                 else:
                     u.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
             else:
@@ -88,16 +86,16 @@ class Interface:
                 interval = u.input_integer('Enter interval: ', 5, 200)
                 df = self.technical.calc_ema(interval)
                 print(u.delimeter(f'EMA {interval}', True))
-                print(f'Yesterday: {df[-1]:.2f}')
+                print(f'Yesterday: {df.iloc[-1]:.2f}')
                 self.plot(df, f'EMA {interval}')
             elif selection == 2:
                 df = self.technical.calc_rsi()
                 print(u.delimeter('RSI', True))
-                print(f'Yesterday: {df[-1]:.2f}')
+                print(f'Yesterday: {df.iloc[-1]:.2f}')
             elif selection == 3:
                 df = self.technical.calc_vwap()
                 print(u.delimeter('VWAP', True))
-                print(f'Yesterday: {df[-1]:.2f}')
+                print(f'Yesterday: {df.iloc[-1]:.2f}')
             elif selection == 4:
                 df = self.technical.calc_macd()
                 print(u.delimeter('MACD', True))
@@ -211,4 +209,4 @@ if __name__ == '__main__':
     elif 'ticker' in command.keys():
         Interface(command['ticker'])
     else:
-        Interface('MSFT')
+        Interface('AAPL')

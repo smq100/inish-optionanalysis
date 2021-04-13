@@ -7,7 +7,6 @@ import logging
 from screener.screener import Screener
 import data as d
 from data import store as o
-from fetcher import fetcher as f
 from utils import utils as u
 
 

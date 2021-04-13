@@ -10,15 +10,15 @@ logger = u.get_logger()
 assert_msg = 'Must instantiate Company class with a history value'
 
 class Company:
-    def __init__(self, ticker, history=0, lazy=True):
+    def __init__(self, ticker, days=0, lazy=True):
         self.ticker = ticker.upper()
-        self.days = history
+        self.days = days
         self.company = None
         self.history = None
         self.ta = None
 
         if o.is_symbol_valid(ticker):
-            if history > 1 and not lazy:
+            if days > 1 and not lazy:
                 self._load_history()
         else:
             raise ValueError('Invalid ticker')
@@ -68,6 +68,6 @@ class Company:
         return valid
 
 if __name__ == '__main__':
-    company = Company('AAPL', history=365, lazy=False)
+    company = Company('AAPL', days=365, lazy=False)
     val = company.get_close()
     print(val)
