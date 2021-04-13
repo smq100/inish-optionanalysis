@@ -275,7 +275,7 @@ class Interface:
 
             self.chain = Chain(ticker)
             self.load_strategy(ticker, 'call', 'long', False)
-            u.print_message('The initial strategy has been set to a long call')
+            u.print_message('The initial strategy has been set to a long call', False)
 
     def select_strategy(self):
         menu_items = {
@@ -537,7 +537,7 @@ class Interface:
                 u.print_error('Unknown argument')
 
         except Exception as e:
-            u.print_error(sys.exc_info()[1], True)
+            u.print_error(sys.exc_info()[1])
             return False
 
         return modified

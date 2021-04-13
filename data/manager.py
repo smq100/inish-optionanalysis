@@ -131,7 +131,7 @@ class Manager:
                     if company is not None:
                         if company.info is not None:
                             c = m.Company()
-                            c.name = company.info['shortName']
+                            c.name = company.info['shortName'] if company.info['shortName'] else '<invalid>'
                             c.description = company.info['longBusinessSummary']
                             c.url = company.info['website']
                             c.sector = company.info['sector']

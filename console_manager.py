@@ -71,18 +71,22 @@ class Interface:
                 break
 
     def reset(self):
-        self.manager.delete_database(recreate=True)
-        self.manager.build_exchanges()
-        self.manager.build_indexes()
-        u.print_message(f'Reset database "{d.SQLITE_DATABASE_PATH}"')
+        select = u.input_integer('Are you sure? 1 to reset or 0 to cancel: ', 0, 1)
+        if select == 1:
+            self.manager.delete_database(recreate=True)
+            self.manager.build_exchanges()
+            self.manager.build_indexes()
+            u.print_message(f'Reset database "{d.SQLITE_DATABASE_PATH}"')
+        else:
+            u.print_message('Database not reset')
 
     def show_information(self):
-        u.print_message(f'Information for database "./{d.SQLITE_DATABASE_PATH}"', True)
+        u.print_message(f'Information for database "./{d.SQLITE_DATABASE_PATH}"')
         info = self.manager.get_database_info()
         for i in info:
             print(f'{i["table"].title():>9}:\t{i["count"]} records')
 
-        u.print_message('Exchange Information', True)
+        u.print_message('Exchange Information')
         info = self.manager.get_exchange_info()
         for i in info:
             print(f'{i["exchange"]:>9}:\t{i["count"]} symbols')
@@ -113,9 +117,9 @@ class Interface:
 
                 if self.manager.error == 'None':
                     u.print_message(f'{self.manager.items_total} {exc} '\
-                        f'Symbols populated in {totaltime:.2f} seconds with {len(self.manager.invalid_symbols)} invalid symbols', True)
+                        f'Symbols populated in {totaltime:.2f} seconds with {len(self.manager.invalid_symbols)} invalid symbols')
             else:
-                u.print_error('Exchange already populated', True)
+                u.print_error('Exchange already populated')
 
     def populate_index(self, progressbar=True):
         print('\nSelect Index')
@@ -139,10 +143,10 @@ class Interface:
             totaltime = toc - tic
 
             if self.manager.error == 'None':
-                u.print_message(f'{self.manager.items_total} {index} Symbols populated in {totaltime:.2f} seconds', True)
+                u.print_message(f'{self.manager.items_total} {index} Symbols populated in {totaltime:.2f} seconds')
 
     def list_invalid(self):
-        u.print_message(f'Invalid: {self.manager.invalid_symbols}', True)
+        u.print_message(f'Invalid: {self.manager.invalid_symbols}')
 
     def _show_progress(self, prefix, suffix, scheme):
         while not self.manager.error: pass
@@ -155,11 +159,9 @@ class Interface:
             while completed < total and self.manager.error == 'None':
                 time.sleep(0.25)
                 completed = self.manager.items_completed
-                errors = len(self.manager.invalid_symbols)
-                if errors > 0: suffix += f' ({errors})'
                 u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50)
         else:
-            u.print_message(f'{self.manager.error}', True)
+            u.print_message(f'{self.manager.error}')
 
 if __name__ == '__main__':
     import argparse

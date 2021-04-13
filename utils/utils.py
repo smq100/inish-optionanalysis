@@ -150,13 +150,13 @@ def isnumeric(value):
     except ValueError:
         return False
 
-def print_message(message, creturn=False):
+def print_message(message, creturn=True):
     print(delimeter(f'{message}', creturn))
 
-def print_warning(message, creturn=False):
+def print_warning(message, creturn=True):
     print(delimeter(f'Warning: {message}', creturn))
 
-def print_error(message, creturn=False):
+def print_error(message, creturn=True):
     print(delimeter(f'Error: {message}', creturn))
 
 def progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█', end='\r', percent=False):

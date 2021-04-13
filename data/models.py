@@ -49,7 +49,7 @@ class Security(Base):
     company = relationship('Company', back_populates='security')
 
     def __init__(self, ticker):
-        self.ticker = ticker
+        self.ticker = ticker.upper()
 
     def __repr__(self):
         return f'<Security({self.ticker})>'

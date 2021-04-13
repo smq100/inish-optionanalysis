@@ -148,9 +148,9 @@ class Interface:
 
     def run_script(self, progressbar):
         if not self.table_name:
-            u.print_error('No table specified', True)
+            u.print_error('No table specified')
         elif not self.screen_name:
-            u.print_error('No script specified', True)
+            u.print_error('No script specified')
         elif self.screener.load_script(self.screen_name):
             self.results = []
             self.valids = 0
@@ -173,23 +173,23 @@ class Interface:
                     if result:
                         self.valids += 1
 
-                u.print_message(f'{self.valids} Symbols Identified in {self.time:.2f} seconds', True)
+                u.print_message(f'{self.valids} Symbols Identified in {self.time:.2f} seconds', False)
             else:
                 self.results = []
                 self.valids = 0
-                u.print_error(self.screener.error, True)
+                u.print_error(self.screener.error)
         else:
-            u.print_error('Script error', True)
+            u.print_error('Script error')
 
     def print_results(self, all=False):
         if not self.table_name:
-            u.print_error('No table specified', True)
+            u.print_error('No table specified')
         elif not self.screen_name:
-            u.print_error('No script specified', True)
+            u.print_error('No script specified')
         elif len(self.results) == 0:
-            u.print_message('No symbols were located', True)
+            u.print_message('No symbols were located')
         else:
-            u.print_message('Symbols Identified', True)
+            u.print_message('Symbols Identified')
             index = 0
             for result in self.results:
                 if all:
