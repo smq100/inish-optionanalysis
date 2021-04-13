@@ -11,6 +11,7 @@ from strategy.call import Call
 from strategy.put import Put
 from strategy.vertical import Vertical
 from options.chain import Chain
+from data import store as o
 from fetcher import fetcher as f
 from utils import utils as u
 
@@ -39,7 +40,7 @@ class Interface:
                     u.print_error('File read error')
             else:
                 u.print_error(f'File "{script}" not found')
-        elif f.validate_ticker(ticker):
+        elif o.is_symbol_valid(ticker):
             self.chain = Chain(ticker)
 
             if autoload:
@@ -262,7 +263,7 @@ class Interface:
         while not valid:
             ticker = input('Please enter symbol, or 0 to cancel: ').upper()
             if ticker != '0':
-                valid = f.validate_ticker(ticker)
+                valid = o.is_symbol_valid(ticker)
                 if not valid:
                     u.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
             else:
