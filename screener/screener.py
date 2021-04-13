@@ -1,34 +1,26 @@
 import os
 import json
 
-from fetcher.google import Google
-from fetcher.excel import Excel
 from company.company import Company
-from data import history as h
 from utils import utils as u
+from data import store as o
 from .interpreter import Interpreter, SyntaxError
-
 
 logger = u.get_logger()
 
 
 class Screener:
-    def __init__(self, table_name='', table_type='google', script_name='', days=365):
+    def __init__(self, table_name='', script_name='', days=365):
         table_name = table_name.upper()
         if table_name:
-            if table_name not in h.VALID_LISTS:
+            if not o.is_index(table_name):
                 raise ValueError(f'Table not found: {table_name}')
-
-        if table_type:
-            if table_type not in h.VALID_TYPES:
-                raise ValueError(f'Table type not valid: {table_name}')
 
         if days < 30:
             raise ValueError('Invalid number of days')
 
         self.days = days
         self.table_name = table_name
-        self.table_type = table_type
         self.script = []
         self.symbols = []
         self.items_total = 0
@@ -37,13 +29,6 @@ class Screener:
         self.error = ''
         self.active_symbol = ''
         self.matches = 0
-
-        if table_type == 'google':
-            self.table = Google(h.GOOGLE_SHEETNAME)
-        elif table_type == 'excel':
-            self.table = Excel(h.EXCEL_SHEETNAME)
-        else:
-            raise ValueError('Invalid table type')
 
         if script_name:
             if not self.load_script(script_name):
@@ -68,22 +53,19 @@ class Screener:
         self.items_completed = 0
         self.error = ''
         self.active_symbol = ''
-        if self.table_name in h.VALID_LISTS:
-            if self.table.open(self.table_name):
-                symbols = self.table.get_column(1)
-                self.items_total = len(symbols)
-                self.error = 'None'
-                for s in symbols:
-                    try:
-                        self.symbols += [Company(s, self.days)]
-                    except ValueError as e:
-                        logger.warning(f'{__name__}: Invalid ticker {s}')
+        if o.is_index(self.table_name):
+            symbols = o.get_index(self.table_name)
+            self.items_total = len(symbols)
+            self.error = 'None'
+            for s in symbols:
+                try:
+                    self.symbols += [Company(s, self.days)]
+                except ValueError as e:
+                    logger.warning(f'{__name__}: Invalid ticker {s}')
 
-                    self.items_completed += 1
+                self.items_completed += 1
 
-                self.items_total = len(self.symbols)
-            else:
-                self.error = 'Unable to open spreadsheet'
+            self.items_total = len(self.symbols)
         else:
             self.error = 'Invalid table name'
 
@@ -166,8 +148,7 @@ if __name__ == '__main__':
 
     u.get_logger(logging.DEBUG)
 
-    s = Screener('test')
-    # s = Screener('test', table_type='excel')
+    s = Screener('SP500')
     s.open()
     s.load_script('/Users/steve/Documents/Source Code/Personal/OptionAnalysis/screener/screens/test.screen')
     s.run_script()

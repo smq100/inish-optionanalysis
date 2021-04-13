@@ -5,7 +5,8 @@ import threading
 import logging
 
 from screener.screener import Screener
-from data import history as h
+import data as d
+from data import store as o
 from fetcher import fetcher as f
 from utils import utils as u
 
@@ -88,7 +89,7 @@ class Interface:
             selection = u.menu(menu_items, 'Select Operation', 0, 4)
 
             if selection == 1:
-                self.select_table(True)
+                self.select_table()
             elif selection == 2:
                 self.select_script()
             elif selection == 3:
@@ -98,20 +99,24 @@ class Interface:
             elif selection == 0:
                 break
 
-    def select_table(self, progressbar):
+    def select_table(self):
         menu_items = {}
-        for index, item in enumerate(h.VALID_LISTS):
-            menu_items[f'{index+1}'] = f'{item}'
+        for index, item in enumerate(d.INDEXES):
+            menu_items[f'{index+1}'] = f'{item["abbreviation"]}'
         menu_items['0'] = 'Cancel'
 
-        selection = u.menu(menu_items, 'Select Table', 0, len(h.VALID_LISTS))
+        selection = u.menu(menu_items, 'Select Table', 0, len(d.INDEXES))
         if selection > 0:
-            self.screener = Screener(h.VALID_LISTS[selection-1], script_name=self.screen_name)
-
-            self._open_table(progressbar)
-
-            if self.screener.valid():
-                self.table_name = h.VALID_LISTS[selection-1]
+            index = d.INDEXES[selection-1]['abbreviation']
+            if len(o.get_index(index)) > 0:
+                self.screener = Screener(index, script_name=self.screen_name)
+                if self.screener.valid():
+                    self.screener.open()
+                    self.table_name = index
+            else:
+                self.table_name = ''
+                self.screener = None
+                u.print_error(f'Index {index} has no symbols')
 
     def select_script(self):
         self.script = []
@@ -159,7 +164,7 @@ class Interface:
             tic = time.perf_counter()
 
             if progressbar:
-                self._show_progress('Progress', 'Completed', 1)
+                self._show_progress('Progress', 'Completed')
 
             # Wait for thread to finish
             while task.is_alive(): pass
@@ -205,17 +210,7 @@ class Interface:
 
         print()
 
-    def _open_table(self, progressbar):
-        task = threading.Thread(target=self.screener.open)
-        task.start()
-
-        if progressbar:
-            self._show_progress('Progress', 'Symbols loaded', 2)
-
-        # Wait for thread to finish
-        while task.is_alive(): pass
-
-    def _show_progress(self, prefix, suffix, scheme):
+    def _show_progress(self, prefix, suffix):
         # Wait for either an error or running to start, or not, the progress bar
         while not self.screener.error: pass
 
@@ -225,10 +220,7 @@ class Interface:
             u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50)
             while completed < total:
                 time.sleep(0.25)
-                if scheme == 1:
-                    sfx = suffix + f' - {self.screener.active_symbol} ({self.screener.matches})' + '    '
-                elif scheme == 2:
-                    sfx = suffix
+                sfx = suffix + f' - {self.screener.active_symbol} ({self.screener.matches})' + '    '
                 completed = self.screener.items_completed
                 u.progress_bar(completed, total, prefix=prefix, suffix=sfx, length=50)
 

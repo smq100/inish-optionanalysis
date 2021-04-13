@@ -1,4 +1,7 @@
 SQLITE_DATABASE_PATH = 'data/securities.db'
+
+VALID_SPREADSHEETS = ('google', 'excel')
+
 GOOGLE_SHEETNAME_EXCHANGES = 'Exchanges'
 GOOGLE_SHEETNAME_INDEXES = 'Indexes'
 EXCEL_SHEETNAME_EXCHANGES = 'data/symbols/exchanges.xlsx'

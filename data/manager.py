@@ -44,10 +44,10 @@ class Manager:
         with self.session.begin() as session:
             exc = session.query(m.Exchange).filter(m.Exchange.abbreviation==exchange).first()
             if exc is not None:
-                symbols = self.get_exchange_symbols(exc.abbreviation)
-                self.add_securities_to_exchange(symbols, exc.abbreviation)
+                symbols = self._get_exchange_symbols(exc.abbreviation)
+                self._add_securities_to_exchange(symbols, exc.abbreviation)
             else:
-                raise ValueError(f'Unknown exchange {exchange}')
+                self.error = 'Unknown exchange'
 
     def populate_index(self, index):
         self.error = ''
@@ -56,20 +56,20 @@ class Manager:
         with self.session() as session:
             i = session.query(m.Index).filter(m.Index.abbreviation==index).first()
             if i is not None:
-                symbols = self.get_index_symbols(i.abbreviation)
+                symbols = self._get_index_symbols(i.abbreviation)
                 for s in symbols:
                     t = session.query(m.Security).filter(m.Security.ticker==s).first()
                     if t is not None:
                         valid += [t.ticker]
 
                 if len(valid) > 0:
-                    self.add_securities_to_index(valid, i.abbreviation)
+                    self._add_securities_to_index(valid, i.abbreviation)
                 else:
                     self.error = 'No symbols'
             else:
-                raise ValueError(f'Unknown index {index}')
+                self.error = 'Unknown index'
 
-    def add_securities_to_exchange(self, tickers, exchange):
+    def _add_securities_to_exchange(self, tickers, exchange):
         self.items_total = 0
         self.items_completed = 0
 
@@ -84,24 +84,24 @@ class Manager:
                         s = m.Security(sec)
                         exc.securities += [s]
                         session.commit()
-
-                        self.add_company_to_security(sec)
-                        self.add_pricing_to_security(sec)
+                        print(1)
+                        self._add_company_to_security(sec)
+                        print(2)
+                        self._add_pricing_to_security(sec)
+                        print(3)
 
                         logger.info(f'{__name__}: Added {sec} to exchange {exchange}')
                     else:
                         logger.info(f'{__name__}: {sec} already exists')
 
                     self.items_completed += 1
-            else:
-                raise ValueError(f'Unknown exchange {exchange}')
 
-    def add_securities_to_index(self, tickers, index):
+    def _add_securities_to_index(self, tickers, index):
         self.items_total = 0
         self.items_completed = 0
 
         with self.session() as session, session.begin():
-            ind = session.query(m.Index).filter(m.Index.abbreviation == index).first()
+            ind = session.query(m.Index).filter(m.Index.abbreviation==index).first()
             if ind is not None:
                 self.items_total = len(tickers)
                 self.error = 'None'
@@ -111,47 +111,40 @@ class Manager:
                         s.index1_id = ind.id
                     elif s.index2_id is None:
                         s.index2_id = ind.id
-                    session.commit()
 
                     self.items_completed += 1
 
                     logger.info(f'{__name__}: Added {t} to index {index}')
-            else:
-                session.close()
-                raise ValueError(f'Unknown index {index}')
 
-        session.close()
-
-    def add_company_to_security(self, ticker):
+    def _add_company_to_security(self, ticker):
         with self.session() as session, session.begin():
             s = session.query(m.Security).filter(m.Security.ticker == ticker).first()
             if s is not None:
                 try: # YFinance & Pandas throw a lot of exceptions for sketchy data and connection issues
                     company = f.get_company(ticker)
-                    if company is not None:
-                        if company.info is not None:
-                            c = m.Company()
-                            c.name = company.info['shortName'] if company.info['shortName'] else '<invalid>'
-                            c.description = company.info['longBusinessSummary']
-                            c.url = company.info['website']
-                            c.sector = company.info['sector']
-                            c.industry = company.info['industry']
+                    if company is None:
+                        pass
+                    elif company.info is None:
+                        pass
+                    else:
+                        c = m.Company()
+                        c.name = company.info['shortName'] if company.info['shortName'] else '<error>'
+                        c.description = company.info['longBusinessSummary']
+                        c.url = company.info['website']
+                        c.sector = company.info['sector']
+                        c.industry = company.info['industry']
 
-                            s.company = [c]
+                        s.company = [c]
 
-                            logger.info(f'{__name__}: Added company information for {ticker}')
+                        logger.info(f'{__name__}: Added company information for {ticker}')
                 except (ValueError, KeyError, IndexError) as e:
                     self.invalid_symbols += [ticker]
                     logger.info(f'{__name__}: Company info invalid: {ticker}: {str(e)}')
                 except HTTPError as e:
                     self.error = 'HTTP Error'
-                    logger.info(f'{__name__}: HTTP Error {str(e)}')
-            else:
-                raise ValueError(f'Unknown ticker {ticker}')
+                    logger.error(f'{__name__}: HTTP Error {str(e)}')
 
-        session.close()
-
-    def add_pricing_to_security(self, ticker):
+    def _add_pricing_to_security(self, ticker):
         with self.session() as session, session.begin():
             s = session.query(m.Security).filter(m.Security.ticker == ticker).first()
             if s is not None:
@@ -175,13 +168,11 @@ class Manager:
                     logger.info(f'{__name__}: Pricing info invalid: {ticker}: {str(e)}')
                 except HTTPError as e:
                     self.error = 'HTTP Error'
-                    logger.info(f'{__name__}: HTTP Error {str(e)}')
+                    logger.error(f'{__name__}: HTTP Error {str(e)}')
             else:
                 raise ValueError(f'Unknown ticker {ticker}')
 
-        session.close()
-
-    def get_exchange_symbols(self, exchange, type='google'):
+    def _get_exchange_symbols(self, exchange, type='google'):
         table = None
         symbols = []
 
@@ -202,7 +193,7 @@ class Manager:
 
         return symbols
 
-    def get_index_symbols(self, index, type='google'):
+    def _get_index_symbols(self, index, type='google'):
         table = None
         symbols = []
 
@@ -269,9 +260,9 @@ class Manager:
         symbols = []
         invalid = []
         if self.is_exchange(list):
-            symbols = self.get_exchange_symbols(list)
+            symbols = self._get_exchange_symbols(list)
         elif self.is_index(list):
-            symbols = self.get_index_symbols(list)
+            symbols = self._get_index_symbols(list)
 
         if len(symbols) > 0:
             for s in symbols:
@@ -279,24 +270,6 @@ class Manager:
                     invalid += [s]
 
         return invalid
-
-    @staticmethod
-    def is_exchange(exchange):
-        ret = False
-        for e in d.EXCHANGES:
-            if exchange == e['abbreviation']:
-                ret = True
-                break
-        return ret
-
-    @staticmethod
-    def is_index(index):
-        ret = False
-        for i in d.INDEXES:
-            if index == i['abbreviation']:
-                ret = True
-                break
-        return ret
 
 if __name__ == '__main__':
     from logging import DEBUG

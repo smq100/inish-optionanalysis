@@ -2,7 +2,7 @@
 import datetime as dt
 
 from analysis.technical import Technical
-from fetcher import fetcher as f
+from data import store as o
 from utils import utils as u
 
 logger = u.get_logger()
@@ -17,8 +17,7 @@ class Company:
         self.history = None
         self.ta = None
 
-        self.company = f.get_company(ticker)
-        if self.company is not None:
+        if o.is_symbol_valid(ticker):
             if history > 1 and not lazy:
                 self._load_history()
         else:
@@ -32,49 +31,36 @@ class Company:
         if self.history is None:
             if not self._load_history():
                 raise AssertionError(assert_msg)
-        return self.history['Close'][-1]
+        return self.history['close'][-1]
 
     def get_high(self):
         if self.history is None:
             if not self._load_history():
                 raise AssertionError(assert_msg)
-        return self.history['High']
+        return self.history['high']
 
     def get_low(self):
         if self.history is None:
             if not self._load_history():
                 raise AssertionError(assert_msg)
-        return self.history['Low']
+        return self.history['low']
 
     def get_close(self):
         if self.history is None:
             if not self._load_history():
                 raise AssertionError(assert_msg)
-        return self.history['Close']
+        return self.history['close']
 
     def get_volume(self):
         if self.history is None:
             if not self._load_history():
                 raise AssertionError(assert_msg)
-        return self.history['Volume']
-
-    def get_info(self, item):
-        if self.history is None:
-            if not self._load_history():
-                raise AssertionError(assert_msg)
-        else:
-            value = 0
-            try:
-                value = self.company.info[item]
-            except KeyError as e:
-                raise ValueError(f'Invalid YFinance info key: {e}')
-
-        return value
+        return self.history['volume']
 
     def _load_history(self):
         valid = False
         if self.days > 1:
-            self.history = f.get_history(self.ticker, self.days)
+            self.history = o.get_history(self.ticker, self.days)
             start = dt.datetime.today() - dt.timedelta(days=self.days)
             self.ta = Technical(self.ticker, start)
             valid = True
@@ -82,6 +68,6 @@ class Company:
         return valid
 
 if __name__ == '__main__':
-    company = Company('AAPL', history=365)
-    val = company.get_info('marketCap')
+    company = Company('AAPL', history=365, lazy=False)
+    val = company.get_close()
     print(val)
