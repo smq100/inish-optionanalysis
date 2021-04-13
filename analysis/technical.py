@@ -53,7 +53,7 @@ class Technical:
 
     def calc_macd(self, slow=26, fast=12, signal=9):
         df = pd.DataFrame()
-        macd = trend.MACD(self.history['Close'], window_slow=slow, window_fast=fast, window_sign=signal, fillna=True)
+        macd = trend.MACD(self.history['close'], window_slow=slow, window_fast=fast, window_sign=signal, fillna=True)
         diff = macd.macd_diff()
         macd_ = macd.macd()
         signal = macd.macd_signal()
@@ -66,7 +66,7 @@ class Technical:
     def calc_bb(self, interval=14, std=2):
         df = pd.DataFrame()
         if interval > 5:
-            bb = volatility.BollingerBands(self.history['Close'], window=interval, window_dev=std, fillna=True)
+            bb = volatility.BollingerBands(self.history['close'], window=interval, window_dev=std, fillna=True)
             high = bb.bollinger_hband()
             mid = bb.bollinger_mavg()
             low = bb.bollinger_lband()

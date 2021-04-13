@@ -4,7 +4,7 @@ import datetime as dt
 
 from analysis.scoring import ScoringAnalysis
 from analysis.technical import Technical
-from fetcher import fetcher as f
+from data import store as o
 from utils import utils as u
 
 
@@ -25,9 +25,8 @@ class Interface:
                     u.print_error('File read error')
             else:
                 u.print_error(f'File "{script}" not found')
-        elif f.validate_ticker(ticker):
-            start = dt.datetime.today() - dt.timedelta(days=365)
-            self.technical = Technical(ticker, start=start)
+        elif o.is_symbol_valid(ticker):
+            self.technical = Technical(ticker, 365)
             self.scoring = ScoringAnalysis(ticker)
 
             self.calculate(True)
@@ -58,9 +57,8 @@ class Interface:
         while not valid:
             ticker = input('Please enter symbol, or 0 to cancel: ').upper()
             if ticker != '0':
-                valid = f.validate_ticker(ticker)
+                valid = o.is_symbol_valid(ticker)
                 if valid:
-                    start = dt.datetime.today() - dt.timedelta(days=365)
                     self.scoring = ScoringAnalysis(ticker)
                 else:
                     u.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
@@ -89,11 +87,11 @@ class Interface:
 
         if show:
             print(u.delimeter(f"Yesterday's {self.scoring.ticker} Technicals", True))
-            print(f'EMA 21:    {self.scoring.ema["21"][-1]:.2f}')
-            print(f'EMA 50:    {self.scoring.ema["50"][-1]:.2f}')
-            print(f'EMA 200:   {self.scoring.ema["200"][-1]:.2f}')
-            print(f'RSA:       {self.scoring.rsa[-1]:.2f}')
-            print(f'VWAP:      {self.scoring.vwap[-1]:.2f}')
+            print(f'EMA 21:    {self.scoring.ema["21"].iloc[-1]:.2f}')
+            print(f'EMA 50:    {self.scoring.ema["50"].iloc[-1]:.2f}')
+            print(f'EMA 200:   {self.scoring.ema["200"].iloc[-1]:.2f}')
+            print(f'RSA:       {self.scoring.rsa.iloc[-1]:.2f}')
+            print(f'VWAP:      {self.scoring.vwap.iloc[-1]:.2f}')
             print(f'MACD Diff: {self.scoring.macd.iloc[-1]["Diff"]:.2f}')
             print(f'MACD:      {self.scoring.macd.iloc[-1]["MACD"]:.2f}')
             print(f'MACD Sig:  {self.scoring.macd.iloc[-1]["Signal"]:.2f}')

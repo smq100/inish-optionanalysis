@@ -1,13 +1,12 @@
-from fetcher import fetcher as f
+from data import store as o
 from utils import utils as u
-
 
 logger = u.get_logger()
 
 
 class ScoringAnalysis:
     def __init__(self, ticker):
-        if (f.validate_ticker(ticker)):
+        if (o.is_symbol_valid(ticker)):
             self.ticker = ticker.upper()
             self.ema = {}
             self.rsa = None
