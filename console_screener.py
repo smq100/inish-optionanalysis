@@ -10,7 +10,7 @@ from data import store as o
 from utils import utils as u
 
 
-logger = u.get_logger(logging.WARNING)
+logger = u.get_logger(logging.DEBUG)
 
 BASEPATH = os.getcwd()+'/screener/screens/'
 SCREEN_SUFFIX = '.screen'

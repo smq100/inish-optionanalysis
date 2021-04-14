@@ -66,6 +66,7 @@ class Screener:
                 self.items_completed += 1
 
             self.items_total = len(self.symbols)
+            logger.debug(f'{__name__}: Opened {self.items_total} symbols')
         else:
             self.error = 'Invalid table name'
 

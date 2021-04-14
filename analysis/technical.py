@@ -12,7 +12,7 @@ logger = u.get_logger()
 
 
 class Technical:
-    def __init__(self, ticker, days=-1):
+    def __init__(self, ticker, days):
         if o.is_symbol_valid(ticker):
             self.ticker = ticker.upper()
             self.days = days
@@ -25,21 +25,21 @@ class Technical:
 
     def calc_sma(self, interval):
         df = pd.DataFrame()
-        if interval > 5:
+        if interval > 5 and interval < self.days:
             df = trend.sma_indicator(self.history['close'], window=interval, fillna=True)
 
         return df
 
     def calc_ema(self, interval):
         df = pd.DataFrame()
-        if interval > 5:
+        if interval > 5 and interval < self.days:
             df = trend.ema_indicator(self.history['close'], window=interval, fillna=True)
 
         return df
 
     def calc_rsi(self, interval=14):
         df = pd.DataFrame()
-        if interval > 5:
+        if interval > 5 and interval < self.days:
             df = momentum.rsi(self.history['close'], window=interval, fillna=True)
 
         return df
@@ -65,7 +65,7 @@ class Technical:
 
     def calc_bb(self, interval=14, std=2):
         df = pd.DataFrame()
-        if interval > 5:
+        if interval > 5 and interval < self.days:
             bb = volatility.BollingerBands(self.history['close'], window=interval, window_dev=std, fillna=True)
             high = bb.bollinger_hband()
             mid = bb.bollinger_mavg()

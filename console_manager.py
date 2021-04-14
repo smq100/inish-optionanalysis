@@ -73,11 +73,11 @@ class Interface:
     def reset(self):
         select = u.input_integer('Are you sure? 1 to reset or 0 to cancel: ', 0, 1)
         if select == 1:
-            # self.manager.delete_database(recreate=True)
+            self.manager.delete_database(recreate=True)
             self.manager.create_database()
             self.manager.build_exchanges()
             self.manager.build_indexes()
-            u.print_message(f'Reset database')
+            u.print_message(f'Reset the database')
         else:
             u.print_message('Database not reset')
 

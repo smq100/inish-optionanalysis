@@ -1,6 +1,6 @@
 import os
 from urllib.error import HTTPError
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker
 
 from fetcher.google import Google
@@ -16,13 +16,16 @@ logger = u.get_logger()
 
 class Manager:
     def __init__(self):
-        self.engine = create_engine(d.SQLITE_URI, echo=False)
+        self.engine = create_engine(d.ACTIVE_URI, echo=False)
         self.session = sessionmaker(bind=self.engine)
         self.items_total = 0
         self.items_completed = 0
         self.exchange = ''
         self.invalid_symbols = []
         self.error = ''
+
+    def create_database(self):
+        m.Base.metadata.create_all(self.engine)
 
     def build_exchanges(self):
         with self.session() as session, session.begin():
@@ -69,6 +72,74 @@ class Manager:
                     self.error = 'No symbols'
             else:
                 self.error = 'Unknown index'
+
+    def delete_security(self, ticker):
+        with self.session() as session, session.begin():
+            s = session.query(m.Security).filter(m.Security.ticker == ticker).first()
+            if s is not None:
+                session.delete(s)
+
+    def get_database_info(self):
+        info = []
+
+        inspector = inspect(self.engine)
+        tables = inspector.get_table_names()
+        if (len(tables) > 0):
+            with self.session() as session:
+                tables = m.Base.metadata.tables
+                for table in tables:
+                    count = session.query(tables[table]).count()
+                    info += [{'table':table, 'count':count}]
+        else:
+            u.print_error('No tables in database')
+
+        return info
+
+    def get_exchange_info(self, exchange=''):
+        info = []
+
+        inspector = inspect(self.engine)
+        tables = inspector.get_table_names()
+        if (len(tables) > 0):
+            with self.session() as session:
+                if not exchange:
+                    exchanges = session.query(m.Exchange)
+                    for e in exchanges:
+                        s = session.query(m.Security).filter(m.Security.exchange_id == e.id)
+                        info += [{'exchange':e.abbreviation, 'count':s.count()}]
+                else:
+                    e = session.query(m.Exchange).filter(m.Exchange.abbreviation == exchange).first()
+                    s = session.query(m.Security).filter(m.Security.exchange_id == e.id)
+                    info = [{'exchange':e.abbreviation, 'count':s.count()}]
+
+        return info
+
+    def delete_database(self, recreate=False):
+        if d.ACTIVE_DB == 'sqlite':
+            if os.path.exists(d.SQLITE_DATABASE_PATH):
+                os.remove(d.SQLITE_DATABASE_PATH)
+            else:
+                logger.info(f'{__name__}: File does not exist: {d.SQLITE_DATABASE_PATH}')
+
+            if recreate:
+                self.create_database()
+        else:
+            m.Base.metadata.drop_all(self.engine)
+
+    def validate_list(self, list):
+        symbols = []
+        invalid = []
+        if o.is_exchange(list):
+            symbols = self._get_exchange_symbols(list)
+        elif o.is_index(list):
+            symbols = self._get_index_symbols(list)
+
+        if len(symbols) > 0:
+            for s in symbols:
+                if not f.validate_ticker(s, force=True):
+                    invalid += [s]
+
+        return invalid
 
     def _add_securities_to_exchange(self, tickers, exchange):
         self.items_total = 0
@@ -225,65 +296,6 @@ class Manager:
 
         return symbols
 
-    def delete_security(self, ticker):
-        with self.session() as session, session.begin():
-            s = session.query(m.Security).filter(m.Security.ticker == ticker).first()
-            if s is not None:
-                session.delete(s)
-
-    def get_database_info(self):
-        info = []
-
-        with self.session() as session:
-            tables = m.Base.metadata.tables
-            for table in tables:
-                count = session.query(tables[table]).count()
-                info += [{'table':table, 'count':count}]
-
-        return info
-
-    def get_exchange_info(self, exchange=''):
-        info = []
-
-        with self.session() as session:
-            if not exchange:
-                exchanges = session.query(m.Exchange)
-                for e in exchanges:
-                    s = session.query(m.Security).filter(m.Security.exchange_id == e.id)
-                    info += [{'exchange':e.abbreviation, 'count':s.count()}]
-            else:
-                e = session.query(m.Exchange).filter(m.Exchange.abbreviation == exchange).first()
-                s = session.query(m.Security).filter(m.Security.exchange_id == e.id)
-                info = [{'exchange':e.abbreviation, 'count':s.count()}]
-
-        return info
-
-    def delete_database(self, recreate=False):
-        if os.path.exists(d.SQLITE_DATABASE_PATH):
-            os.remove(d.SQLITE_DATABASE_PATH)
-        else:
-            logger.info(f'{__name__}: File does not exist: {d.SQLITE_DATABASE_PATH}')
-
-        if recreate:
-            self.create_database()
-
-    def create_database(self):
-        m.Base.metadata.create_all(self.engine)
-
-    def validate_list(self, list):
-        symbols = []
-        invalid = []
-        if o.is_exchange(list):
-            symbols = self._get_exchange_symbols(list)
-        elif o.is_index(list):
-            symbols = self._get_index_symbols(list)
-
-        if len(symbols) > 0:
-            for s in symbols:
-                if not f.validate_ticker(s, force=True):
-                    invalid += [s]
-
-        return invalid
 
 if __name__ == '__main__':
     from logging import DEBUG
