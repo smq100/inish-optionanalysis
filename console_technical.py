@@ -14,7 +14,7 @@ logger = u.get_logger(logging.WARNING)
 
 class Interface:
     def __init__(self, ticker, script=''):
-        ticker = ticker.upper()
+        self.technical = None
 
         if script:
             if os.path.exists(script):
@@ -26,21 +26,24 @@ class Interface:
                     u.print_error('File read error')
             else:
                 u.print_error(f'File "{script}" not found')
-        elif o.is_symbol_valid(ticker):
-            self.technical = Technical(ticker, 365)
+        elif o.is_symbol_valid(ticker.upper()):
+            self.technical = Technical(ticker.upper(), 365)
             self.main_menu()
         else:
-            u.print_error('Invalid ticker symbol specified')
+            self.main_menu()
 
     def main_menu(self):
         while True:
             menu_items = {
-                '1': f'Change Symbol ({self.technical.ticker})',
+                '1': 'Change Symbol',
                 '2': 'Technical Analysis',
                 '3': 'Support & Resistance Chart',
                 '4': 'Plot All',
                 '0': 'Exit'
             }
+
+            if self.technical is not None:
+                menu_items['1'] = f'Change Symbol ({self.technical.ticker})'
 
             selection = u.menu(menu_items, 'Select Operation', 0, 4)
 

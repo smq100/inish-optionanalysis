@@ -81,7 +81,7 @@ def calc_major_minor_ticks(width):
 
 def menu(menu_items, header, minvalue, maxvalue):
     print(f'\n{header}')
-    print('-----------------------------')
+    print('---------------------------------------------')
 
     option = menu_items.keys()
     for entry in option:

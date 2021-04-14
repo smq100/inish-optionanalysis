@@ -7,6 +7,7 @@ from fetcher.google import Google
 from fetcher.excel import Excel
 
 import data as d
+from data import store as o
 from fetcher import fetcher as f
 from utils import utils as u
 from data import models as m
@@ -15,7 +16,7 @@ logger = u.get_logger()
 
 class Manager:
     def __init__(self):
-        self.engine = create_engine(f'sqlite:///{d.SQLITE_DATABASE_PATH}', echo=False)
+        self.engine = create_engine(d.SQLITE_URI, echo=False)
         self.session = sessionmaker(bind=self.engine)
         self.items_total = 0
         self.items_completed = 0
@@ -24,14 +25,14 @@ class Manager:
         self.error = ''
 
     def build_exchanges(self):
-        with self.session.begin() as session:
+        with self.session() as session, session.begin():
             for exchange in d.EXCHANGES:
                 exc = m.Exchange(abbreviation=exchange['abbreviation'], name=exchange['name'])
                 session.add(exc)
                 logger.info(f'{__name__}: Added exchange {exchange["abbreviation"]}')
 
     def build_indexes(self):
-        with self.session.begin() as session:
+        with self.session() as session, session.begin():
             for index in d.INDEXES:
                 exc = m.Index(abbreviation=index['abbreviation'], name=index['name'])
                 session.add(exc)
@@ -79,16 +80,16 @@ class Manager:
                 self.items_total = len(tickers)
                 self.error = 'None'
                 for sec in tickers:
+                    if self.error != 'None':
+                        break
+
                     exists = session.query(m.Security).filter(m.Security.ticker==sec.upper()).first()
                     if exists is None:
                         s = m.Security(sec)
                         exc.securities += [s]
                         session.commit()
-                        print(1)
                         self._add_company_to_security(sec)
-                        print(2)
                         self._add_pricing_to_security(sec)
-                        print(3)
 
                         logger.info(f'{__name__}: Added {sec} to exchange {exchange}')
                     else:
@@ -106,6 +107,9 @@ class Manager:
                 self.items_total = len(tickers)
                 self.error = 'None'
                 for t in tickers:
+                    if self.error != 'None':
+                        break
+
                     s = session.query(m.Security).filter(m.Security.ticker == t).first()
                     if s.index1_id is None:
                         s.index1_id = ind.id
@@ -143,24 +147,28 @@ class Manager:
                 except HTTPError as e:
                     self.error = 'HTTP Error'
                     logger.error(f'{__name__}: HTTP Error {str(e)}')
+                except RuntimeError as e:
+                    self.error = 'Runtime Error'
+                    logger.error(f'{__name__}: Runtime Error, Yahoo Finance down? {str(e)}')
 
     def _add_pricing_to_security(self, ticker):
         with self.session() as session, session.begin():
             s = session.query(m.Security).filter(m.Security.ticker == ticker).first()
             if s is not None:
                 try: # YFinance & Pandas throw a lot of exceptions for sketchy data and connection issues
-                    history = f.get_history(ticker, -1)
+                    history = f.get_history(ticker)
                     if history is not None:
                         history.reset_index(inplace=True)
                         for index, price in history.iterrows():
-                            p = m.Price()
-                            p.date = price['Date']
-                            p.open = price['Open']
-                            p.high = price['High']
-                            p.low = price['Low']
-                            p.close = price['Close']
-                            p.volume = price['Volume']
-                            s.pricing += [p]
+                            if price['Date']:
+                                p = m.Price()
+                                p.date = price['Date']
+                                p.open = price['Open']
+                                p.high = price['High']
+                                p.low = price['Low']
+                                p.close = price['Close']
+                                p.volume = price['Volume']
+                                s.pricing += [p]
 
                         logger.info(f'{__name__}: Added pricing to {ticker}')
                 except (ValueError, KeyError, IndexError) as e:
@@ -169,6 +177,9 @@ class Manager:
                 except HTTPError as e:
                     self.error = 'HTTP Error'
                     logger.error(f'{__name__}: HTTP Error {str(e)}')
+                except RuntimeError as e:
+                    self.error = 'Runtime Error'
+                    logger.error(f'{__name__}: Runtime Error, Yahoo Finance down? {str(e)}')
             else:
                 raise ValueError(f'Unknown ticker {ticker}')
 
@@ -176,7 +187,7 @@ class Manager:
         table = None
         symbols = []
 
-        if self.is_exchange(exchange):
+        if o.is_exchange(exchange):
             if type == 'google':
                 table = Google(d.GOOGLE_SHEETNAME_EXCHANGES)
             elif type == 'excel':
@@ -197,7 +208,7 @@ class Manager:
         table = None
         symbols = []
 
-        if self.is_index(index):
+        if o.is_index(index):
             if type == 'google':
                 table = Google(d.GOOGLE_SHEETNAME_INDEXES)
             elif type == 'excel':
@@ -254,14 +265,17 @@ class Manager:
             logger.info(f'{__name__}: File does not exist: {d.SQLITE_DATABASE_PATH}')
 
         if recreate:
-            m.Base.metadata.create_all(self.engine)
+            self.create_database()
+
+    def create_database(self):
+        m.Base.metadata.create_all(self.engine)
 
     def validate_list(self, list):
         symbols = []
         invalid = []
-        if self.is_exchange(list):
+        if o.is_exchange(list):
             symbols = self._get_exchange_symbols(list)
-        elif self.is_index(list):
+        elif o.is_index(list):
             symbols = self._get_index_symbols(list)
 
         if len(symbols) > 0:

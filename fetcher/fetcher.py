@@ -42,7 +42,7 @@ def get_company(ticker, force=False):
 
     return company
 
-def get_history(ticker, days):
+def get_history(ticker, days=-1):
     history = None
 
     company = get_company(ticker)

@@ -1,4 +1,5 @@
 SQLITE_DATABASE_PATH = 'data/securities.db'
+SQLITE_URI = f'sqlite:///{SQLITE_DATABASE_PATH}'
 
 VALID_SPREADSHEETS = ('google', 'excel')
 

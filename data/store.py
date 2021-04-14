@@ -11,7 +11,7 @@ from data import SQLITE_DATABASE_PATH
 
 
 def is_symbol_valid(symbol):
-    engine = create_engine(f'sqlite:///{SQLITE_DATABASE_PATH}', echo=False)
+    engine = create_engine(d.SQLITE_URI, echo=False)
     session = sessionmaker(bind=engine)
 
     with session() as session:

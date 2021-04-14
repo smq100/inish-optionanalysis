@@ -418,12 +418,11 @@ class Interface:
     def select_chain_expiry(self):
         expiry = self.chain.get_expiry()
 
-        print('\nSelect Expiration')
-        print('-------------------------')
-        for index, exp in enumerate(expiry):
-            print(f'{index+1})\t{exp}')
+        menu_items = {}
+        for i, exp in enumerate(expiry):
+            menu_items[f'{i+1}'] = f'{exp}'
 
-        select = u.input_integer('Select expiration date, or 0 to cancel: ', 0, index+1)
+        select = u.menu(menu_items, 'Select expiration date, or 0 to cancel: ', 0, i+1)
         if select > 0:
             self.chain.expire = expiry[select-1]
             expiry = dt.datetime.strptime(self.chain.expire, '%Y-%m-%d')
@@ -446,17 +445,14 @@ class Interface:
             options = self.chain.get_chain('put')
 
         if options is not None:
-            print('\nSelect option')
-            print('-------------------------')
-            for index, row in options.iterrows():
-                chain = f'{index+1})\t'\
+            menu_items = {}
+            for i, row in options.iterrows():
+                menu_items[f'{i+1}'] = \
                     f'${row["strike"]:7.2f} '\
                     f'${row["lastPrice"]:7.2f} '\
                     f'ITM: {bool(row["inTheMoney"])}'
-                print(chain)
 
-            select = u.input_integer('Select option, or 0 to cancel: ', 0, index + 1)
-
+            select = u.menu(menu_items, 'Select option, or 0 to cancel: ', 0, i+1)
             if select > 0:
                 sel_row = options.iloc[select-1]
                 contract = sel_row['contractSymbol']

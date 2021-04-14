@@ -73,15 +73,16 @@ class Interface:
     def reset(self):
         select = u.input_integer('Are you sure? 1 to reset or 0 to cancel: ', 0, 1)
         if select == 1:
-            self.manager.delete_database(recreate=True)
+            # self.manager.delete_database(recreate=True)
+            self.manager.create_database()
             self.manager.build_exchanges()
             self.manager.build_indexes()
-            u.print_message(f'Reset database "{d.SQLITE_DATABASE_PATH}"')
+            u.print_message(f'Reset database')
         else:
             u.print_message('Database not reset')
 
     def show_information(self):
-        u.print_message(f'Information for database "./{d.SQLITE_DATABASE_PATH}"')
+        u.print_message(f'Database Information')
         info = self.manager.get_database_info()
         for i in info:
             print(f'{i["table"].title():>9}:\t{i["count"]} records')
@@ -92,42 +93,39 @@ class Interface:
             print(f'{i["exchange"]:>9}:\t{i["count"]} symbols')
 
     def populate_exchange(self, progressbar=True):
-        print('\nSelect Exchange')
-        print('-------------------------')
+        menu_items = {}
         for i, exchange in enumerate(self.exchanges):
-            print(f'{i+1})\t{exchange}')
+            menu_items[f'{i+1}'] = f'{exchange}'
+        menu_items['0'] = 'Cancel'
 
-        select = u.input_integer('Select exchange, or 0 to cancel: ', 0, i+1)
+        select = u.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
         if select > 0:
             exc = self.exchanges[select-1]
-            info = self.manager.get_exchange_info(exc)
-            if True: #info[0]['count'] == 0:
-                task = threading.Thread(target=self.manager.populate_exchange, args=[exc])
-                task.start()
-                tic = time.perf_counter()
 
-                if progressbar:
-                    self._show_progress('Progress', 'Completed', 1)
+            task = threading.Thread(target=self.manager.populate_exchange, args=[exc])
+            task.start()
+            tic = time.perf_counter()
 
-                # Wait for thread to finish
-                while task.is_alive(): pass
+            if progressbar:
+                self._show_progress('Progress', 'Completed', 1)
 
-                toc = time.perf_counter()
-                totaltime = toc - tic
+            # Wait for thread to finish
+            while task.is_alive(): pass
 
-                if self.manager.error == 'None':
-                    u.print_message(f'{self.manager.items_total} {exc} '\
-                        f'Symbols populated in {totaltime:.2f} seconds with {len(self.manager.invalid_symbols)} invalid symbols')
-            else:
-                u.print_error('Exchange already populated')
+            toc = time.perf_counter()
+            totaltime = toc - tic
+
+            if self.manager.error == 'None':
+                u.print_message(f'{self.manager.items_total} {exc} '\
+                    f'Symbols populated in {totaltime:.2f} seconds with {len(self.manager.invalid_symbols)} invalid symbols')
 
     def populate_index(self, progressbar=True):
-        print('\nSelect Index')
-        print('-------------------------')
+        menu_items = {}
         for i, index in enumerate(self.indexes):
-            print(f'{i+1})\t{index}')
+            menu_items[f'{i+1}'] = f'{index}'
+        menu_items['0'] = 'Cancel'
 
-        select = u.input_integer('Select index, or 0 to cancel: ', 0, i+1)
+        select = u.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(d.INDEXES))
         if select > 0:
             task = threading.Thread(target=self.manager.populate_index, args=[self.indexes[select-1]])
             task.start()
