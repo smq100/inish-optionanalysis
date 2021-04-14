@@ -120,11 +120,11 @@ class Manager:
                 os.remove(d.SQLITE_DATABASE_PATH)
             else:
                 logger.info(f'{__name__}: File does not exist: {d.SQLITE_DATABASE_PATH}')
-
-            if recreate:
-                self.create_database()
         else:
             m.Base.metadata.drop_all(self.engine)
+
+        if recreate:
+            self.create_database()
 
     def validate_list(self, list):
         symbols = []
