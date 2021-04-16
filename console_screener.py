@@ -9,21 +9,22 @@ import data as d
 from data import store as o
 from utils import utils as u
 
-
-logger = u.get_logger(logging.DEBUG)
+logger = u.get_logger(logging.WARNING)
 
 BASEPATH = os.getcwd()+'/screener/screens/'
 SCREEN_SUFFIX = '.screen'
 
+
 class Interface:
     def __init__(self, table='', screen='', script=''):
-        self.table_name = table.upper()
-        self.screen_name = screen
+        self.table = table.upper()
+        self.screen = screen
         self.script = []
         self.results = []
         self.valids = 0
         self.screener = None
         self.time = 0.0
+        self.type = ''
 
         if script:
             if os.path.exists(script):
@@ -36,84 +37,105 @@ class Interface:
             else:
                 u.print_error(f'File "{script}" not found')
         else:
-            if self.table_name:
-                try:
-                    self.screener = Screener(self.table_name)
-                    self._open_table(True)
-                    if not self.screener.valid():
-                        self.table_name = ''
-                        self.screener = None
-                except ValueError as e:
-                    self.screener = None
-                    self.table_name = ''
-                    u.print_error(f'Table "{self.table_name}" not found')
+            if self.table:
+                if o.is_exchange(self.table):
+                    self.type = 'exchange'
+                elif o.is_index(self.table):
+                    self.type = 'index'
+                else:
+                    raise ValueError(f'Table not found: {table}')
 
-            if self.screen_name:
+                self.screener = Screener(self.table)
+
+            if self.screen:
                 if os.path.exists(BASEPATH+screen+SCREEN_SUFFIX):
-                    self.screen_name = BASEPATH + self.screen_name + SCREEN_SUFFIX
-                    if not self.screener.load_script(self.screen_name):
-                        self.screen_name = ''
+                    self.screen = BASEPATH + self.screen + SCREEN_SUFFIX
+                    if not self.screener.load_script(self.screen):
+                        self.screen = ''
                         u.print_error('Invalid screen script')
                 else:
-                    self.screen_name = ''
-                    u.print_error(f'File "{self.screen_name}" not found')
+                    self.screen = ''
+                    u.print_error(f'File "{self.screen}" not found')
 
             self.main_menu()
 
-
     def main_menu(self):
-        if self.screener is None:
-            self.screener = Screener()
-
         while True:
             menu_items = {
-                '1': 'Select Table',
-                '2': 'Select Script',
-                '3': 'Run Script',
-                '4': 'Show Results',
+                '1': 'Select Exchange',
+                '2': 'Select Index',
+                '3': 'Select Script',
+                '4': 'Run Script',
+                '5': 'Show Results',
                 '0': 'Exit'
             }
 
-            if self.table_name:
-                menu_items['1'] = f'Select Table ({self.table_name}, {len(self.screener.symbols)} Symbols)'
+            if self.table:
+                if self.type == 'exchange':
+                    menu_items['1'] = f'Select Exchange ({self.table}, {len(self.screener.symbols)} Symbols)'
+                else:
+                    menu_items['2'] = f'Select Index ({self.table}, {len(self.screener.symbols)} Symbols)'
 
-            if self.screen_name:
-                filename = os.path.basename(self.screen_name)
+            if self.screen:
+                filename = os.path.basename(self.screen)
                 head, sep, tail = filename.partition('.')
-                menu_items['2'] = f'Select Script ({head})'
+                menu_items['3'] = f'Select Script ({head})'
 
             if len(self.results) > 0:
-                menu_items['4'] = f'Show Results ({self.valids})'
+                menu_items['5'] = f'Show Results ({self.valids})'
 
-            selection = u.menu(menu_items, 'Select Operation', 0, 4)
+            selection = u.menu(menu_items, 'Select Operation', 0, 5)
 
             if selection == 1:
-                self.select_table()
-            elif selection == 2:
-                self.select_script()
+                self.select_exchange()
+            if selection == 2:
+                self.select_index()
             elif selection == 3:
-                self.run_script(True)
+                self.select_script()
             elif selection == 4:
+                self.run_script(True)
+            elif selection == 5:
                 self.print_results()
             elif selection == 0:
                 break
 
-    def select_table(self):
+    def select_exchange(self):
+        menu_items = {}
+        for exchange, item in enumerate(d.EXCHANGES):
+            menu_items[f'{exchange+1}'] = f'{item["abbreviation"]}'
+        menu_items['0'] = 'Cancel'
+
+        selection = u.menu(menu_items, 'Select Exchange', 0, len(d.EXCHANGES))
+        if selection > 0:
+            exc = d.EXCHANGES[selection-1]['abbreviation']
+            if len(o.get_exchange(exc)) > 0:
+                self.screener = Screener(exc, script=self.screen)
+                if self.screener.valid():
+                    self.screener.open()
+                    self.table = exc
+                    self.type = 'exchange'
+            else:
+                self.table = ''
+                self.screener = None
+                u.print_error(f'Exchange {exc} has no symbols')
+
+    def select_index(self):
         menu_items = {}
         for index, item in enumerate(d.INDEXES):
             menu_items[f'{index+1}'] = f'{item["abbreviation"]}'
         menu_items['0'] = 'Cancel'
 
-        selection = u.menu(menu_items, 'Select Table', 0, len(d.INDEXES))
+        selection = u.menu(menu_items, 'Select Index', 0, len(d.INDEXES))
         if selection > 0:
             index = d.INDEXES[selection-1]['abbreviation']
             if len(o.get_index(index)) > 0:
-                self.screener = Screener(index, script_name=self.screen_name)
+                self.screener = Screener(index, script=self.screen)
                 if self.screener.valid():
                     self.screener.open()
-                    self.table_name = index
+                    self.table = index
+                    self.type = 'index'
             else:
-                self.table_name = ''
+                self.table = ''
                 self.screener = None
                 u.print_error(f'Index {index} has no symbols')
 
@@ -141,21 +163,21 @@ class Interface:
 
             selection = u.menu(menu_items, 'Select Screen', 0, index+1)
             if selection > 0:
-                self.screen_name = self.script[selection-1]
+                self.screen = self.script[selection-1]
                 self.results = []
 
-                if not self.screener.load_script(self.screen_name):
+                if not self.screener.load_script(self.screen):
                     u.print_error('Error in script file')
 
         else:
             u.print_message('No script files found')
 
     def run_script(self, progressbar):
-        if not self.table_name:
+        if not self.table:
             u.print_error('No table specified')
-        elif not self.screen_name:
+        elif not self.screen:
             u.print_error('No script specified')
-        elif self.screener.load_script(self.screen_name):
+        elif self.screener.load_script(self.screen):
             self.results = []
             self.valids = 0
             task = threading.Thread(target=self.screener.run_script)
@@ -186,9 +208,9 @@ class Interface:
             u.print_error('Script error')
 
     def print_results(self, all=False):
-        if not self.table_name:
+        if not self.table:
             u.print_error('No table specified')
-        elif not self.screen_name:
+        elif not self.screen:
             u.print_error('No script specified')
         elif len(self.results) == 0:
             u.print_message('No symbols were located')
@@ -248,8 +270,7 @@ if __name__ == '__main__':
         table = ''
         if 'table' in command.keys():
             table = command['table']
-
         if 'screen' in command.keys():
             Interface(table, command['screen'])
         else:
-            Interface(table)
+            Interface()

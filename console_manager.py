@@ -7,7 +7,7 @@ import data as d
 from data import manager as m
 from utils import utils as u
 
-logger = u.get_logger(logging.WARNING)
+logger = u.get_logger(logging.ERROR)
 
 
 class Interface:

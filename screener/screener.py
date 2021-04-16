@@ -10,17 +10,25 @@ logger = u.get_logger()
 
 
 class Screener:
-    def __init__(self, table_name='', script_name='', days=365):
-        table_name = table_name.upper()
-        if table_name:
-            if not o.is_index(table_name):
-                raise ValueError(f'Table not found: {table_name}')
+    def __init__(self, table, script='', days=365):
+        table = table.upper()
+        self.type = ''
+
+        if table:
+            if o.is_exchange(table):
+                self.type = 'exchange'
+            elif o.is_index(table):
+                self.type = 'index'
+            else:
+                raise ValueError(f'Table not found: {table}')
+        else:
+            raise ValueError(f'Must specify a table name')
 
         if days < 30:
             raise ValueError('Invalid number of days')
 
         self.days = days
-        self.table_name = table_name
+        self.table = table
         self.script = []
         self.symbols = []
         self.items_total = 0
@@ -30,12 +38,14 @@ class Screener:
         self.active_symbol = ''
         self.matches = 0
 
-        if script_name:
-            if not self.load_script(script_name):
-                raise ValueError(f'Script not found: {script_name}')
+        if script:
+            if not self.load_script(script):
+                raise ValueError(f'Script not found: {script}')
+        else:
+            self.open()
 
     def __str__(self):
-        return self.table_name
+        return self.table
 
     class Result:
         def __init__(self, symbol, result):
@@ -53,8 +63,16 @@ class Screener:
         self.items_completed = 0
         self.error = ''
         self.active_symbol = ''
-        if o.is_index(self.table_name):
-            symbols = o.get_index(self.table_name)
+        symbols = []
+
+        if self.type == 'exchange':
+            symbols = o.get_exchange(self.table)
+        elif self.type == 'index':
+            symbols = o.get_index(self.table)
+        else:
+            self.error = 'Invalid table name'
+
+        if len(symbols) > 0:
             self.items_total = len(symbols)
             self.error = 'None'
             for s in symbols:
@@ -68,7 +86,8 @@ class Screener:
             self.items_total = len(self.symbols)
             logger.debug(f'{__name__}: Opened {self.items_total} symbols')
         else:
-            self.error = 'Invalid table name'
+            logger.debug(f'{__name__}: No symbols available')
+            self.error = 'No symbols'
 
         return self.items_total > 0
 
@@ -78,7 +97,6 @@ class Screener:
             try:
                 with open(script) as f:
                     self.script = json.load(f)
-                    valid = True
             except:
                 self.script = None
                 logger.error(f'{__name__}: File format error')
@@ -115,6 +133,9 @@ class Screener:
                     except SyntaxError as e:
                         self.error = str(e)
                         break
+                    except RuntimeError as e:
+                        self.error = str(e)
+                        break
 
                 if self.error == 'None':
                     self.items_completed += 1
@@ -129,7 +150,7 @@ class Screener:
         return self.results
 
     def valid(self):
-        return bool(self.table_name)
+        return bool(self.table)
 
 
     # Minervini:

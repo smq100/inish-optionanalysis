@@ -56,6 +56,22 @@ def get_history(ticker, days):
 
     return results
 
+def get_exchange(exchange):
+    results = []
+    engine = create_engine(d.ACTIVE_URI, echo=False)
+    session = sessionmaker(bind=engine)
+
+    with session() as session:
+        exc = session.query(o.Exchange).filter(o.Exchange.abbreviation==exchange.upper()).first()
+        if exc is not None:
+            t = session.query(o.Security).filter(o.Security.exchange_id==exc.id).all()
+            for symbol in t:
+                results += [symbol.ticker]
+        else:
+            raise ValueError(f'Invalid exchange: {exchange}')
+
+    return results
+
 def get_index(index):
     results = []
     engine = create_engine(d.ACTIVE_URI, echo=False)
