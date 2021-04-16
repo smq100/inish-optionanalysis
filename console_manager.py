@@ -15,6 +15,7 @@ class Interface:
         self.list = list.upper()
         self.exchanges = []
         self.indexes = []
+        self.task = None
 
         self.manager = m.Manager()
         for e in d.EXCHANGES:
@@ -50,12 +51,13 @@ class Interface:
             '2': 'Database information',
             '3': 'Populate Exchanges',
             '4': 'Populate Indexes',
-            '5': 'List invalid symbols',
+            '5': 'Delete Symbols in Exchange',
+            '6': 'List invalid symbols',
             '0': 'Exit'
         }
 
         while True:
-            selection = u.menu(menu_items, 'Select Operation', 0, 5)
+            selection = u.menu(menu_items, 'Select Operation', 0, 6)
 
             if selection == 1:
                 self.reset()
@@ -66,6 +68,8 @@ class Interface:
             elif selection == 4:
                 self.populate_index()
             elif selection == 5:
+                self.delete_exchange()
+            elif selection == 6:
                 self.list_invalid()
             elif selection == 0:
                 break
@@ -101,15 +105,15 @@ class Interface:
         if select > 0:
             exc = self.exchanges[select-1]
 
-            task = threading.Thread(target=self.manager.populate_exchange, args=[exc])
-            task.start()
+            self.task = threading.Thread(target=self.manager.populate_exchange, args=[exc])
+            self.task.start()
             tic = time.perf_counter()
 
             if progressbar:
                 self._show_progress('Progress', 'Completed', 1)
 
             # Wait for thread to finish
-            while task.is_alive(): pass
+            while self.task.is_alive(): pass
 
             toc = time.perf_counter()
             totaltime = toc - tic
@@ -126,21 +130,32 @@ class Interface:
 
         select = u.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(d.INDEXES))
         if select > 0:
-            task = threading.Thread(target=self.manager.populate_index, args=[self.indexes[select-1]])
-            task.start()
+            self.task = threading.Thread(target=self.manager.populate_index, args=[self.indexes[select-1]])
+            self.task.start()
             tic = time.perf_counter()
 
             if progressbar:
                 self._show_progress('Progress', 'Completed', 1)
 
             # Wait for thread to finish
-            while task.is_alive(): pass
+            while self.task.is_alive(): pass
 
             toc = time.perf_counter()
             totaltime = toc - tic
 
             if self.manager.error == 'None':
                 u.print_message(f'{self.manager.items_total} {index} Symbols populated in {totaltime:.2f} seconds')
+
+    def delete_exchange(self):
+        menu_items = {}
+        for i, exchange in enumerate(self.exchanges):
+            menu_items[f'{i+1}'] = f'{exchange}'
+        menu_items['0'] = 'Cancel'
+
+        select = u.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
+        if select > 0:
+            exc = self.exchanges[select-1]
+            self.manager.delete_exchange(exc)
 
     def list_invalid(self):
         u.print_message(f'Invalid: {self.manager.invalid_symbols}')
@@ -153,7 +168,7 @@ class Interface:
             completed = self.manager.items_completed
 
             u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50)
-            while completed < total and self.manager.error == 'None':
+            while completed < total and self.task.is_alive and self.manager.error == 'None':
                 time.sleep(0.25)
                 completed = self.manager.items_completed
                 u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50)
