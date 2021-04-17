@@ -7,7 +7,7 @@ import data as d
 from data import manager as m
 from utils import utils as u
 
-logger = u.get_logger(logging.ERROR)
+logger = u.get_logger(logging.DEBUG)
 
 
 class Interface:
@@ -94,6 +94,11 @@ class Interface:
         info = self.manager.get_exchange_info()
         for i in info:
             print(f'{i["exchange"]:>9}:\t{i["count"]} symbols')
+
+        u.print_message('Index Information')
+        info = self.manager.get_index_info()
+        for i in info:
+            print(f'{i["index"]:>9}:\t{i["count"]} symbols')
 
     def populate_exchange(self, progressbar=True):
         menu_items = {}

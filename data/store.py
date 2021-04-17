@@ -47,12 +47,14 @@ def get_history(ticker, days):
             if days < 0:
                 p = session.query(o.Price).filter(o.Price.security_id==t.id)
                 results = pd.read_sql(p.statement, engine)
-                logger.debug(f'{__name__}: Fetched entire price history for {ticker}')
+                logger.info(f'{__name__}: Fetched entire price history for {ticker}')
             elif days > 1:
                 start = dt.datetime.today() - dt.timedelta(days=days)
                 p = session.query(o.Price).filter(and_(o.Price.security_id==t.id, o.Price.date >= start))
                 results = pd.read_sql(p.statement, engine)
-                logger.debug(f'{__name__}: Fetched {days} days of price history for {ticker}')
+                logger.info(f'{__name__}: Fetched {days} days of price history for {ticker}')
+        else:
+            logger.warning(f'{__name__}: No history found for {ticker}')
 
     return results
 

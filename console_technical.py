@@ -27,7 +27,7 @@ class Interface:
             else:
                 u.print_error(f'File "{script}" not found')
         elif o.is_symbol_valid(ticker.upper()):
-            self.technical = Technical(ticker.upper(), 365)
+            self.technical = Technical(ticker.upper(), None, 365)
             self.main_menu()
         else:
             self.main_menu()

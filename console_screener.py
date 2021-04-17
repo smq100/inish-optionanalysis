@@ -199,7 +199,7 @@ class Interface:
                     if result:
                         self.valids += 1
 
-                u.print_message(f'{self.valids} Symbols Identified in {self.time:.2f} seconds', False)
+                u.print_message(f'{self.valids} Symbols Identified in {self.time:.2f} seconds')
             else:
                 self.results = []
                 self.valids = 0

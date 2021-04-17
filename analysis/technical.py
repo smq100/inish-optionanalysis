@@ -12,11 +12,16 @@ logger = u.get_logger()
 
 
 class Technical:
-    def __init__(self, ticker, days):
+    def __init__(self, ticker, history, days):
         if o.is_symbol_valid(ticker):
             self.ticker = ticker.upper()
             self.days = days
-            self.history = o.get_history(self.ticker, self.days)
+
+            if history is None or history.empty:
+                self.history = o.get_history(self.ticker, self.days)
+            else:
+                self.history = history
+
         else:
             raise ValueError('Invalid symbol')
 
