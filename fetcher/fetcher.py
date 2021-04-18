@@ -47,7 +47,7 @@ def get_history(ticker, days=-1):
 
     company = get_company(ticker)
     if company is not None:
-        if days < 0:
+        if days < 1:
             days = 7300 # 20 years
 
         start = dt.datetime.today() - dt.timedelta(days=days)

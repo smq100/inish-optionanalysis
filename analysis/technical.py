@@ -12,13 +12,13 @@ logger = u.get_logger()
 
 
 class Technical:
-    def __init__(self, ticker, history, days):
+    def __init__(self, ticker, history, days, live=False):
         if o.is_symbol_valid(ticker):
             self.ticker = ticker.upper()
             self.days = days
 
             if history is None or history.empty:
-                self.history = o.get_history(self.ticker, self.days)
+                self.history = o.get_history(self.ticker, self.days, live=live)
             else:
                 self.history = history
 

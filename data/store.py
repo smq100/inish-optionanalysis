@@ -4,9 +4,12 @@ from sqlalchemy import create_engine, and_, or_
 from sqlalchemy.orm import sessionmaker
 import pandas as pd
 
+from fetcher.google import Google
+from fetcher.excel import Excel
 from utils import utils as u
 import data as d
 from data import models as o
+from fetcher import fetcher as f
 
 logger = u.get_logger()
 
@@ -36,25 +39,28 @@ def is_index(index):
             break
     return ret
 
-def get_history(ticker, days):
+def get_history(ticker, days, live=False):
     results = pd.DataFrame
     engine = create_engine(d.ACTIVE_URI, echo=False)
     session = sessionmaker(bind=engine)
 
-    with session() as session:
-        t = session.query(o.Security).filter(o.Security.ticker==ticker.upper()).first()
-        if t is not None:
-            if days < 0:
-                p = session.query(o.Price).filter(o.Price.security_id==t.id)
-                results = pd.read_sql(p.statement, engine)
-                logger.info(f'{__name__}: Fetched entire price history for {ticker}')
-            elif days > 1:
-                start = dt.datetime.today() - dt.timedelta(days=days)
-                p = session.query(o.Price).filter(and_(o.Price.security_id==t.id, o.Price.date >= start))
-                results = pd.read_sql(p.statement, engine)
-                logger.info(f'{__name__}: Fetched {days} days of price history for {ticker}')
-        else:
-            logger.warning(f'{__name__}: No history found for {ticker}')
+    if live:
+        results = f.get_history(ticker, days)
+    else:
+        with session() as session:
+            t = session.query(o.Security).filter(o.Security.ticker==ticker.upper()).first()
+            if t is not None:
+                if days < 0:
+                    p = session.query(o.Price).filter(o.Price.security_id==t.id)
+                    results = pd.read_sql(p.statement, engine)
+                    logger.info(f'{__name__}: Fetched entire price history for {ticker}')
+                elif days > 1:
+                    start = dt.datetime.today() - dt.timedelta(days=days)
+                    p = session.query(o.Price).filter(and_(o.Price.security_id==t.id, o.Price.date >= start))
+                    results = pd.read_sql(p.statement, engine)
+                    logger.info(f'{__name__}: Fetched {days} days of price history for {ticker}')
+            else:
+                logger.warning(f'{__name__}: No history found for {ticker}')
 
     return results
 
@@ -89,6 +95,48 @@ def get_index(index):
             raise ValueError(f'Invalid index: {index}')
 
     return results
+
+def get_exchange_symbols_master(exchange, type='google'):
+    table = None
+    symbols = []
+
+    if is_exchange(exchange):
+        if type == 'google':
+            table = Google(d.GOOGLE_SHEETNAME_EXCHANGES)
+        elif type == 'excel':
+            table = Excel(d.EXCEL_SHEETNAME_EXCHANGES)
+        else:
+            raise ValueError(f'Invalid table type: {type}')
+
+        if table.open(exchange):
+            symbols = table.get_column(1)
+        else:
+            logger.warning(f'{__name__}: Unable to open index spreadsheet {exchange}')
+    else:
+        raise ValueError(f'Invalid exchange name: {exchange}')
+
+    return symbols
+
+def get_index_symbols_master(index, type='google'):
+    table = None
+    symbols = []
+
+    if is_index(index):
+        if type == 'google':
+            table = Google(d.GOOGLE_SHEETNAME_INDEXES)
+        elif type == 'excel':
+            table = Excel(d.EXCEL_SHEETNAME_INDEXES)
+        else:
+            raise ValueError(f'Invalid spreadsheet type: {type}')
+
+        if table.open(index):
+            symbols = table.get_column(1)
+        else:
+            logger.warning(f'{__name__}: Unable to open exchange spreadsheet {index}')
+    else:
+        raise ValueError(f'Invalid index name: {index}')
+
+    return symbols
 
 
 if __name__ == '__main__':

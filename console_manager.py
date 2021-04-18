@@ -7,7 +7,7 @@ import data as d
 from data import manager as m
 from utils import utils as u
 
-logger = u.get_logger(logging.DEBUG)
+logger = u.get_logger(logging.WARNING)
 
 
 class Interface:
@@ -48,11 +48,11 @@ class Interface:
 
         menu_items = {
             '1': 'Reset Database',
-            '2': 'Database information',
-            '3': 'Populate Exchanges',
-            '4': 'Populate Indexes',
-            '5': 'Delete Symbols in Exchange',
-            '6': 'List invalid symbols',
+            '2': 'Database Information',
+            '3': 'Populate Exchange',
+            '4': 'Refresh Exchange',
+            '5': 'Populate Index',
+            '6': 'Reset Exchange',
             '0': 'Exit'
         }
 
@@ -66,11 +66,11 @@ class Interface:
             elif selection == 3:
                 self.populate_exchange()
             elif selection == 4:
-                self.populate_index()
+                self.refresh_exchange()
             elif selection == 5:
-                self.delete_exchange()
+                self.populate_index()
             elif selection == 6:
-                self.list_invalid()
+                self.reset_exchange()
             elif selection == 0:
                 break
 
@@ -93,7 +93,7 @@ class Interface:
         u.print_message('Exchange Information')
         info = self.manager.get_exchange_info()
         for i in info:
-            print(f'{i["exchange"]:>9}:\t{i["count"]} symbols')
+            print(f'{i["exchange"]:>9}:\t{i["count"]} symbols ({i["missing"]} missing)')
 
         u.print_message('Index Information')
         info = self.manager.get_index_info()
@@ -127,6 +127,33 @@ class Interface:
                 u.print_message(f'{self.manager.items_total} {exc} '\
                     f'Symbols populated in {totaltime:.2f} seconds with {len(self.manager.invalid_symbols)} invalid symbols')
 
+    def refresh_exchange(self, progressbar=True):
+        menu_items = {}
+        for i, exchange in enumerate(self.exchanges):
+            menu_items[f'{i+1}'] = f'{exchange}'
+        menu_items['0'] = 'Cancel'
+
+        select = u.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
+        if select > 0:
+            exc = self.exchanges[select-1]
+
+            self.task = threading.Thread(target=self.manager.refresh_exchange, args=[exc])
+            self.task.start()
+            tic = time.perf_counter()
+
+            if progressbar:
+                self._show_progress('Progress', 'Completed', 1)
+
+            # Wait for thread to finish
+            while self.task.is_alive(): pass
+
+            toc = time.perf_counter()
+            totaltime = toc - tic
+
+            if self.manager.error == 'None':
+                u.print_message(f'{self.manager.items_total} {exc} '\
+                    f'Symbols refreshed in {totaltime:.2f} seconds with {len(self.manager.invalid_symbols)} invalid symbols')
+
     def populate_index(self, progressbar=True):
         menu_items = {}
         for i, index in enumerate(self.indexes):
@@ -151,7 +178,7 @@ class Interface:
             if self.manager.error == 'None':
                 u.print_message(f'{self.manager.items_total} {index} Symbols populated in {totaltime:.2f} seconds')
 
-    def delete_exchange(self):
+    def reset_exchange(self):
         menu_items = {}
         for i, exchange in enumerate(self.exchanges):
             menu_items[f'{i+1}'] = f'{exchange}'
@@ -184,7 +211,7 @@ if __name__ == '__main__':
     import argparse
 
     # Create the top-level parser
-    parser = argparse.ArgumentParser(description='Scoring')
+    parser = argparse.ArgumentParser(description='Data Management')
     subparser = parser.add_subparsers(help='Specify the desired command')
 
     # Create the parser for the "load" command

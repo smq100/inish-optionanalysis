@@ -6,9 +6,10 @@ from utils import utils as u
 logger = u.get_logger()
 
 class Company:
-    def __init__(self, ticker, days=0, lazy=True):
+    def __init__(self, ticker, days, lazy=True, live=False):
         self.ticker = ticker.upper()
         self.days = days
+        self.live = live
         self.company = None
         self.history = None
         self.ta = None
@@ -30,35 +31,40 @@ class Company:
         if self.history is None:
             self._load_history()
 
-        return self.history['close'][-1]
+        price = 'close' if not self.live else 'Close'
+        return self.history[price][-1]
 
     def get_high(self):
         if self.history is None:
             self._load_history()
 
-        return self.history['high']
+        price = 'high' if not self.live else 'High'
+        return self.history[price]
 
     def get_low(self):
         if self.history is None:
             self._load_history()
 
-        return self.history['low']
+        price = 'low' if not self.live else 'Low'
+        return self.history[price]
 
     def get_close(self):
         if self.history is None:
             self._load_history()
 
-        return self.history['close']
+        price = 'close' if not self.live else 'Close'
+        return self.history[price]
 
     def get_volume(self):
         if self.history is None:
             self._load_history()
 
-        return self.history['volume']
+        price = 'volume' if not self.live else 'Volume'
+        return self.history[price]
 
     def _load_history(self):
-        self.history = o.get_history(self.ticker, self.days)
-        self.ta = Technical(self.ticker, self.history, self.days)
+        self.history = o.get_history(self.ticker, self.days, live=self.live)
+        self.ta = Technical(self.ticker, self.history, self.days, live=self.live)
 
 
 if __name__ == '__main__':
