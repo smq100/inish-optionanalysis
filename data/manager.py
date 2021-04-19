@@ -71,16 +71,19 @@ class Manager:
         self.error = ''
         self.invalid_symbols = []
         self.retry = 0
+        self.items_completed = 0
+        self.error = 'None'
 
         with self.session() as session:
-            exc = session.query(m.Exchange).filter(m.Exchange.abbreviation==exchange).one()
-            abrev = exc.abbreviation
+            # Throws exception if does not exist
+            session.query(m.Exchange).filter(m.Exchange.abbreviation==exchange).one()
 
-        symbols = o.get_exchange_symbols_master(abrev)
-        if len(symbols) > 0:
-            self._refresh_securities_in_exchange(symbols, abrev)
-        else:
-            logger.warning(f'{__name__}: No symbols for {exchange}')
+        missing = self.identify_missing_securities(exchange)
+        self.items_total = len(missing)
+        logger.info(f'{__name__}: {self.items_total} missing symbols in {exchange}')
+
+        if self.items_total > 0:
+            self._add_securities_to_exchange(missing, exchange)
 
     def identify_missing_securities(self, exchange):
         missing = []
@@ -88,8 +91,8 @@ class Manager:
             exc = session.query(m.Exchange).filter(m.Exchange.abbreviation==exchange).one()
             tickers = o.get_exchange_symbols_master(exc.abbreviation)
             for sec in tickers:
-                s = session.query(m.Security).filter(and_(m.Security.ticker==sec, m.Security.exchange_id==exc.id)).all()
-                if len(s) == 0:
+                s = session.query(m.Security).filter(m.Security.ticker==sec)
+                if s.count() == 0:
                     missing += [sec]
 
         return missing
@@ -188,19 +191,21 @@ class Manager:
         return invalid
 
     def _add_securities_to_exchange(self, tickers, exchange):
-        self.items_total = 0
+        self.items_total = len(tickers)
         self.items_completed = 0
 
         with self.session() as session:
             exc = session.query(m.Exchange).filter(m.Exchange.abbreviation==exchange).one()
             self.items_total = len(tickers)
             self.error = 'None'
+
             for sec in tickers:
-                exists = session.query(m.Security).filter(m.Security.ticker==sec.upper()).first()
-                if exists is None:
-                    s = m.Security(sec)
-                    exc.securities += [s]
+                s = session.query(m.Security).filter(m.Security.ticker==sec).all()
+                if len(s) == 0:
+                    exc.securities += [m.Security(sec)]
                     session.commit()
+
+                    logger.info(f'{__name__}: Added {sec} to exchange {exchange}')
 
                     try:
                         self._add_company_to_security(sec)
@@ -222,49 +227,6 @@ class Manager:
                         logger.error(f'{__name__}: Runtime Error, {str(e)}')
                     else:
                         self.retry = 0
-
-                    logger.info(f'{__name__}: Added {sec} to exchange {exchange}')
-                else:
-                    logger.info(f'{__name__}: {sec} already exists')
-
-                self.items_completed += 1
-
-                if self.error != 'None':
-                    logger.warning(f'{__name__}: Cancelling operation')
-                    break
-
-    def _refresh_securities_in_exchange(self, tickers, exchange):
-        self.items_total = 0
-        self.items_completed = 0
-
-        with self.session() as session:
-            exc = session.query(m.Exchange).filter(m.Exchange.abbreviation==exchange).one()
-            self.items_total = len(tickers)
-            self.error = 'None'
-            for sec in tickers:
-                exists = session.query(m.Security).filter(m.Security.ticker==sec.upper()).first()
-                if exists is None:
-                    try:
-                        pass
-                    except (ValueError, KeyError, IndexError) as e:
-                        self.invalid_symbols += [sec]
-                        logger.warning(f'{__name__}: Company info invalid: {sec}, {str(e)}')
-                    except HTTPError as e:
-                        self.invalid_symbols += [sec]
-                        self.retry += 1
-                        logger.warning(f'{__name__}: HTTP Error. Retrying... {self.retry}, {str(e)}')
-                        if self.retry > 10:
-                            self.error = 'HTTP Error'
-                            logger.error(f'{__name__}: HTTP Error. Too many retries. {str(e)}')
-                        else:
-                            time.sleep(5.0)
-                    except RuntimeError as e:
-                        self.error = 'Runtime Error'
-                        logger.error(f'{__name__}: Runtime Error, {str(e)}')
-                    else:
-                        self.retry = 0
-
-                    logger.info(f'{__name__}: Added {sec} to exchange {exchange}')
                 else:
                     logger.info(f'{__name__}: {sec} already exists')
 

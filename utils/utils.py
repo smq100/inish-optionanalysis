@@ -172,13 +172,15 @@ def progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100,
         fill        - Optional  : bar fill character (Str)
         end         - Optional  : end character (e.g. "\r", "\r\n") (Str)
     """
-    filled = int(length * iteration // total)
-    bar = fill * filled + '-' * (length - filled)
-    if percent:
-        percent = ('{0:.' + str(decimals) + 'f}').format(100 * (iteration / float(total)))
-        print(f'\r{prefix} |{bar}| {percent}% {suffix}', end=end)
-    else:
-        print(f'\r{prefix} |{bar}| {iteration}/{total} {suffix}', end=end)
+    if total > 0:
+        filled = int(length * iteration // total)
 
-    if iteration == total:
-        print()
+        bar = fill * filled + '-' * (length - filled)
+        if percent:
+            percent = ('{0:.' + str(decimals) + 'f}').format(100 * (iteration / float(total)))
+            print(f'\r{prefix} |{bar}| {percent}% {suffix}', end=end)
+        else:
+            print(f'\r{prefix} |{bar}| {iteration}/{total} {suffix}', end=end)
+
+        if iteration == total:
+            print()
