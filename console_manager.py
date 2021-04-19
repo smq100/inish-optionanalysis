@@ -4,6 +4,7 @@ import time
 import threading
 
 import data as d
+from data import store as o
 from data import manager as m
 from utils import utils as u
 
@@ -51,26 +52,29 @@ class Interface:
             '2': 'Database Information',
             '3': 'Populate Exchange',
             '4': 'Refresh Exchange',
-            '5': 'Populate Index',
-            '6': 'Reset Exchange',
+            '5': 'Delete Exchange',
+            '6': 'Populate Index',
+            '7': 'Delete Index',
             '0': 'Exit'
         }
 
         while True:
-            selection = u.menu(menu_items, 'Select Operation', 0, 6)
+            selection = u.menu(menu_items, 'Select Operation', 0, 7)
 
             if selection == 1:
                 self.reset()
             elif selection == 2:
-                self.show_information()
+                self.show_information(brief=False)
             elif selection == 3:
                 self.populate_exchange()
             elif selection == 4:
                 self.refresh_exchange()
             elif selection == 5:
+                self.delete_exchange()
+            elif selection == 6:
                 self.populate_index()
             elif selection == 6:
-                self.reset_exchange()
+                self.delete_index()
             elif selection == 0:
                 break
 
@@ -84,7 +88,7 @@ class Interface:
         else:
             u.print_message('Database not reset')
 
-    def show_information(self):
+    def show_information(self, brief=True):
         u.print_message(f'Database Information')
         info = self.manager.get_database_info()
         for i in info:
@@ -93,12 +97,28 @@ class Interface:
         u.print_message('Exchange Information')
         info = self.manager.get_exchange_info()
         for i in info:
-            print(f'{i["exchange"]:>9}:\t{i["count"]} symbols ({i["missing"]} missing)')
+            print(f'{i["exchange"]:>9}:\t{i["count"]} symbols')
 
         u.print_message('Index Information')
         info = self.manager.get_index_info()
         for i in info:
             print(f'{i["index"]:>9}:\t{i["count"]} symbols')
+
+        if not brief:
+            u.print_message('Missing Symbols')
+            exchanges = o.get_exchanges()
+            for e in exchanges:
+                count = len(self.manager.identify_missing_securities(e))
+                print(f'{e:>9}:\t{count} symbols')
+
+            u.print_message('Common Symbols')
+            nasdaq_nyse, nasdaq_amex, nyse_amex = self.manager.identify_common_securities()
+            count = len(nasdaq_nyse)
+            print(f'NASDAQ-NYSE:\t{count} symbols')
+            count = len(nasdaq_amex)
+            print(f'NASDAQ-AMEX:\t{count} symbols')
+            count = len(nyse_amex)
+            print(f'NYSE-AMEX:\t{count} symbols')
 
     def populate_exchange(self, progressbar=True):
         menu_items = {}
@@ -154,6 +174,17 @@ class Interface:
                 u.print_message(f'{self.manager.items_total} {exc} '\
                     f'Symbols refreshed in {totaltime:.2f} seconds with {len(self.manager.invalid_symbols)} invalid symbols')
 
+    def delete_exchange(self):
+        menu_items = {}
+        for i, exchange in enumerate(self.exchanges):
+            menu_items[f'{i+1}'] = f'{exchange}'
+        menu_items['0'] = 'Cancel'
+
+        select = u.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
+        if select > 0:
+            exc = self.exchanges[select-1]
+            self.manager.delete_exchange(exc)
+
     def populate_index(self, progressbar=True):
         menu_items = {}
         for i, index in enumerate(self.indexes):
@@ -178,16 +209,16 @@ class Interface:
             if self.manager.error == 'None':
                 u.print_message(f'{self.manager.items_total} {index} Symbols populated in {totaltime:.2f} seconds')
 
-    def reset_exchange(self):
+    def delete_index(self):
         menu_items = {}
-        for i, exchange in enumerate(self.exchanges):
-            menu_items[f'{i+1}'] = f'{exchange}'
+        for i, index in enumerate(self.indexes):
+            menu_items[f'{i+1}'] = f'{index}'
         menu_items['0'] = 'Cancel'
 
-        select = u.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
+        select = u.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(d.INDEXES))
         if select > 0:
-            exc = self.exchanges[select-1]
-            self.manager.delete_exchange(exc)
+            ind = self.indexes[select-1]
+            self.manager.delete_index(ind)
 
     def list_invalid(self):
         u.print_message(f'Invalid: {self.manager.invalid_symbols}')

@@ -12,7 +12,17 @@ from data import models as o
 from fetcher import fetcher as f
 
 logger = u.get_logger()
+_master_symbols = {
+    d.EXCHANGES[0]['abbreviation']: set(),
+    d.EXCHANGES[1]['abbreviation']: set(),
+    d.EXCHANGES[2]['abbreviation']: set()
+    }
 
+_master_indexes = {
+    d.INDEXES[0]['abbreviation']: set(),
+    d.INDEXES[1]['abbreviation']: set(),
+    d.INDEXES[2]['abbreviation']: set()
+    }
 
 def is_symbol_valid(symbol):
     engine = create_engine(d.SQLITE_URI, echo=False)
@@ -64,6 +74,18 @@ def get_history(ticker, days, live=False):
 
     return results
 
+def get_exchanges():
+    results = []
+    engine = create_engine(d.ACTIVE_URI, echo=False)
+    session = sessionmaker(bind=engine)
+
+    with session() as session:
+        exc = session.query(o.Exchange).all()
+        for e in exc:
+            results += [e.abbreviation]
+
+    return results
+
 def get_exchange(exchange):
     results = []
     engine = create_engine(d.ACTIVE_URI, echo=False)
@@ -77,6 +99,18 @@ def get_exchange(exchange):
                 results += [symbol.ticker]
         else:
             raise ValueError(f'Invalid exchange: {exchange}')
+
+    return results
+
+def get_indexes():
+    results = []
+    engine = create_engine(d.ACTIVE_URI, echo=False)
+    session = sessionmaker(bind=engine)
+
+    with session() as session:
+        ind = session.query(o.Index).all()
+        for i in ind:
+            results += [i.abbreviation]
 
     return results
 
@@ -97,42 +131,52 @@ def get_index(index):
     return results
 
 def get_exchange_symbols_master(exchange, type='google'):
+    global _master_symbols
     table = None
     symbols = []
 
     if is_exchange(exchange):
-        if type == 'google':
-            table = Google(d.GOOGLE_SHEETNAME_EXCHANGES)
-        elif type == 'excel':
-            table = Excel(d.EXCEL_SHEETNAME_EXCHANGES)
+        if len(_master_symbols[exchange]) > 0:
+            symbols = _master_symbols[exchange]
         else:
-            raise ValueError(f'Invalid table type: {type}')
+            if type == 'google':
+                table = Google(d.GOOGLE_SHEETNAME_EXCHANGES)
+            elif type == 'excel':
+                table = Excel(d.EXCEL_SHEETNAME_EXCHANGES)
+            else:
+                raise ValueError(f'Invalid table type: {type}')
 
-        if table.open(exchange):
-            symbols = table.get_column(1)
-        else:
-            logger.warning(f'{__name__}: Unable to open index spreadsheet {exchange}')
+            if table.open(exchange):
+                symbols = table.get_column(1)
+                _master_symbols[exchange] = set(symbols)
+            else:
+                logger.warning(f'{__name__}: Unable to open index spreadsheet {exchange}')
     else:
         raise ValueError(f'Invalid exchange name: {exchange}')
 
     return symbols
 
 def get_index_symbols_master(index, type='google'):
+    global _master_indexes
     table = None
     symbols = []
 
     if is_index(index):
-        if type == 'google':
-            table = Google(d.GOOGLE_SHEETNAME_INDEXES)
-        elif type == 'excel':
-            table = Excel(d.EXCEL_SHEETNAME_INDEXES)
+        if len(_master_symbols[index]) > 0:
+            symbols = _master_indexes[index]
         else:
-            raise ValueError(f'Invalid spreadsheet type: {type}')
+            if type == 'google':
+                table = Google(d.GOOGLE_SHEETNAME_INDEXES)
+            elif type == 'excel':
+                table = Excel(d.EXCEL_SHEETNAME_INDEXES)
+            else:
+                raise ValueError(f'Invalid spreadsheet type: {type}')
 
-        if table.open(index):
-            symbols = table.get_column(1)
-        else:
-            logger.warning(f'{__name__}: Unable to open exchange spreadsheet {index}')
+            if table.open(index):
+                symbols = table.get_column(1)
+                _master_indexes[index] = set(symbols)
+            else:
+                logger.warning(f'{__name__}: Unable to open exchange spreadsheet {index}')
     else:
         raise ValueError(f'Invalid index name: {index}')
 
@@ -143,6 +187,7 @@ if __name__ == '__main__':
     from logging import DEBUG
     logger = u.get_logger(DEBUG)
 
-    p = get_index('DOW')
-    print(p)
-    # print(is_symbol_valid('IBM'))
+    e = get_exchanges()
+    print(e)
+    e = get_indexes()
+    print(e)

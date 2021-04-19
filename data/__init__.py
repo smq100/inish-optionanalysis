@@ -32,4 +32,4 @@ EXCHANGES = ({'abbreviation':'NASDAQ', 'name':'National Association of Securitie
 
 INDEXES = ({'abbreviation':'SP500', 'name':'Standard & Poors 500'},
            {'abbreviation':'DOW',   'name':'DOW industrials'},
-           {'abbreviation':'TEST',  'name':'Test Index'})
+           {'abbreviation':'CUSTOM',  'name':'Custom Index'})
