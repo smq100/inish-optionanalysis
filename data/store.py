@@ -162,7 +162,7 @@ def get_index_symbols_master(index, type='google'):
     symbols = []
 
     if is_index(index):
-        if len(_master_symbols[index]) > 0:
+        if len(_master_indexes[index]) > 0:
             symbols = _master_indexes[index]
         else:
             if type == 'google':

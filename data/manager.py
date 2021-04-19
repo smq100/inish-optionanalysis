@@ -79,7 +79,7 @@ class Manager:
 
     def delete_exchange(self, exchange):
         with self.session() as session, session.begin():
-            exc = session.query(m.Exchange).filter(m.Exchange.abbreviation==exchange).one()
+            exc = session.query(m.Exchange).filter(m.Exchange.abbreviation==exchange)
             if exc is not None:
                 exc.delete(synchronize_session=False)
 
@@ -104,15 +104,30 @@ class Manager:
 
         if len(valid) > 0:
             self._add_securities_to_index(valid, i.abbreviation)
+            logger.info(f'{__name__}: Populated index {index}')
         else:
             self.error = 'No symbols'
             logger.warning(f'{__name__}: No symbols found for {index}')
 
+    def add_index(self, abbreviation, name):
+        with self.session() as session, session.begin():
+            i = session.query(m.Index).filter(m.Index.abbreviation==abbreviation).one_or_none()
+            if i is None:
+                ind = m.Index(abbreviation=abbreviation, name=name)
+                if ind is not None:
+                    session.add(ind)
+                    logger.info(f'{__name__}: Added index {name}')
+            else:
+                logger.warning(f'{__name__}: Index {name} already present')
+
     def delete_index(self, index):
         with self.session() as session, session.begin():
-            ind = session.query(m.Index).filter(m.Index.abbreviation==index).one()
+            ind = session.query(m.Index).filter(m.Index.abbreviation==index)
             if ind is not None:
                 ind.delete(synchronize_session=False)
+                logger.info(f'{__name__}: Deleted index {index}')
+            else:
+                logger.error(f'{__name__}: Index {index} does not exist')
 
     def get_database_info(self):
         info = []
@@ -317,19 +332,11 @@ if __name__ == '__main__':
     from logging import DEBUG
     logger = u.get_logger(DEBUG)
 
-    nasdaq = o.get_exchange_symbols_master('NASDAQ')
-    nyse = o.get_exchange_symbols_master('NYSE')
-    amex = o.get_exchange_symbols_master('AMEX')
-    print(f'NASDAQ:{len(nasdaq)}')
-    print(f'NYSE:{len(nyse)}')
-    print(f'AMEX:{len(amex)}')
+    manager = Manager()
+    manager.delete_index('TEST')
+    manager.add_index('CUSTOM', 'Custom Index')
+    manager.populate_index('CUSTOM')
 
-    nasdaq_nyse, nasdaq_amex, nyse_amex = Manager.identify_common_securities()
-    print(f'NASDAQ x NYSE:{len(nasdaq_nyse)}')
-    print(f'NASDAQ x AMEX:{len(nasdaq_amex)}')
-    print(f'NYSE x AMEX:{len(nyse_amex)}')
-
-    # manager = Manager()
     # invalid = manager.validate_list('NASDAQ')
     # print (invalid)
 

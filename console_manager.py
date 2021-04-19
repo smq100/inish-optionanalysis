@@ -89,7 +89,7 @@ class Interface:
             u.print_message('Database not reset')
 
     def show_information(self, brief=True):
-        u.print_message(f'Database Information')
+        u.print_message(f'{d.ACTIVE_DB} Database Information')
         info = self.manager.get_database_info()
         for i in info:
             print(f'{i["table"].title():>9}:\t{i["count"]} records')
