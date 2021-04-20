@@ -124,7 +124,7 @@ class Leg:
         if direction not in DIRECTIONS:
             raise AssertionError('Invalid direction')
 
-        self.symbol = Company(ticker)
+        self.symbol = Company(ticker, days=1)
         self.option = Option(ticker, product, strike, expiry)
         self.strategy = strategy
         self.quantity = quantity

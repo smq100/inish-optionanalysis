@@ -247,8 +247,6 @@ class Manager:
                     exc.securities += [m.Security(sec)]
                     session.commit()
 
-                    logger.info(f'{__name__}: Added {sec} to exchange {exchange}')
-
                     try:
                         self._add_company_to_security(sec)
                         self._add_pricing_to_security(sec)
@@ -269,6 +267,7 @@ class Manager:
                         logger.error(f'{__name__}: Runtime Error, {str(e)}')
                     else:
                         self.retry = 0
+                        logger.info(f'{__name__}: Added {sec} to exchange {exchange}')
                 else:
                     logger.info(f'{__name__}: {sec} already exists')
 

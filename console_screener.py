@@ -16,10 +16,11 @@ SCREEN_SUFFIX = '.screen'
 
 
 class Interface:
-    def __init__(self, table='', screen='', script=''):
+    def __init__(self, table='', screen='', script='', live=False):
         self.table = table.upper()
         self.screen = screen
         self.script = []
+        self.live = live
         self.results = []
         self.valids = 0
         self.screener = None
@@ -45,7 +46,7 @@ class Interface:
                 else:
                     raise ValueError(f'Table not found: {table}')
 
-                self.screener = Screener(self.table)
+                self.screener = Screener(table=self.table, live=self.live)
 
             if self.screen:
                 if os.path.exists(BASEPATH+screen+SCREEN_SUFFIX):
@@ -61,43 +62,63 @@ class Interface:
 
     def main_menu(self):
         while True:
+            source = 'live' if self.live else d.ACTIVE_DB
             menu_items = {
-                '1': 'Select Exchange',
-                '2': 'Select Index',
-                '3': 'Select Script',
-                '4': 'Run Script',
-                '5': 'Show Results',
+                '1': f'Select Data Source ({source})',
+                '2': 'Select Exchange',
+                '3': 'Select Index',
+                '4': 'Select Script',
+                '5': 'Run Script',
+                '6': 'Show Results',
                 '0': 'Exit'
             }
 
             if self.table:
                 if self.type == 'exchange':
-                    menu_items['1'] = f'Select Exchange ({self.table}, {len(self.screener.symbols)} Symbols)'
+                    menu_items['2'] = f'Select Exchange ({self.table}, {len(self.screener.symbols)} Symbols)'
                 else:
-                    menu_items['2'] = f'Select Index ({self.table}, {len(self.screener.symbols)} Symbols)'
+                    menu_items['3'] = f'Select Index ({self.table}, {len(self.screener.symbols)} Symbols)'
 
             if self.screen:
                 filename = os.path.basename(self.screen)
                 head, sep, tail = filename.partition('.')
-                menu_items['3'] = f'Select Script ({head})'
+                menu_items['4'] = f'Select Script ({head})'
 
             if len(self.results) > 0:
-                menu_items['5'] = f'Show Results ({self.valids})'
+                menu_items['6'] = f'Show Results ({self.valids})'
 
-            selection = u.menu(menu_items, 'Select Operation', 0, 5)
+            selection = u.menu(menu_items, 'Select Operation', 0, 6)
 
             if selection == 1:
-                self.select_exchange()
+                self.select_source()
             if selection == 2:
+                self.select_exchange()
+            if selection == 3:
                 self.select_index()
-            elif selection == 3:
-                self.select_script()
             elif selection == 4:
-                self.run_script(True)
+                self.select_script()
             elif selection == 5:
+                self.run_script(True)
+            elif selection == 6:
                 self.print_results()
             elif selection == 0:
                 break
+
+    def select_source(self):
+        menu_items = {
+            '1': 'Database',
+            '2': 'Live',
+            '0': 'Cancel',
+        }
+
+        selection = u.menu(menu_items, 'Select Data Source', 0, 2)
+        if selection == 1:
+            self.live = False
+        elif selection == 2:
+            self.live = True
+
+        if self.table:
+            self.screener = Screener(table=self.table, script=self.screen, live=self.live)
 
     def select_exchange(self):
         menu_items = {}
@@ -109,9 +130,8 @@ class Interface:
         if selection > 0:
             exc = d.EXCHANGES[selection-1]['abbreviation']
             if len(o.get_exchange(exc)) > 0:
-                self.screener = Screener(exc, script=self.screen)
+                self.screener = Screener(exc, script=self.screen, live=self.live)
                 if self.screener.valid():
-                    self.screener.open()
                     self.table = exc
                     self.type = 'exchange'
             else:
@@ -129,9 +149,8 @@ class Interface:
         if selection > 0:
             index = d.INDEXES[selection-1]['abbreviation']
             if len(o.get_index(index)) > 0:
-                self.screener = Screener(index, script=self.screen)
+                self.screener = Screener(index, script=self.screen, live=self.live)
                 if self.screener.valid():
-                    self.screener.open()
                     self.table = index
                     self.type = 'index'
             else:

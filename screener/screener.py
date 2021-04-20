@@ -10,7 +10,7 @@ logger = u.get_logger()
 
 
 class Screener:
-    def __init__(self, table, script='', days=365):
+    def __init__(self, table, script='', days=365, live=False):
         table = table.upper()
         self.type = ''
 
@@ -22,12 +22,13 @@ class Screener:
             else:
                 raise ValueError(f'Table not found: {table}')
         else:
-            raise ValueError(f'Must specify a table name')
+            raise ValueError('Must specify a table name')
 
         if days < 30:
             raise ValueError('Invalid number of days')
 
         self.days = days
+        self.live = live
         self.table = table
         self.script = []
         self.symbols = []
@@ -41,8 +42,8 @@ class Screener:
         if script:
             if not self.load_script(script):
                 raise ValueError(f'Script not found: {script}')
-        else:
-            self.open()
+
+        self.open()
 
     def __str__(self):
         return self.table
@@ -77,7 +78,7 @@ class Screener:
             self.error = 'None'
             for s in symbols:
                 try:
-                    self.symbols += [Company(s, self.days)]
+                    self.symbols += [Company(s, self.days, live=self.live)]
                 except ValueError as e:
                     logger.warning(f'{__name__}: Invalid ticker {s}')
 
@@ -170,7 +171,7 @@ if __name__ == '__main__':
 
     u.get_logger(logging.DEBUG)
 
-    s = Screener('SP500')
-    s.open()
+    s = Screener('DOW')
+    # s.open()
     s.load_script('/Users/steve/Documents/Source Code/Personal/OptionAnalysis/screener/screens/test.screen')
-    s.run_script()
+    # s.run_script()

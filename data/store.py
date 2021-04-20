@@ -25,11 +25,11 @@ _master_indexes = {
     }
 
 def is_symbol_valid(symbol):
-    engine = create_engine(d.SQLITE_URI, echo=False)
+    engine = create_engine(d.ACTIVE_URI, echo=False)
     session = sessionmaker(bind=engine)
 
     with session() as session:
-        e = session.query(o.Security).filter(o.Security.ticker==symbol.upper()).first()
+        e = session.query(o.Security).filter(o.Security.ticker==symbol).one_or_none()
 
     return (e is not None)
 
@@ -132,8 +132,8 @@ def get_index(index):
 
 def get_exchange_symbols_master(exchange, type='google'):
     global _master_symbols
-    table = None
     symbols = []
+    table = None
 
     if is_exchange(exchange):
         if len(_master_symbols[exchange]) > 0:

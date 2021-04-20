@@ -8,7 +8,7 @@ from data import store as o
 from data import manager as m
 from utils import utils as u
 
-logger = u.get_logger(logging.WARNING)
+logger = u.get_logger(logging.ERROR)
 
 
 class Interface:
@@ -53,14 +53,13 @@ class Interface:
             '3': 'Populate Exchange',
             '4': 'Refresh Exchange',
             '5': 'Delete Exchange',
-            '6': 'Master Exchange List',
-            '7': 'Populate Index',
-            '8': 'Delete Index',
+            '6': 'Populate Index',
+            '7': 'Delete Index',
             '0': 'Exit'
         }
 
         while True:
-            selection = u.menu(menu_items, 'Select Operation', 0, 8)
+            selection = u.menu(menu_items, 'Select Operation', 0, 7)
 
             if selection == 1:
                 self.reset()
@@ -73,10 +72,8 @@ class Interface:
             elif selection == 5:
                 self.delete_exchange()
             elif selection == 6:
-                self.show_master_list()
-            elif selection == 7:
                 self.populate_index()
-            elif selection == 8:
+            elif selection == 7:
                 self.delete_index()
             elif selection == 0:
                 break
@@ -186,16 +183,19 @@ class Interface:
         for exchange in d.EXCHANGES:
             exc = list(o.get_exchange_symbols_master(exchange['abbreviation']))
             count = len(exc)
-            print(f'{exchange["abbreviation"]}:\t{count} symbols')
+            print(f'{exchange["abbreviation"]:>9}:\t{count} symbols')
 
         u.print_message('Master Exchange Common Symbols')
         nasdaq_nyse, nasdaq_amex, nyse_amex = self.manager.identify_common_securities()
         count = len(nasdaq_nyse)
-        print(f'NASDAQ-NYSE:\t{count} symbols')
+        name = 'NASDAQ-NYSE'
+        print(f'{name:>12}:\t{count} symbols')
         count = len(nasdaq_amex)
-        print(f'NASDAQ-AMEX:\t{count} symbols')
+        name = 'NASDAQ-AMEX'
+        print(f'{name:>12}:\t{count} symbols')
         count = len(nyse_amex)
-        print(f'NYSE-AMEX:\t{count} symbols')
+        name = 'NYSE-AMEX'
+        print(f'{name:>12}:\t{count} symbols')
 
     def populate_index(self, progressbar=True):
         menu_items = {}

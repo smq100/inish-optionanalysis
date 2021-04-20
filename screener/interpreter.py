@@ -95,7 +95,7 @@ class Interpreter:
     def _calc_comparison(self):
         result = False
         if self.base.empty:
-            raise RuntimeError('Empty dataframe')
+            raise RuntimeError(f'Empty dataframe for {self.symbol}')
 
         base = self.base.iloc[-1] * self.base_factor
         value = 0.0
