@@ -60,6 +60,17 @@ class Manager:
         else:
             logger.warning(f'{__name__}: No symbols for {exchange}')
 
+    def add_exchange(self, abbreviation, name):
+        with self.session() as session, session.begin():
+            e = session.query(m.Exchange).filter(m.Exchange.abbreviation==abbreviation).one_or_none()
+            if e is None:
+                ind = m.Exchange(abbreviation=abbreviation, name=name)
+                if ind is not None:
+                    session.add(ind)
+                    logger.info(f'{__name__}: Added exchange {name}')
+            else:
+                logger.warning(f'{__name__}: Exchange {name} already present')
+
     def refresh_exchange(self, exchange):
         self.error = ''
         self.invalid_symbols = []
@@ -232,7 +243,7 @@ class Manager:
 
             for sec in tickers:
                 s = session.query(m.Security).filter(m.Security.ticker==sec).one_or_none()
-                if len(s) == 0:
+                if s is None:
                     exc.securities += [m.Security(sec)]
                     session.commit()
 
@@ -333,9 +344,7 @@ if __name__ == '__main__':
     logger = u.get_logger(DEBUG)
 
     manager = Manager()
-    manager.delete_index('TEST')
-    manager.add_index('CUSTOM', 'Custom Index')
-    manager.populate_index('CUSTOM')
+    manager.add_exchange(d.EXCHANGES[1]['abbreviation'], d.EXCHANGES[1]['name'])
 
     # invalid = manager.validate_list('NASDAQ')
     # print (invalid)

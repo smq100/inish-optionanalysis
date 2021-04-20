@@ -53,13 +53,14 @@ class Interface:
             '3': 'Populate Exchange',
             '4': 'Refresh Exchange',
             '5': 'Delete Exchange',
-            '6': 'Populate Index',
-            '7': 'Delete Index',
+            '6': 'Master Exchange List',
+            '7': 'Populate Index',
+            '8': 'Delete Index',
             '0': 'Exit'
         }
 
         while True:
-            selection = u.menu(menu_items, 'Select Operation', 0, 7)
+            selection = u.menu(menu_items, 'Select Operation', 0, 8)
 
             if selection == 1:
                 self.reset()
@@ -72,8 +73,10 @@ class Interface:
             elif selection == 5:
                 self.delete_exchange()
             elif selection == 6:
+                self.show_master_list()
+            elif selection == 7:
                 self.populate_index()
-            elif selection == 6:
+            elif selection == 8:
                 self.delete_index()
             elif selection == 0:
                 break
@@ -89,7 +92,7 @@ class Interface:
             u.print_message('Database not reset')
 
     def show_information(self, brief=True):
-        u.print_message(f'{d.ACTIVE_DB} Database Information')
+        u.print_message(f'Database Information ({d.ACTIVE_DB})')
         info = self.manager.get_database_info()
         for i in info:
             print(f'{i["table"].title():>9}:\t{i["count"]} records')
@@ -111,14 +114,7 @@ class Interface:
                 count = len(self.manager.identify_missing_securities(e))
                 print(f'{e:>9}:\t{count} symbols')
 
-            u.print_message('Common Symbols')
-            nasdaq_nyse, nasdaq_amex, nyse_amex = self.manager.identify_common_securities()
-            count = len(nasdaq_nyse)
-            print(f'NASDAQ-NYSE:\t{count} symbols')
-            count = len(nasdaq_amex)
-            print(f'NASDAQ-AMEX:\t{count} symbols')
-            count = len(nyse_amex)
-            print(f'NYSE-AMEX:\t{count} symbols')
+            self.show_master_list()
 
     def populate_exchange(self, progressbar=True):
         menu_items = {}
@@ -184,6 +180,22 @@ class Interface:
         if select > 0:
             exc = self.exchanges[select-1]
             self.manager.delete_exchange(exc)
+
+    def show_master_list(self):
+        u.print_message('Master Exchange Symbol List')
+        for exchange in d.EXCHANGES:
+            exc = list(o.get_exchange_symbols_master(exchange['abbreviation']))
+            count = len(exc)
+            print(f'{exchange["abbreviation"]}:\t{count} symbols')
+
+        u.print_message('Master Exchange Common Symbols')
+        nasdaq_nyse, nasdaq_amex, nyse_amex = self.manager.identify_common_securities()
+        count = len(nasdaq_nyse)
+        print(f'NASDAQ-NYSE:\t{count} symbols')
+        count = len(nasdaq_amex)
+        print(f'NASDAQ-AMEX:\t{count} symbols')
+        count = len(nyse_amex)
+        print(f'NYSE-AMEX:\t{count} symbols')
 
     def populate_index(self, progressbar=True):
         menu_items = {}
