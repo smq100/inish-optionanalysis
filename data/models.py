@@ -11,7 +11,7 @@ Base = declarative_base()
 class Exchange(Base):
     __tablename__ = 'exchange'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    abbreviation = Column('abbreviation', String(20))
+    abbreviation = Column('abbreviation', String(20), unique=True)
     name = Column('name', String(200), unique=True, nullable=False)
     securities = relationship('Security', back_populates='exchange')
 
@@ -20,20 +20,10 @@ class Exchange(Base):
         self.name = name
 
     def __repr__(self):
-        return f'<Exchange({self.acronym})>'
+        return f'<Exchange Model ({self.acronym})>'
 
-class Index(Base):
-    __tablename__ = 'index'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    abbreviation = Column('abbreviation', String(20))
-    name = Column('name', String(200), unique=True, nullable=False)
-
-    def __init__(self, abbreviation, name):
-        self.abbreviation = abbreviation.upper()
-        self.name = name
-
-    def __repr__(self):
-        return f'<Index({self.name})>'
+    def __str__(self):
+        return self.abbreviation
 
 class Security(Base):
     __tablename__ = 'security'
@@ -52,7 +42,26 @@ class Security(Base):
         self.ticker = ticker.upper()
 
     def __repr__(self):
-        return f'<Security({self.ticker})>'
+        return f'<Security Model ({self.ticker})>'
+
+    def __str__(self):
+        return self.ticker
+
+class Index(Base):
+    __tablename__ = 'index'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    abbreviation = Column('abbreviation', String(20), unique=True)
+    name = Column('name', String(200), nullable=False)
+
+    def __init__(self, abbreviation, name):
+        self.abbreviation = abbreviation.upper()
+        self.name = name
+
+    def __repr__(self):
+        return f'<Index Model({self.name})>'
+
+    def __str__(self):
+        return self.abbreviation
 
 class Company(Base):
     __tablename__ = 'company'
@@ -66,7 +75,10 @@ class Company(Base):
     security = relationship('Security', back_populates='company')
 
     def __repr__(self):
-        return f'<Company({self.name})>'
+        return f'<Company Model ({self.name})>'
+
+    def __str__(self):
+        return self.name
 
 class Price(Base):
     __tablename__ = 'price'
@@ -82,7 +94,10 @@ class Price(Base):
     security = relationship('Security')
 
     def __repr__(self):
-        return f'<Price(security{self.security_id})>'
+        return f'<Price Model ({self.security_id})>'
+
+    def __str__(self):
+        return f'{self.date}: {self.security_id}'
 
 # class Adjustment(Base):
 #     __tablename__ = 'adjustment'

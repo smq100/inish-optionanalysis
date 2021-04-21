@@ -5,7 +5,7 @@ from sqlalchemy import create_engine, inspect, and_, or_
 from sqlalchemy.orm import sessionmaker
 
 import data as d
-from data import store as o
+from data import store as s
 from data import models as m
 from fetcher import fetcher as f
 from utils import utils as u
@@ -54,7 +54,7 @@ class Manager:
             exc = session.query(m.Exchange).filter(m.Exchange.abbreviation==exchange).one()
             abrev = exc.abbreviation
 
-        symbols = o.get_exchange_symbols_master(abrev)
+        symbols = s.get_exchange_symbols_master(abrev)
         if len(symbols) > 0:
             self._add_securities_to_exchange(symbols, abrev)
         else:
@@ -107,7 +107,7 @@ class Manager:
 
         with self.session() as session:
             i = session.query(m.Index).filter(m.Index.abbreviation==index).one()
-            symbols = o.get_index_symbols_master(i.abbreviation)
+            symbols = s.get_index_symbols_master(i.abbreviation)
             for symbol in symbols:
                 ticker = session.query(m.Security).filter(m.Security.ticker==symbol).one_or_none()
                 if ticker is not None:
@@ -194,10 +194,10 @@ class Manager:
     def validate_list(self, list):
         symbols = []
         invalid = []
-        if o.is_exchange(list):
+        if s.is_exchange(list):
             symbols = self.get_exchange_symbols_master(list)
-        elif o.is_index(list):
-            symbols = o.get_index_symbols_master(list)
+        elif s.is_index(list):
+            symbols = s.get_index_symbols_master(list)
 
         if len(symbols) > 0:
             for s in symbols:
@@ -208,7 +208,7 @@ class Manager:
 
     def identify_missing_securities(self, exchange):
         missing = []
-        tickers = o.get_exchange_symbols_master(exchange)
+        tickers = s.get_exchange_symbols_master(exchange)
         logger.info(f'{__name__}: {len(tickers)} total symbols in {exchange}')
         with self.session() as session:
             exc = session.query(m.Exchange).filter(m.Exchange.abbreviation==exchange).one()
@@ -222,9 +222,9 @@ class Manager:
         return missing
 
     def identify_common_securities(self):
-        nasdaq = o.get_exchange_symbols_master('NASDAQ')
-        nyse = o.get_exchange_symbols_master('NYSE')
-        amex = o.get_exchange_symbols_master('AMEX')
+        nasdaq = s.get_exchange_symbols_master('NASDAQ')
+        nyse = s.get_exchange_symbols_master('NYSE')
+        amex = s.get_exchange_symbols_master('AMEX')
 
         nasdaq_nyse = nasdaq.intersection(nyse)
         nasdaq_amex = nasdaq.intersection(amex)

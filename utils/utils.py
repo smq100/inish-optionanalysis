@@ -143,6 +143,15 @@ def input_float(message, min_, max_):
 
     return val
 
+def input_text(message):
+    val = input(message)
+    if any(char.isdigit() for char in val):
+        val = ''
+        print_error('Symbol value must be all letters')
+
+    return val
+
+
 def isnumeric(value):
     try:
         float(value)

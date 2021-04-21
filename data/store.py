@@ -12,7 +12,7 @@ from data import models as o
 from fetcher import fetcher as f
 
 logger = u.get_logger()
-_master_symbols = {
+_master_exchanges = {
     d.EXCHANGES[0]['abbreviation']: set(),
     d.EXCHANGES[1]['abbreviation']: set(),
     d.EXCHANGES[2]['abbreviation']: set()
@@ -29,7 +29,7 @@ def is_symbol_valid(symbol):
     session = sessionmaker(bind=engine)
 
     with session() as session:
-        e = session.query(o.Security).filter(o.Security.ticker==symbol).one_or_none()
+        e = session.query(o.Security).filter(o.Security.ticker==symbol.upper()).one_or_none()
 
     return (e is not None)
 
@@ -58,7 +58,7 @@ def get_history(ticker, days, live=False):
         results = f.get_history(ticker, days)
     else:
         with session() as session:
-            t = session.query(o.Security).filter(o.Security.ticker==ticker.upper()).first()
+            t = session.query(o.Security).filter(o.Security.ticker==ticker.upper()).one_or_none()
             if t is not None:
                 if days < 0:
                     p = session.query(o.Price).filter(o.Price.security_id==t.id)
@@ -71,6 +71,21 @@ def get_history(ticker, days, live=False):
                     logger.info(f'{__name__}: Fetched {days} days of price history for {ticker}')
             else:
                 logger.warning(f'{__name__}: No history found for {ticker}')
+
+    return results
+
+def get_company(ticker, live=False):
+    results = None
+    engine = create_engine(d.ACTIVE_URI, echo=False)
+    session = sessionmaker(bind=engine)
+
+    if live:
+        results = f.get_company(ticker)
+    else:
+        with session() as session:
+            t = session.query(o.Security).filter(o.Security.ticker==ticker.upper()).one_or_none()
+            if t is not None:
+                results = session.query(o.Company).filter(o.Company.security_id==t.id).one_or_none()
 
     return results
 
@@ -131,13 +146,13 @@ def get_index(index):
     return results
 
 def get_exchange_symbols_master(exchange, type='google'):
-    global _master_symbols
+    global _master_exchanges
     symbols = []
     table = None
 
     if is_exchange(exchange):
-        if len(_master_symbols[exchange]) > 0:
-            symbols = _master_symbols[exchange]
+        if len(_master_exchanges[exchange]) > 0:
+            symbols = _master_exchanges[exchange]
         else:
             if type == 'google':
                 table = Google(d.GOOGLE_SHEETNAME_EXCHANGES)
@@ -148,7 +163,7 @@ def get_exchange_symbols_master(exchange, type='google'):
 
             if table.open(exchange):
                 symbols = table.get_column(1)
-                _master_symbols[exchange] = set(symbols)
+                _master_exchanges[exchange] = set(symbols)
             else:
                 logger.warning(f'{__name__}: Unable to open index spreadsheet {exchange}')
     else:
@@ -187,7 +202,5 @@ if __name__ == '__main__':
     from logging import DEBUG
     logger = u.get_logger(DEBUG)
 
-    e = get_exchanges()
-    print(e)
-    e = get_indexes()
+    e = get_company('aapl')
     print(e)

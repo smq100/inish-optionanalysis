@@ -4,7 +4,7 @@ import time
 import threading
 
 import data as d
-from data import store as o
+from data import store as s
 from data import manager as m
 from utils import utils as u
 
@@ -45,26 +45,27 @@ class Interface:
             u.print_error('Invalid list specified')
 
     def main_menu(self):
-        self.show_information()
+        self.show_database_information()
 
         menu_items = {
-            '1': 'Reset Database',
-            '2': 'Database Information',
+            '1': 'Database Information',
+            '2': 'Symbol Information',
             '3': 'Populate Exchange',
             '4': 'Refresh Exchange',
             '5': 'Delete Exchange',
             '6': 'Populate Index',
             '7': 'Delete Index',
+            '8': 'Reset Database',
             '0': 'Exit'
         }
 
         while True:
-            selection = u.menu(menu_items, 'Select Operation', 0, 7)
+            selection = u.menu(menu_items, 'Select Operation', 0, 8)
 
             if selection == 1:
-                self.reset()
+                self.show_database_information(brief=False)
             elif selection == 2:
-                self.show_information(brief=False)
+                self.show_symbol_information()
             elif selection == 3:
                 self.populate_exchange()
             elif selection == 4:
@@ -75,20 +76,12 @@ class Interface:
                 self.populate_index()
             elif selection == 7:
                 self.delete_index()
+            elif selection == 8:
+                self.reset_database()
             elif selection == 0:
                 break
 
-    def reset(self):
-        select = u.input_integer('Are you sure? 1 to reset or 0 to cancel: ', 0, 1)
-        if select == 1:
-            self.manager.delete_database(recreate=True)
-            self.manager.build_exchanges()
-            self.manager.build_indexes()
-            u.print_message(f'Reset the database')
-        else:
-            u.print_message('Database not reset')
-
-    def show_information(self, brief=True):
+    def show_database_information(self, brief=True):
         u.print_message(f'Database Information ({d.ACTIVE_DB})')
         info = self.manager.get_database_info()
         for i in info:
@@ -106,12 +99,23 @@ class Interface:
 
         if not brief:
             u.print_message('Missing Symbols')
-            exchanges = o.get_exchanges()
+            exchanges = s.get_exchanges()
             for e in exchanges:
                 count = len(self.manager.identify_missing_securities(e))
                 print(f'{e:>9}:\t{count} symbols')
 
             self.show_master_list()
+
+    def show_symbol_information(self):
+        symbol = u.input_text('Enter symbol: ')
+        if symbol:
+            symbol = symbol[:4].upper()
+            if s.is_symbol_valid(symbol):
+                company = s.get_company(symbol)
+                u.print_message('Company Information')
+                print(f'Name:\t{symbol} ({company.name})')
+            else:
+                u.print_error(f'{symbol} not found')
 
     def populate_exchange(self, progressbar=True):
         menu_items = {}
@@ -178,25 +182,6 @@ class Interface:
             exc = self.exchanges[select-1]
             self.manager.delete_exchange(exc)
 
-    def show_master_list(self):
-        u.print_message('Master Exchange Symbol List')
-        for exchange in d.EXCHANGES:
-            exc = list(o.get_exchange_symbols_master(exchange['abbreviation']))
-            count = len(exc)
-            print(f'{exchange["abbreviation"]:>9}:\t{count} symbols')
-
-        u.print_message('Master Exchange Common Symbols')
-        nasdaq_nyse, nasdaq_amex, nyse_amex = self.manager.identify_common_securities()
-        count = len(nasdaq_nyse)
-        name = 'NASDAQ-NYSE'
-        print(f'{name:>12}:\t{count} symbols')
-        count = len(nasdaq_amex)
-        name = 'NASDAQ-AMEX'
-        print(f'{name:>12}:\t{count} symbols')
-        count = len(nyse_amex)
-        name = 'NYSE-AMEX'
-        print(f'{name:>12}:\t{count} symbols')
-
     def populate_index(self, progressbar=True):
         menu_items = {}
         for i, index in enumerate(self.indexes):
@@ -231,6 +216,35 @@ class Interface:
         if select > 0:
             ind = self.indexes[select-1]
             self.manager.delete_index(ind)
+
+    def reset_database(self):
+        select = u.input_integer('Are you sure? 1 to reset or 0 to cancel: ', 0, 1)
+        if select == 1:
+            self.manager.delete_database(recreate=True)
+            self.manager.build_exchanges()
+            self.manager.build_indexes()
+            u.print_message(f'Reset the database')
+        else:
+            u.print_message('Database not reset')
+
+    def show_master_list(self):
+        u.print_message('Master Exchange Symbol List')
+        for exchange in d.EXCHANGES:
+            exc = list(s.get_exchange_symbols_master(exchange['abbreviation']))
+            count = len(exc)
+            print(f'{exchange["abbreviation"]:>9}:\t{count} symbols')
+
+        u.print_message('Master Exchange Common Symbols')
+        nasdaq_nyse, nasdaq_amex, nyse_amex = self.manager.identify_common_securities()
+        count = len(nasdaq_nyse)
+        name = 'NASDAQ-NYSE'
+        print(f'{name:>12}:\t{count} symbols')
+        count = len(nasdaq_amex)
+        name = 'NASDAQ-AMEX'
+        print(f'{name:>12}:\t{count} symbols')
+        count = len(nyse_amex)
+        name = 'NYSE-AMEX'
+        print(f'{name:>12}:\t{count} symbols')
 
     def list_invalid(self):
         u.print_message(f'Invalid: {self.manager.invalid_symbols}')
