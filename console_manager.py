@@ -112,8 +112,20 @@ class Interface:
             symbol = symbol[:4].upper()
             if s.is_symbol_valid(symbol):
                 company = s.get_company(symbol)
-                u.print_message('Company Information')
-                print(f'Name:\t{symbol} ({company.name})')
+                if company is not None:
+                    u.print_message(f'{symbol} Company Information')
+                    print(f'Name:\t\t{company["name"]}')
+                    print(f'Sector:\t\t{company["sector"]}')
+                    print(f'Industry:\t{company["industry"]}')
+                    print(f'Indexes:\t{company["indexes"]}')
+                    print(f'URL:\t\t{company["url"]}')
+                    print(f'Records:\t{company["precords"]}')
+                    if company["min"] is not None:
+                        print(f'Oldest:\t\t{company["min"]:%Y-%m-%d}')
+                    else:
+                        print('Oldest:')
+                else:
+                    u.print_error(f'{symbol} has no company information')
             else:
                 u.print_error(f'{symbol} not found')
 
@@ -220,7 +232,7 @@ class Interface:
     def reset_database(self):
         select = u.input_integer('Are you sure? 1 to reset or 0 to cancel: ', 0, 1)
         if select == 1:
-            self.manager.delete_database(recreate=True)
+            self.manager.delete_database()
             self.manager.build_exchanges()
             self.manager.build_indexes()
             u.print_message(f'Reset the database')

@@ -1,6 +1,6 @@
 import datetime as dt
 
-from sqlalchemy import create_engine, and_, or_
+from sqlalchemy import create_engine, func, and_, or_
 from sqlalchemy.orm import sessionmaker
 import pandas as pd
 
@@ -75,17 +75,51 @@ def get_history(ticker, days, live=False):
     return results
 
 def get_company(ticker, live=False):
-    results = None
+    results = {}
     engine = create_engine(d.ACTIVE_URI, echo=False)
     session = sessionmaker(bind=engine)
 
     if live:
-        results = f.get_company(ticker)
+        c = f.get_company(ticker).info
+        results['name'] = c['shortName']
+        results['url'] = c['website']
+        results['sector'] = c['sector']
+        results['industry'] = c['industry']
+        results['indexes'] = ''
+        results['precords'] = 0
+        results['min'] = ''
     else:
+        results['name'] = ''
+        results['url'] = ''
+        results['sector'] = ''
+        results['industry'] = ''
+        results['indexes'] = ''
+        results['precords'] = 0
+        results['min'] = None
         with session() as session:
             t = session.query(o.Security).filter(o.Security.ticker==ticker.upper()).one_or_none()
             if t is not None:
-                results = session.query(o.Company).filter(o.Company.security_id==t.id).one_or_none()
+                c = session.query(o.Company).filter(o.Company.security_id==t.id).one_or_none()
+                if c is not None:
+                    results['name'] = c.name
+                    results['url'] = c.url
+                    results['sector'] = c.sector
+                    results['industry'] = c.industry
+
+                results['indexes'] = 'None'
+                if t.index1_id is not None:
+                    index = session.query(o.Index).filter(o.Index.id==t.index1_id).one().abbreviation
+                    results['indexes'] = index
+
+                    if t.index2_id is not None:
+                        index = session.query(o.Index).filter(o.Index.id==t.index2_id).one().abbreviation
+                        results['indexes'] += f', {index}'
+
+                p = session.query(o.Price).filter(o.Price.security_id==t.id).count()
+                results['precords'] = p
+
+                p = session.query(func.min(o.Price.date)).filter(o.Price.security_id==t.id).one_or_none()
+                results['min'] = p[0]
 
     return results
 
@@ -202,5 +236,8 @@ if __name__ == '__main__':
     from logging import DEBUG
     logger = u.get_logger(DEBUG)
 
-    e = get_company('aapl')
+    e = get_company('trv')
+    # print(type(e['min']))
+    # print(str(e['min']))
+    # print(f'{e["min"]:%Y-%m-%d}')
     print(e)

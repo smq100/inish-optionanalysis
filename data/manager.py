@@ -26,10 +26,11 @@ class Manager:
     def create_database(self):
         m.Base.metadata.create_all(self.engine)
 
-    def delete_database(self, recreate=False):
-        if d.ACTIVE_DB == 'sqlite':
+    def delete_database(self, recreate=True):
+        if d.ACTIVE_DB == d.OPTIONS_DB[1]:
             if os.path.exists(d.SQLITE_DATABASE_PATH):
                 os.remove(d.SQLITE_DATABASE_PATH)
+                logger.info(f'{__name__}: Deleted {d.SQLITE_DATABASE_PATH}')
             else:
                 logger.warning(f'{__name__}: File does not exist: {d.SQLITE_DATABASE_PATH}')
         else:
@@ -211,11 +212,10 @@ class Manager:
         tickers = s.get_exchange_symbols_master(exchange)
         logger.info(f'{__name__}: {len(tickers)} total symbols in {exchange}')
         with self.session() as session:
-            exc = session.query(m.Exchange).filter(m.Exchange.abbreviation==exchange).one()
+            exc = session.query(m.Exchange.id, m.Exchange.abbreviation).filter(m.Exchange.abbreviation==exchange).one()
             for sec in tickers:
-                # s = session.query(m.Security).filter(m.Security.ticker==sec).one_or_none()
-                s = session.query(m.Security).filter(and_(m.Security.ticker==sec, m.Security.exchange_id==exc.id)).one_or_none()
-                if s is None:
+                t = session.query(m.Security.ticker, m.Security.exchange_id).filter(and_(m.Security.ticker==sec, m.Security.exchange_id==exc.id)).one_or_none()
+                if t is None:
                     missing += [sec]
 
         logger.info(f'{__name__}: {len(missing)} missing symbols in {exchange}')
@@ -231,6 +231,30 @@ class Manager:
         nyse_amex = nyse.intersection(amex)
 
         return nasdaq_nyse, nasdaq_amex, nyse_amex
+
+    def identify_incomplete_securities_companies(self):
+        missing = []
+        with self.session() as session:
+            sec = session.query(m.Security.id, m.Security.ticker).all()
+            for t in sec:
+                c = session.query(m.Company.security_id).filter(m.Company.security_id==t.id).first()
+                if c is None:
+                    missing += [t.ticker]
+
+        logger.info(f'{__name__}: {len(missing)} incomplete symbol company info')
+        return missing
+
+    def identify_incomplete_securities_price(self):
+        missing = []
+        with self.session() as session:
+            sec = session.query(m.Security.id, m.Security.ticker).all()
+            for t in sec:
+                p = session.query(m.Price.security_id).filter(m.Price.security_id==t.id).first()
+                if p is None:
+                    missing += [t.ticker]
+
+        logger.info(f'{__name__}: {len(missing)} incomplete symbol price info')
+        return missing
 
     def _add_securities_to_exchange(self, tickers, exchange):
         self.items_total = len(tickers)
@@ -343,7 +367,10 @@ if __name__ == '__main__':
     logger = u.get_logger(DEBUG)
 
     manager = Manager()
-    manager.add_exchange(d.EXCHANGES[1]['abbreviation'], d.EXCHANGES[1]['name'])
+    missing = manager.identify_incomplete_securities_companies()
+    print(len(missing))
+    # missing = manager.identify_incomplete_price_securities()
+    # print(len(missing))
 
     # invalid = manager.validate_list('NASDAQ')
     # print (invalid)

@@ -94,57 +94,57 @@ class Interpreter:
 
     def _calc_comparison(self):
         result = False
-        if self.base.empty:
-            raise RuntimeError(f'Empty dataframe for {self.symbol}')
+        if not self.base.empty:
+            base = self.base.iloc[-1] * self.base_factor
+            value = 0.0
 
-        base = self.base.iloc[-1] * self.base_factor
-        value = 0.0
+            if self.criteria_conditional == VALID_CONDITIONALS[0]: # lt
+                if self.criteria_series == VALID_SERIES[-1]: # na
+                    if len(self.value) > 0:
+                        value = self.value.iloc[-1] * self.criteria_factor
+                        if base < value:
+                            result = True
+                elif self.criteria_series == VALID_SERIES[0]: # min
+                    if len(self.value) > 0:
+                        value = self.value.min() * self.criteria_factor
+                        if base < value.min():
+                            result = True
+                elif self.criteria_series == VALID_SERIES[1]: # max
+                    if len(self.value) > 0:
+                        value = self.value.max() * self.criteria_factor
+                        if base < value:
+                            result = True
 
-        if self.criteria_conditional == VALID_CONDITIONALS[0]: # lt
-            if self.criteria_series == VALID_SERIES[-1]: # na
-                if len(self.value) > 0:
-                    value = self.value.iloc[-1] * self.criteria_factor
-                    if base < value:
-                        result = True
-            elif self.criteria_series == VALID_SERIES[0]: # min
+            elif self.criteria_conditional == VALID_CONDITIONALS[1]: # eq
                 if len(self.value) > 0:
                     value = self.value.min() * self.criteria_factor
-                    if base < value.min():
-                        result = True
-            elif self.criteria_series == VALID_SERIES[1]: # max
-                if len(self.value) > 0:
-                    value = self.value.max() * self.criteria_factor
-                    if base < value:
+                    if base == value:
                         result = True
 
-        elif self.criteria_conditional == VALID_CONDITIONALS[1]: # eq
-            if len(self.value) > 0:
-                value = self.value.min() * self.criteria_factor
-                if base == value:
-                    result = True
+            elif self.criteria_conditional == VALID_CONDITIONALS[2]: # gt
+                if self.criteria_series == VALID_SERIES[-1]: # na
+                    if len(self.value) > 0:
+                        value = self.value.iloc[-1] * self.criteria_factor
+                        if base > value:
+                            result = True
+                elif self.criteria_series == VALID_SERIES[0]: # min
+                    if len(self.value) > 0:
+                        value = self.value.min() * self.criteria_factor
+                        if base > value:
+                            result = True
+                elif self.criteria_series == VALID_SERIES[1]: # max
+                    if len(self.value) > 0:
+                        value = self.value.max() * self.criteria_factor
+                        if base > value:
+                            result = True
 
-        elif self.criteria_conditional == VALID_CONDITIONALS[2]: # gt
-            if self.criteria_series == VALID_SERIES[-1]: # na
-                if len(self.value) > 0:
-                    value = self.value.iloc[-1] * self.criteria_factor
-                    if base > value:
-                        result = True
-            elif self.criteria_series == VALID_SERIES[0]: # min
-                if len(self.value) > 0:
-                    value = self.value.min() * self.criteria_factor
-                    if base > value:
-                        result = True
-            elif self.criteria_series == VALID_SERIES[1]: # max
-                if len(self.value) > 0:
-                    value = self.value.max() * self.criteria_factor
-                    if base > value:
-                        result = True
-
-        logger.info(
-            f'{self.note}: {str(self.symbol)}:{str(result)} ' +
-            f'{self.base_technical}{self.base_length}/{base:.2f}*{self.base_factor:.2f} ' +
-            f'{self.criteria_conditional} ' +
-            f'{self.criteria_technical}{self.criteria_length}/{self.criteria_start}/{self.criteria_series}/{value:.2f}*{self.criteria_factor:.2f}')
+            logger.info(
+                f'{self.note}: {str(self.symbol)}:{str(result)} ' +
+                f'{self.base_technical}{self.base_length}/{base:.2f}*{self.base_factor:.2f} ' +
+                f'{self.criteria_conditional} ' +
+                f'{self.criteria_technical}{self.criteria_length}/{self.criteria_start}/{self.criteria_series}/{value:.2f}*{self.criteria_factor:.2f}')
+        else:
+            logger.warning(f'{__name__}: No price information for {self.symbol}')
 
         return result
 

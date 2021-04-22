@@ -30,6 +30,6 @@ EXCHANGES = ({'abbreviation':'NASDAQ', 'name':'National Association of Securitie
              {'abbreviation':'NYSE',   'name':'New York Stock Exchange'},
              {'abbreviation':'AMEX',   'name':'American Stock Exchange'})
 
-INDEXES = ({'abbreviation':'SP500',  'name':'Standard & Poors 500'},
-           {'abbreviation':'DOW',    'name':'DOW industrials'},
-           {'abbreviation':'CUSTOM', 'name':'Custom Index'})
+INDEXES =   ({'abbreviation':'SP500',  'name':'Standard & Poors 500'},
+             {'abbreviation':'DOW',    'name':'DOW industrials'},
+             {'abbreviation':'CUSTOM', 'name':'Custom Index'})
