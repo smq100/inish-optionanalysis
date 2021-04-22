@@ -168,6 +168,8 @@ def print_warning(message, creturn=True):
 def print_error(message, creturn=True):
     print(delimeter(f'Error: {message}', creturn))
 
+position = 1
+direction = 'f'
 def progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█', end='\r', percent=False):
     """
     Call in a loop to create terminal progress bar
@@ -181,10 +183,12 @@ def progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100,
         fill        - Optional  : bar fill character (Str)
         end         - Optional  : end character (e.g. "\r", "\r\n") (Str)
     """
+    global position
+    global direction
     if total > 0:
         filled = int(length * iteration // total)
-
         bar = fill * filled + '-' * (length - filled)
+
         if percent:
             percent = ('{0:.' + str(decimals) + 'f}').format(100 * (iteration / float(total)))
             print(f'\r{prefix} |{bar}| {percent}% {suffix}', end=end)
@@ -193,3 +197,30 @@ def progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100,
 
         if iteration == total:
             print()
+    elif total < 0:
+        suffix = 'Working...'
+        if direction == 'f':
+            if position < length:
+                position += 1
+            else:
+                position -= 1
+                direction = 'r'
+        else:
+            if position > 1:
+                position -= 1
+            else:
+                position = 2
+                direction = 'f'
+
+        front = position - 1
+        back = length - position
+        bar = ('-' * front) + fill + ('-' * back)
+
+        print(f'\r{prefix} |{bar}| {suffix}', end=end)
+
+if __name__ == '__main__':
+    import time
+
+    while(True):
+        time.sleep(0.05)
+        progress_bar(0, -1, 'Progress', 'Completed', length=50)

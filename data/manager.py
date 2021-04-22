@@ -39,7 +39,7 @@ class Manager:
         if recreate:
             self.create_database()
 
-    def build_exchanges(self):
+    def create_exchanges(self):
         with self.session() as session, session.begin():
             for exchange in d.EXCHANGES:
                 exc = m.Exchange(abbreviation=exchange['abbreviation'], name=exchange['name'])
@@ -52,27 +52,16 @@ class Manager:
         self.retry = 0
 
         with self.session() as session:
-            exc = session.query(m.Exchange).filter(m.Exchange.abbreviation==exchange).one()
-            abrev = exc.abbreviation
+            e = session.query(m.Exchange.abbreviation).filter(m.Exchange.abbreviation==exchange).one()
+            abrev = e.abbreviation
 
         symbols = s.get_exchange_symbols_master(abrev)
         if len(symbols) > 0:
-            self._add_securities_to_exchange(symbols, abrev)
+            self._add_securities_to_exchange_th(symbols, abrev)
         else:
             logger.warning(f'{__name__}: No symbols for {exchange}')
 
-    def add_exchange(self, abbreviation, name):
-        with self.session() as session, session.begin():
-            e = session.query(m.Exchange).filter(m.Exchange.abbreviation==abbreviation).one_or_none()
-            if e is None:
-                ind = m.Exchange(abbreviation=abbreviation, name=name)
-                if ind is not None:
-                    session.add(ind)
-                    logger.info(f'{__name__}: Added exchange {name}')
-            else:
-                logger.warning(f'{__name__}: Exchange {name} already present')
-
-    def refresh_exchange(self, exchange):
+    def refresh_exchange(self, exchange, area):
         self.error = ''
         self.invalid_symbols = []
         self.retry = 0
@@ -80,22 +69,32 @@ class Manager:
 
         with self.session() as session:
             # Throws exception if does not exist
-            session.query(m.Exchange).filter(m.Exchange.abbreviation==exchange).one()
+            session.query(m.Exchange.abbreviation).filter(m.Exchange.abbreviation==exchange).one()
 
-        missing = self.identify_missing_securities(exchange)
-        self.items_total = len(missing)
-
-        self.error = 'None'
-        if self.items_total > 0:
-            self._add_securities_to_exchange(missing, exchange)
+        if area == 'securities':
+            missing = self.identify_missing_securities(exchange)
+            self.items_total = len(missing)
+            self.error = 'None'
+            if self.items_total > 0:
+                self._add_securities_to_exchange_th(missing, exchange)
+        elif area == 'companies':
+            self.error = 'None'
+            missing = self._identify_incomplete_securities_companies_th(exchange)
+            self.items_total = len(missing)
+            self.error = 'Done'
+        elif area == 'prices':
+            self.error = 'None'
+            missing = self._identify_incomplete_securities_price_th(exchange)
+            self.items_total = len(missing)
+            self.error = 'Done'
 
     def delete_exchange(self, exchange):
         with self.session() as session, session.begin():
-            exc = session.query(m.Exchange).filter(m.Exchange.abbreviation==exchange)
+            exc = session.query(m.Exchange.abbreviation).filter(m.Exchange.abbreviation==exchange)
             if exc is not None:
                 exc.delete(synchronize_session=False)
 
-    def build_indexes(self):
+    def create_indexes(self):
         with self.session() as session, session.begin():
             for index in d.INDEXES:
                 ind = m.Index(abbreviation=index['abbreviation'], name=index['name'])
@@ -107,34 +106,23 @@ class Manager:
         valid = []
 
         with self.session() as session:
-            i = session.query(m.Index).filter(m.Index.abbreviation==index).one()
+            i = session.query(m.Index.abbreviation).filter(m.Index.abbreviation==index).one()
             symbols = s.get_index_symbols_master(i.abbreviation)
             for symbol in symbols:
-                ticker = session.query(m.Security).filter(m.Security.ticker==symbol).one_or_none()
+                ticker = session.query(m.Security.ticker).filter(m.Security.ticker==symbol).one_or_none()
                 if ticker is not None:
                     valid += [ticker.ticker]
 
         if len(valid) > 0:
-            self._add_securities_to_index(valid, i.abbreviation)
+            self._add_securities_to_index_th(valid, i.abbreviation)
             logger.info(f'{__name__}: Populated index {index}')
         else:
             self.error = 'No symbols'
             logger.warning(f'{__name__}: No symbols found for {index}')
 
-    def add_index(self, abbreviation, name):
-        with self.session() as session, session.begin():
-            i = session.query(m.Index).filter(m.Index.abbreviation==abbreviation).one_or_none()
-            if i is None:
-                ind = m.Index(abbreviation=abbreviation, name=name)
-                if ind is not None:
-                    session.add(ind)
-                    logger.info(f'{__name__}: Added index {name}')
-            else:
-                logger.warning(f'{__name__}: Index {name} already present')
-
     def delete_index(self, index):
         with self.session() as session, session.begin():
-            ind = session.query(m.Index).filter(m.Index.abbreviation==index)
+            ind = session.query(m.Index.abbreviation).filter(m.Index.abbreviation==index)
             if ind is not None:
                 ind.delete(synchronize_session=False)
                 logger.info(f'{__name__}: Deleted index {index}')
@@ -232,31 +220,7 @@ class Manager:
 
         return nasdaq_nyse, nasdaq_amex, nyse_amex
 
-    def identify_incomplete_securities_companies(self):
-        missing = []
-        with self.session() as session:
-            sec = session.query(m.Security.id, m.Security.ticker).all()
-            for t in sec:
-                c = session.query(m.Company.security_id).filter(m.Company.security_id==t.id).first()
-                if c is None:
-                    missing += [t.ticker]
-
-        logger.info(f'{__name__}: {len(missing)} incomplete symbol company info')
-        return missing
-
-    def identify_incomplete_securities_price(self):
-        missing = []
-        with self.session() as session:
-            sec = session.query(m.Security.id, m.Security.ticker).all()
-            for t in sec:
-                p = session.query(m.Price.security_id).filter(m.Price.security_id==t.id).first()
-                if p is None:
-                    missing += [t.ticker]
-
-        logger.info(f'{__name__}: {len(missing)} incomplete symbol price info')
-        return missing
-
-    def _add_securities_to_exchange(self, tickers, exchange):
+    def _add_securities_to_exchange_th(self, tickers, exchange):
         self.items_total = len(tickers)
         self.items_completed = 0
 
@@ -301,7 +265,7 @@ class Manager:
                     logger.warning(f'{__name__}: Cancelling operation')
                     break
 
-    def _add_securities_to_index(self, tickers, index):
+    def _add_securities_to_index_th(self, tickers, index):
         self.items_total = 0
         self.items_completed = 0
 
@@ -322,6 +286,34 @@ class Manager:
                 self.items_completed += 1
 
                 logger.info(f'{__name__}: Added {t} to index {index}')
+
+    def _identify_incomplete_securities_companies_th(self, exchange):
+        missing = []
+        with self.session() as session:
+            exc = session.query(m.Exchange.id).filter(m.Exchange.abbreviation==exchange).one()
+            sec = session.query(m.Security.ticker, m.Security.id).filter(m.Security.exchange_id==exc.id).all()
+            for t in sec:
+                c = session.query(m.Company.id).filter(m.Company.security_id==t.id).limit(1)
+                if c.first() is None:
+                    logger.info(f'{__name__}: {t.ticker} incomplete company info')
+                    missing += [t.ticker]
+
+        logger.info(f'{__name__}: {len(missing)} incomplete symbol company info')
+        return missing
+
+    def _identify_incomplete_securities_price_th(self, exchange):
+        missing = []
+        with self.session() as session:
+            exc = session.query(m.Exchange.id).filter(m.Exchange.abbreviation==exchange).one()
+            sec = session.query(m.Security.ticker, m.Security.id).filter(m.Security.exchange_id==exc.id).all()
+            for t in sec:
+                c = session.query(m.Price.id).filter(m.Price.security_id==t.id).limit(1)
+                if c.first() is None:
+                    logger.info(f'{__name__}: {t.ticker} incomplete price info')
+                    missing += [t.ticker]
+
+        logger.info(f'{__name__}: {len(missing)} incomplete symbol price info')
+        return missing
 
     def _add_company_to_security(self, ticker):
         with self.session() as session, session.begin():
@@ -367,10 +359,9 @@ if __name__ == '__main__':
     logger = u.get_logger(DEBUG)
 
     manager = Manager()
-    missing = manager.identify_incomplete_securities_companies()
+    # missing = manager.identify_incomplete_securities_companies('NYSE')
+    missing = manager._identify_incomplete_securities_price_th('AMEX')
     print(len(missing))
-    # missing = manager.identify_incomplete_price_securities()
-    # print(len(missing))
 
     # invalid = manager.validate_list('NASDAQ')
     # print (invalid)

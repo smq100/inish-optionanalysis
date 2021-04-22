@@ -144,7 +144,7 @@ class Interface:
             tic = time.perf_counter()
 
             if progressbar:
-                self._show_progress('Progress', 'Completed', 1)
+                self._show_progress('Progress', 'Completed')
 
             # Wait for thread to finish
             while self.task.is_alive(): pass
@@ -166,22 +166,18 @@ class Interface:
         if select > 0:
             exc = self.exchanges[select-1]
 
-            self.task = threading.Thread(target=self.manager.refresh_exchange, args=[exc])
+            self.task = threading.Thread(target=self.manager.refresh_exchange, args=[exc, 'companies'])
             self.task.start()
             tic = time.perf_counter()
 
             if progressbar:
-                self._show_progress('Progress', 'Completed', 1)
-
-            # Wait for thread to finish
-            while self.task.is_alive(): pass
+                self._show_progress('Progress', 'Completed', infinite=True)
 
             toc = time.perf_counter()
             totaltime = toc - tic
 
-            if self.manager.error == 'None':
-                u.print_message(f'{self.manager.items_total} {exc} '\
-                    f'Symbols refreshed in {totaltime:.2f} seconds with {len(self.manager.invalid_symbols)} invalid symbols')
+            print('')
+            u.print_message(f'{self.manager.items_total} {exc} Completed in {totaltime:.2f} seconds')
 
     def delete_exchange(self):
         menu_items = {}
@@ -207,7 +203,7 @@ class Interface:
             tic = time.perf_counter()
 
             if progressbar:
-                self._show_progress('Progress', 'Completed', 1)
+                self._show_progress('Progress', 'Completed')
 
             # Wait for thread to finish
             while self.task.is_alive(): pass
@@ -233,8 +229,8 @@ class Interface:
         select = u.input_integer('Are you sure? 1 to reset or 0 to cancel: ', 0, 1)
         if select == 1:
             self.manager.delete_database()
-            self.manager.build_exchanges()
-            self.manager.build_indexes()
+            self.manager.create_exchanges()
+            self.manager.create_indexes()
             u.print_message(f'Reset the database')
         else:
             u.print_message('Database not reset')
@@ -261,15 +257,15 @@ class Interface:
     def list_invalid(self):
         u.print_message(f'Invalid: {self.manager.invalid_symbols}')
 
-    def _show_progress(self, prefix, suffix, scheme):
+    def _show_progress(self, prefix, suffix, infinite=False):
         while not self.manager.error: pass
 
         if self.manager.error == 'None':
-            total = self.manager.items_total
+            total = -1 if infinite else self.manager.items_total
             completed = self.manager.items_completed
 
             u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50)
-            while completed < total and self.task.is_alive and self.manager.error == 'None':
+            while self.task.is_alive and self.manager.error == 'None':
                 time.sleep(0.25)
                 completed = self.manager.items_completed
                 u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50)

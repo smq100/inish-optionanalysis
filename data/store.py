@@ -63,7 +63,7 @@ def get_history(ticker, days, live=False):
                 if days < 0:
                     p = session.query(o.Price).filter(o.Price.security_id==t.id)
                     results = pd.read_sql(p.statement, engine)
-                    logger.info(f'{__name__}: Fetched entire price history for {ticker}')
+                    logger.info(f'{__name__}: Fetched max price history for {ticker}')
                 elif days > 1:
                     start = dt.datetime.today() - dt.timedelta(days=days)
                     p = session.query(o.Price).filter(and_(o.Price.security_id==t.id, o.Price.date >= start))
@@ -129,7 +129,7 @@ def get_exchanges():
     session = sessionmaker(bind=engine)
 
     with session() as session:
-        exc = session.query(o.Exchange).all()
+        exc = session.query(o.Exchange.abbreviation).all()
         for e in exc:
             results += [e.abbreviation]
 
@@ -141,7 +141,7 @@ def get_exchange(exchange):
     session = sessionmaker(bind=engine)
 
     with session() as session:
-        exc = session.query(o.Exchange).filter(o.Exchange.abbreviation==exchange.upper()).first()
+        exc = session.query(o.Exchange.id).filter(o.Exchange.abbreviation==exchange.upper()).first()
         if exc is not None:
             t = session.query(o.Security).filter(o.Security.exchange_id==exc.id).all()
             for symbol in t:
@@ -157,7 +157,7 @@ def get_indexes():
     session = sessionmaker(bind=engine)
 
     with session() as session:
-        ind = session.query(o.Index).all()
+        ind = session.query(o.Index.abbreviation).all()
         for i in ind:
             results += [i.abbreviation]
 
@@ -169,7 +169,7 @@ def get_index(index):
     session = sessionmaker(bind=engine)
 
     with session() as session:
-        i = session.query(o.Index).filter(o.Index.abbreviation==index.upper()).first()
+        i = session.query(o.Index.id).filter(o.Index.abbreviation==index.upper()).first()
         if i is not None:
             t = session.query(o.Security).filter(or_(o.Security.index1_id==i.id, o.Security.index2_id==i.id)).all()
             for symbol in t:
