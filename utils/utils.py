@@ -168,23 +168,16 @@ def print_warning(message, creturn=True):
 def print_error(message, creturn=True):
     print(delimeter(f'Error: {message}', creturn))
 
-position = 1
+position = 0
 direction = 'f'
-def progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█', end='\r', percent=False):
-    """
-    Call in a loop to create terminal progress bar
-    @params:
-        iteration   - Required  : current iteration (Int)
-        total       - Required  : total iterations (Int)
-        prefix      - Optional  : prefix string (Str)
-        suffix      - Optional  : suffix string (Str)
-        decimals    - Optional  : positive number of decimals in percent complete (Int)
-        length      - Optional  : character length of bar (Int)
-        fill        - Optional  : bar fill character (Str)
-        end         - Optional  : end character (e.g. "\r", "\r\n") (Str)
-    """
+def progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█', end='\r', percent=False, reset=False):
     global position
     global direction
+
+    if reset:
+        position = 0
+        direction = 'f'
+
     if total > 0:
         filled = int(length * iteration // total)
         bar = fill * filled + '-' * (length - filled)
@@ -198,7 +191,8 @@ def progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100,
         if iteration == total:
             print()
     elif total < 0:
-        suffix = 'Working...'
+        prefix = 'Working'
+        suffix = ''
         if direction == 'f':
             if position < length:
                 position += 1

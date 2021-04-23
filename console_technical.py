@@ -66,7 +66,7 @@ class Interface:
             if ticker != '0':
                 valid = o.is_symbol_valid(ticker)
                 if valid:
-                    self.technical = Technical(ticker, 365)
+                    self.technical = Technical(ticker, None, 365)
                 else:
                     u.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
             else:

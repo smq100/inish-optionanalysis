@@ -58,6 +58,7 @@ class Manager:
         symbols = s.get_exchange_symbols_master(abrev)
         if len(symbols) > 0:
             self._add_securities_to_exchange_th(symbols, abrev)
+            self.error = 'Success'
         else:
             logger.warning(f'{__name__}: No symbols for {exchange}')
 
@@ -81,12 +82,12 @@ class Manager:
             self.error = 'None'
             missing = self._identify_incomplete_securities_companies_th(exchange)
             self.items_total = len(missing)
-            self.error = 'Done'
+            self.error = 'Success'
         elif area == 'prices':
             self.error = 'None'
             missing = self._identify_incomplete_securities_price_th(exchange)
             self.items_total = len(missing)
-            self.error = 'Done'
+            self.error = 'Success'
 
     def delete_exchange(self, exchange):
         with self.session() as session, session.begin():

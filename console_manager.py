@@ -157,27 +157,37 @@ class Interface:
                     f'Symbols populated in {totaltime:.2f} seconds with {len(self.manager.invalid_symbols)} invalid symbols')
 
     def refresh_exchange(self, progressbar=True):
-        menu_items = {}
-        for i, exchange in enumerate(self.exchanges):
-            menu_items[f'{i+1}'] = f'{exchange}'
-        menu_items['0'] = 'Cancel'
+        menu_items = {
+            '1': 'Missing Securities',
+            '2': 'Missing Company Information',
+            '3': 'Missing Price Information',
+            '0': 'Cancel',
+        }
+        area = u.menu(menu_items, 'Select item to refresh, or 0 to cancel: ', 0, 3)
 
-        select = u.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
-        if select > 0:
-            exc = self.exchanges[select-1]
+        if area > 0:
+            areaname = ['securities', 'companies', 'prices']
+            menu_items = {}
+            for i, e in enumerate(self.exchanges):
+                menu_items[f'{i+1}'] = f'{e}'
+            menu_items['0'] = 'Cancel'
 
-            self.task = threading.Thread(target=self.manager.refresh_exchange, args=[exc, 'companies'])
-            self.task.start()
-            tic = time.perf_counter()
+            exchange = u.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
+            if exchange > 0:
+                exc = self.exchanges[exchange-1]
 
-            if progressbar:
-                self._show_progress('Progress', 'Completed', infinite=True)
+                self.task = threading.Thread(target=self.manager.refresh_exchange, args=[exc, areaname[area-1]])
+                self.task.start()
+                tic = time.perf_counter()
 
-            toc = time.perf_counter()
-            totaltime = toc - tic
+                if progressbar:
+                    self._show_progress('Progress', 'Completed', infinite=True)
 
-            print('')
-            u.print_message(f'{self.manager.items_total} {exc} Completed in {totaltime:.2f} seconds')
+                toc = time.perf_counter()
+                totaltime = toc - tic
+
+                print('')
+                u.print_message(f'Completed {exc} {areaname[area-1]} refresh in {totaltime:.2f} seconds with {self.manager.items_total} items missing')
 
     def delete_exchange(self):
         menu_items = {}
@@ -264,11 +274,12 @@ class Interface:
             total = -1 if infinite else self.manager.items_total
             completed = self.manager.items_completed
 
-            u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50)
+            u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50, reset=True)
             while self.task.is_alive and self.manager.error == 'None':
                 time.sleep(0.25)
                 completed = self.manager.items_completed
                 u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50)
+            u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50, reset=True)
         else:
             u.print_message(f'{self.manager.error}')
 
