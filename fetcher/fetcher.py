@@ -4,6 +4,7 @@ yfinance: https://github.com/ranaroussi/yfinance
 
 import datetime as dt
 import configparser
+from logging import exception
 
 import quandl as qd
 import yfinance as yf
@@ -39,6 +40,11 @@ def get_company(ticker, force=False):
 
     if validate_ticker(ticker, force):
         company = yf.Ticker(ticker)
+        try:
+            _ = company.info
+        except Exception as e:
+            # YFinance (pandas) throws exceptions with bad info (YFinance bug)
+            company = None
 
     return company
 
@@ -47,8 +53,7 @@ def get_history(ticker, days=-1):
 
     company = get_company(ticker)
     if company is not None:
-        if days < 1:
-            days = 7300 # 20 years
+        if days < 1: days = 7300 # 20 years
 
         start = dt.datetime.today() - dt.timedelta(days=days)
         history = company.history(start=f'{start:%Y-%m-%d}')
@@ -96,8 +101,8 @@ if __name__ == '__main__':
     from logging import DEBUG
     logger = u.get_logger(DEBUG)
 
-    history = get_history('AAPL', 60)
-    print(history)
+    c = get_company('ADRA')
+    print(type(c.info))
 
     # start = dt.datetime.today() - dt.timedelta(days=10)
     # df = refresh_history('AAPL', 60)

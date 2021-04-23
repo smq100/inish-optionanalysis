@@ -8,7 +8,7 @@ from data import store as s
 from data import manager as m
 from utils import utils as u
 
-logger = u.get_logger(logging.ERROR)
+logger = u.get_logger(logging.WARNING)
 
 
 class Interface:
@@ -181,7 +181,7 @@ class Interface:
                 tic = time.perf_counter()
 
                 if progressbar:
-                    self._show_progress('Progress', 'Completed', infinite=True)
+                    self._show_progress('Working', '', infinite=True)
 
                 toc = time.perf_counter()
                 totaltime = toc - tic
@@ -277,8 +277,14 @@ class Interface:
             u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50, reset=True)
             while self.task.is_alive and self.manager.error == 'None':
                 time.sleep(0.25)
-                completed = self.manager.items_completed
-                u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50)
+                if self.manager.items_total > 0:
+                    total = self.manager.items_total
+                    completed = self.manager.items_completed
+                    u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50)
+                else:
+                    total = -1
+                    u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50)
+
             u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50, reset=True)
         else:
             u.print_message(f'{self.manager.error}')

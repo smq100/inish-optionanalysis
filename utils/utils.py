@@ -191,8 +191,6 @@ def progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100,
         if iteration == total:
             print()
     elif total < 0:
-        prefix = 'Working'
-        suffix = ''
         if direction == 'f':
             if position < length:
                 position += 1

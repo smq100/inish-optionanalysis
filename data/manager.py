@@ -78,14 +78,21 @@ class Manager:
             self.error = 'None'
             if self.items_total > 0:
                 self._add_securities_to_exchange_th(missing, exchange)
+            self.error = 'Success'
         elif area == 'companies':
             self.error = 'None'
-            missing = self._identify_incomplete_securities_companies_th(exchange)
+            missing = self.identify_incomplete_securities_companies(exchange)
             self.items_total = len(missing)
+            self.items_completed = 0
+
+            for company in missing:
+                self._add_company_to_security(company)
+                self.items_completed += 1
+
             self.error = 'Success'
         elif area == 'prices':
             self.error = 'None'
-            missing = self._identify_incomplete_securities_price_th(exchange)
+            missing = self.identify_incomplete_securities_price(exchange)
             self.items_total = len(missing)
             self.error = 'Success'
 
@@ -210,6 +217,34 @@ class Manager:
         logger.info(f'{__name__}: {len(missing)} missing symbols in {exchange}')
         return missing
 
+    def identify_incomplete_securities_companies(self, exchange):
+        missing = []
+        with self.session() as session:
+            exc = session.query(m.Exchange.id).filter(m.Exchange.abbreviation==exchange).one()
+            sec = session.query(m.Security.ticker, m.Security.id).filter(m.Security.exchange_id==exc.id).all()
+            for t in sec:
+                c = session.query(m.Company.id).filter(m.Company.security_id==t.id).limit(1)
+                if c.first() is None:
+                    logger.info(f'{__name__}: {t.ticker} incomplete company info')
+                    missing += [t.ticker]
+
+        logger.info(f'{__name__}: {len(missing)} incomplete symbol company info')
+        return missing
+
+    def identify_incomplete_securities_price(self, exchange):
+        missing = []
+        with self.session() as session:
+            exc = session.query(m.Exchange.id).filter(m.Exchange.abbreviation==exchange).one()
+            sec = session.query(m.Security.ticker, m.Security.id).filter(m.Security.exchange_id==exc.id).all()
+            for t in sec:
+                c = session.query(m.Price.id).filter(m.Price.security_id==t.id).limit(1)
+                if c.first() is None:
+                    logger.info(f'{__name__}: {t.ticker} incomplete price info')
+                    missing += [t.ticker]
+
+        logger.info(f'{__name__}: {len(missing)} incomplete symbol price info')
+        return missing
+
     def identify_common_securities(self):
         nasdaq = s.get_exchange_symbols_master('NASDAQ')
         nyse = s.get_exchange_symbols_master('NYSE')
@@ -288,34 +323,6 @@ class Manager:
 
                 logger.info(f'{__name__}: Added {t} to index {index}')
 
-    def _identify_incomplete_securities_companies_th(self, exchange):
-        missing = []
-        with self.session() as session:
-            exc = session.query(m.Exchange.id).filter(m.Exchange.abbreviation==exchange).one()
-            sec = session.query(m.Security.ticker, m.Security.id).filter(m.Security.exchange_id==exc.id).all()
-            for t in sec:
-                c = session.query(m.Company.id).filter(m.Company.security_id==t.id).limit(1)
-                if c.first() is None:
-                    logger.info(f'{__name__}: {t.ticker} incomplete company info')
-                    missing += [t.ticker]
-
-        logger.info(f'{__name__}: {len(missing)} incomplete symbol company info')
-        return missing
-
-    def _identify_incomplete_securities_price_th(self, exchange):
-        missing = []
-        with self.session() as session:
-            exc = session.query(m.Exchange.id).filter(m.Exchange.abbreviation==exchange).one()
-            sec = session.query(m.Security.ticker, m.Security.id).filter(m.Security.exchange_id==exc.id).all()
-            for t in sec:
-                c = session.query(m.Price.id).filter(m.Price.security_id==t.id).limit(1)
-                if c.first() is None:
-                    logger.info(f'{__name__}: {t.ticker} incomplete price info')
-                    missing += [t.ticker]
-
-        logger.info(f'{__name__}: {len(missing)} incomplete symbol price info')
-        return missing
-
     def _add_company_to_security(self, ticker):
         with self.session() as session, session.begin():
             s = session.query(m.Security).filter(m.Security.ticker==ticker).one_or_none()
@@ -324,16 +331,28 @@ class Manager:
                 logger.info(f'{__name__}: No company for {ticker}')
             elif company.info is None:
                 logger.info(f'{__name__}: No company information for {ticker}')
+            elif len(company.info) == 0:
+                logger.info(f'{__name__}: No company information for {ticker}')
             else:
-                c = m.Company()
-                c.name = company.info['shortName'] if company.info['shortName'] else '<error>'
-                c.description = company.info['longBusinessSummary'][:4999]
-                c.url = company.info['website']
-                c.sector = company.info['sector']
-                c.industry = company.info['industry']
-                s.company = [c]
+                try:
+                    _ = company.info['shortName']
+                    _ = company.info['longBusinessSummary']
+                    _ = company.info['website']
+                    _ = company.info['sector']
+                    _ = company.info['industry']
+                except KeyError:
+                    pass
+                else:
+                    c = m.Company()
+                    c.name = company.info['shortName'] if company.info['shortName'] else '<error>'
+                    c.description = company.info['longBusinessSummary'][:4999]
+                    c.url = company.info['website']
+                    c.sector = company.info['sector']
+                    c.industry = company.info['industry']
 
-                logger.info(f'{__name__}: Added company information for {ticker}')
+                    s.company = [c]
+
+                    logger.info(f'{__name__}: Added company information for {ticker}')
 
     def _add_pricing_to_security(self, ticker):
         with self.session() as session, session.begin():
@@ -361,7 +380,7 @@ if __name__ == '__main__':
 
     manager = Manager()
     # missing = manager.identify_incomplete_securities_companies('NYSE')
-    missing = manager._identify_incomplete_securities_price_th('AMEX')
+    missing = manager.identify_incomplete_securities_price('AMEX')
     print(len(missing))
 
     # invalid = manager.validate_list('NASDAQ')

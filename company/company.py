@@ -68,7 +68,7 @@ class Company:
 
 
 if __name__ == '__main__':
-    company = Company('TRV', days=365, live=True)
+    company = Company('ADRA', days=365, live=True)
     val = company.get_current_price()
     print(val)
     val = company.get_close()
