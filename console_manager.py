@@ -119,13 +119,13 @@ class Interface:
                     print(f'Industry:\t{company["industry"]}')
                     print(f'Indexes:\t{company["indexes"]}')
                     print(f'URL:\t\t{company["url"]}')
-                    print(f'Records:\t{company["precords"]}')
-                    if company["min"] is not None:
-                        print(f'Oldest:\t\t{company["min"]:%Y-%m-%d}')
-                    else:
-                        print('Oldest:')
+                    print(f'Price Records:\t{company["precords"]}')
                 else:
                     u.print_error(f'{symbol} has no company information')
+
+                history = s.get_history(symbol, 0)
+                if not history.empty:
+                    print(f'Latest Record:\t{history["date"]:%Y-%m-%d}, closed at ${history["close"]:.2f}')
             else:
                 u.print_error(f'{symbol} not found')
 
@@ -181,7 +181,7 @@ class Interface:
                 tic = time.perf_counter()
 
                 if progressbar:
-                    self._show_progress('Working', '', infinite=True)
+                    self._show_progress('Progress', 'Completed', infinite=True)
 
                 toc = time.perf_counter()
                 totaltime = toc - tic
@@ -284,8 +284,6 @@ class Interface:
                 else:
                     total = -1
                     u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50)
-
-            u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50, reset=True)
         else:
             u.print_message(f'{self.manager.error}')
 

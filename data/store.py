@@ -50,15 +50,14 @@ def is_index(index):
     return ret
 
 def get_history(ticker, days, live=False):
-    results = pd.DataFrame
-    engine = create_engine(d.ACTIVE_URI, echo=False)
-    session = sessionmaker(bind=engine)
-
     if live:
         results = f.get_history(ticker, days)
     else:
+        results = pd.DataFrame
+        engine = create_engine(d.ACTIVE_URI, echo=False)
+        session = sessionmaker(bind=engine)
         with session() as session:
-            t = session.query(o.Security).filter(o.Security.ticker==ticker.upper()).one_or_none()
+            t = session.query(o.Security).filter(o.Security.ticker==ticker.upper()).one()
             if t is not None:
                 if days < 0:
                     p = session.query(o.Price).filter(o.Price.security_id==t.id)
@@ -69,6 +68,15 @@ def get_history(ticker, days, live=False):
                     p = session.query(o.Price).filter(and_(o.Price.security_id==t.id, o.Price.date >= start))
                     results = pd.read_sql(p.statement, engine)
                     logger.info(f'{__name__}: Fetched {days} days of price history for {ticker}')
+                else:
+                    start = dt.datetime.today() - dt.timedelta(days=100)
+                    p = session.query(o.Price).filter(and_(o.Price.security_id==t.id, o.Price.date >= start))
+                    results = pd.read_sql(p.statement, engine)
+                    if not results.empty:
+                        results = results.iloc[-1]
+                        logger.info(f'{__name__}: Fetched latest price history for {ticker}')
+                    else:
+                        logger.warning(f'{__name__}: No price history for {ticker}')
             else:
                 logger.warning(f'{__name__}: No history found for {ticker}')
 
@@ -87,7 +95,6 @@ def get_company(ticker, live=False):
         results['industry'] = c['industry']
         results['indexes'] = ''
         results['precords'] = 0
-        results['min'] = ''
     else:
         results['name'] = ''
         results['url'] = ''
@@ -95,7 +102,6 @@ def get_company(ticker, live=False):
         results['industry'] = ''
         results['indexes'] = ''
         results['precords'] = 0
-        results['min'] = None
         with session() as session:
             t = session.query(o.Security).filter(o.Security.ticker==ticker.upper()).one_or_none()
             if t is not None:
@@ -117,9 +123,6 @@ def get_company(ticker, live=False):
 
                 p = session.query(o.Price).filter(o.Price.security_id==t.id).count()
                 results['precords'] = p
-
-                p = session.query(func.min(o.Price.date)).filter(o.Price.security_id==t.id).one_or_none()
-                results['min'] = p[0]
 
     return results
 
@@ -233,11 +236,11 @@ def get_index_symbols_master(index, type='google'):
 
 
 if __name__ == '__main__':
-    from logging import DEBUG
-    logger = u.get_logger(DEBUG)
+    # from logging import DEBUG
+    # logger = u.get_logger(DEBUG)
 
-    e = get_company('trv')
+    e = get_history('aapl', 0)
     # print(type(e['min']))
     # print(str(e['min']))
     # print(f'{e["min"]:%Y-%m-%d}')
-    print(e)
+    print(e['close'])

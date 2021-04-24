@@ -57,7 +57,7 @@ class Manager:
 
         symbols = s.get_exchange_symbols_master(abrev)
         if len(symbols) > 0:
-            self._add_securities_to_exchange_th(symbols, abrev)
+            self._add_securities_to_exchange(symbols, abrev)
             self.error = 'Success'
         else:
             logger.warning(f'{__name__}: No symbols for {exchange}')
@@ -77,7 +77,7 @@ class Manager:
             self.items_total = len(missing)
             self.error = 'None'
             if self.items_total > 0:
-                self._add_securities_to_exchange_th(missing, exchange)
+                self._add_securities_to_exchange(missing, exchange)
             self.error = 'Success'
         elif area == 'companies':
             self.error = 'None'
@@ -94,6 +94,11 @@ class Manager:
             self.error = 'None'
             missing = self.identify_incomplete_securities_price(exchange)
             self.items_total = len(missing)
+
+            for company in missing:
+                self._add_pricing_to_security(company)
+                self.items_completed += 1
+
             self.error = 'Success'
 
     def delete_exchange(self, exchange):
@@ -122,7 +127,7 @@ class Manager:
                     valid += [ticker.ticker]
 
         if len(valid) > 0:
-            self._add_securities_to_index_th(valid, i.abbreviation)
+            self._add_securities_to_index(valid, i.abbreviation)
             logger.info(f'{__name__}: Populated index {index}')
         else:
             self.error = 'No symbols'
@@ -188,20 +193,18 @@ class Manager:
 
         return info
 
-    def validate_list(self, list):
-        symbols = []
-        invalid = []
-        if s.is_exchange(list):
-            symbols = self.get_exchange_symbols_master(list)
-        elif s.is_index(list):
-            symbols = s.get_index_symbols_master(list)
+    def refresh_pricing(self, ticker):
+        history = s.get_history(ticker, 0)
+        date_db = history['date']
+        logger.info(f'{__name__}: Last price in database: {date_db:%Y-%m-%d}')
 
-        if len(symbols) > 0:
-            for s in symbols:
-                if not f.validate_ticker(s, force=True):
-                    invalid += [s]
+        history = s.get_history(ticker, 0, live=True)
+        date_cloud = history['Date'].date()
+        logger.info(f'{__name__}: Last price in cloud: {date_cloud:%Y-%m-%d}')
 
-        return invalid
+        delta = date_cloud - date_db
+        history = s.get_history(ticker, delta.days, live=True)
+        print(history)
 
     def identify_missing_securities(self, exchange):
         missing = []
@@ -256,7 +259,22 @@ class Manager:
 
         return nasdaq_nyse, nasdaq_amex, nyse_amex
 
-    def _add_securities_to_exchange_th(self, tickers, exchange):
+    def validate_list(self, list):
+        symbols = []
+        invalid = []
+        if s.is_exchange(list):
+            symbols = self.get_exchange_symbols_master(list)
+        elif s.is_index(list):
+            symbols = s.get_index_symbols_master(list)
+
+        if len(symbols) > 0:
+            for s in symbols:
+                if not f.validate_ticker(s, force=True):
+                    invalid += [s]
+
+        return invalid
+
+    def _add_securities_to_exchange(self, tickers, exchange):
         self.items_total = len(tickers)
         self.items_completed = 0
 
@@ -301,7 +319,7 @@ class Manager:
                     logger.warning(f'{__name__}: Cancelling operation')
                     break
 
-    def _add_securities_to_index_th(self, tickers, index):
+    def _add_securities_to_index(self, tickers, index):
         self.items_total = 0
         self.items_completed = 0
 
@@ -326,7 +344,7 @@ class Manager:
     def _add_company_to_security(self, ticker):
         with self.session() as session, session.begin():
             s = session.query(m.Security).filter(m.Security.ticker==ticker).one_or_none()
-            company = f.get_company(ticker)
+            company = s.get_company(ticker, live=True)
             if company is None:
                 logger.info(f'{__name__}: No company for {ticker}')
             elif company.info is None:
@@ -356,11 +374,15 @@ class Manager:
 
     def _add_pricing_to_security(self, ticker):
         with self.session() as session, session.begin():
-            s = session.query(m.Security).filter(m.Security.ticker==ticker).one_or_none()
-            history = f.get_history(ticker)
-            if history is not None:
+            s = session.query(m.Security).filter(m.Security.ticker==ticker).one()
+            history = s.get_history(ticker, live=True)
+            if history is None:
+                logger.info(f'{__name__}: No pricing information for {ticker}')
+            elif history.empty:
+                logger.info(f'{__name__}: No pricing information for {ticker}')
+            else:
                 history.reset_index(inplace=True)
-                for index, price in history.iterrows():
+                for _, price in history.iterrows():
                     if price['Date']:
                         p = m.Price()
                         p.date = price['Date']
@@ -369,6 +391,7 @@ class Manager:
                         p.low = price['Low']
                         p.close = price['Close']
                         p.volume = price['Volume']
+
                         s.pricing += [p]
 
                 logger.info(f'{__name__}: Added pricing to {ticker}')
@@ -380,8 +403,8 @@ if __name__ == '__main__':
 
     manager = Manager()
     # missing = manager.identify_incomplete_securities_companies('NYSE')
-    missing = manager.identify_incomplete_securities_price('AMEX')
-    print(len(missing))
+    data = manager.refresh_pricing('aapl')
+    # print(len(data))
 
     # invalid = manager.validate_list('NASDAQ')
     # print (invalid)

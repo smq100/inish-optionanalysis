@@ -208,7 +208,7 @@ def progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100,
         back = length - position
         bar = ('-' * front) + fill + ('-' * back)
 
-        print(f'\r{prefix} |{bar}| {suffix}', end=end)
+        print(f'\rWorking |{bar}| ', end=end)
 
 if __name__ == '__main__':
     import time
