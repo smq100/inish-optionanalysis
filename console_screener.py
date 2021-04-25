@@ -9,7 +9,7 @@ import data as d
 from data import store as o
 from utils import utils as u
 
-logger = u.get_logger(logging.WARNING)
+logger = u.get_logger(logging.ERROR)
 
 BASEPATH = os.getcwd()+'/screener/screens/'
 SCREEN_SUFFIX = '.screen'
@@ -149,6 +149,7 @@ class Interface:
         if selection > 0:
             index = d.INDEXES[selection-1]['abbreviation']
             if len(o.get_index(index)) > 0:
+                print(index)
                 self.screener = Screener(index, script=self.screen, live=self.live)
                 if self.screener.valid():
                     self.table = index
@@ -185,8 +186,9 @@ class Interface:
                 self.screen = self.script[selection-1]
                 self.results = []
 
-                if not self.screener.load_script(self.screen):
-                    u.print_error('Error in script file')
+                if self.screener is not None:
+                    if not self.screener.load_script(self.screen):
+                        u.print_error('Error in script file')
 
         else:
             u.print_message('No script files found')
@@ -257,12 +259,14 @@ class Interface:
         if self.screener.error == 'None':
             total = self.screener.items_total
             completed = self.screener.items_completed
+
             u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50)
             while completed < total:
                 time.sleep(0.25)
-                sfx = suffix + f' - {self.screener.active_symbol} ({self.screener.matches})' + '    '
                 completed = self.screener.items_completed
-                u.progress_bar(completed, total, prefix=prefix, suffix=sfx, length=50)
+                success = self.screener.items_success
+                symbol = self.screener.items_symbol
+                u.progress_bar(completed, total, prefix=prefix, suffix=suffix, symbol=symbol, length=50, success=success)
 
 
 if __name__ == '__main__':

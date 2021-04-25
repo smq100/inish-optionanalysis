@@ -12,7 +12,7 @@
       "criteria":{
          "conditional":"gt",
          "technical":"value",
-         "value":150,
+         "value":100,
          "length":0,
          "start":-1,
          "stop":0,

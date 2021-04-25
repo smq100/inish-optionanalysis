@@ -19,6 +19,8 @@ class Manager:
         self.exchange = ''
         self.items_total = 0
         self.items_completed = 0
+        self.items_success = 0
+        self.items_symbol = ''
         self.invalid_symbols = []
         self.error = ''
         self.retry = 0
@@ -119,6 +121,7 @@ class Manager:
         valid = []
 
         with self.session() as session:
+            self.error = 'None'
             i = session.query(m.Index.abbreviation).filter(m.Index.abbreviation==index).one()
             symbols = s.get_index_symbols_master(i.abbreviation)
             for symbol in symbols:
@@ -129,6 +132,7 @@ class Manager:
         if len(valid) > 0:
             self._add_securities_to_index(valid, i.abbreviation)
             logger.info(f'{__name__}: Populated index {index}')
+            self.error = 'Done'
         else:
             self.error = 'No symbols'
             logger.warning(f'{__name__}: No symbols found for {index}')
@@ -193,18 +197,26 @@ class Manager:
 
         return info
 
-    def refresh_pricing(self, ticker):
-        history = s.get_history(ticker, 0)
-        date_db = history['date']
-        logger.info(f'{__name__}: Last price in database: {date_db:%Y-%m-%d}')
+    def refresh_pricing(self, exchange):
+        self.error = ''
+        self.items_completed = 0
+        self.items_success = 0
 
-        history = s.get_history(ticker, 0, live=True)
-        date_cloud = history['Date'].date()
-        logger.info(f'{__name__}: Last price in cloud: {date_cloud:%Y-%m-%d}')
+        tickers = s.get_exchange_symbols_master(exchange)
+        self.items_total = len(tickers)
 
-        delta = date_cloud - date_db
-        history = s.get_history(ticker, delta.days, live=True)
-        print(history)
+        with self.session() as session:
+            _ = session.query(m.Exchange.id, m.Exchange.abbreviation).filter(m.Exchange.abbreviation==exchange).one()
+            self.error = 'None'
+            for sec in tickers:
+                self.items_symbol = sec
+                if self._refresh_pricing(sec):
+                    self.items_success += 1
+
+                self.items_completed += 1
+
+            self.error = 'Done'
+
 
     def identify_missing_securities(self, exchange):
         missing = []
@@ -242,7 +254,6 @@ class Manager:
             for t in sec:
                 c = session.query(m.Price.id).filter(m.Price.security_id==t.id).limit(1)
                 if c.first() is None:
-                    logger.info(f'{__name__}: {t.ticker} incomplete price info')
                     missing += [t.ticker]
 
         logger.info(f'{__name__}: {len(missing)} incomplete symbol price info')
@@ -320,17 +331,13 @@ class Manager:
                     break
 
     def _add_securities_to_index(self, tickers, index):
-        self.items_total = 0
         self.items_completed = 0
 
         with self.session() as session, session.begin():
             ind = session.query(m.Index).filter(m.Index.abbreviation==index).one()
             self.items_total = len(tickers)
-            self.error = 'None'
             for t in tickers:
-                if self.error != 'None':
-                    break
-
+                self.items_symbol = t
                 s = session.query(m.Security).filter(m.Security.ticker==t).one_or_none()
                 if s.index1_id is None:
                     s.index1_id = ind.id
@@ -396,16 +403,59 @@ class Manager:
 
                 logger.info(f'{__name__}: Added pricing to {ticker}')
 
+    def _refresh_pricing(self, ticker):
+        updated = False
+        history = s.get_history(ticker, 0)
+        if history.empty:
+            logger.warning(f'{__name__}: No price history')
+        else:
+            date_db = history['date']
+            if date_db is not None:
+                logger.info(f'{__name__}: Last price in database: {date_db:%Y-%m-%d}')
+
+            history = s.get_history(ticker, 0, live=True)
+            date_cloud = history['Date'].date()
+            logger.info(f'{__name__}: Last price in cloud: {date_cloud:%Y-%m-%d}')
+
+            delta = date_cloud - date_db
+            if delta.days > 0:
+                history = s.get_history(ticker, delta.days, live=True).reset_index()
+                if history is None:
+                    logger.info(f'{__name__}: No pricing information for {ticker}')
+                elif history.empty:
+                    logger.info(f'{__name__}: No pricing information for {ticker}')
+                else:
+                    with self.session() as session, session.begin():
+                        sec = session.query(m.Security).filter(m.Security.ticker==ticker).one()
+                        for _, price in history.iterrows():
+                            if price['Date']:
+                                p = m.Price()
+                                p.date = price['Date']
+                                p.open = price['Open']
+                                p.high = price['High']
+                                p.low = price['Low']
+                                p.close = price['Close']
+                                p.volume = price['Volume']
+
+                                sec.pricing += [p]
+                                updated = True
+
+                        logger.info(f'{__name__}: Updated pricing for {ticker.upper()} to {date_cloud:%Y-%m-%d}')
+        return updated
 
 if __name__ == '__main__':
+    import sys
     from logging import DEBUG
     logger = u.get_logger(DEBUG)
 
     manager = Manager()
     # missing = manager.identify_incomplete_securities_companies('NYSE')
-    data = manager.refresh_pricing('aapl')
-    # print(len(data))
+    if len(sys.argv) > 1:
+        data = manager._refresh_pricing(sys.argv[1])
+    else:
+        data = manager._refresh_pricing('IMO')
 
+    # print(len(data))
     # invalid = manager.validate_list('NASDAQ')
     # print (invalid)
 

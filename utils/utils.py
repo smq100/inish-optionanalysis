@@ -170,7 +170,7 @@ def print_error(message, creturn=True):
 
 position = 0
 direction = 'f'
-def progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█', end='\r', percent=False, reset=False):
+def progress_bar(iteration, total, prefix='', suffix='', symbol='', decimals=1, length=100, fill='█', end='\r', percent=False, reset=False, success=-1):
     global position
     global direction
 
@@ -184,9 +184,11 @@ def progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100,
 
         if percent:
             percent = ('{0:.' + str(decimals) + 'f}').format(100 * (iteration / float(total)))
-            print(f'\r{prefix} |{bar}| {percent}% {suffix}', end=end)
+            print(f'\r{prefix} |{bar}| {percent}% {suffix} {symbol}', end=end)
+        elif success < 0:
+            print(f'\r{prefix} |{bar}| {iteration}/{total} {suffix} {symbol}', end=end)
         else:
-            print(f'\r{prefix} |{bar}| {iteration}/{total} {suffix}', end=end)
+            print(f'\r{prefix} |{bar}| {iteration}/{total} ({success}) {suffix} {symbol}', end=end)
 
         if iteration == total:
             print()

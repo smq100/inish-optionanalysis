@@ -8,7 +8,7 @@ from data import store as s
 from data import manager as m
 from utils import utils as u
 
-logger = u.get_logger(logging.WARNING)
+logger = u.get_logger(logging.ERROR)
 
 
 class Interface:
@@ -52,15 +52,16 @@ class Interface:
             '2': 'Symbol Information',
             '3': 'Populate Exchange',
             '4': 'Refresh Exchange',
-            '5': 'Delete Exchange',
-            '6': 'Populate Index',
-            '7': 'Delete Index',
-            '8': 'Reset Database',
+            '5': 'Update Pricing',
+            '6': 'Delete Exchange',
+            '7': 'Populate Index',
+            '8': 'Delete Index',
+            '9': 'Reset Database',
             '0': 'Exit'
         }
 
         while True:
-            selection = u.menu(menu_items, 'Select Operation', 0, 8)
+            selection = u.menu(menu_items, 'Select Operation', 0, 9)
 
             if selection == 1:
                 self.show_database_information(brief=False)
@@ -71,12 +72,14 @@ class Interface:
             elif selection == 4:
                 self.refresh_exchange()
             elif selection == 5:
-                self.delete_exchange()
+                self.update_pricing()
             elif selection == 6:
-                self.populate_index()
+                self.delete_exchange()
             elif selection == 7:
-                self.delete_index()
+                self.populate_index()
             elif selection == 8:
+                self.delete_index()
+            elif selection == 9:
                 self.reset_database()
             elif selection == 0:
                 break
@@ -104,7 +107,33 @@ class Interface:
                 count = len(self.manager.identify_missing_securities(e))
                 print(f'{e:>9}:\t{count} symbols')
 
-            self.show_master_list()
+            u.print_message('Missing Information')
+            exchanges = s.get_exchanges()
+            for e in exchanges:
+                count = len(self.manager.identify_incomplete_securities_companies(e))
+                print(f'{e:>9}:\t{count} symbols missing company information')
+
+            # for e in exchanges:
+            #     count = len(self.manager.identify_incomplete_securities_price(e))
+            #     print(f'{e:>9}:\t{count} symbols missing price information')
+
+            u.print_message('Master Exchange Symbol List')
+            for exchange in d.EXCHANGES:
+                exc = list(s.get_exchange_symbols_master(exchange['abbreviation']))
+                count = len(exc)
+                print(f'{exchange["abbreviation"]:>9}:\t{count} symbols')
+
+            u.print_message('Master Exchange Common Symbols')
+            nasdaq_nyse, nasdaq_amex, nyse_amex = self.manager.identify_common_securities()
+            count = len(nasdaq_nyse)
+            name = 'NASDAQ-NYSE'
+            print(f'{name:>12}:\t{count} symbols')
+            count = len(nasdaq_amex)
+            name = 'NASDAQ-AMEX'
+            print(f'{name:>12}:\t{count} symbols')
+            count = len(nyse_amex)
+            name = 'NYSE-AMEX'
+            print(f'{name:>12}:\t{count} symbols')
 
     def show_symbol_information(self):
         symbol = u.input_text('Enter symbol: ')
@@ -126,6 +155,13 @@ class Interface:
                 history = s.get_history(symbol, 0)
                 if not history.empty:
                     print(f'Latest Record:\t{history["date"]:%Y-%m-%d}, closed at ${history["close"]:.2f}')
+
+                u.print_message(f'{symbol} Recent Price History')
+                history = s.get_history(symbol, 10)
+                history.set_index('date', inplace=True)
+                if not history.empty:
+                    print(history)
+
             else:
                 u.print_error(f'{symbol} not found')
 
@@ -189,6 +225,33 @@ class Interface:
                 print('')
                 u.print_message(f'Completed {exc} {areaname[area-1]} refresh in {totaltime:.2f} seconds with {self.manager.items_total} items missing')
 
+    def update_pricing(self, progressbar=True):
+        menu_items = {}
+        for i, exchange in enumerate(self.exchanges):
+            menu_items[f'{i+1}'] = f'{exchange}'
+        menu_items['0'] = 'Cancel'
+
+        select = u.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
+        if select > 0:
+            exc = self.exchanges[select-1]
+
+            self.task = threading.Thread(target=self.manager.refresh_pricing, args=[exc])
+            self.task.start()
+            tic = time.perf_counter()
+
+            if progressbar:
+                self._show_progress('Progress', 'Completed')
+
+            # Wait for thread to finish
+            while self.task.is_alive(): pass
+
+            toc = time.perf_counter()
+            totaltime = toc - tic
+
+            if self.manager.error == 'None':
+                u.print_message(f'{self.manager.items_total} {exc} '\
+                    f'Ticker pricing refreshed in {totaltime:.2f} seconds')
+
     def delete_exchange(self):
         menu_items = {}
         for i, exchange in enumerate(self.exchanges):
@@ -245,25 +308,6 @@ class Interface:
         else:
             u.print_message('Database not reset')
 
-    def show_master_list(self):
-        u.print_message('Master Exchange Symbol List')
-        for exchange in d.EXCHANGES:
-            exc = list(s.get_exchange_symbols_master(exchange['abbreviation']))
-            count = len(exc)
-            print(f'{exchange["abbreviation"]:>9}:\t{count} symbols')
-
-        u.print_message('Master Exchange Common Symbols')
-        nasdaq_nyse, nasdaq_amex, nyse_amex = self.manager.identify_common_securities()
-        count = len(nasdaq_nyse)
-        name = 'NASDAQ-NYSE'
-        print(f'{name:>12}:\t{count} symbols')
-        count = len(nasdaq_amex)
-        name = 'NASDAQ-AMEX'
-        print(f'{name:>12}:\t{count} symbols')
-        count = len(nyse_amex)
-        name = 'NYSE-AMEX'
-        print(f'{name:>12}:\t{count} symbols')
-
     def list_invalid(self):
         u.print_message(f'Invalid: {self.manager.invalid_symbols}')
 
@@ -280,7 +324,9 @@ class Interface:
                 if self.manager.items_total > 0:
                     total = self.manager.items_total
                     completed = self.manager.items_completed
-                    u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50)
+                    success = self.manager.items_success
+                    symbol = self.manager.items_symbol
+                    u.progress_bar(completed, total, prefix=prefix, suffix=suffix, symbol=symbol, length=50, success=success)
                 else:
                     total = -1
                     u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50)

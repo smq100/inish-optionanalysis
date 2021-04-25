@@ -34,10 +34,11 @@ class Screener:
         self.symbols = []
         self.items_total = 0
         self.items_completed = 0
+        self.items_success = 0
+        self.items_symbol = ''
         self.results = []
         self.error = ''
         self.active_symbol = ''
-        self.matches = 0
 
         if script:
             if not self.load_script(script):
@@ -109,8 +110,9 @@ class Screener:
     def run_script(self):
         self.results = []
         self.items_completed = 0
+        self.items_success = 0
+        self.items_symbol = ''
         self.error = ''
-        self.matches = 0
 
         if len(self.symbols) == 0:
             self.items_completed = self.items_total
@@ -126,6 +128,7 @@ class Screener:
             self.error = 'None'
             for symbol in self.symbols:
                 result = []
+                self.items_symbol = symbol
                 for condition in self.script:
                     i = Interpreter(symbol, condition)
                     self.active_symbol = symbol.ticker
@@ -142,7 +145,7 @@ class Screener:
                     self.items_completed += 1
                     self.results += [self.Result(symbol, result)]
                     if (bool(self.results[-1])):
-                        self.matches += 1
+                        self.items_success += 1
                 else:
                     self.items_completed = self.items_total
                     self.results = []

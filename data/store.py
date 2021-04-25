@@ -60,17 +60,17 @@ def get_history(ticker, days, live=False):
             t = session.query(o.Security).filter(o.Security.ticker==ticker.upper()).one()
             if t is not None:
                 if days < 0:
-                    p = session.query(o.Price).filter(o.Price.security_id==t.id)
+                    p = session.query(o.Price).filter(o.Price.security_id==t.id).order_by(o.Price.date)
                     results = pd.read_sql(p.statement, engine)
                     logger.info(f'{__name__}: Fetched max price history for {ticker}')
                 elif days > 1:
                     start = dt.datetime.today() - dt.timedelta(days=days)
-                    p = session.query(o.Price).filter(and_(o.Price.security_id==t.id, o.Price.date >= start))
+                    p = session.query(o.Price).filter(and_(o.Price.security_id==t.id, o.Price.date >= start)).order_by(o.Price.date)
                     results = pd.read_sql(p.statement, engine)
                     logger.info(f'{__name__}: Fetched {days} days of price history for {ticker}')
                 else:
                     start = dt.datetime.today() - dt.timedelta(days=100)
-                    p = session.query(o.Price).filter(and_(o.Price.security_id==t.id, o.Price.date >= start))
+                    p = session.query(o.Price).filter(and_(o.Price.security_id==t.id, o.Price.date >= start)).order_by(o.Price.date)
                     results = pd.read_sql(p.statement, engine)
                     if not results.empty:
                         results = results.iloc[-1]
