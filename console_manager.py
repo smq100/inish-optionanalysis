@@ -72,7 +72,7 @@ class Interface:
             elif selection == 4:
                 self.refresh_exchange()
             elif selection == 5:
-                self.update_pricing()
+                self.refresh_pricing()
             elif selection == 6:
                 self.delete_exchange()
             elif selection == 7:
@@ -188,7 +188,7 @@ class Interface:
             toc = time.perf_counter()
             totaltime = toc - tic
 
-            if self.manager.error == 'None':
+            if self.manager.items_error == 'None':
                 u.print_message(f'{self.manager.items_total} {exc} '\
                     f'Symbols populated in {totaltime:.2f} seconds with {len(self.manager.invalid_symbols)} invalid symbols')
 
@@ -225,7 +225,7 @@ class Interface:
                 print('')
                 u.print_message(f'Completed {exc} {areaname[area-1]} refresh in {totaltime:.2f} seconds with {self.manager.items_total} items missing')
 
-    def update_pricing(self, progressbar=True):
+    def refresh_pricing(self, progressbar=True):
         menu_items = {}
         for i, exchange in enumerate(self.exchanges):
             menu_items[f'{i+1}'] = f'{exchange}'
@@ -248,7 +248,7 @@ class Interface:
             toc = time.perf_counter()
             totaltime = toc - tic
 
-            if self.manager.error == 'None':
+            if self.manager.items_error == 'None':
                 u.print_message(f'{self.manager.items_total} {exc} '\
                     f'Ticker pricing refreshed in {totaltime:.2f} seconds')
 
@@ -284,8 +284,10 @@ class Interface:
             toc = time.perf_counter()
             totaltime = toc - tic
 
-            if self.manager.error == 'None':
+            if self.manager.items_error == 'None':
                 u.print_message(f'{self.manager.items_total} {index} Symbols populated in {totaltime:.2f} seconds')
+            else:
+                u.print_error(self.manager.items_error)
 
     def delete_index(self):
         menu_items = {}
@@ -312,14 +314,14 @@ class Interface:
         u.print_message(f'Invalid: {self.manager.invalid_symbols}')
 
     def _show_progress(self, prefix, suffix, infinite=False):
-        while not self.manager.error: pass
+        while not self.manager.items_error: pass
 
-        if self.manager.error == 'None':
+        if self.manager.items_error == 'None':
             total = -1 if infinite else self.manager.items_total
             completed = self.manager.items_completed
 
             u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50, reset=True)
-            while self.task.is_alive and self.manager.error == 'None':
+            while self.task.is_alive and self.manager.items_error == 'None':
                 time.sleep(0.25)
                 if self.manager.items_total > 0:
                     total = self.manager.items_total
@@ -330,8 +332,9 @@ class Interface:
                 else:
                     total = -1
                     u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50)
+            print()
         else:
-            u.print_message(f'{self.manager.error}')
+            u.print_message(f'{self.manager.items_error}')
 
 if __name__ == '__main__':
     import argparse

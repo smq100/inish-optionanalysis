@@ -1,6 +1,7 @@
 import os
 import json
 
+from base import Threaded
 from company.company import Company
 from utils import utils as u
 from data import store as o
@@ -9,8 +10,10 @@ from .interpreter import Interpreter, SyntaxError
 logger = u.get_logger()
 
 
-class Screener:
+class Screener(Threaded):
     def __init__(self, table, script='', days=365, live=False):
+        super().__init__()
+
         table = table.upper()
         self.type = ''
 
@@ -32,12 +35,7 @@ class Screener:
         self.table = table
         self.script = []
         self.symbols = []
-        self.items_total = 0
-        self.items_completed = 0
-        self.items_success = 0
-        self.items_symbol = ''
         self.results = []
-        self.error = ''
         self.active_symbol = ''
 
         if script:
@@ -63,7 +61,7 @@ class Screener:
     def open(self):
         self.items_total = 0
         self.items_completed = 0
-        self.error = ''
+        self.items_error = ''
         self.active_symbol = ''
         symbols = []
 
@@ -72,11 +70,11 @@ class Screener:
         elif self.type == 'index':
             symbols = o.get_index(self.table)
         else:
-            self.error = 'Invalid table name'
+            self.items_error = 'Invalid table name'
 
         if len(symbols) > 0:
             self.items_total = len(symbols)
-            self.error = 'None'
+            self.items_error = 'None'
             for s in symbols:
                 try:
                     self.symbols += [Company(s, self.days, live=self.live)]
@@ -89,7 +87,7 @@ class Screener:
             logger.debug(f'{__name__}: Opened {self.items_total} symbols')
         else:
             logger.debug(f'{__name__}: No symbols available')
-            self.error = 'No symbols'
+            self.items_error = 'No symbols'
 
         return self.items_total > 0
 
@@ -107,25 +105,26 @@ class Screener:
 
         return self.script is not None
 
+    @Threaded.threaded
     def run_script(self):
         self.results = []
         self.items_completed = 0
         self.items_success = 0
         self.items_symbol = ''
-        self.error = ''
+        self.items_error = ''
 
         if len(self.symbols) == 0:
             self.items_completed = self.items_total
             self.results = []
-            self.error = 'No symbols'
-            logger.warning(f'{__name__}: {self.error}')
+            self.items_error = 'No symbols'
+            logger.warning(f'{__name__}: {self.items_error}')
         elif len(self.script) == 0:
             self.items_completed = self.items_total
             self.results = []
-            self.error = 'Illegal script'
-            logger.warning(f'{__name__}: {self.error}')
+            self.items_error = 'Illegal script'
+            logger.warning(f'{__name__}: {self.items_error}')
         else:
-            self.error = 'None'
+            self.items_error = 'None'
             for symbol in self.symbols:
                 result = []
                 self.items_symbol = symbol
@@ -135,13 +134,13 @@ class Screener:
                     try:
                         result += [i.run()]
                     except SyntaxError as e:
-                        self.error = str(e)
+                        self.items_error = str(e)
                         break
                     except RuntimeError as e:
-                        self.error = str(e)
+                        self.items_error = str(e)
                         break
 
-                if self.error == 'None':
+                if self.items_error == 'None':
                     self.items_completed += 1
                     self.results += [self.Result(symbol, result)]
                     if (bool(self.results[-1])):

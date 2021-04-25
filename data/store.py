@@ -88,13 +88,17 @@ def get_company(ticker, live=False):
     session = sessionmaker(bind=engine)
 
     if live:
-        c = f.get_company(ticker).info
-        results['name'] = c['shortName']
-        results['url'] = c['website']
-        results['sector'] = c['sector']
-        results['industry'] = c['industry']
-        results['indexes'] = ''
-        results['precords'] = 0
+        c = f.get_company(ticker)
+        if c is not None:
+            try:
+                results['name'] = c.info['shortName']
+                results['url'] = c.info['website']
+                results['sector'] = c.info['sector']
+                results['industry'] = c.info['industry']
+                results['indexes'] = ''
+                results['precords'] = 0
+            except KeyError:
+                results = {}
     else:
         results['name'] = ''
         results['url'] = ''

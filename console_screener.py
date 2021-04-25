@@ -149,7 +149,6 @@ class Interface:
         if selection > 0:
             index = d.INDEXES[selection-1]['abbreviation']
             if len(o.get_index(index)) > 0:
-                print(index)
                 self.screener = Screener(index, script=self.screen, live=self.live)
                 if self.screener.valid():
                     self.table = index
@@ -214,7 +213,7 @@ class Interface:
             toc = time.perf_counter()
             self.time = toc - tic
 
-            if self.screener.error == 'None':
+            if self.screener.items_error == 'None':
                 self.results = self.screener.results
                 for result in self.results:
                     if result:
@@ -224,7 +223,7 @@ class Interface:
             else:
                 self.results = []
                 self.valids = 0
-                u.print_error(self.screener.error)
+                u.print_error(self.screener.items_error)
         else:
             u.print_error('Script error')
 
@@ -254,9 +253,9 @@ class Interface:
 
     def _show_progress(self, prefix, suffix):
         # Wait for either an error or running to start, or not, the progress bar
-        while not self.screener.error: pass
+        while not self.screener.items_error: pass
 
-        if self.screener.error == 'None':
+        if self.screener.items_error == 'None':
             total = self.screener.items_total
             completed = self.screener.items_completed
 
@@ -267,6 +266,7 @@ class Interface:
                 success = self.screener.items_success
                 symbol = self.screener.items_symbol
                 u.progress_bar(completed, total, prefix=prefix, suffix=suffix, symbol=symbol, length=50, success=success)
+            print()
 
 
 if __name__ == '__main__':

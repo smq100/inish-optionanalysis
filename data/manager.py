@@ -4,6 +4,7 @@ from urllib.error import HTTPError
 from sqlalchemy import create_engine, inspect, and_, or_
 from sqlalchemy.orm import sessionmaker
 
+from base import Threaded
 import data as d
 from data import store as s
 from data import models as m
@@ -12,17 +13,14 @@ from utils import utils as u
 
 logger = u.get_logger()
 
-class Manager:
+class Manager(Threaded):
     def __init__(self):
+        super().__init__()
+
         self.engine = create_engine(d.ACTIVE_URI, echo=False)
         self.session = sessionmaker(bind=self.engine)
         self.exchange = ''
-        self.items_total = 0
-        self.items_completed = 0
-        self.items_success = 0
-        self.items_symbol = ''
         self.invalid_symbols = []
-        self.error = ''
         self.retry = 0
 
     def create_database(self):
@@ -48,8 +46,8 @@ class Manager:
                 session.add(exc)
                 logger.info(f'{__name__}: Added exchange {exchange["abbreviation"]}')
 
+    @Threaded.threaded
     def populate_exchange(self, exchange):
-        self.error = ''
         self.invalid_symbols = []
         self.retry = 0
 
@@ -60,15 +58,14 @@ class Manager:
         symbols = s.get_exchange_symbols_master(abrev)
         if len(symbols) > 0:
             self._add_securities_to_exchange(symbols, abrev)
-            self.error = 'Success'
+            self.items_error = 'Success'
         else:
             logger.warning(f'{__name__}: No symbols for {exchange}')
 
+    @Threaded.threaded
     def refresh_exchange(self, exchange, area):
-        self.error = ''
         self.invalid_symbols = []
         self.retry = 0
-        self.items_completed = 0
 
         with self.session() as session:
             # Throws exception if does not exist
@@ -77,12 +74,12 @@ class Manager:
         if area == 'securities':
             missing = self.identify_missing_securities(exchange)
             self.items_total = len(missing)
-            self.error = 'None'
+            self.items_error = 'None'
             if self.items_total > 0:
                 self._add_securities_to_exchange(missing, exchange)
-            self.error = 'Success'
+            self.items_error = 'Success'
         elif area == 'companies':
-            self.error = 'None'
+            self.items_error = 'None'
             missing = self.identify_incomplete_securities_companies(exchange)
             self.items_total = len(missing)
             self.items_completed = 0
@@ -91,9 +88,9 @@ class Manager:
                 self._add_company_to_security(company)
                 self.items_completed += 1
 
-            self.error = 'Success'
+            self.items_error = 'Success'
         elif area == 'prices':
-            self.error = 'None'
+            self.items_error = 'None'
             missing = self.identify_incomplete_securities_price(exchange)
             self.items_total = len(missing)
 
@@ -101,7 +98,7 @@ class Manager:
                 self._add_pricing_to_security(company)
                 self.items_completed += 1
 
-            self.error = 'Success'
+            self.items_error = 'Success'
 
     def delete_exchange(self, exchange):
         with self.session() as session, session.begin():
@@ -116,30 +113,34 @@ class Manager:
                 session.add(ind)
                 logger.info(f'{__name__}: Added index {index["abbreviation"]}')
 
+    @Threaded.threaded
     def populate_index(self, index):
-        self.error = ''
         valid = []
 
         with self.session() as session:
-            self.error = 'None'
-            i = session.query(m.Index.abbreviation).filter(m.Index.abbreviation==index).one()
-            symbols = s.get_index_symbols_master(i.abbreviation)
-            for symbol in symbols:
-                ticker = session.query(m.Security.ticker).filter(m.Security.ticker==symbol).one_or_none()
-                if ticker is not None:
-                    valid += [ticker.ticker]
+            self.items_error = 'None'
+            try:
+                i = session.query(m.Index.abbreviation).filter(m.Index.abbreviation==index).one()
+            except Exception:
+                self.items_error = f'No index {index}'
+            else:
+                symbols = s.get_index_symbols_master(i.abbreviation)
+                for symbol in symbols:
+                    ticker = session.query(m.Security.ticker).filter(m.Security.ticker==symbol).one_or_none()
+                    if ticker is not None:
+                        valid += [ticker.ticker]
 
         if len(valid) > 0:
             self._add_securities_to_index(valid, i.abbreviation)
             logger.info(f'{__name__}: Populated index {index}')
-            self.error = 'Done'
-        else:
-            self.error = 'No symbols'
+            self.items_error = 'Done'
+        elif not self.items_error:
+            self.items_error = 'No symbols'
             logger.warning(f'{__name__}: No symbols found for {index}')
 
     def delete_index(self, index):
         with self.session() as session, session.begin():
-            ind = session.query(m.Index.abbreviation).filter(m.Index.abbreviation==index)
+            ind = session.query(m.Index).filter(m.Index.abbreviation==index)
             if ind is not None:
                 ind.delete(synchronize_session=False)
                 logger.info(f'{__name__}: Deleted index {index}')
@@ -197,17 +198,14 @@ class Manager:
 
         return info
 
+    @Threaded.threaded
     def refresh_pricing(self, exchange):
-        self.error = ''
-        self.items_completed = 0
-        self.items_success = 0
-
         tickers = s.get_exchange_symbols_master(exchange)
         self.items_total = len(tickers)
 
         with self.session() as session:
             _ = session.query(m.Exchange.id, m.Exchange.abbreviation).filter(m.Exchange.abbreviation==exchange).one()
-            self.error = 'None'
+            self.items_error = 'None'
             for sec in tickers:
                 self.items_symbol = sec
                 if self._refresh_pricing(sec):
@@ -215,7 +213,7 @@ class Manager:
 
                 self.items_completed += 1
 
-            self.error = 'Done'
+            self.items_error = 'Done'
 
 
     def identify_missing_securities(self, exchange):
@@ -287,12 +285,11 @@ class Manager:
 
     def _add_securities_to_exchange(self, tickers, exchange):
         self.items_total = len(tickers)
-        self.items_completed = 0
 
         with self.session() as session:
             exc = session.query(m.Exchange).filter(m.Exchange.abbreviation==exchange).one()
             self.items_total = len(tickers)
-            self.error = 'None'
+            self.items_error = 'None'
 
             for sec in tickers:
                 s = session.query(m.Security).filter(m.Security.ticker==sec).one_or_none()
@@ -311,12 +308,12 @@ class Manager:
                         self.retry += 1
                         logger.warning(f'{__name__}: HTTP Error. Retrying... {self.retry}, {str(e)}')
                         if self.retry > 10:
-                            self.error = 'HTTP Error'
+                            self.items_error = 'HTTP Error'
                             logger.error(f'{__name__}: HTTP Error. Too many retries. {str(e)}')
                         else:
                             time.sleep(5.0)
                     except RuntimeError as e:
-                        self.error = 'Runtime Error'
+                        self.items_error = 'Runtime Error'
                         logger.error(f'{__name__}: Runtime Error, {str(e)}')
                     else:
                         self.retry = 0
@@ -326,19 +323,19 @@ class Manager:
 
                 self.items_completed += 1
 
-                if self.error != 'None':
+                if self.items_error != 'None':
                     logger.warning(f'{__name__}: Cancelling operation')
                     break
 
     def _add_securities_to_index(self, tickers, index):
-        self.items_completed = 0
-
         with self.session() as session, session.begin():
             ind = session.query(m.Index).filter(m.Index.abbreviation==index).one()
+            self.items_error = 'No index row'
             self.items_total = len(tickers)
             for t in tickers:
                 self.items_symbol = t
-                s = session.query(m.Security).filter(m.Security.ticker==t).one_or_none()
+                self.items_success += 1
+                s = session.query(m.Security).filter(m.Security.ticker==t).one()
                 if s.index1_id is None:
                     s.index1_id = ind.id
                 elif s.index2_id is None:
@@ -350,10 +347,12 @@ class Manager:
 
     def _add_company_to_security(self, ticker):
         with self.session() as session, session.begin():
-            s = session.query(m.Security).filter(m.Security.ticker==ticker).one_or_none()
+            sec = session.query(m.Security).filter(m.Security.ticker==ticker).one()
             company = s.get_company(ticker, live=True)
             if company is None:
                 logger.info(f'{__name__}: No company for {ticker}')
+            elif len(company) == 0:
+                logger.info(f'{__name__}: No company information for {ticker}')
             elif company.info is None:
                 logger.info(f'{__name__}: No company information for {ticker}')
             elif len(company.info) == 0:
@@ -375,7 +374,8 @@ class Manager:
                     c.sector = company.info['sector']
                     c.industry = company.info['industry']
 
-                    s.company = [c]
+                    sec.company = [c]
+                    self.items_success += 1
 
                     logger.info(f'{__name__}: Added company information for {ticker}')
 
@@ -400,6 +400,7 @@ class Manager:
                         p.volume = price['Volume']
 
                         s.pricing += [p]
+                        self.items_success += 1
 
                 logger.info(f'{__name__}: Added pricing to {ticker}')
 
