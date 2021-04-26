@@ -74,7 +74,6 @@ class Screener(Threaded):
 
         if len(symbols) > 0:
             self.items_total = len(symbols)
-            self.items_error = 'None'
             for s in symbols:
                 try:
                     self.symbols += [Company(s, self.days, live=self.live)]
@@ -108,12 +107,13 @@ class Screener(Threaded):
     @Threaded.threaded
     def run_script(self):
         self.results = []
+        self.items_total = len(self.symbols)
         self.items_completed = 0
         self.items_success = 0
         self.items_symbol = ''
         self.items_error = ''
 
-        if len(self.symbols) == 0:
+        if self.items_total == 0:
             self.items_completed = self.items_total
             self.results = []
             self.items_error = 'No symbols'

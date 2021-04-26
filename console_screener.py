@@ -24,7 +24,6 @@ class Interface:
         self.results = []
         self.valids = 0
         self.screener = None
-        self.time = 0.0
         self.type = ''
 
         if script:
@@ -202,7 +201,6 @@ class Interface:
             self.valids = 0
             task = threading.Thread(target=self.screener.run_script)
             task.start()
-            tic = time.perf_counter()
 
             if progressbar:
                 self._show_progress('Progress', 'Completed')
@@ -210,16 +208,13 @@ class Interface:
             # Wait for thread to finish
             while task.is_alive(): pass
 
-            toc = time.perf_counter()
-            self.time = toc - tic
-
             if self.screener.items_error == 'None':
                 self.results = self.screener.results
                 for result in self.results:
                     if result:
                         self.valids += 1
 
-                u.print_message(f'{self.valids} Symbols Identified in {self.time:.2f} seconds')
+                u.print_message(f'{self.valids} Symbols Identified in {self.screener.items_time:.2f} seconds')
             else:
                 self.results = []
                 self.valids = 0

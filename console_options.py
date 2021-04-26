@@ -1,4 +1,4 @@
-import sys, os, json
+import sys, os, json, math
 import datetime as dt
 
 import pandas as pd
@@ -139,7 +139,7 @@ class Interface:
 
                         if rows > 0 or cols > 0:
                             # compress the table rows and columns
-                            table_ = u.compress_table(table_, rows, cols)
+                            table_ = self._compress_table(table_, rows, cols)
 
                         if val == 1:
                             print(u.delimeter(title, True) + '\n')
@@ -177,7 +177,7 @@ class Interface:
                         cols = -1
 
                     if rows > 0 or cols > 0:
-                        table_ = u.compress_table(table_, rows, cols)
+                        table_ = self._compress_table(table_, rows, cols)
 
                     if val == 1:
                         print(u.delimeter(title, True))
@@ -568,7 +568,7 @@ class Interface:
         # Y Axis
         ax.yaxis.set_major_formatter('${x:.2f}')
         height = table.index[0] - table.index[-1]
-        major, minor = u.calc_major_minor_ticks(height)
+        major, minor = self._calc_major_minor_ticks(height)
         if major > 0:
             ax.yaxis.set_major_locator(mticker.MultipleLocator(major))
         if minor > 0:
@@ -612,6 +612,59 @@ class Interface:
         ax.axhline(breakeven, color='k', linestyle='-', linewidth=0.5)
 
         plt.show()
+
+    @staticmethod
+    def _compress_table(table, rows, cols):
+        if not isinstance(table, pd.DataFrame):
+            raise AssertionError("'table' must be a Pandas DataFrame")
+        else:
+            srows, scols = table.shape
+
+            if cols > 0 and cols < scols:
+                # thin out cols
+                step = int(math.ceil(scols/cols))
+                end = table[table.columns[-2::]]        # Save the last two cols
+                table = table[table.columns[:-2:step]]  # Thin the table (less the last two cols)
+                table = pd.concat([table, end], axis=1) # Add back the last two cols
+
+            if rows > 0 and rows < srows:
+                # Thin out rows
+                step = int(math.ceil(srows/rows))
+                table = table.iloc[::step]
+
+        return table
+
+    @staticmethod
+    def _calc_major_minor_ticks(width):
+        if width <= 0.0:
+            major = 0
+            minor = 0
+        elif width > 1000:
+            major = 100
+            minor = 20
+        elif width > 500:
+            major = 50
+            minor = 10
+        elif width > 100:
+            major = 10
+            minor = 2
+        elif width > 40:
+            major = 5
+            minor = 1
+        elif width > 20:
+            major = 2
+            minor = 0
+        elif width > 10:
+            major = 1
+            minor = 0
+        elif width > 1:
+            major = 0.5
+            minor = 0
+        else:
+            major = .1
+            minor = 0
+
+        return major, minor
 
 
 if __name__ == '__main__':

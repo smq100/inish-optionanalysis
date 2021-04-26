@@ -56,12 +56,13 @@ class Interface:
             '6': 'Delete Exchange',
             '7': 'Populate Index',
             '8': 'Delete Index',
-            '9': 'Reset Database',
+            '9': 'Create Missing Exchanges and Indexes',
+            '10': 'Reset Database',
             '0': 'Exit'
         }
 
         while True:
-            selection = u.menu(menu_items, 'Select Operation', 0, 9)
+            selection = u.menu(menu_items, 'Select Operation', 0, 10)
 
             if selection == 1:
                 self.show_database_information(brief=False)
@@ -80,6 +81,8 @@ class Interface:
             elif selection == 8:
                 self.delete_index()
             elif selection == 9:
+                self.create_missing_tables()
+            elif selection == 10:
                 self.reset_database()
             elif selection == 0:
                 break
@@ -177,7 +180,6 @@ class Interface:
 
             self.task = threading.Thread(target=self.manager.populate_exchange, args=[exc])
             self.task.start()
-            tic = time.perf_counter()
 
             if progressbar:
                 self._show_progress('Progress', 'Completed')
@@ -185,12 +187,9 @@ class Interface:
             # Wait for thread to finish
             while self.task.is_alive(): pass
 
-            toc = time.perf_counter()
-            totaltime = toc - tic
-
-            if self.manager.items_error == 'None':
+            if self.manager.items_error == 'Done':
                 u.print_message(f'{self.manager.items_total} {exc} '\
-                    f'Symbols populated in {totaltime:.2f} seconds with {len(self.manager.invalid_symbols)} invalid symbols')
+                    f'Symbols populated in {self.manager.items_time:.2f} seconds with {len(self.manager.invalid_symbols)} invalid symbols')
 
     def refresh_exchange(self, progressbar=True):
         menu_items = {
@@ -237,7 +236,6 @@ class Interface:
 
             self.task = threading.Thread(target=self.manager.refresh_pricing, args=[exc])
             self.task.start()
-            tic = time.perf_counter()
 
             if progressbar:
                 self._show_progress('Progress', 'Completed')
@@ -245,12 +243,9 @@ class Interface:
             # Wait for thread to finish
             while self.task.is_alive(): pass
 
-            toc = time.perf_counter()
-            totaltime = toc - tic
-
             if self.manager.items_error == 'None':
                 u.print_message(f'{self.manager.items_total} {exc} '\
-                    f'Ticker pricing refreshed in {totaltime:.2f} seconds')
+                    f'Ticker pricing refreshed in {self.manager.items_time:.2f} seconds')
 
     def delete_exchange(self):
         menu_items = {}
@@ -273,7 +268,6 @@ class Interface:
         if select > 0:
             self.task = threading.Thread(target=self.manager.populate_index, args=[self.indexes[select-1]])
             self.task.start()
-            tic = time.perf_counter()
 
             if progressbar:
                 self._show_progress('Progress', 'Completed')
@@ -281,11 +275,8 @@ class Interface:
             # Wait for thread to finish
             while self.task.is_alive(): pass
 
-            toc = time.perf_counter()
-            totaltime = toc - tic
-
-            if self.manager.items_error == 'None':
-                u.print_message(f'{self.manager.items_total} {index} Symbols populated in {totaltime:.2f} seconds')
+            if self.manager.items_error == 'Done':
+                u.print_message(f'{self.manager.items_total} {index} Symbols populated in {self.manager.items_time:.2f} seconds')
             else:
                 u.print_error(self.manager.items_error)
 
@@ -299,6 +290,10 @@ class Interface:
         if select > 0:
             ind = self.indexes[select-1]
             self.manager.delete_index(ind)
+
+    def create_missing_tables(self):
+        self.manager.create_exchanges()
+        self.manager.create_indexes()
 
     def reset_database(self):
         select = u.input_integer('Are you sure? 1 to reset or 0 to cancel: ', 0, 1)

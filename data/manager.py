@@ -42,9 +42,11 @@ class Manager(Threaded):
     def create_exchanges(self):
         with self.session() as session, session.begin():
             for exchange in d.EXCHANGES:
-                exc = m.Exchange(abbreviation=exchange['abbreviation'], name=exchange['name'])
-                session.add(exc)
-                logger.info(f'{__name__}: Added exchange {exchange["abbreviation"]}')
+                e = session.query(m.Exchange.id).filter(m.Exchange.abbreviation==exchange['abbreviation']).one_or_none()
+                if e is None:
+                    exc = m.Exchange(abbreviation=exchange['abbreviation'], name=exchange['name'])
+                    session.add(exc)
+                    logger.info(f'{__name__}: Added exchange {exchange["abbreviation"]}')
 
     @Threaded.threaded
     def populate_exchange(self, exchange):
@@ -109,9 +111,11 @@ class Manager(Threaded):
     def create_indexes(self):
         with self.session() as session, session.begin():
             for index in d.INDEXES:
-                ind = m.Index(abbreviation=index['abbreviation'], name=index['name'])
-                session.add(ind)
-                logger.info(f'{__name__}: Added index {index["abbreviation"]}')
+                i = session.query(m.Index.id).filter(m.Index.abbreviation==index['abbreviation']).one_or_none()
+                if i is None:
+                    ind = m.Index(abbreviation=index['abbreviation'], name=index['name'])
+                    session.add(ind)
+                    logger.info(f'{__name__}: Added index {index["abbreviation"]}')
 
     @Threaded.threaded
     def populate_index(self, index):

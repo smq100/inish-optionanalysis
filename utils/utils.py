@@ -1,5 +1,4 @@
 import logging
-import math
 
 import pandas as pd
 
@@ -20,64 +19,6 @@ def get_logger(level=None):
         logger.addHandler(handler)
 
     return logger
-
-def compress_table(table, rows, cols):
-    if not isinstance(table, pd.DataFrame):
-        raise AssertionError("'table' must be a Pandas DataFrame")
-    else:
-        srows, scols = table.shape
-
-        if cols > 0 and cols < scols:
-            # thin out cols
-            step = int(math.ceil(scols/cols))
-            end = table[table.columns[-2::]]        # Save the last two cols
-            table = table[table.columns[:-2:step]]  # Thin the table (less the last two cols)
-            table = pd.concat([table, end], axis=1) # Add back the last two cols
-
-        if rows > 0 and rows < srows:
-            # Thin out rows
-            step = int(math.ceil(srows/rows))
-            table = table.iloc[::step]
-
-    return table
-
-def mround(n, precision):
-    val = round(n / precision) * precision
-    if val < 0.01: val = 0.01
-
-    return val
-
-def calc_major_minor_ticks(width):
-    if width <= 0.0:
-        major = 0
-        minor = 0
-    elif width > 1000:
-        major = 100
-        minor = 20
-    elif width > 500:
-        major = 50
-        minor = 10
-    elif width > 100:
-        major = 10
-        minor = 2
-    elif width > 40:
-        major = 5
-        minor = 1
-    elif width > 20:
-        major = 2
-        minor = 0
-    elif width > 10:
-        major = 1
-        minor = 0
-    elif width > 1:
-        major = 0.5
-        minor = 0
-    else:
-        major = .1
-        minor = 0
-
-    return major, minor
-
 
 def menu(menu_items, header, minvalue, maxvalue):
     print(f'\n{header}')
@@ -151,14 +92,6 @@ def input_text(message):
 
     return val
 
-
-def isnumeric(value):
-    try:
-        float(value)
-        return True
-    except ValueError:
-        return False
-
 def print_message(message, creturn=True):
     print(delimeter(f'{message}', creturn))
 
@@ -211,6 +144,19 @@ def progress_bar(iteration, total, prefix='', suffix='', symbol='', decimals=1, 
         bar = ('-' * front) + fill + ('-' * back)
 
         print(f'\rWorking |{bar}| ', end=end)
+
+def mround(n, precision):
+    val = round(n / precision) * precision
+    if val < 0.01: val = 0.01
+
+    return val
+
+def isnumeric(value):
+    try:
+        float(value)
+        return True
+    except ValueError:
+        return False
 
 if __name__ == '__main__':
     import time
