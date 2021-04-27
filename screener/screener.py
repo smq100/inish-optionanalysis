@@ -5,7 +5,7 @@ from base import Threaded
 from company.company import Company
 from utils import utils as u
 from data import store as o
-from .interpreter import Interpreter, SyntaxError
+from .interpreter import Interpreter
 
 logger = u.get_logger()
 

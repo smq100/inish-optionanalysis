@@ -199,8 +199,3 @@ class Interpreter:
         stop = None if self.criteria_stop == 0 else self.criteria_stop
         sl = slice(start, stop)
         return self.symbol.ta.calc_sma(self.criteria_length)[sl]
-
-
-class SyntaxError(Exception):
-    def __init__(self, message):
-        super().__init__(message)

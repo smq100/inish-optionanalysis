@@ -53,17 +53,23 @@ def get_history(ticker, days=-1):
 
     company = get_company(ticker)
     if company is not None:
-        if days < 0:
-            days = 7300 # 20 years
-            start = dt.datetime.today() - dt.timedelta(days=days)
-            history = company.history(start=f'{start:%Y-%m-%d}')
-        elif days > 1:
-            start = dt.datetime.today() - dt.timedelta(days=days)
-            history = company.history(start=f'{start:%Y-%m-%d}')
-        else:
-            start = dt.datetime.today() - dt.timedelta(days=5)
-            history = company.history(start=f'{start:%Y-%m-%d}').reset_index()
-            history = history.iloc[-1]
+        try:
+            if days < 0:
+                days = 7300 # 20 years
+                start = dt.datetime.today() - dt.timedelta(days=days)
+                history = company.history(start=f'{start:%Y-%m-%d}')
+            elif days > 1:
+                start = dt.datetime.today() - dt.timedelta(days=days)
+                history = company.history(start=f'{start:%Y-%m-%d}')
+            else:
+                start = dt.datetime.today() - dt.timedelta(days=5)
+                history = company.history(start=f'{start:%Y-%m-%d}')
+                if history is not None:
+                    history.reset_index(inplace=True)
+                    history = history.iloc[-1]
+        except Exception:
+            # YFinance (pandas) throws exceptions with bad info (YFinance bug)
+            history = None
 
     return history
 

@@ -287,6 +287,52 @@ class Manager(Threaded):
 
         return invalid
 
+    def _refresh_pricing(self, ticker):
+        updated = False
+        history = s.get_history(ticker, 0)
+        if history.empty:
+            logger.warning(f'{__name__}: No price history')
+        else:
+            date_db = history['date']
+            if date_db is not None:
+                logger.info(f'{__name__}: Last price in database: {date_db:%Y-%m-%d}')
+
+            history = s.get_history(ticker, 0, live=True)
+            if history is None:
+                logger.info(f'{__name__}: No pricing information for {ticker}')
+            elif history.empty:
+                logger.info(f'{__name__}: No pricing information for {ticker}')
+            else:
+                date_cloud = history['Date'].date()
+                logger.info(f'{__name__}: Last price in cloud: {date_cloud:%Y-%m-%d}')
+
+                delta = date_cloud - date_db
+                if delta.days > 0:
+                    history = s.get_history(ticker, delta.days, live=True)
+                    if history is None:
+                        logger.info(f'{__name__}: No pricing information for {ticker}')
+                    elif history.empty:
+                        logger.info(f'{__name__}: No pricing information for {ticker}')
+                    else:
+                        history.reset_index(inplace=True)
+                        with self.session() as session, session.begin():
+                            sec = session.query(m.Security).filter(m.Security.ticker==ticker).one()
+                            for _, price in history.iterrows():
+                                if price['Date']:
+                                    p = m.Price()
+                                    p.date = price['Date']
+                                    p.open = price['Open']
+                                    p.high = price['High']
+                                    p.low = price['Low']
+                                    p.close = price['Close']
+                                    p.volume = price['Volume']
+
+                                    sec.pricing += [p]
+                                    updated = True
+
+                            logger.info(f'{__name__}: Updated pricing for {ticker.upper()} to {date_cloud:%Y-%m-%d}')
+        return updated
+
     def _add_securities_to_exchange(self, tickers, exchange):
         self.items_total = len(tickers)
 
@@ -408,45 +454,6 @@ class Manager(Threaded):
 
                 logger.info(f'{__name__}: Added pricing to {ticker}')
 
-    def _refresh_pricing(self, ticker):
-        updated = False
-        history = s.get_history(ticker, 0)
-        if history.empty:
-            logger.warning(f'{__name__}: No price history')
-        else:
-            date_db = history['date']
-            if date_db is not None:
-                logger.info(f'{__name__}: Last price in database: {date_db:%Y-%m-%d}')
-
-            history = s.get_history(ticker, 0, live=True)
-            date_cloud = history['Date'].date()
-            logger.info(f'{__name__}: Last price in cloud: {date_cloud:%Y-%m-%d}')
-
-            delta = date_cloud - date_db
-            if delta.days > 0:
-                history = s.get_history(ticker, delta.days, live=True).reset_index()
-                if history is None:
-                    logger.info(f'{__name__}: No pricing information for {ticker}')
-                elif history.empty:
-                    logger.info(f'{__name__}: No pricing information for {ticker}')
-                else:
-                    with self.session() as session, session.begin():
-                        sec = session.query(m.Security).filter(m.Security.ticker==ticker).one()
-                        for _, price in history.iterrows():
-                            if price['Date']:
-                                p = m.Price()
-                                p.date = price['Date']
-                                p.open = price['Open']
-                                p.high = price['High']
-                                p.low = price['Low']
-                                p.close = price['Close']
-                                p.volume = price['Volume']
-
-                                sec.pricing += [p]
-                                updated = True
-
-                        logger.info(f'{__name__}: Updated pricing for {ticker.upper()} to {date_cloud:%Y-%m-%d}')
-        return updated
 
 if __name__ == '__main__':
     import sys
