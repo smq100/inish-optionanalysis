@@ -1,8 +1,10 @@
 import os, time
+import concurrent.futures
 from urllib.error import HTTPError
 
 from sqlalchemy import create_engine, inspect, and_, or_
 from sqlalchemy.orm import sessionmaker
+import numpy as np
 
 from base import Threaded
 import data as d
@@ -52,17 +54,32 @@ class Manager(Threaded):
     def populate_exchange(self, exchange):
         self.invalid_symbols = []
         self.retry = 0
+        abbrev = ''
 
         with self.session() as session:
             e = session.query(m.Exchange.abbreviation).filter(m.Exchange.abbreviation==exchange).one()
-            abrev = e.abbreviation
+            abbrev = e.abbreviation
 
-        symbols = s.get_exchange_symbols_master(abrev)
-        if len(symbols) > 0:
-            self._add_securities_to_exchange(symbols, abrev)
-            self.items_error = 'Success'
+        tickers = s.get_exchange_symbols_master(abbrev)
+        if len(tickers) > 10:
+            self.items_total = len(tickers)
+            self.items_error = 'None'
+
+            futures = []
+            lists = np.array_split(tickers, 10)
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                futures = executor.map(self._add_securities_to_exchange, lists, [abbrev]*len(lists))
+
+            for future in futures:
+                if future is None:
+                    self.items_results += ['Ok']
+                else:
+                    self.items_results += [future.result()]
+
         else:
             logger.warning(f'{__name__}: No symbols for {exchange}')
+
+        self.items_error = 'Done'
 
     @Threaded.threaded
     def refresh_exchange(self, exchange, area):
@@ -102,11 +119,14 @@ class Manager(Threaded):
 
             self.items_error = 'Success'
 
+    @Threaded.threaded
     def delete_exchange(self, exchange):
+        self.items_error = 'None'
         with self.session() as session, session.begin():
-            exc = session.query(m.Exchange.abbreviation).filter(m.Exchange.abbreviation==exchange)
+            exc = session.query(m.Exchange).filter(m.Exchange.abbreviation==exchange)
             if exc is not None:
                 exc.delete(synchronize_session=False)
+        self.items_error = 'Done'
 
     def create_indexes(self):
         with self.session() as session, session.begin():
@@ -209,7 +229,8 @@ class Manager(Threaded):
 
         with self.session() as session:
             _ = session.query(m.Exchange.id, m.Exchange.abbreviation).filter(m.Exchange.abbreviation==exchange).one()
-            self.items_error = 'None'
+
+        def _pricing(tickers):
             for sec in tickers:
                 self.items_symbol = sec
                 if self._refresh_pricing(sec):
@@ -217,8 +238,20 @@ class Manager(Threaded):
 
                 self.items_completed += 1
 
-            self.items_error = 'Done'
+        self.items_error = 'None'
 
+        futures = []
+        lists = np.array_split(tickers, 10)
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = executor.map(_pricing, lists)
+
+        for future in futures:
+            if future is None:
+                self.items_results += ['Ok']
+            else:
+                self.items_results += [future.result()]
+
+        self.items_error = 'Done'
 
     def identify_missing_securities(self, exchange):
         missing = []
@@ -334,12 +367,8 @@ class Manager(Threaded):
         return updated
 
     def _add_securities_to_exchange(self, tickers, exchange):
-        self.items_total = len(tickers)
-
         with self.session() as session:
             exc = session.query(m.Exchange).filter(m.Exchange.abbreviation==exchange).one()
-            self.items_total = len(tickers)
-            self.items_error = 'None'
 
             for sec in tickers:
                 s = session.query(m.Security).filter(m.Security.ticker==sec).one_or_none()
@@ -367,6 +396,7 @@ class Manager(Threaded):
                         logger.error(f'{__name__}: Runtime Error, {str(e)}')
                     else:
                         self.retry = 0
+                        self.items_success += 1
                         logger.info(f'{__name__}: Added {sec} to exchange {exchange}')
                 else:
                     logger.info(f'{__name__}: {sec} already exists')
@@ -379,8 +409,8 @@ class Manager(Threaded):
 
     def _add_securities_to_index(self, tickers, index):
         with self.session() as session, session.begin():
-            ind = session.query(m.Index).filter(m.Index.abbreviation==index).one()
-            self.items_error = 'No index row'
+            ind = session.query(m.Index.id).filter(m.Index.abbreviation==index).one()
+
             self.items_total = len(tickers)
             for t in tickers:
                 self.items_symbol = t
@@ -403,36 +433,22 @@ class Manager(Threaded):
                 logger.info(f'{__name__}: No company for {ticker}')
             elif len(company) == 0:
                 logger.info(f'{__name__}: No company information for {ticker}')
-            elif company.info is None:
-                logger.info(f'{__name__}: No company information for {ticker}')
-            elif len(company.info) == 0:
-                logger.info(f'{__name__}: No company information for {ticker}')
             else:
-                try:
-                    _ = company.info['shortName']
-                    _ = company.info['longBusinessSummary']
-                    _ = company.info['website']
-                    _ = company.info['sector']
-                    _ = company.info['industry']
-                except KeyError:
-                    pass
-                else:
-                    c = m.Company()
-                    c.name = company.info['shortName'] if company.info['shortName'] else '<error>'
-                    c.description = company.info['longBusinessSummary'][:4999]
-                    c.url = company.info['website']
-                    c.sector = company.info['sector']
-                    c.industry = company.info['industry']
+                c = m.Company()
+                c.name = company['name']
+                c.description = company['description']
+                c.url = company['url']
+                c.sector = company['sector']
+                c.industry = company['industry']
 
-                    sec.company = [c]
-                    self.items_success += 1
+                sec.company = [c]
 
-                    logger.info(f'{__name__}: Added company information for {ticker}')
+                logger.info(f'{__name__}: Added company information for {ticker}')
 
     def _add_pricing_to_security(self, ticker):
         with self.session() as session, session.begin():
-            s = session.query(m.Security).filter(m.Security.ticker==ticker).one()
-            history = s.get_history(ticker, live=True)
+            sec = session.query(m.Security).filter(m.Security.ticker==ticker).one()
+            history = s.get_history(ticker, -1, live=True)
             if history is None:
                 logger.info(f'{__name__}: No pricing information for {ticker}')
             elif history.empty:
@@ -449,8 +465,7 @@ class Manager(Threaded):
                         p.close = price['Close']
                         p.volume = price['Volume']
 
-                        s.pricing += [p]
-                        self.items_success += 1
+                        sec.pricing += [p]
 
                 logger.info(f'{__name__}: Added pricing to {ticker}')
 
@@ -463,9 +478,9 @@ if __name__ == '__main__':
     manager = Manager()
     # missing = manager.identify_incomplete_securities_companies('NYSE')
     if len(sys.argv) > 1:
-        data = manager._refresh_pricing(sys.argv[1])
+        data = manager.populate_exchange(sys.argv[1])
     else:
-        data = manager._refresh_pricing('IMO')
+        data = manager.populate_exchange('AMEX')
 
     # print(len(data))
     # invalid = manager.validate_list('NASDAQ')

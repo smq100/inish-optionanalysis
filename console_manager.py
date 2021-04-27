@@ -184,12 +184,12 @@ class Interface:
             if progressbar:
                 self._show_progress('Progress', 'Completed')
 
-            # Wait for thread to finish
-            while self.task.is_alive(): pass
-
             if self.manager.items_error == 'Done':
                 u.print_message(f'{self.manager.items_total} {exc} '\
                     f'Symbols populated in {self.manager.items_time:.2f} seconds with {len(self.manager.invalid_symbols)} invalid symbols')
+
+            for i, result in enumerate(self.manager.items_results):
+                u.print_message(f'{i+1:>2}: {result}', creturn=False)
 
     def refresh_exchange(self, progressbar=True):
         menu_items = {
@@ -240,14 +240,14 @@ class Interface:
             if progressbar:
                 self._show_progress('Progress', 'Completed')
 
-            # Wait for thread to finish
-            while self.task.is_alive(): pass
-
-            if self.manager.items_error == 'None':
+            if self.manager.items_error == 'Done':
                 u.print_message(f'{self.manager.items_total} {exc} '\
                     f'Ticker pricing refreshed in {self.manager.items_time:.2f} seconds')
 
-    def delete_exchange(self):
+            for i, result in enumerate(self.manager.items_results):
+                u.print_message(f'{i+1:>2}: {result}', creturn=False)
+
+    def delete_exchange(self, progressbar=True):
         menu_items = {}
         for i, exchange in enumerate(self.exchanges):
             menu_items[f'{i+1}'] = f'{exchange}'
@@ -256,7 +256,17 @@ class Interface:
         select = u.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
         if select > 0:
             exc = self.exchanges[select-1]
-            self.manager.delete_exchange(exc)
+
+            self.task = threading.Thread(target=self.manager.delete_exchange, args=[exc])
+            self.task.start()
+
+            if progressbar:
+                self._show_progress('', '', infinite=True)
+
+            self.create_missing_tables()
+
+            if self.manager.items_error == 'Done':
+                u.print_message(f'Deleted exchange {exc} in {self.manager.items_time:.2f} seconds')
 
     def populate_index(self, progressbar=True):
         menu_items = {}
@@ -271,9 +281,6 @@ class Interface:
 
             if progressbar:
                 self._show_progress('Progress', 'Completed')
-
-            # Wait for thread to finish
-            while self.task.is_alive(): pass
 
             if self.manager.items_error == 'Done':
                 u.print_message(f'{self.manager.items_total} {index} Symbols populated in {self.manager.items_time:.2f} seconds')
@@ -315,9 +322,12 @@ class Interface:
             total = -1 if infinite else self.manager.items_total
             completed = self.manager.items_completed
 
+            starttime = time.perf_counter()
             u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50, reset=True)
             while self.task.is_alive and self.manager.items_error == 'None':
                 time.sleep(0.25)
+                if infinite: suffix = f'{time.perf_counter() - starttime:.1f} seconds'
+
                 if self.manager.items_total > 0:
                     total = self.manager.items_total
                     completed = self.manager.items_completed

@@ -92,6 +92,7 @@ def get_company(ticker, live=False):
         if c is not None:
             try:
                 results['name'] = c.info['shortName']
+                results['description'] = c.info['longBusinessSummary']
                 results['url'] = c.info['website']
                 results['sector'] = c.info['sector']
                 results['industry'] = c.info['industry']
@@ -101,17 +102,20 @@ def get_company(ticker, live=False):
                 results = {}
     else:
         results['name'] = ''
+        results['description'] = ''
         results['url'] = ''
         results['sector'] = ''
         results['industry'] = ''
         results['indexes'] = ''
         results['precords'] = 0
+
         with session() as session:
             t = session.query(o.Security).filter(o.Security.ticker==ticker.upper()).one_or_none()
             if t is not None:
                 c = session.query(o.Company).filter(o.Company.security_id==t.id).one_or_none()
                 if c is not None:
                     results['name'] = c.name
+                    results['description'] = c.description
                     results['url'] = c.url
                     results['sector'] = c.sector
                     results['industry'] = c.industry

@@ -143,7 +143,7 @@ def progress_bar(iteration, total, prefix='', suffix='', symbol='', decimals=1, 
         back = length - position
         bar = ('-' * front) + fill + ('-' * back)
 
-        print(f'\rWorking |{bar}| ', end=end)
+        print(f'\rWorking |{bar}| {suffix}', end=end)
 
 def mround(n, precision):
     val = round(n / precision) * precision
