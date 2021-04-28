@@ -31,36 +31,31 @@ class Company:
         if self.history is None:
             self._load_history()
 
-        price = 'close' if not self.live else 'Close'
-        return self.history[price][-1]
+        return self.history['close'][-1]
 
     def get_high(self):
         if self.history is None:
             self._load_history()
 
-        price = 'high' if not self.live else 'High'
-        return self.history[price]
+        return self.history['high']
 
     def get_low(self):
         if self.history is None:
             self._load_history()
 
-        price = 'low' if not self.live else 'Low'
-        return self.history[price]
+        return self.history['low']
 
     def get_close(self):
         if self.history is None:
             self._load_history()
 
-        price = 'close' if not self.live else 'Close'
-        return self.history[price]
+        return self.history['close']
 
     def get_volume(self):
         if self.history is None:
             self._load_history()
 
-        price = 'volume' if not self.live else 'Volume'
-        return self.history[price]
+        return self.history['volume']
 
     def _load_history(self):
         self.history = o.get_history(self.ticker, self.days, live=self.live)

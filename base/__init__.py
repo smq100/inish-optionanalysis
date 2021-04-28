@@ -8,6 +8,7 @@ class Threaded:
         self.items_symbol = ''
         self.items_error = ''
         self.items_results = []
+        self.items_time = 0
 
     def threaded(func):
         def wrapper(self, *args, **kwargs):

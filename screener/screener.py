@@ -1,5 +1,8 @@
 import os
 import json
+from concurrent.futures import ThreadPoolExecutor
+
+import numpy as np
 
 from base import Threaded
 from company.company import Company
@@ -7,8 +10,8 @@ from utils import utils as u
 from data import store as o
 from .interpreter import Interpreter
 
-logger = u.get_logger()
 
+logger = u.get_logger()
 
 class Screener(Threaded):
     def __init__(self, table, script='', days=365, live=False):
@@ -36,7 +39,6 @@ class Screener(Threaded):
         self.script = []
         self.symbols = []
         self.results = []
-        self.active_symbol = ''
 
         if script:
             if not self.load_script(script):
@@ -62,7 +64,6 @@ class Screener(Threaded):
         self.items_total = 0
         self.items_completed = 0
         self.items_error = ''
-        self.active_symbol = ''
         symbols = []
 
         if self.type == 'exchange':
@@ -83,7 +84,7 @@ class Screener(Threaded):
                 self.items_completed += 1
 
             self.items_total = len(self.symbols)
-            logger.debug(f'{__name__}: Opened {self.items_total} symbols')
+            logger.debug(f'{__name__}: Opened {self.items_total} symbols from {self.table} table')
         else:
             logger.debug(f'{__name__}: No symbols available')
             self.items_error = 'No symbols'
@@ -108,10 +109,6 @@ class Screener(Threaded):
     def run_script(self):
         self.results = []
         self.items_total = len(self.symbols)
-        self.items_completed = 0
-        self.items_success = 0
-        self.items_symbol = ''
-        self.items_error = ''
 
         if self.items_total == 0:
             self.items_completed = self.items_total
@@ -125,32 +122,43 @@ class Screener(Threaded):
             logger.warning(f'{__name__}: {self.items_error}')
         else:
             self.items_error = 'None'
-            for symbol in self.symbols:
-                result = []
-                self.items_symbol = symbol
-                for condition in self.script:
-                    i = Interpreter(symbol, condition)
-                    self.active_symbol = symbol.ticker
-                    try:
-                        result += [i.run()]
-                    except SyntaxError as e:
-                        self.items_error = str(e)
-                        break
-                    except RuntimeError as e:
-                        self.items_error = str(e)
-                        break
 
-                if self.items_error == 'None':
-                    self.items_completed += 1
-                    self.results += [self.Result(symbol, result)]
-                    if (bool(self.results[-1])):
-                        self.items_success += 1
+            lists = np.array_split(self.symbols, 3)
+            with ThreadPoolExecutor() as executor:
+                futures = executor.map(self._run, lists)
+
+            for future in futures:
+                if future is None:
+                    self.items_results += ['Ok']
                 else:
-                    self.items_completed = self.items_total
-                    self.results = []
-                    break
+                    self.items_results += [future.result()]
 
         return self.results
+
+    def _run(self, tickers):
+        for symbol in tickers:
+            result = []
+            self.items_symbol = symbol
+            for condition in self.script:
+                i = Interpreter(symbol, condition)
+                try:
+                    result += [i.run()]
+                except SyntaxError as e:
+                    self.items_error = str(e)
+                    break
+                except RuntimeError as e:
+                    self.items_error = str(e)
+                    break
+
+            if self.items_error == 'None':
+                self.items_completed += 1
+                self.results += [self.Result(symbol, result)]
+                if (bool(self.results[-1])):
+                    self.items_success += 1
+            else:
+                self.items_completed = self.items_total
+                self.results = []
+                break
 
     def valid(self):
         return bool(self.table)
@@ -174,6 +182,5 @@ if __name__ == '__main__':
     u.get_logger(logging.DEBUG)
 
     s = Screener('DOW')
-    # s.open()
     s.load_script('/Users/steve/Documents/Source Code/Personal/OptionAnalysis/screener/screens/test.screen')
     # s.run_script()

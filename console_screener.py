@@ -54,8 +54,8 @@ class Interface:
                         self.screen = ''
                         u.print_error('Invalid screen script')
                 else:
-                    self.screen = ''
                     u.print_error(f'File "{self.screen}" not found')
+                    self.screen = ''
 
             self.main_menu()
 
@@ -215,6 +215,9 @@ class Interface:
                         self.valids += 1
 
                 u.print_message(f'{self.valids} Symbols Identified in {self.screener.items_time:.2f} seconds')
+
+                for i, result in enumerate(self.screener.items_results):
+                    u.print_message(f'{i+1:>2}: {result}', creturn=False)
             else:
                 self.results = []
                 self.valids = 0
@@ -286,9 +289,12 @@ if __name__ == '__main__':
         Interface('TEST', script=command['script'])
     else:
         table = ''
+        screen = ''
+
         if 'table' in command.keys():
             table = command['table']
+
         if 'screen' in command.keys():
-            Interface(table, command['screen'])
-        else:
-            Interface()
+            screen = command['screen']
+
+        Interface(table, screen)

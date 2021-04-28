@@ -1,5 +1,5 @@
 import os, time
-import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 from urllib.error import HTTPError
 
 from sqlalchemy import create_engine, inspect, and_, or_
@@ -67,7 +67,7 @@ class Manager(Threaded):
 
             futures = []
             lists = np.array_split(tickers, 10)
-            with concurrent.futures.ThreadPoolExecutor() as executor:
+            with ThreadPoolExecutor() as executor:
                 futures = executor.map(self._add_securities_to_exchange, lists, [abbrev]*len(lists))
 
             for future in futures:
@@ -242,7 +242,7 @@ class Manager(Threaded):
 
         futures = []
         lists = np.array_split(tickers, 10)
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        with ThreadPoolExecutor() as executor:
             futures = executor.map(_pricing, lists)
 
         for future in futures:

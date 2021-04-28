@@ -58,15 +58,24 @@ def get_history(ticker, days=-1):
                 days = 7300 # 20 years
                 start = dt.datetime.today() - dt.timedelta(days=days)
                 history = company.history(start=f'{start:%Y-%m-%d}')
+
+                # Rename YFinance columns to match the Postgres columns
+                history.rename(columns={'Open':'open', 'High':'high', 'Low':'low', 'Close':'close', 'Volume':'volume'}, inplace=True)
             elif days > 1:
                 start = dt.datetime.today() - dt.timedelta(days=days)
                 history = company.history(start=f'{start:%Y-%m-%d}')
+
+                # Rename YFinance columns to match the Postgres columns
+                history.rename(columns={'Open':'open', 'High':'high', 'Low':'low', 'Close':'close', 'Volume':'volume'}, inplace=True)
             else:
                 start = dt.datetime.today() - dt.timedelta(days=5)
                 history = company.history(start=f'{start:%Y-%m-%d}')
                 if history is not None:
+                    # Rename YFinance columns to match the Postgres columns
+                    history.rename(columns={'Open':'open', 'High':'high', 'Low':'low', 'Close':'close', 'Volume':'volume'}, inplace=True)
                     history.reset_index(inplace=True)
                     history = history.iloc[-1]
+
         except Exception:
             # YFinance (pandas) throws exceptions with bad info (YFinance bug)
             history = None
@@ -114,8 +123,8 @@ if __name__ == '__main__':
     from logging import DEBUG
     logger = u.get_logger(DEBUG)
 
-    c = get_company('ADRA')
-    print(type(c.info))
+    c = get_history('IBM', days=0)
+    print(c)
 
     # start = dt.datetime.today() - dt.timedelta(days=10)
     # df = refresh_history('AAPL', 60)

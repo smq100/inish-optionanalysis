@@ -57,7 +57,7 @@ def get_history(ticker, days, live=False):
         engine = create_engine(d.ACTIVE_URI, echo=False)
         session = sessionmaker(bind=engine)
         with session() as session:
-            t = session.query(o.Security).filter(o.Security.ticker==ticker.upper()).one()
+            t = session.query(o.Security.id).filter(o.Security.ticker==ticker.upper()).one()
             if t is not None:
                 if days < 0:
                     p = session.query(o.Price).filter(o.Price.security_id==t.id).order_by(o.Price.date)
