@@ -49,6 +49,21 @@ def is_index(index):
             break
     return ret
 
+def get_tickers(exchange=''):
+    tickers = []
+    engine = create_engine(d.ACTIVE_URI, echo=False)
+    session = sessionmaker(bind=engine)
+
+    with session() as session:
+        if exchange:
+            e = session.query(o.Exchange.id, o.Exchange.abbreviation).filter(o.Exchange.abbreviation==exchange).one()
+            t = session.query(o.Security.ticker).filter(o.Security.exchange_id==e.id).order_by(o.Security.ticker)
+        else:
+            t = session.query(o.Security.ticker).order_by(o.Security.ticker)
+
+    tickers = list(map(lambda x: x[0], t.all()))
+    return tickers
+
 def get_history(ticker, days, live=False):
     if live:
         results = f.get_history(ticker, days)
@@ -247,8 +262,5 @@ if __name__ == '__main__':
     # from logging import DEBUG
     # logger = u.get_logger(DEBUG)
 
-    e = get_history('aapl', 0)
-    # print(type(e['min']))
-    # print(str(e['min']))
-    # print(f'{e["min"]:%Y-%m-%d}')
-    print(e['close'])
+    t = get_tickers()
+    print(t)

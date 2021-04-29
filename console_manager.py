@@ -116,9 +116,9 @@ class Interface:
                 count = len(self.manager.identify_incomplete_securities_companies(e))
                 print(f'{e:>9}:\t{count} symbols missing company information')
 
-            # for e in exchanges:
-            #     count = len(self.manager.identify_incomplete_securities_price(e))
-            #     print(f'{e:>9}:\t{count} symbols missing price information')
+            for e in exchanges:
+                count = len(self.manager.identify_incomplete_securities_price(e))
+                print(f'{e:>9}:\t{count} symbols missing price information')
 
             u.print_message('Master Exchange Symbol List')
             for exchange in d.EXCHANGES:
@@ -228,12 +228,12 @@ class Interface:
         menu_items = {}
         for i, exchange in enumerate(self.exchanges):
             menu_items[f'{i+1}'] = f'{exchange}'
+        menu_items[f'{i+2}'] = 'All'
         menu_items['0'] = 'Cancel'
 
-        select = u.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
+        select = u.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.EXCHANGES)+1)
         if select > 0:
-            exc = self.exchanges[select-1]
-
+            exc = self.exchanges[select-1] if select <= len(d.EXCHANGES) else ''
             self.task = threading.Thread(target=self.manager.refresh_pricing, args=[exc])
             self.task.start()
 

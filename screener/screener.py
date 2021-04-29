@@ -123,7 +123,10 @@ class Screener(Threaded):
         else:
             self.items_error = 'None'
 
+            # Split the list and remove any empty lists
             lists = np.array_split(self.symbols, 3)
+            lists = [i for i in lists if i is not None]
+
             with ThreadPoolExecutor() as executor:
                 futures = executor.map(self._run, lists)
 

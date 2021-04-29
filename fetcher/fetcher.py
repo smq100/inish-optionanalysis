@@ -23,10 +23,10 @@ config.read(CREDENTIALS)
 qd.ApiConfig.api_key = config['DEFAULT']['APIKEY']
 
 
-def validate_ticker(ticker, force=False):
+def validate_ticker(ticker, live=False):
     valid = False
 
-    if force:
+    if live:
         t = yf.Ticker(ticker).history(period='1d')
         if len(t) > 0:
             valid = True
@@ -35,10 +35,10 @@ def validate_ticker(ticker, force=False):
 
     return valid
 
-def get_company(ticker, force=False):
+def get_company(ticker, live=True):
     company = None
 
-    if validate_ticker(ticker, force):
+    if validate_ticker(ticker, live):
         company = yf.Ticker(ticker)
         try:
             _ = company.info
@@ -51,30 +51,29 @@ def get_company(ticker, force=False):
 def get_history(ticker, days=-1):
     history = None
 
-    company = get_company(ticker)
+    company = get_company(ticker, live=True)
     if company is not None:
         try:
             if days < 0:
                 days = 7300 # 20 years
                 start = dt.datetime.today() - dt.timedelta(days=days)
                 history = company.history(start=f'{start:%Y-%m-%d}')
-
-                # Rename YFinance columns to match the Postgres columns
-                history.rename(columns={'Open':'open', 'High':'high', 'Low':'low', 'Close':'close', 'Volume':'volume'}, inplace=True)
+                if history is not None:
+                    history.reset_index(inplace=True)
+                    history.rename(columns={'Date':'date', 'Open':'open', 'High':'high', 'Low':'low', 'Close':'close', 'Volume':'volume'}, inplace=True)
             elif days > 1:
                 start = dt.datetime.today() - dt.timedelta(days=days)
                 history = company.history(start=f'{start:%Y-%m-%d}')
-
-                # Rename YFinance columns to match the Postgres columns
-                history.rename(columns={'Open':'open', 'High':'high', 'Low':'low', 'Close':'close', 'Volume':'volume'}, inplace=True)
+                if history is not None:
+                    history.reset_index(inplace=True)
+                    history.rename(columns={'Date':'date', 'Open':'open', 'High':'high', 'Low':'low', 'Close':'close', 'Volume':'volume'}, inplace=True)
             else:
                 start = dt.datetime.today() - dt.timedelta(days=5)
                 history = company.history(start=f'{start:%Y-%m-%d}')
                 if history is not None:
-                    # Rename YFinance columns to match the Postgres columns
-                    history.rename(columns={'Open':'open', 'High':'high', 'Low':'low', 'Close':'close', 'Volume':'volume'}, inplace=True)
                     history.reset_index(inplace=True)
-                    history = history.iloc[-1]
+                    history.rename(columns={'Date':'date', 'Open':'open', 'High':'high', 'Low':'low', 'Close':'close', 'Volume':'volume'}, inplace=True)
+                    history = history.iloc[-1].to_frame()
 
         except Exception:
             # YFinance (pandas) throws exceptions with bad info (YFinance bug)
@@ -123,7 +122,8 @@ if __name__ == '__main__':
     from logging import DEBUG
     logger = u.get_logger(DEBUG)
 
-    c = get_history('IBM', days=0)
+    # c = get_company('AAPL', force=True)
+    c = get_history('AAPL', days=5)
     print(c)
 
     # start = dt.datetime.today() - dt.timedelta(days=10)

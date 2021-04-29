@@ -61,12 +61,16 @@ class Manager(Threaded):
             abbrev = e.abbreviation
 
         tickers = s.get_exchange_symbols_master(abbrev)
+
         if len(tickers) > 10:
             self.items_total = len(tickers)
             self.items_error = 'None'
 
+            # Split the list and remove any empty lists
+            lists = np.array_split(tickers, 5)
+            lists = [i for i in lists if i is not None]
+
             futures = []
-            lists = np.array_split(tickers, 10)
             with ThreadPoolExecutor() as executor:
                 futures = executor.map(self._add_securities_to_exchange, lists, [abbrev]*len(lists))
 
@@ -223,12 +227,9 @@ class Manager(Threaded):
         return info
 
     @Threaded.threaded
-    def refresh_pricing(self, exchange):
-        tickers = s.get_exchange_symbols_master(exchange)
+    def refresh_pricing(self, exchange=''):
+        tickers = s.get_tickers(exchange)
         self.items_total = len(tickers)
-
-        with self.session() as session:
-            _ = session.query(m.Exchange.id, m.Exchange.abbreviation).filter(m.Exchange.abbreviation==exchange).one()
 
         def _pricing(tickers):
             for sec in tickers:
@@ -240,8 +241,11 @@ class Manager(Threaded):
 
         self.items_error = 'None'
 
+        # Split the list and remove any empty lists
+        lists = np.array_split(tickers, 5)
+        lists = [i for i in lists if i is not None]
+
         futures = []
-        lists = np.array_split(tickers, 10)
         with ThreadPoolExecutor() as executor:
             futures = executor.map(_pricing, lists)
 
@@ -336,11 +340,11 @@ class Manager(Threaded):
             elif history.empty:
                 logger.info(f'{__name__}: No pricing information for {ticker}')
             else:
-                date_cloud = history['Date'].date()
+                date_cloud = history['date'].date()
                 logger.info(f'{__name__}: Last price in cloud: {date_cloud:%Y-%m-%d}')
 
                 delta = date_cloud - date_db
-                if delta.days > 0:
+                if delta.days > 1:
                     history = s.get_history(ticker, delta.days, live=True)
                     if history is None:
                         logger.info(f'{__name__}: No pricing information for {ticker}')
@@ -351,14 +355,14 @@ class Manager(Threaded):
                         with self.session() as session, session.begin():
                             sec = session.query(m.Security).filter(m.Security.ticker==ticker).one()
                             for _, price in history.iterrows():
-                                if price['Date']:
+                                if price['date']:
                                     p = m.Price()
-                                    p.date = price['Date']
-                                    p.open = price['Open']
-                                    p.high = price['High']
-                                    p.low = price['Low']
-                                    p.close = price['Close']
-                                    p.volume = price['Volume']
+                                    p.date = price['date']
+                                    p.open = price['open']
+                                    p.high = price['high']
+                                    p.low = price['low']
+                                    p.close = price['close']
+                                    p.volume = price['volume']
 
                                     sec.pricing += [p]
                                     updated = True
@@ -373,6 +377,7 @@ class Manager(Threaded):
             for sec in tickers:
                 s = session.query(m.Security).filter(m.Security.ticker==sec).one_or_none()
                 if s is None:
+                    self.items_symbol = sec
                     exc.securities += [m.Security(sec)]
                     session.commit()
 
@@ -435,8 +440,8 @@ class Manager(Threaded):
                 logger.info(f'{__name__}: No company information for {ticker}')
             else:
                 c = m.Company()
-                c.name = company['name']
-                c.description = company['description']
+                c.name = company['name'] if company['name'] else '<error>'
+                c.description = company['description'][:4995]
                 c.url = company['url']
                 c.sector = company['sector']
                 c.industry = company['industry']
@@ -456,14 +461,14 @@ class Manager(Threaded):
             else:
                 history.reset_index(inplace=True)
                 for _, price in history.iterrows():
-                    if price['Date']:
+                    if price['date']:
                         p = m.Price()
-                        p.date = price['Date']
-                        p.open = price['Open']
-                        p.high = price['High']
-                        p.low = price['Low']
-                        p.close = price['Close']
-                        p.volume = price['Volume']
+                        p.date = price['date']
+                        p.open = price['open']
+                        p.high = price['high']
+                        p.low = price['low']
+                        p.close = price['close']
+                        p.volume = price['volume']
 
                         sec.pricing += [p]
 

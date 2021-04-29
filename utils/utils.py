@@ -26,7 +26,7 @@ def menu(menu_items, header, minvalue, maxvalue):
 
     option = menu_items.keys()
     for entry in option:
-        print(f'{entry})\t{menu_items[entry]}')
+        print(f'{entry:>2})\t{menu_items[entry]}')
 
     return input_integer('Please select: ', minvalue, maxvalue)
 
