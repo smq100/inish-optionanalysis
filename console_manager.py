@@ -53,19 +53,17 @@ class Interface:
             '3': 'Populate Exchange',
             '4': 'Refresh Exchange',
             '5': 'Update Pricing',
-            '6': 'Delete Exchange',
-            '7': 'Populate Index',
-            '8': 'Delete Index',
-            '9': 'Create Missing Exchanges and Indexes',
-            '10': 'Reset Database',
+            '6': 'Populate Index',
+            '7': 'Create Missing Exchanges and Indexes',
+            '8': 'Reset Database',
             '0': 'Exit'
         }
 
         while True:
-            selection = u.menu(menu_items, 'Select Operation', 0, 10)
+            selection = u.menu(menu_items, 'Select Operation', 0, 8)
 
             if selection == 1:
-                self.show_database_information(brief=False)
+                self.show_database_information(all=True)
             elif selection == 2:
                 self.show_symbol_information()
             elif selection == 3:
@@ -75,19 +73,15 @@ class Interface:
             elif selection == 5:
                 self.refresh_pricing()
             elif selection == 6:
-                self.delete_exchange()
-            elif selection == 7:
                 self.populate_index()
-            elif selection == 8:
-                self.delete_index()
-            elif selection == 9:
+            elif selection == 7:
                 self.create_missing_tables()
-            elif selection == 10:
+            elif selection == 8:
                 self.reset_database()
             elif selection == 0:
                 break
 
-    def show_database_information(self, brief=True):
+    def show_database_information(self, all=False):
         u.print_message(f'Database Information ({d.ACTIVE_DB})')
         info = self.manager.get_database_info()
         for i in info:
@@ -103,22 +97,28 @@ class Interface:
         for i in info:
             print(f'{i["index"]:>9}:\t{i["count"]} symbols')
 
-        if not brief:
+        if all:
             u.print_message('Missing Symbols')
             exchanges = s.get_exchanges()
             for e in exchanges:
                 count = len(self.manager.identify_missing_securities(e))
                 print(f'{e:>9}:\t{count} symbols')
 
+            u.print_message('Inactive Symbols')
+            exchanges = s.get_exchanges()
+            for e in exchanges:
+                count = len(self.manager.identify_inactive_securities(e))
+                print(f'{e:>9}:\t{count} symbols')
+
             u.print_message('Missing Information')
             exchanges = s.get_exchanges()
             for e in exchanges:
                 count = len(self.manager.identify_incomplete_securities_companies(e))
-                print(f'{e:>9}:\t{count} symbols missing company information')
+                print(f'{e:>9}:\t{count} missing company')
 
             for e in exchanges:
                 count = len(self.manager.identify_incomplete_securities_price(e))
-                print(f'{e:>9}:\t{count} symbols missing price information')
+                print(f'{e:>9}:\t{count} missing price')
 
             u.print_message('Master Exchange Symbol List')
             for exchange in d.EXCHANGES:

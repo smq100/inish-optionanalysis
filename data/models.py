@@ -1,7 +1,7 @@
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, ForeignKey, Boolean, String, Integer, BigInteger, Float, Date
-from sqlalchemy.orm import relationship
 from sqlalchemy import Enum, UniqueConstraint
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
 
 from utils import utils as u
 
@@ -29,12 +29,15 @@ class Security(Base):
     __tablename__ = 'security'
     id = Column(Integer, primary_key=True, autoincrement=True)
     ticker = Column('ticker', String(12), nullable=False, unique=True)
+    active = Column('active', Boolean, default=True)
     exchange_id = Column(Integer, ForeignKey('exchange.id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
     exchange = relationship('Exchange')
     index1_id = Column(Integer, ForeignKey('index.id', onupdate='CASCADE', ondelete='SET NULL'))
     index2_id = Column(Integer, ForeignKey('index.id', onupdate='CASCADE', ondelete='SET NULL'))
+    index3_id = Column(Integer, ForeignKey('index.id', onupdate='CASCADE', ondelete='SET NULL'))
     index1 = relationship('Index', foreign_keys=[index1_id])
     index2 = relationship('Index', foreign_keys=[index2_id])
+    index3 = relationship('Index', foreign_keys=[index3_id])
     pricing = relationship('Price', back_populates='security')
     company = relationship('Company', back_populates='security')
 
@@ -90,8 +93,8 @@ class Price(Base):
     close = Column('close', Float)
     volume = Column('volume', Float)
     security_id = Column(Integer, ForeignKey('security.id', onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
-    UniqueConstraint('date', 'security_id')
     security = relationship('Security')
+    UniqueConstraint('date', 'security_id')
 
     def __repr__(self):
         return f'<Price Model ({self.security_id})>'

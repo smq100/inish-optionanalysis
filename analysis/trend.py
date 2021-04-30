@@ -9,6 +9,7 @@ import yfinance as yf
 import trendln
 import matplotlib.pyplot as plt
 
+from data import store as s
 from fetcher import fetcher as f
 from utils import utils as u
 
@@ -101,7 +102,7 @@ class SupportResistance:
             self.history = yf.Ticker(self.ticker).history(start=f'{self.start:%Y-%m-%d}', rounding=True)
 
         self.points = len(self.history)
-        self.price = f.get_current_price(self.ticker)
+        self.price = s.get_current_price(self.ticker)
 
         logger.info(f'{__name__}: {self.points} pivot points identified from {self.history.iloc[0].name} to {self.history.iloc[-1].name}')
 

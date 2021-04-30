@@ -73,110 +73,119 @@ class Interface:
                 break
 
     def select_technical(self):
-        menu_items = {
-            '1': 'EMA',
-            '2': 'RSI',
-            '3': 'VWAP',
-            '4': 'MACD',
-            '5': 'Bollinger Bands',
-            '0': 'Done',
-        }
+        if self.technical is not None:
+            while True:
+                menu_items = {
+                    '1': 'EMA',
+                    '2': 'RSI',
+                    '3': 'VWAP',
+                    '4': 'MACD',
+                    '5': 'Bollinger Bands',
+                    '0': 'Done',
+                }
 
-        while True:
-            selection = u.menu(menu_items, 'Select Indicator', 0, 5)
+                selection = u.menu(menu_items, 'Select Indicator', 0, 5)
 
-            if selection == 1:
-                interval = u.input_integer('Enter interval: ', 5, 200)
-                df = self.technical.calc_ema(interval)
-                print(u.delimeter(f'EMA {interval}', True))
-                print(f'Yesterday: {df.iloc[-1]:.2f}')
-                self.plot(df, f'EMA {interval}')
-            elif selection == 2:
-                df = self.technical.calc_rsi()
-                print(u.delimeter('RSI', True))
-                print(f'Yesterday: {df.iloc[-1]:.2f}')
-            elif selection == 3:
-                df = self.technical.calc_vwap()
-                print(u.delimeter('VWAP', True))
-                print(f'Yesterday: {df.iloc[-1]:.2f}')
-            elif selection == 4:
-                df = self.technical.calc_macd()
-                print(u.delimeter('MACD', True))
-                print(f'Diff: {df.iloc[-1]["Diff"]:.2f}')
-                print(f'MACD: {df.iloc[-1]["MACD"]:.2f}')
-                print(f'Sig:  {df.iloc[-1]["Signal"]:.2f}')
-            elif selection == 5:
-                df = self.technical.calc_bb()
-                print(u.delimeter('Bollinger Band', True))
-                print(f'High: {df.iloc[-1]["High"]:.2f}')
-                print(f'Mid:  {df.iloc[-1]["Mid"]:.2f}')
-                print(f'Low:  {df.iloc[-1]["Low"]:.2f}')
-            elif selection == 0:
-                break
+                if selection == 1:
+                    interval = u.input_integer('Enter interval: ', 5, 200)
+                    df = self.technical.calc_ema(interval)
+                    print(u.delimeter(f'EMA {interval}', True))
+                    print(f'Yesterday: {df.iloc[-1]:.2f}')
+                    self.plot(df, f'EMA {interval}')
+                elif selection == 2:
+                    df = self.technical.calc_rsi()
+                    print(u.delimeter('RSI', True))
+                    print(f'Yesterday: {df.iloc[-1]:.2f}')
+                elif selection == 3:
+                    df = self.technical.calc_vwap()
+                    print(u.delimeter('VWAP', True))
+                    print(f'Yesterday: {df.iloc[-1]:.2f}')
+                elif selection == 4:
+                    df = self.technical.calc_macd()
+                    print(u.delimeter('MACD', True))
+                    print(f'Diff: {df.iloc[-1]["Diff"]:.2f}')
+                    print(f'MACD: {df.iloc[-1]["MACD"]:.2f}')
+                    print(f'Sig:  {df.iloc[-1]["Signal"]:.2f}')
+                elif selection == 5:
+                    df = self.technical.calc_bb()
+                    print(u.delimeter('Bollinger Band', True))
+                    print(f'High: {df.iloc[-1]["High"]:.2f}')
+                    print(f'Mid:  {df.iloc[-1]["Mid"]:.2f}')
+                    print(f'Low:  {df.iloc[-1]["Low"]:.2f}')
+                elif selection == 0:
+                    break
+        else:
+            u.print_error('Please forst select symbol')
 
     def get_trend_parameters(self):
-        days = 1000
-        filename = ''
-        show = True
+        if self.technical is not None:
+            days = 1000
+            filename = ''
+            show = True
 
-        while True:
-            name = filename if filename else 'none'
-            menu_items = {
-                '1': f'Number of Days ({days})',
-                '2': f'Plot File Name ({name})',
-                '3': f'Show Window ({show})',
-                '4': 'Analyze',
-                '0': 'Cancel'
-            }
+            while True:
+                name = filename if filename else 'none'
+                menu_items = {
+                    '1': f'Number of Days ({days})',
+                    '2': f'Plot File Name ({name})',
+                    '3': f'Show Window ({show})',
+                    '4': 'Analyze',
+                    '0': 'Cancel'
+                }
 
-            selection = u.menu(menu_items, 'Select option', 0, 4)
+                selection = u.menu(menu_items, 'Select option', 0, 4)
 
-            if selection == 1:
-                days = u.input_integer('Enter number of days (0=max): ', 0, 9999)
+                if selection == 1:
+                    days = u.input_integer('Enter number of days (0=max): ', 0, 9999)
 
-            if selection == 2:
-                filename = input('Enter filename: ')
+                if selection == 2:
+                    filename = input('Enter filename: ')
 
-            if selection == 3:
-                show = True if u.input_integer('Show Window? (1=Yes, 0=No): ', 0, 1) == 1 else False
+                if selection == 3:
+                    show = True if u.input_integer('Show Window? (1=Yes, 0=No): ', 0, 1) == 1 else False
 
-            if selection == 4:
-                start = None
-                if days > 0:
-                    start = dt.datetime.today() - dt.timedelta(days=days)
+                if selection == 4:
+                    start = None
+                    if days > 0:
+                        start = dt.datetime.today() - dt.timedelta(days=days)
 
-                sr = SupportResistance(self.technical.ticker, start=start)
-                sr.calculate()
+                    sr = SupportResistance(self.technical.ticker, start=start)
+                    sr.calculate()
 
-                sup = sr.get_support()
-                print(u.delimeter(f'{sr.ticker} Support & Resistance Levels (${sr.price:.2f})', True))
-                for line in sup:
-                    print(f'Support:    ${line.end_point:.2f} ({line.get_score():.2f})')
+                    sup = sr.get_support()
+                    print(u.delimeter(f'{sr.ticker} Support & Resistance Levels (${sr.price:.2f})', True))
+                    for line in sup:
+                        print(f'Support:    ${line.end_point:.2f} ({line.get_score():.2f})')
 
-                res = sr.get_resistance()
-                for line in res:
-                    print(f'Resistance: ${line.end_point:.2f} ({line.get_score():.2f})')
+                    res = sr.get_resistance()
+                    for line in res:
+                        print(f'Resistance: ${line.end_point:.2f} ({line.get_score():.2f})')
 
-                sr.plot(filename=filename, show=show)
-                break
+                    sr.plot(filename=filename, show=show)
+                    break
 
-            if selection == 0:
-                break
+                if selection == 0:
+                    break
+        else:
+            u.print_error('Please forst select symbol')
+
 
     def plot_all(self):
-        df1 = self.technical.calc_ema(21)
-        df2 = self.technical.calc_rsi()
-        df3 = self.technical.calc_vwap()
-        df4 = self.technical.calc_macd()
-        df5 = self.technical.calc_bb()
-        df1.plot(label='EMA')
-        df2.plot(label='RSI')
-        df3.plot(label='VWAP')
-        df4.plot(label='MACD')
-        df5.plot(label='BB')
-        plt.legend()
-        plt.show()
-
+        if self.technical is not None:
+            df1 = self.technical.calc_ema(21)
+            df2 = self.technical.calc_rsi()
+            df3 = self.technical.calc_vwap()
+            df4 = self.technical.calc_macd()
+            df5 = self.technical.calc_bb()
+            df1.plot(label='EMA')
+            df2.plot(label='RSI')
+            df3.plot(label='VWAP')
+            df4.plot(label='MACD')
+            df5.plot(label='BB')
+            plt.legend()
+            plt.show()
+        else:
+            u.print_error('Please forst select symbol')
 
     def plot(self, df, title=''):
         if df is not None:

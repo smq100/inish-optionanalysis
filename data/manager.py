@@ -264,11 +264,26 @@ class Manager(Threaded):
         with self.session() as session:
             exc = session.query(m.Exchange.id, m.Exchange.abbreviation).filter(m.Exchange.abbreviation==exchange).one()
             for sec in tickers:
-                t = session.query(m.Security.ticker, m.Security.exchange_id).filter(and_(m.Security.ticker==sec, m.Security.exchange_id==exc.id)).one_or_none()
+                t = session.query(m.Security.ticker).filter(and_(m.Security.ticker==sec, m.Security.exchange_id==exc.id)).one_or_none()
                 if t is None:
                     missing += [sec]
 
         logger.info(f'{__name__}: {len(missing)} missing symbols in {exchange}')
+        return missing
+
+    def identify_inactive_securities(self, exchange):
+        missing = []
+        tickers = s.get_tickers(exchange)
+        if len(tickers) > 0:
+            with self.session() as session:
+                exc = session.query(m.Exchange.id, m.Exchange.abbreviation).filter(m.Exchange.abbreviation==exchange).one()
+                for sec in tickers:
+                    t = session.query(m.Security.ticker).filter(and_(m.Security.ticker==sec,
+                        m.Security.exchange_id==exc.id, m.Security.active==True)).one_or_none()
+                    if t is None:
+                        missing += [sec]
+
+        logger.info(f'{__name__}: {len(missing)} inactive symbols in {exchange}')
         return missing
 
     def identify_incomplete_securities_companies(self, exchange):
@@ -282,7 +297,7 @@ class Manager(Threaded):
                     logger.info(f'{__name__}: {t.ticker} incomplete company info')
                     missing += [t.ticker]
 
-        logger.info(f'{__name__}: {len(missing)} incomplete symbol company info')
+        logger.info(f'{__name__}: {len(missing)} with incomplete company info')
         return missing
 
     def identify_incomplete_securities_price(self, exchange):
@@ -420,11 +435,14 @@ class Manager(Threaded):
             for t in tickers:
                 self.items_symbol = t
                 self.items_success += 1
+
                 s = session.query(m.Security).filter(m.Security.ticker==t).one()
                 if s.index1_id is None:
                     s.index1_id = ind.id
                 elif s.index2_id is None:
                     s.index2_id = ind.id
+                elif s.index3_id is None:
+                    s.index3_id = ind.id
 
                 self.items_completed += 1
 
@@ -455,8 +473,10 @@ class Manager(Threaded):
             sec = session.query(m.Security).filter(m.Security.ticker==ticker).one()
             history = s.get_history(ticker, -1, live=True)
             if history is None:
+                sec.active = False
                 logger.info(f'{__name__}: No pricing information for {ticker}')
             elif history.empty:
+                sec.active = False
                 logger.info(f'{__name__}: No pricing information for {ticker}')
             else:
                 history.reset_index(inplace=True)
@@ -469,8 +489,9 @@ class Manager(Threaded):
                         p.low = price['low']
                         p.close = price['close']
                         p.volume = price['volume']
-
                         sec.pricing += [p]
+                    else:
+                        sec.active = False
 
                 logger.info(f'{__name__}: Added pricing to {ticker}')
 

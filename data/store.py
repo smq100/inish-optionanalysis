@@ -64,6 +64,10 @@ def get_tickers(exchange=''):
     tickers = list(map(lambda x: x[0], t.all()))
     return tickers
 
+def get_current_price(ticker):
+    history = get_history(ticker, 5, live=True)
+    return history.iloc[-1]['close']
+
 def get_history(ticker, days, live=False):
     if live:
         results = f.get_history(ticker, days)
@@ -262,5 +266,7 @@ if __name__ == '__main__':
     # from logging import DEBUG
     # logger = u.get_logger(DEBUG)
 
-    t = get_tickers()
+    t = get_history('APT', 0, live=True)['close']
+    # t = get_current_price('APT')
     print(t)
+    print(type(t))

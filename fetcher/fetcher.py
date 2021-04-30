@@ -39,8 +39,8 @@ def get_company(ticker, live=True):
     company = None
 
     if validate_ticker(ticker, live):
-        company = yf.Ticker(ticker)
         try:
+            company = yf.Ticker(ticker)
             _ = company.info
         except Exception as e:
             # YFinance (pandas) throws exceptions with bad info (YFinance bug)
@@ -67,13 +67,14 @@ def get_history(ticker, days=-1):
                 if history is not None:
                     history.reset_index(inplace=True)
                     history.rename(columns={'Date':'date', 'Open':'open', 'High':'high', 'Low':'low', 'Close':'close', 'Volume':'volume'}, inplace=True)
-            else:
-                start = dt.datetime.today() - dt.timedelta(days=5)
-                history = company.history(start=f'{start:%Y-%m-%d}')
-                if history is not None:
-                    history.reset_index(inplace=True)
-                    history.rename(columns={'Date':'date', 'Open':'open', 'High':'high', 'Low':'low', 'Close':'close', 'Volume':'volume'}, inplace=True)
-                    history = history.iloc[-1].to_frame()
+            # else:
+            #     start = dt.datetime.today() - dt.timedelta(days=5)
+            #     history = company.history(start=f'{start:%Y-%m-%d}')
+            #     if history is not None:
+            #         history.reset_index(inplace=True)
+            #         history.rename(columns={'Date':'date', 'Open':'open', 'High':'high', 'Low':'low', 'Close':'close', 'Volume':'volume'}, inplace=True)
+            #         history = history.iloc[-1].to_frame()
+            #         history = history.transpose().convert_dtypes()
 
         except Exception:
             # YFinance (pandas) throws exceptions with bad info (YFinance bug)
@@ -81,36 +82,10 @@ def get_history(ticker, days=-1):
 
     return history
 
-def get_current_price(ticker):
-    if validate_ticker(ticker):
-        start = dt.datetime.today() - dt.timedelta(days=5)
-        df = get_ranged_data(ticker, start)
-        price = df.iloc[-1]['Close']
-    else:
-        logger.error(f'{__name__}: Ticker {ticker} not valid')
-        price = -1.0
-
-    return price
-
-def get_ranged_data(ticker, start, end=None):
-    df = pd.DataFrame()
-
-    if end is None:
-        end = dt.date.today()
-
-    if validate_ticker(ticker):
-        company = get_company(ticker)
-        info = company.history(start=f'{start:%Y-%m-%d}', end=f'{end:%Y-%m-%d}')
-        df = pd.DataFrame(info)
-
-    return df
-
 def get_treasury_rate(ticker='DTB3'):
     # DTB3: Default to 3-Month Treasury Rate
     df = pd.DataFrame()
-    prev_business_date = dt.datetime.today() - BDay(1)
-
-    df = qd.get('FRED/' + ticker)
+    df = qd.get(f'FRED/{ticker}')
     if df.empty:
         logger.error(f'{__name__}: Unable to get Treasury Rates from Quandl. Please check connection')
         raise IOError('Unable to get Treasury Rate from Quandl')
@@ -123,8 +98,12 @@ if __name__ == '__main__':
     logger = u.get_logger(DEBUG)
 
     # c = get_company('AAPL', force=True)
-    c = get_history('AAPL', days=5)
+    c = get_history('AAPL', days=0)
+    print(c.shape)
+    print(type(c))
     print(c)
+    print(c['close'])
+    print(type(c['close']))
 
     # start = dt.datetime.today() - dt.timedelta(days=10)
     # df = refresh_history('AAPL', 60)

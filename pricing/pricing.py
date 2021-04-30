@@ -10,8 +10,8 @@ import datetime as dt
 
 import numpy as np
 import pandas as pd
-from pandas.tseries.offsets import BDay
 
+from data import store as s
 from fetcher import fetcher as f
 from utils import utils as u
 
@@ -22,7 +22,7 @@ logger = u.get_logger()
 
 
 class Pricing(ABC):
-    LOOK_BACK_WINDOW = 252
+    LOOK_BACK_WINDOW = 365
 
     def __init__(self, ticker, expiry, strike, dividend=0.0):
         '''
@@ -56,7 +56,6 @@ class Pricing(ABC):
         self.rho_put = 0.0
 
         self._underlying_asset_data = pd.DataFrame()
-        self._start_date = dt.datetime.today() - BDay(self.LOOK_BACK_WINDOW)  # How far we need to go to get historical prices
 
         # Convert time to midnight
         self.expiry = self.expiry.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -100,16 +99,6 @@ class Pricing(ABC):
         self._calc_volatility()
         self._calc_spot_price()
 
-    def override_historical_start_date(self, hist_start_date):
-        '''
-        If we want to change the look_back window for historical prices (used for volatility calculations),
-        we can override the look_back window here. Farther back the start date is bigger our window.
-
-        :param hist_start_date:
-        :return: <void>
-        '''
-        self._start_date = hist_start_date
-
     def is_call_put_parity_maintained(self, call_price, put_price):
         ''' Verify is the Put-Call Pairty is maintained by the two option prices calculated by us.
 
@@ -132,7 +121,8 @@ class Pricing(ABC):
         :return:
         '''
         if self._underlying_asset_data.empty:
-            self._underlying_asset_data = f.get_ranged_data(self.ticker, self._start_date, None)
+            history = s.get_history(self.ticker, days=self.LOOK_BACK_WINDOW)
+            self._underlying_asset_data = pd.DataFrame(history)
 
             if self._underlying_asset_data.empty:
                 logger.error(f'{__name__}: Unable to get historical stock data')
@@ -168,8 +158,8 @@ class Pricing(ABC):
         '''
         self._calc_underlying_asset_data()
         self._underlying_asset_data.reset_index(inplace=True)
-        self._underlying_asset_data.set_index('Date', inplace=True)
-        self._underlying_asset_data['log_returns'] = np.log(self._underlying_asset_data['Close'] / self._underlying_asset_data['Close'].shift(1))
+        self._underlying_asset_data.set_index('date', inplace=True)
+        self._underlying_asset_data['log_returns'] = np.log(self._underlying_asset_data['close'] / self._underlying_asset_data['close'].shift(1))
 
         d_std = np.std(self._underlying_asset_data.log_returns)
         std = d_std * 252 ** 0.5
@@ -183,5 +173,5 @@ class Pricing(ABC):
         :return:
         '''
         self._calc_underlying_asset_data()
-        self.spot_price = self._underlying_asset_data['Close'][-1]
+        self.spot_price = self._underlying_asset_data['close'][-1]
         logger.info(f'{__name__}: Spot price = {self.spot_price:.2f}')
