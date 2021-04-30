@@ -25,7 +25,7 @@ class Interface:
                     u.print_error('File read error')
             else:
                 u.print_error(f'File "{script}" not found')
-        elif o.is_symbol_valid(ticker):
+        elif o.is_ticker_valid(ticker):
             self.technical = Technical(ticker, 365)
             self.scoring = ScoringAnalysis(ticker)
 
@@ -57,7 +57,7 @@ class Interface:
         while not valid:
             ticker = input('Please enter symbol, or 0 to cancel: ').upper()
             if ticker != '0':
-                valid = o.is_symbol_valid(ticker)
+                valid = o.is_ticker_valid(ticker)
                 if valid:
                     self.scoring = ScoringAnalysis(ticker)
                 else:

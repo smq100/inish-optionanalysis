@@ -1,3 +1,4 @@
+from data import store as s
 from fetcher import fetcher as f
 from utils import utils as u
 
@@ -5,7 +6,7 @@ logger = u.get_logger()
 
 class Chain:
     def __init__(self, ticker):
-        if not f.validate_ticker(ticker):
+        if not s.is_ticker_valid(ticker):
             logger.error(f'Error initializing {__class__}')
         else:
             self.ticker = ticker

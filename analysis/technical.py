@@ -13,7 +13,7 @@ logger = u.get_logger()
 
 class Technical:
     def __init__(self, ticker, history, days, live=False):
-        if o.is_symbol_valid(ticker):
+        if o.is_ticker_valid(ticker):
             self.ticker = ticker.upper()
             self.days = days
 

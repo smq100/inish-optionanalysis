@@ -16,12 +16,12 @@ from utils import utils as u
 
 logger = u.get_logger()
 
+
 # Quandl credentials
 CREDENTIALS = 'fetcher/quandl.ini'
 config = configparser.ConfigParser()
 config.read(CREDENTIALS)
 qd.ApiConfig.api_key = config['DEFAULT']['APIKEY']
-
 
 def validate_ticker(ticker, live=False):
     valid = False
@@ -31,7 +31,7 @@ def validate_ticker(ticker, live=False):
         if len(t) > 0:
             valid = True
     else:
-        valid = s.is_symbol_valid(ticker)
+        valid = s.is_ticker_valid(ticker)
 
     return valid
 

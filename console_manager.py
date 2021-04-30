@@ -102,13 +102,13 @@ class Interface:
             exchanges = s.get_exchanges()
             for e in exchanges:
                 count = len(self.manager.identify_missing_securities(e))
-                print(f'{e:>9}:\t{count} symbols')
+                print(f'{e:>9}:\t{count}')
 
             u.print_message('Inactive Symbols')
             exchanges = s.get_exchanges()
             for e in exchanges:
                 count = len(self.manager.identify_inactive_securities(e))
-                print(f'{e:>9}:\t{count} symbols')
+                print(f'{e:>9}:\t{count}')
 
             u.print_message('Missing Information')
             exchanges = s.get_exchanges()
@@ -116,9 +116,9 @@ class Interface:
                 count = len(self.manager.identify_incomplete_securities_companies(e))
                 print(f'{e:>9}:\t{count} missing company')
 
-            for e in exchanges:
-                count = len(self.manager.identify_incomplete_securities_price(e))
-                print(f'{e:>9}:\t{count} missing price')
+            # for e in exchanges:
+            #     count = len(self.manager.identify_incomplete_securities_price(e))
+            #     print(f'{e:>9}:\t{count} missing price')
 
             u.print_message('Master Exchange Symbol List')
             for exchange in d.EXCHANGES:
@@ -142,7 +142,7 @@ class Interface:
         symbol = u.input_text('Enter symbol: ')
         if symbol:
             symbol = symbol[:4].upper()
-            if s.is_symbol_valid(symbol):
+            if s.is_ticker_valid(symbol):
                 company = s.get_company(symbol)
                 if company is not None:
                     u.print_message(f'{symbol} Company Information')

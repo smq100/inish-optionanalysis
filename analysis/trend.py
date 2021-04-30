@@ -10,7 +10,6 @@ import trendln
 import matplotlib.pyplot as plt
 
 from data import store as s
-from fetcher import fetcher as f
 from utils import utils as u
 
 logger = u.get_logger()
@@ -74,7 +73,7 @@ class SupportResistance:
         if best < 1:
             raise AssertionError("'best' value must be > 0")
 
-        if (f.validate_ticker(ticker)):
+        if (s.is_ticker_valid(ticker)):
             self.ticker = ticker.upper()
             self.best = best
             self.start = start

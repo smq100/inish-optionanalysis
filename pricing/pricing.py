@@ -61,7 +61,7 @@ class Pricing(ABC):
         self.expiry = self.expiry.replace(hour=0, minute=0, second=0, microsecond=0)
 
         # Initialize
-        if f.validate_ticker(ticker):
+        if s.is_ticker_valid(ticker):
             self.initialize_variables()
         else:
             raise IOError('Problem fetching ticker information')

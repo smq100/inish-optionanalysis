@@ -24,7 +24,7 @@ _master_indexes = {
     d.INDEXES[2]['abbreviation']: set()
     }
 
-def is_symbol_valid(symbol):
+def is_ticker_valid(symbol):
     engine = create_engine(d.ACTIVE_URI, echo=False)
     session = sessionmaker(bind=engine)
 
