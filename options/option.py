@@ -1,7 +1,7 @@
 import datetime as dt
 import re
 
-from data import store as s
+from fetcher import fetcher as f
 from utils import utils as u
 
 PRODUCTS = ('call', 'put')
@@ -122,16 +122,15 @@ def get_contract(contract_symbol):
     strike = parsed['strike']
 
     try:
-        company = s.get_company(ticker)
-
         if product == 'call':
-            chain = company.option_chain(expiry).calls
+            chain = f.get_option_chain(ticker)(expiry).calls
         else:
-            chain = company.option_chain(expiry).puts
+            chain = f.get_option_chain(ticker)(expiry).puts
 
         contract = chain.loc[chain['contractSymbol'] == contract_symbol]
         return contract.iloc[0]
     except Exception as e:
+        print(str(e))
         return None
 
 def _parse_contract_name(contract_name):

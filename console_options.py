@@ -12,7 +12,6 @@ from strategy.put import Put
 from strategy.vertical import Vertical
 from options.chain import Chain
 from data import store as o
-from fetcher import fetcher as f
 from utils import utils as u
 
 MAX_ROWS = 50
@@ -23,12 +22,12 @@ logger = u.get_logger()
 
 class Interface:
     def __init__(self, ticker, strategy, direction, autoload='', script='', exit=False):
-        pd.options.display.float_format = '{:,.2f}'.format
-
         self.ticker = ticker
         self.strategy = None
         self.dirty_calculate = True
         self.dirty_analyze = True
+
+        pd.options.display.float_format = '{:,.2f}'.format
 
         if script:
             if os.path.exists(script):
@@ -447,10 +446,11 @@ class Interface:
         if options is not None:
             menu_items = {}
             for i, row in options.iterrows():
+                itm = 'ITM' if bool(row["inTheMoney"]) else 'OTM'
                 menu_items[f'{i+1}'] = \
                     f'${row["strike"]:7.2f} '\
                     f'${row["lastPrice"]:7.2f} '\
-                    f'ITM: {bool(row["inTheMoney"])}'
+                    f'{itm}'
 
             select = u.menu(menu_items, 'Select option, or 0 to cancel: ', 0, i+1)
             if select > 0:

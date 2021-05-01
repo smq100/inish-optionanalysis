@@ -4,14 +4,11 @@ yfinance: https://github.com/ranaroussi/yfinance
 
 import datetime as dt
 import configparser
-from logging import exception
 
 import quandl as qd
 import yfinance as yf
 import pandas as pd
-from pandas.tseries.offsets import BDay
 
-from data import store as s
 from utils import utils as u
 
 logger = u.get_logger()
@@ -23,22 +20,19 @@ config = configparser.ConfigParser()
 config.read(CREDENTIALS)
 qd.ApiConfig.api_key = config['DEFAULT']['APIKEY']
 
-def validate_ticker(ticker, live=False):
+def validate_ticker(ticker):
     valid = False
 
-    if live:
-        t = yf.Ticker(ticker).history(period='1d')
-        if len(t) > 0:
-            valid = True
-    else:
-        valid = s.is_ticker_valid(ticker)
+    t = yf.Ticker(ticker).history(period='1d')
+    if len(t) > 0:
+        valid = True
 
     return valid
 
-def get_company(ticker, live=True):
+def get_company_ex(ticker):
     company = None
 
-    if validate_ticker(ticker, live):
+    if validate_ticker(ticker):
         try:
             company = yf.Ticker(ticker)
             _ = company.info
@@ -48,10 +42,19 @@ def get_company(ticker, live=True):
 
     return company
 
+def get_option_chain(ticker):
+    chain = None
+
+    company = get_company_ex(ticker)
+    if company is not None:
+        chain = company.option_chain
+
+    return chain
+
 def get_history(ticker, days=-1):
     history = None
 
-    company = get_company(ticker, live=True)
+    company = get_company_ex(ticker)
     if company is not None:
         try:
             if days < 0:

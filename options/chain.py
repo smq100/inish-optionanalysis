@@ -15,14 +15,14 @@ class Chain:
             self.width = 1
 
     def get_expiry(self):
-        self.company = f.get_company(self.ticker)
+        self.company = f.get_company_ex(self.ticker)
         value = self.company.options
 
         return value
 
     def get_chain(self, product):
-        self.company = f.get_company(self.ticker)
-        value = self.company.option_chain(date=self.expire)
+        value = f.get_option_chain(self.ticker)(date=self.expire)
+
         if product == 'call':
             value = value.calls
         elif product == 'put':

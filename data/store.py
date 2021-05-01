@@ -107,7 +107,7 @@ def get_company(ticker, live=False):
     session = sessionmaker(bind=engine)
 
     if live:
-        c = f.get_company(ticker)
+        c = f.get_company_ex(ticker)
         if c is not None:
             try:
                 results['name'] = c.info['shortName']

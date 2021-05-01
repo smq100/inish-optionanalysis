@@ -24,6 +24,7 @@ class Manager(Threaded):
         self.exchange = ''
         self.invalid_symbols = []
         self.retry = 0
+        self._concurrency = 3 if d.ACTIVE_DB == 'SQLite' else 5
 
     def create_database(self):
         m.Base.metadata.create_all(self.engine)
@@ -67,7 +68,7 @@ class Manager(Threaded):
             self.items_error = 'None'
 
             # Split the list and remove any empty lists
-            lists = np.array_split(tickers, 5)
+            lists = np.array_split(tickers, self._concurrency)
             lists = [i for i in lists if i is not None]
 
             futures = []
@@ -242,7 +243,7 @@ class Manager(Threaded):
         self.items_error = 'None'
 
         # Split the list and remove any empty lists
-        lists = np.array_split(tickers, 5)
+        lists = np.array_split(tickers, self._concurrency)
         lists = [i for i in lists if i is not None]
 
         futures = []
@@ -334,7 +335,7 @@ class Manager(Threaded):
 
         if len(symbols) > 0:
             for s in symbols:
-                if not f.validate_ticker(s, force=True):
+                if not f.validate_ticker(s):
                     invalid += [s]
 
         return invalid
