@@ -89,26 +89,26 @@ class Interface:
                 if selection == 1:
                     interval = u.input_integer('Enter interval: ', 5, 200)
                     df = self.technical.calc_ema(interval)
-                    print(u.delimeter(f'EMA {interval}', True))
+                    print(u.delimeter(f'EMA {interval}'))
                     print(f'Yesterday: {df.iloc[-1]:.2f}')
                     self.plot(df, f'EMA {interval}')
                 elif selection == 2:
                     df = self.technical.calc_rsi()
-                    print(u.delimeter('RSI', True))
+                    print(u.delimeter('RSI'))
                     print(f'Yesterday: {df.iloc[-1]:.2f}')
                 elif selection == 3:
                     df = self.technical.calc_vwap()
-                    print(u.delimeter('VWAP', True))
+                    print(u.delimeter('VWAP'))
                     print(f'Yesterday: {df.iloc[-1]:.2f}')
                 elif selection == 4:
                     df = self.technical.calc_macd()
-                    print(u.delimeter('MACD', True))
+                    print(u.delimeter('MACD'))
                     print(f'Diff: {df.iloc[-1]["Diff"]:.2f}')
                     print(f'MACD: {df.iloc[-1]["MACD"]:.2f}')
                     print(f'Sig:  {df.iloc[-1]["Signal"]:.2f}')
                 elif selection == 5:
                     df = self.technical.calc_bb()
-                    print(u.delimeter('Bollinger Band', True))
+                    print(u.delimeter('Bollinger Band'))
                     print(f'High: {df.iloc[-1]["High"]:.2f}')
                     print(f'Mid:  {df.iloc[-1]["Mid"]:.2f}')
                     print(f'Low:  {df.iloc[-1]["Low"]:.2f}')
@@ -153,7 +153,7 @@ class Interface:
                     sr.calculate()
 
                     sup = sr.get_support()
-                    print(u.delimeter(f'{sr.ticker} Support & Resistance Levels (${sr.price:.2f})', True))
+                    print(u.delimeter(f'{sr.ticker} Support & Resistance Levels (${sr.price:.2f})'))
                     for line in sup:
                         print(f'Support:    ${line.end_point:.2f} ({line.get_score():.2f})')
 

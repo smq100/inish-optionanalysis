@@ -71,7 +71,7 @@ class Interface:
             elif selection == 4:
                 self.refresh_exchange()
             elif selection == 5:
-                self.refresh_pricing()
+                self.update_pricing()
             elif selection == 6:
                 self.populate_index()
             elif selection == 7:
@@ -194,15 +194,14 @@ class Interface:
 
     def refresh_exchange(self, progressbar=True):
         menu_items = {
-            '1': 'Missing Securities',
-            '2': 'Missing Company Information',
-            '3': 'Missing Price Information',
+            '1': 'Missing Company Information',
+            '2': 'Missing Price Information',
             '0': 'Cancel',
         }
-        area = u.menu(menu_items, 'Select item to refresh, or 0 to cancel: ', 0, 3)
+        area = u.menu(menu_items, 'Select item to refresh, or 0 to cancel: ', 0, 2)
 
         if area > 0:
-            areaname = ['securities', 'companies', 'prices']
+            areaname = ['companies', 'pricing']
             menu_items = {}
             for i, e in enumerate(self.exchanges):
                 menu_items[f'{i+1}'] = f'{e}'
@@ -211,18 +210,18 @@ class Interface:
             exchange = u.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
             if exchange > 0:
                 exc = self.exchanges[exchange-1]
-
                 self.task = threading.Thread(target=self.manager.refresh_exchange, args=[exc, areaname[area-1]])
                 self.task.start()
 
                 if progressbar:
                     print()
-                    self._show_progress('Progress', 'Completed', infinite=True)
+                    self._show_progress('Progress', 'Completed')
 
                 print()
-                u.print_message(f'Completed {exc} {areaname[area-1]} refresh in {self.manager.items_time:.2f} seconds with {self.manager.items_total} items missing')
+                u.print_message(f'Completed {exc} {areaname[area-1]} refresh in {self.manager.items_time:.2f} seconds', creturn=2)
+                u.print_message(f'Identified {self.manager.items_total} missing items. {self.manager.items_success} items filled', creturn=0)
 
-    def refresh_pricing(self, progressbar=True):
+    def update_pricing(self, progressbar=True):
         menu_items = {}
         for i, exchange in enumerate(self.exchanges):
             menu_items[f'{i+1}'] = f'{exchange}'
@@ -232,7 +231,7 @@ class Interface:
         select = u.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.EXCHANGES)+1)
         if select > 0:
             exc = self.exchanges[select-1] if select <= len(d.EXCHANGES) else ''
-            self.task = threading.Thread(target=self.manager.refresh_pricing, args=[exc])
+            self.task = threading.Thread(target=self.manager.update_pricing, args=[exc])
             self.task.start()
 
             if progressbar:
@@ -316,28 +315,22 @@ class Interface:
     def list_invalid(self):
         u.print_message(f'Invalid: {self.manager.invalid_symbols}')
 
-    def _show_progress(self, prefix, suffix, infinite=False):
+    def _show_progress(self, prefix, suffix):
         while not self.manager.items_error: pass
 
         if self.manager.items_error == 'None':
-            total = -1 if infinite else self.manager.items_total
-            completed = self.manager.items_completed
-
-            starttime = time.perf_counter()
-            u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50, reset=True)
+            u.progress_bar(self.manager.items_completed, self.manager.items_total, prefix=prefix, suffix=suffix, length=50, reset=True)
             while self.task.is_alive and self.manager.items_error == 'None':
-                time.sleep(0.15)
-                if infinite: suffix = f'{time.perf_counter() - starttime:.1f} seconds'
+                time.sleep(0.20)
+                total = self.manager.items_total
+                completed = self.manager.items_completed
+                success = self.manager.items_success
+                symbol = self.manager.items_symbol
 
-                if self.manager.items_total > 0:
-                    total = self.manager.items_total
-                    completed = self.manager.items_completed
-                    success = self.manager.items_success
-                    symbol = self.manager.items_symbol
+                if total > 0:
                     u.progress_bar(completed, total, prefix=prefix, suffix=suffix, symbol=symbol, length=50, success=success)
                 else:
-                    total = -1
-                    u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50)
+                    u.progress_bar(completed, total, prefix=prefix, suffix='Calculating...', length=50)
             print()
         else:
             u.print_message(f'{self.manager.items_error}')

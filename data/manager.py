@@ -95,38 +95,33 @@ class Manager(Threaded):
             # Throws exception if does not exist
             session.query(m.Exchange.abbreviation).filter(m.Exchange.abbreviation==exchange).one()
 
-        if area == 'securities':
-            self.items_error = 'None'
-            missing = self.identify_missing_securities(exchange)
-            self.items_total = len(missing)
-
-            if self.items_total > 0:
-                self._add_securities_to_exchange(missing, exchange)
-
-            self.items_error = 'Success'
-
-        elif area == 'companies':
+        if area == 'companies':
             self.items_error = 'None'
             missing = self.identify_incomplete_securities_companies(exchange)
             self.items_total = len(missing)
-            self.items_completed = 0
 
-            for company in missing:
-                self._add_company_to_security(company)
+            for ticker in missing:
+                self.items_symbol = ticker
+                if self._add_company_to_security(ticker):
+                    self.items_success += 1
                 self.items_completed += 1
 
-            self.items_error = 'Success'
-
-        elif area == 'prices':
+            self.items_error = 'Done'
+        elif area == 'pricing':
             self.items_error = 'None'
             missing = self.identify_incomplete_securities_price(exchange)
             self.items_total = len(missing)
 
-            for company in missing:
-                self._add_pricing_to_security(company)
+            for ticker in missing:
+                self.items_symbol = ticker
+                if self._add_pricing_to_security(ticker):
+                    self.items_success += 1
                 self.items_completed += 1
 
-            self.items_error = 'Success'
+            self.items_error = 'Done'
+        else:
+            self.items_error = 'Invalid area'
+            raise ValueError(f'{self.items_error}: {area}')
 
     @Threaded.threaded
     def delete_exchange(self, exchange):
@@ -232,7 +227,7 @@ class Manager(Threaded):
         return info
 
     @Threaded.threaded
-    def refresh_pricing(self, exchange=''):
+    def update_pricing(self, exchange=''):
         tickers = s.get_tickers(exchange)
         self.items_total = len(tickers)
 
@@ -432,28 +427,8 @@ class Manager(Threaded):
                     logger.warning(f'{__name__}: Cancelling operation')
                     break
 
-    def _add_securities_to_index(self, tickers, index):
-        with self.session() as session, session.begin():
-            ind = session.query(m.Index.id).filter(m.Index.abbreviation==index).one()
-
-            self.items_total = len(tickers)
-            for t in tickers:
-                self.items_symbol = t
-                self.items_success += 1
-
-                s = session.query(m.Security).filter(m.Security.ticker==t).one()
-                if s.index1_id is None:
-                    s.index1_id = ind.id
-                elif s.index2_id is None:
-                    s.index2_id = ind.id
-                elif s.index3_id is None:
-                    s.index3_id = ind.id
-
-                self.items_completed += 1
-
-                logger.info(f'{__name__}: Added {t} to index {index}')
-
     def _add_company_to_security(self, ticker):
+        added = False
         with self.session() as session, session.begin():
             sec = session.query(m.Security).filter(m.Security.ticker==ticker).one()
             company = s.get_company(ticker, live=True)
@@ -470,10 +445,13 @@ class Manager(Threaded):
                 c.industry = company['industry']
 
                 sec.company = [c]
-
+                added = True
                 logger.info(f'{__name__}: Added company information for {ticker}')
 
+        return added
+
     def _add_pricing_to_security(self, ticker):
+        added = False
         with self.session() as session, session.begin():
             sec = session.query(m.Security).filter(m.Security.ticker==ticker).one()
             history = s.get_history(ticker, -1, live=True)
@@ -494,11 +472,35 @@ class Manager(Threaded):
                         p.low = price['low']
                         p.close = price['close']
                         p.volume = price['volume']
+
                         sec.pricing += [p]
+                        added = True
+                        logger.info(f'{__name__}: Added pricing to {ticker}')
                     else:
                         sec.active = False
 
-                logger.info(f'{__name__}: Added pricing to {ticker}')
+        return added
+
+    def _add_securities_to_index(self, tickers, index):
+        with self.session() as session, session.begin():
+            ind = session.query(m.Index.id).filter(m.Index.abbreviation==index).one()
+
+            self.items_total = len(tickers)
+            for t in tickers:
+                self.items_symbol = t
+                self.items_success += 1
+
+                s = session.query(m.Security).filter(m.Security.ticker==t).one()
+                if s.index1_id is None:
+                    s.index1_id = ind.id
+                elif s.index2_id is None:
+                    s.index2_id = ind.id
+                elif s.index3_id is None:
+                    s.index3_id = ind.id
+
+                self.items_completed += 1
+
+                logger.info(f'{__name__}: Added {t} to index {index}')
 
 
 if __name__ == '__main__':

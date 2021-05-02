@@ -86,7 +86,7 @@ class Interface:
         self.scoring.bb = self.technical.calc_bb()
 
         if show:
-            print(u.delimeter(f"Yesterday's {self.scoring.ticker} Technicals", True))
+            print(u.delimeter(f"Yesterday's {self.scoring.ticker} Technicals"))
             print(f'EMA 21:    {self.scoring.ema["21"].iloc[-1]:.2f}')
             print(f'EMA 50:    {self.scoring.ema["50"].iloc[-1]:.2f}')
             print(f'EMA 200:   {self.scoring.ema["200"].iloc[-1]:.2f}')

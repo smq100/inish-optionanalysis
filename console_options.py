@@ -143,7 +143,7 @@ class Interface:
                             table_ = self._compress_table(table_, rows, cols)
 
                         if val == 1:
-                            print(u.delimeter(title, True) + '\n')
+                            print(u.delimeter(title) + '\n')
                             print(table_)
 
                         if val == 2:
@@ -181,10 +181,10 @@ class Interface:
                         table_ = self._compress_table(table_, rows, cols)
 
                     if val == 1:
-                        print(u.delimeter(title, True))
+                        print(u.delimeter(title))
                         print(self.strategy.analysis)
                     elif val == 2:
-                        print(u.delimeter(title, True))
+                        print(u.delimeter(title))
                         print(table_)
                     elif val == 3:
                         self._show_chart(table_, title, charttype='chart')
@@ -205,12 +205,12 @@ class Interface:
                 leg = 0
 
             if leg < 0:
-                print(u.delimeter('Leg 1 Option Metrics', True))
+                print(u.delimeter('Leg 1 Option Metrics'))
             else:
-                print(u.delimeter(f'Leg {leg+1} Option Metrics', True))
+                print(u.delimeter(f'Leg {leg+1} Option Metrics'))
             if leg < 0:
                 print(f'{self.strategy.legs[0].option}')
-                print(u.delimeter('Leg 2 Option Metrics', True))
+                print(u.delimeter('Leg 2 Option Metrics'))
                 print(f'{self.strategy.legs[1].option}')
             else:
                 print(f'{self.strategy.legs[leg].option}')
@@ -219,7 +219,7 @@ class Interface:
 
     def show_legs(self, leg=-1, delimeter=True):
         if delimeter:
-            print(u.delimeter('Option Leg Values', True))
+            print(u.delimeter('Option Leg Values'))
 
         if len(self.strategy.legs) < 1:
             print('No legs configured')

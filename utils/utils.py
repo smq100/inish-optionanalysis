@@ -30,10 +30,10 @@ def menu(menu_items, header, minvalue, maxvalue):
 
     return input_integer('Please select: ', minvalue, maxvalue)
 
-def delimeter(message, creturn=False):
+def delimeter(message, creturn=1):
     '''Common delimeter to bracket output'''
-    if creturn:
-        output = '\n'
+    if creturn > 0:
+        output = '\n' * creturn
     else:
         output = ''
 
@@ -92,13 +92,13 @@ def input_text(message):
 
     return val
 
-def print_message(message, creturn=True):
+def print_message(message, creturn=1):
     print(delimeter(f'{message}', creturn))
 
-def print_warning(message, creturn=True):
+def print_warning(message, creturn=1):
     print(delimeter(f'Warning: {message}', creturn))
 
-def print_error(message, creturn=True):
+def print_error(message, creturn=1):
     print(delimeter(f'Error: {message}', creturn))
 
 position = 0
@@ -125,7 +125,7 @@ def progress_bar(iteration, total, prefix='', suffix='', symbol='', decimals=1, 
 
         if iteration == total:
             print()
-    elif total < 0:
+    else:
         if direction == 'f':
             if position < length:
                 position += 1

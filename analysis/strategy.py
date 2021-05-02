@@ -25,7 +25,7 @@ class StrategyAnalysis:
             else:
                 loss = 'Unlimited'
 
-            output = '\n'\
+            output = \
                 f'Type:      {self.credit_debit.title()}\n'\
                 f'Sentiment: {self.sentiment.title()}\n'\
                 f'Amount:    ${abs(self.amount):.2f} {self.credit_debit}\n'\
