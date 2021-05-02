@@ -71,12 +71,14 @@ class Interface:
                 '0': 'Exit'
             }
 
+            loaded = '' if  self.strategy.legs[0].option.last_price > 0 else '*'
+
             if self.strategy.name == 'vertical':
                 menu_items['3'] += f' '\
-                    f'(L:${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator}'\
-                    f' S:${self.strategy.legs[1].option.strike:.2f}{self.strategy.legs[1].option.decorator})'
+                    f'(L:${self.strategy.legs[0].option.strike:.2f}{loaded}'\
+                    f' S:${self.strategy.legs[1].option.strike:.2f}{loaded})'
             else:
-                menu_items['3'] += f' (${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator})'
+                menu_items['3'] += f' (${self.strategy.legs[0].option.strike:.2f}{loaded})'
 
             if self.dirty_calculate:
                 menu_items['5'] += ' *'
@@ -368,13 +370,15 @@ class Interface:
                     '3': 'Done',
                 }
 
+                loaded = '' if  self.strategy.legs[0].option.last_price > 0 else '*'
+
                 if self.strategy.name == 'vertical':
                     menu_items['2'] = f'Select {product} Options'
                     menu_items['2'] += f' '\
-                        f'(L:${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator}'\
-                        f' S:${self.strategy.legs[1].option.strike:.2f}{self.strategy.legs[1].option.decorator})'
+                        f'(L:${self.strategy.legs[0].option.strike:.2f}{loaded}'\
+                        f' S:${self.strategy.legs[1].option.strike:.2f}{loaded})'
                 else:
-                    menu_items['2'] += f' (${self.strategy.legs[0].option.strike:.2f}{self.strategy.legs[0].option.decorator})'
+                    menu_items['2'] += f' (${self.strategy.legs[0].option.strike:.2f}{loaded})'
 
                 selection = u.menu(menu_items, 'Select Operation', 0, 3)
 

@@ -8,7 +8,7 @@ from fetcher.google import Google
 from fetcher.excel import Excel
 from utils import utils as u
 import data as d
-from data import models as o
+from data import models as m
 from fetcher import fetcher as f
 
 logger = u.get_logger()
@@ -29,7 +29,7 @@ def is_ticker_valid(symbol):
     session = sessionmaker(bind=engine)
 
     with session() as session:
-        e = session.query(o.Security).filter(o.Security.ticker==symbol.upper()).one_or_none()
+        e = session.query(m.Security).filter(m.Security.ticker==symbol.upper()).one_or_none()
 
     return (e is not None)
 
@@ -56,10 +56,10 @@ def get_tickers(exchange=''):
 
     with session() as session:
         if exchange:
-            e = session.query(o.Exchange.id, o.Exchange.abbreviation).filter(o.Exchange.abbreviation==exchange).one()
-            t = session.query(o.Security.ticker).filter(o.Security.exchange_id==e.id).order_by(o.Security.ticker)
+            e = session.query(m.Exchange.id, m.Exchange.abbreviation).filter(m.Exchange.abbreviation==exchange).one()
+            t = session.query(m.Security.ticker).filter(m.Security.exchange_id==e.id).order_by(m.Security.ticker)
         else:
-            t = session.query(o.Security.ticker).order_by(o.Security.ticker)
+            t = session.query(m.Security.ticker).order_by(m.Security.ticker)
 
     tickers = list(map(lambda x: x[0], t.all()))
     return tickers
@@ -75,21 +75,22 @@ def get_history(ticker, days, live=False):
         results = pd.DataFrame
         engine = create_engine(d.ACTIVE_URI, echo=False)
         session = sessionmaker(bind=engine)
+
         with session() as session:
-            t = session.query(o.Security.id).filter(o.Security.ticker==ticker.upper()).one()
+            t = session.query(m.Security.id).filter(and_(m.Security.ticker==ticker.upper(), m.Security.active)).one()
             if t is not None:
                 if days < 0:
-                    p = session.query(o.Price).filter(o.Price.security_id==t.id).order_by(o.Price.date)
+                    p = session.query(m.Price).filter(m.Price.security_id==t.id).order_by(m.Price.date)
                     results = pd.read_sql(p.statement, engine)
                     logger.info(f'{__name__}: Fetched max price history for {ticker}')
                 elif days > 1:
                     start = dt.datetime.today() - dt.timedelta(days=days)
-                    p = session.query(o.Price).filter(and_(o.Price.security_id==t.id, o.Price.date >= start)).order_by(o.Price.date)
+                    p = session.query(m.Price).filter(and_(m.Price.security_id==t.id, m.Price.date >= start)).order_by(m.Price.date)
                     results = pd.read_sql(p.statement, engine)
                     logger.info(f'{__name__}: Fetched {days} days of price history for {ticker}')
                 else:
                     start = dt.datetime.today() - dt.timedelta(days=100)
-                    p = session.query(o.Price).filter(and_(o.Price.security_id==t.id, o.Price.date >= start)).order_by(o.Price.date)
+                    p = session.query(m.Price).filter(and_(m.Price.security_id==t.id, m.Price.date >= start)).order_by(m.Price.date)
                     results = pd.read_sql(p.statement, engine)
                     if not results.empty:
                         results = results.iloc[-1]
@@ -129,9 +130,9 @@ def get_company(ticker, live=False):
         results['precords'] = 0
 
         with session() as session:
-            t = session.query(o.Security).filter(o.Security.ticker==ticker.upper()).one_or_none()
+            t = session.query(m.Security).filter(m.Security.ticker==ticker.upper()).one_or_none()
             if t is not None:
-                c = session.query(o.Company).filter(o.Company.security_id==t.id).one_or_none()
+                c = session.query(m.Company).filter(m.Company.security_id==t.id).one_or_none()
                 if c is not None:
                     results['name'] = c.name
                     results['description'] = c.description
@@ -141,14 +142,14 @@ def get_company(ticker, live=False):
 
                 results['indexes'] = 'None'
                 if t.index1_id is not None:
-                    index = session.query(o.Index).filter(o.Index.id==t.index1_id).one().abbreviation
+                    index = session.query(m.Index).filter(m.Index.id==t.index1_id).one().abbreviation
                     results['indexes'] = index
 
                     if t.index2_id is not None:
-                        index = session.query(o.Index).filter(o.Index.id==t.index2_id).one().abbreviation
+                        index = session.query(m.Index).filter(m.Index.id==t.index2_id).one().abbreviation
                         results['indexes'] += f', {index}'
 
-                p = session.query(o.Price).filter(o.Price.security_id==t.id).count()
+                p = session.query(m.Price).filter(m.Price.security_id==t.id).count()
                 results['precords'] = p
 
     return results
@@ -159,7 +160,7 @@ def get_exchanges():
     session = sessionmaker(bind=engine)
 
     with session() as session:
-        exc = session.query(o.Exchange.abbreviation).all()
+        exc = session.query(m.Exchange.abbreviation).all()
         for e in exc:
             results += [e.abbreviation]
 
@@ -171,9 +172,9 @@ def get_exchange(exchange):
     session = sessionmaker(bind=engine)
 
     with session() as session:
-        exc = session.query(o.Exchange.id).filter(o.Exchange.abbreviation==exchange.upper()).first()
+        exc = session.query(m.Exchange.id).filter(m.Exchange.abbreviation==exchange.upper()).first()
         if exc is not None:
-            t = session.query(o.Security).filter(o.Security.exchange_id==exc.id).all()
+            t = session.query(m.Security).filter(m.Security.exchange_id==exc.id).all()
             for symbol in t:
                 results += [symbol.ticker]
         else:
@@ -187,7 +188,7 @@ def get_indexes():
     session = sessionmaker(bind=engine)
 
     with session() as session:
-        ind = session.query(o.Index.abbreviation).all()
+        ind = session.query(m.Index.abbreviation).all()
         for i in ind:
             results += [i.abbreviation]
 
@@ -199,9 +200,9 @@ def get_index(index):
     session = sessionmaker(bind=engine)
 
     with session() as session:
-        i = session.query(o.Index.id).filter(o.Index.abbreviation==index.upper()).first()
+        i = session.query(m.Index.id).filter(m.Index.abbreviation==index.upper()).first()
         if i is not None:
-            t = session.query(o.Security).filter(or_(o.Security.index1_id==i.id, o.Security.index2_id==i.id)).all()
+            t = session.query(m.Security).filter(or_(m.Security.index1_id==i.id, m.Security.index2_id==i.id)).all()
             for symbol in t:
                 results += [symbol.ticker]
         else:

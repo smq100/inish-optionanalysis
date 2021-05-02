@@ -29,7 +29,6 @@ class Option:
         self.theta = 0.0
         self.vega = 0.0
         self.rho = 0.0
-        self.decorator = '*'
 
         # Fetched online with YFinance
         self.contract_symbol = ''
@@ -84,7 +83,7 @@ class Option:
         self.expiry = dt.datetime.strptime(parsed['expiry'], '%Y-%m-%d')
         self.strike = parsed['strike']
 
-        contract = get_contract(contract_name)
+        contract = _get_contract(contract_name)
 
         if contract is not None:
             self.contract_symbol = contract['contractSymbol']
@@ -101,7 +100,6 @@ class Option:
             self.itm = contract['inTheMoney']
             self.contract_size = contract['contractSize']
             self.currency = contract['currency']
-            self.decorator = ''
 
             if self.last_price > 0.0:
                 diff = self.calc_price / self.last_price
@@ -113,7 +111,7 @@ class Option:
 
         return ret
 
-def get_contract(contract_symbol):
+def _get_contract(contract_symbol):
     parsed = _parse_contract_name(contract_symbol)
 
     ticker = parsed['ticker']

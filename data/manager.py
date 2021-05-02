@@ -96,12 +96,15 @@ class Manager(Threaded):
             session.query(m.Exchange.abbreviation).filter(m.Exchange.abbreviation==exchange).one()
 
         if area == 'securities':
+            self.items_error = 'None'
             missing = self.identify_missing_securities(exchange)
             self.items_total = len(missing)
-            self.items_error = 'None'
+
             if self.items_total > 0:
                 self._add_securities_to_exchange(missing, exchange)
+
             self.items_error = 'Success'
+
         elif area == 'companies':
             self.items_error = 'None'
             missing = self.identify_incomplete_securities_companies(exchange)
@@ -113,6 +116,7 @@ class Manager(Threaded):
                 self.items_completed += 1
 
             self.items_error = 'Success'
+
         elif area == 'prices':
             self.items_error = 'None'
             missing = self.identify_incomplete_securities_price(exchange)
@@ -280,7 +284,7 @@ class Manager(Threaded):
                 exc = session.query(m.Exchange.id, m.Exchange.abbreviation).filter(m.Exchange.abbreviation==exchange).one()
                 for sec in tickers:
                     t = session.query(m.Security.ticker).filter(and_(m.Security.ticker==sec,
-                        m.Security.exchange_id==exc.id, m.Security.active==True)).one_or_none()
+                        m.Security.exchange_id==exc.id, m.Security.active)).one_or_none()
                     if t is None:
                         missing += [sec]
 

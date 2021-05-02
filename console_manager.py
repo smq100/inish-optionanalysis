@@ -182,6 +182,7 @@ class Interface:
             self.task.start()
 
             if progressbar:
+                print()
                 self._show_progress('Progress', 'Completed')
 
             if self.manager.items_error == 'Done':
@@ -213,16 +214,13 @@ class Interface:
 
                 self.task = threading.Thread(target=self.manager.refresh_exchange, args=[exc, areaname[area-1]])
                 self.task.start()
-                tic = time.perf_counter()
 
                 if progressbar:
+                    print()
                     self._show_progress('Progress', 'Completed', infinite=True)
 
-                toc = time.perf_counter()
-                totaltime = toc - tic
-
-                print('')
-                u.print_message(f'Completed {exc} {areaname[area-1]} refresh in {totaltime:.2f} seconds with {self.manager.items_total} items missing')
+                print()
+                u.print_message(f'Completed {exc} {areaname[area-1]} refresh in {self.manager.items_time:.2f} seconds with {self.manager.items_total} items missing')
 
     def refresh_pricing(self, progressbar=True):
         menu_items = {}
@@ -238,6 +236,7 @@ class Interface:
             self.task.start()
 
             if progressbar:
+                print()
                 self._show_progress('Progress', 'Completed')
 
             if self.manager.items_error == 'Done':
@@ -261,6 +260,7 @@ class Interface:
             self.task.start()
 
             if progressbar:
+                print()
                 self._show_progress('', '', infinite=True)
 
             self.create_missing_tables()
@@ -280,6 +280,7 @@ class Interface:
             self.task.start()
 
             if progressbar:
+                print()
                 self._show_progress('Progress', 'Completed')
 
             if self.manager.items_error == 'Done':
@@ -325,7 +326,7 @@ class Interface:
             starttime = time.perf_counter()
             u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50, reset=True)
             while self.task.is_alive and self.manager.items_error == 'None':
-                time.sleep(0.25)
+                time.sleep(0.15)
                 if infinite: suffix = f'{time.perf_counter() - starttime:.1f} seconds'
 
                 if self.manager.items_total > 0:
