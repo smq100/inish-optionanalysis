@@ -67,9 +67,9 @@ class Screener(Threaded):
         symbols = []
 
         if self.type == 'exchange':
-            symbols = o.get_exchange(self.table)
+            symbols = o.get_exchange_symbols(self.table)
         elif self.type == 'index':
-            symbols = o.get_index(self.table)
+            symbols = o.get_index_symbols(self.table)
         else:
             self.items_error = 'Invalid table name'
 

@@ -49,7 +49,7 @@ def is_index(index):
             break
     return ret
 
-def get_tickers(exchange=''):
+def get_symbols(exchange=''):
     tickers = []
     engine = create_engine(d.ACTIVE_URI, echo=False)
     session = sessionmaker(bind=engine)
@@ -63,6 +63,64 @@ def get_tickers(exchange=''):
 
     tickers = list(map(lambda x: x[0], t.all()))
     return tickers
+
+def get_exchanges():
+    results = []
+    engine = create_engine(d.ACTIVE_URI, echo=False)
+    session = sessionmaker(bind=engine)
+
+    with session() as session:
+        exc = session.query(m.Exchange.abbreviation).all()
+        for e in exc:
+            results += [e.abbreviation]
+
+    return results
+
+def get_indexes():
+    results = []
+    engine = create_engine(d.ACTIVE_URI, echo=False)
+    session = sessionmaker(bind=engine)
+
+    with session() as session:
+        ind = session.query(m.Index.abbreviation).all()
+        for i in ind:
+            results += [i.abbreviation]
+
+    return results
+
+def get_exchange_symbols(exchange):
+    results = []
+    engine = create_engine(d.ACTIVE_URI, echo=False)
+    session = sessionmaker(bind=engine)
+
+    with session() as session:
+        exc = session.query(m.Exchange.id).filter(m.Exchange.abbreviation==exchange.upper()).first()
+        if exc is not None:
+            t = session.query(m.Security).filter(and_(m.Security.exchange_id==exc.id, m.Security.active)).all()
+            for symbol in t:
+                results += [symbol.ticker]
+        else:
+            raise ValueError(f'Invalid exchange: {exchange}')
+
+    return results
+
+def get_index_symbols(index):
+    results = []
+    engine = create_engine(d.ACTIVE_URI, echo=False)
+    session = sessionmaker(bind=engine)
+
+    with session() as session:
+        i = session.query(m.Index.id).filter(m.Index.abbreviation==index.upper()).first()
+        if i is not None:
+            t = session.query(m.Security).filter(and_(
+                or_(m.Security.index1_id==i.id, m.Security.index2_id==i.id, m.Security.index3_id==i.id),
+                m.Security.active)).all()
+            for symbol in t:
+                results += [symbol.ticker]
+        else:
+            raise ValueError(f'Invalid index: {index}')
+
+    return results
 
 def get_current_price(ticker):
     history = get_history(ticker, 5, live=True)
@@ -154,61 +212,6 @@ def get_company(ticker, live=False):
 
     return results
 
-def get_exchanges():
-    results = []
-    engine = create_engine(d.ACTIVE_URI, echo=False)
-    session = sessionmaker(bind=engine)
-
-    with session() as session:
-        exc = session.query(m.Exchange.abbreviation).all()
-        for e in exc:
-            results += [e.abbreviation]
-
-    return results
-
-def get_exchange(exchange):
-    results = []
-    engine = create_engine(d.ACTIVE_URI, echo=False)
-    session = sessionmaker(bind=engine)
-
-    with session() as session:
-        exc = session.query(m.Exchange.id).filter(m.Exchange.abbreviation==exchange.upper()).first()
-        if exc is not None:
-            t = session.query(m.Security).filter(m.Security.exchange_id==exc.id).all()
-            for symbol in t:
-                results += [symbol.ticker]
-        else:
-            raise ValueError(f'Invalid exchange: {exchange}')
-
-    return results
-
-def get_indexes():
-    results = []
-    engine = create_engine(d.ACTIVE_URI, echo=False)
-    session = sessionmaker(bind=engine)
-
-    with session() as session:
-        ind = session.query(m.Index.abbreviation).all()
-        for i in ind:
-            results += [i.abbreviation]
-
-    return results
-
-def get_index(index):
-    results = []
-    engine = create_engine(d.ACTIVE_URI, echo=False)
-    session = sessionmaker(bind=engine)
-
-    with session() as session:
-        i = session.query(m.Index.id).filter(m.Index.abbreviation==index.upper()).first()
-        if i is not None:
-            t = session.query(m.Security).filter(or_(m.Security.index1_id==i.id, m.Security.index2_id==i.id)).all()
-            for symbol in t:
-                results += [symbol.ticker]
-        else:
-            raise ValueError(f'Invalid index: {index}')
-
-    return results
 
 def get_exchange_symbols_master(exchange, type='google'):
     global _master_exchanges

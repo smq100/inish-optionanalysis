@@ -24,14 +24,13 @@ def menu(menu_items, header, minvalue, maxvalue):
     print(f'\n{header}')
     print('---------------------------------------------')
 
-    option = menu_items.keys()
-    for entry in option:
+    options = menu_items.keys()
+    for entry in options:
         print(f'{entry:>2})\t{menu_items[entry]}')
 
     return input_integer('Please select: ', minvalue, maxvalue)
 
-def delimeter(message, creturn=1):
-    '''Common delimeter to bracket output'''
+def _delimeter(message, creturn):
     if creturn > 0:
         output = '\n' * creturn
     else:
@@ -43,6 +42,15 @@ def delimeter(message, creturn=1):
         output += '*****'
 
     return output
+
+def print_message(message, creturn=1):
+    print(_delimeter(f'{message}', creturn))
+
+def print_warning(message, creturn=1):
+    print(_delimeter(f'Warning: {message}', creturn))
+
+def print_error(message, creturn=1):
+    print(_delimeter(f'Error: {message}', creturn))
 
 def input_integer(message, min_, max_):
     val = min_ - 1
@@ -91,15 +99,6 @@ def input_text(message):
         print_error('Symbol value must be all letters')
 
     return val
-
-def print_message(message, creturn=1):
-    print(delimeter(f'{message}', creturn))
-
-def print_warning(message, creturn=1):
-    print(delimeter(f'Warning: {message}', creturn))
-
-def print_error(message, creturn=1):
-    print(delimeter(f'Error: {message}', creturn))
 
 position = 0
 direction = 'f'

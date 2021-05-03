@@ -128,7 +128,7 @@ class Interface:
         selection = u.menu(menu_items, 'Select Exchange', 0, len(d.EXCHANGES))
         if selection > 0:
             exc = d.EXCHANGES[selection-1]['abbreviation']
-            if len(o.get_exchange(exc)) > 0:
+            if len(o.get_exchange_symbols(exc)) > 0:
                 self.screener = Screener(exc, script=self.screen, live=self.live)
                 if self.screener.valid():
                     self.table = exc
@@ -147,7 +147,7 @@ class Interface:
         selection = u.menu(menu_items, 'Select Index', 0, len(d.INDEXES))
         if selection > 0:
             index = d.INDEXES[selection-1]['abbreviation']
-            if len(o.get_index(index)) > 0:
+            if len(o.get_index_symbols(index)) > 0:
                 self.screener = Screener(index, script=self.screen, live=self.live)
                 if self.screener.valid():
                     self.table = index

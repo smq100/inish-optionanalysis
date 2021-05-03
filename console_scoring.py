@@ -26,7 +26,7 @@ class Interface:
             else:
                 u.print_error(f'File "{script}" not found')
         elif o.is_ticker_valid(ticker):
-            self.technical = Technical(ticker, 365)
+            self.technical = Technical(ticker, None, 365)
             self.scoring = ScoringAnalysis(ticker)
 
             self.calculate(True)
@@ -86,7 +86,7 @@ class Interface:
         self.scoring.bb = self.technical.calc_bb()
 
         if show:
-            print(u.delimeter(f"Yesterday's {self.scoring.ticker} Technicals"))
+            u.print_message(f"Yesterday's {self.scoring.ticker} Technicals")
             print(f'EMA 21:    {self.scoring.ema["21"].iloc[-1]:.2f}')
             print(f'EMA 50:    {self.scoring.ema["50"].iloc[-1]:.2f}')
             print(f'EMA 200:   {self.scoring.ema["200"].iloc[-1]:.2f}')

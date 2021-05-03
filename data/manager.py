@@ -145,7 +145,7 @@ class Manager(Threaded):
 
     @Threaded.threaded
     def update_pricing(self, exchange=''):
-        tickers = s.get_tickers(exchange)
+        tickers = s.get_symbols(exchange)
         self.items_total = len(tickers)
 
         def _pricing(tickers):
@@ -178,21 +178,29 @@ class Manager(Threaded):
     def populate_index(self, index):
         valid = []
 
-        with self.session() as session:
+        with self.session() as session, session.begin():
             self.items_error = 'None'
             try:
                 i = session.query(m.Index.abbreviation).filter(m.Index.abbreviation==index).one()
             except Exception:
                 self.items_error = f'No index {index}'
             else:
-                symbols = s.get_index_symbols_master(i.abbreviation)
+                self.delete_index(index)
+
+            index_index = next((ii for (ii, d) in enumerate(d.INDEXES) if d["abbreviation"] == index), -1)
+            if index_index >= 0:
+                ind = m.Index(abbreviation=index, name=d.INDEXES[index_index]['name'])
+                session.add(ind)
+                logger.info(f'{__name__}: Recreated index {index}')
+
+                symbols = s.get_index_symbols_master(index)
                 for symbol in symbols:
                     ticker = session.query(m.Security.ticker).filter(m.Security.ticker==symbol).one_or_none()
                     if ticker is not None:
                         valid += [ticker.ticker]
 
         if len(valid) > 0:
-            self._add_securities_to_index(valid, i.abbreviation)
+            self._add_securities_to_index(valid, index)
             logger.info(f'{__name__}: Populated index {index}')
             self.items_error = 'Done'
         elif not self.items_error:
@@ -283,7 +291,7 @@ class Manager(Threaded):
 
     def identify_inactive_securities(self, exchange, log=True):
         missing = []
-        tickers = s.get_tickers(exchange)
+        tickers = s.get_symbols(exchange)
         if len(tickers) > 0:
             with self.session() as session:
                 exc = session.query(m.Exchange.id, m.Exchange.abbreviation).filter(m.Exchange.abbreviation==exchange).one()
@@ -574,11 +582,11 @@ class Manager(Threaded):
 
 if __name__ == '__main__':
     # import sys
-    # from logging import DEBUG
-    # logger = u.get_logger(DEBUG)
+    from logging import DEBUG
+    logger = u.get_logger(DEBUG)
 
     manager = Manager()
-    missing = manager.identify_incomplete_securities_companies('AMEX', log=True)
+    missing = manager.populate_index('CUSTOM')
 
     # if len(sys.argv) > 1:
     #     data = manager.populate_exchange(sys.argv[1])
