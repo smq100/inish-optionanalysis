@@ -59,6 +59,9 @@ class Company:
 
     def _load_history(self):
         self.history = o.get_history(self.ticker, self.days, live=self.live)
+        if self.history is None:
+            raise RuntimeError('history is None')
+
         self.ta = Technical(self.ticker, self.history, self.days, live=self.live)
 
 

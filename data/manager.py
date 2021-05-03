@@ -1,4 +1,4 @@
-import os, time
+import os, time, json
 from concurrent.futures import ThreadPoolExecutor
 from urllib.error import HTTPError
 
@@ -14,6 +14,8 @@ from fetcher import fetcher as f
 from utils import utils as u
 
 logger = u.get_logger()
+
+LOG_DIR = './log'
 
 class Manager(Threaded):
     def __init__(self):
@@ -97,7 +99,7 @@ class Manager(Threaded):
 
         if area == 'companies':
             self.items_error = 'None'
-            missing = self.identify_incomplete_securities_companies(exchange)
+            missing = self.identify_incomplete_securities_companies(exchange, live=True, log=True)
             self.items_total = len(missing)
 
             for ticker in missing:
@@ -109,7 +111,7 @@ class Manager(Threaded):
             self.items_error = 'Done'
         elif area == 'pricing':
             self.items_error = 'None'
-            missing = self.identify_incomplete_securities_price(exchange)
+            missing = self.identify_incomplete_securities_price(exchange, live=True, log=True)
             self.items_total = len(missing)
 
             for ticker in missing:
@@ -140,6 +142,37 @@ class Manager(Threaded):
                     ind = m.Index(abbreviation=index['abbreviation'], name=index['name'])
                     session.add(ind)
                     logger.info(f'{__name__}: Added index {index["abbreviation"]}')
+
+    @Threaded.threaded
+    def update_pricing(self, exchange=''):
+        tickers = s.get_tickers(exchange)
+        self.items_total = len(tickers)
+
+        def _pricing(tickers):
+            for sec in tickers:
+                self.items_symbol = sec
+                if self._refresh_pricing(sec):
+                    self.items_success += 1
+
+                self.items_completed += 1
+
+        self.items_error = 'None'
+
+        # Split the list and remove any empty lists
+        lists = np.array_split(tickers, self._concurrency)
+        lists = [i for i in lists if i is not None]
+
+        futures = []
+        with ThreadPoolExecutor() as executor:
+            futures = executor.map(_pricing, lists)
+
+        for future in futures:
+            if future is None:
+                self.items_results += ['Ok']
+            else:
+                self.items_results += [future.result()]
+
+        self.items_error = 'Done'
 
     @Threaded.threaded
     def populate_index(self, index):
@@ -226,38 +259,7 @@ class Manager(Threaded):
 
         return info
 
-    @Threaded.threaded
-    def update_pricing(self, exchange=''):
-        tickers = s.get_tickers(exchange)
-        self.items_total = len(tickers)
-
-        def _pricing(tickers):
-            for sec in tickers:
-                self.items_symbol = sec
-                if self._refresh_pricing(sec):
-                    self.items_success += 1
-
-                self.items_completed += 1
-
-        self.items_error = 'None'
-
-        # Split the list and remove any empty lists
-        lists = np.array_split(tickers, self._concurrency)
-        lists = [i for i in lists if i is not None]
-
-        futures = []
-        with ThreadPoolExecutor() as executor:
-            futures = executor.map(_pricing, lists)
-
-        for future in futures:
-            if future is None:
-                self.items_results += ['Ok']
-            else:
-                self.items_results += [future.result()]
-
-        self.items_error = 'Done'
-
-    def identify_missing_securities(self, exchange):
+    def identify_missing_securities(self, exchange, log=True):
         missing = []
         tickers = s.get_exchange_symbols_master(exchange)
         logger.info(f'{__name__}: {len(tickers)} total symbols in {exchange}')
@@ -268,10 +270,18 @@ class Manager(Threaded):
                 if t is None:
                     missing += [sec]
 
+        if log:
+            filename = f'{LOG_DIR}/missing_securities_{exchange.upper()}.log'
+            if len(missing) > 0:
+                with open(filename, 'w') as f:
+                    json.dump(missing, f, indent=2)
+            elif os.path.exists(filename):
+                os.remove(filename)
+
         logger.info(f'{__name__}: {len(missing)} missing symbols in {exchange}')
         return missing
 
-    def identify_inactive_securities(self, exchange):
+    def identify_inactive_securities(self, exchange, log=True):
         missing = []
         tickers = s.get_tickers(exchange)
         if len(tickers) > 0:
@@ -283,32 +293,85 @@ class Manager(Threaded):
                     if t is None:
                         missing += [sec]
 
+        if log:
+            filename = f'{LOG_DIR}/inactive_securities_{exchange.upper()}.log'
+            if len(missing) > 0:
+                with open(filename, 'w') as f:
+                    json.dump(missing, f, indent=2)
+            elif os.path.exists(filename):
+                os.remove(filename)
+
         logger.info(f'{__name__}: {len(missing)} inactive symbols in {exchange}')
         return missing
 
-    def identify_incomplete_securities_companies(self, exchange):
+    def identify_incomplete_securities_companies(self, exchange, live=False, log=True):
         missing = []
-        with self.session() as session:
-            exc = session.query(m.Exchange.id).filter(m.Exchange.abbreviation==exchange).one()
-            sec = session.query(m.Security.ticker, m.Security.id).filter(m.Security.exchange_id==exc.id).all()
-            for t in sec:
-                c = session.query(m.Company.id).filter(m.Company.security_id==t.id).limit(1)
-                if c.first() is None:
-                    logger.info(f'{__name__}: {t.ticker} incomplete company info')
-                    missing += [t.ticker]
+        if live:
+            with self.session() as session, session.begin():
+                exc = session.query(m.Exchange.id).filter(m.Exchange.abbreviation==exchange).one()
+                sec = session.query(m.Security.ticker, m.Security.id).filter(m.Security.exchange_id==exc.id).all()
+                for t in sec:
+                    c = session.query(m.Company.id).filter(m.Company.security_id==t.id).limit(1)
+                    if c.first() is None:
+                        missing += [t.ticker]
+                        mc = session.query(m.MissingCompany).filter(m.MissingCompany.security_id==t.id).one_or_none()
+                        if mc is None:
+                            mc = m.MissingCompany(security_id=t.id)
+                            session.add(mc)
+                        logger.info(f'{__name__}: {t.ticker} added company info')
+
+            if log:
+                filename = f'{LOG_DIR}/incomplete_companies_{exchange.upper()}.log'
+                if len(missing) > 0:
+                    with open(filename, 'w') as f:
+                        json.dump(missing, f, indent=2)
+                elif os.path.exists(filename):
+                    os.remove(filename)
+        else:
+            with self.session() as session:
+                exc = session.query(m.Exchange.id).filter(m.Exchange.abbreviation==exchange).one()
+                companies = session.query(m.MissingCompany).all()
+                for company in companies:
+                    sec = session.query(m.Security.ticker, m.Security.id).filter(
+                        and_(m.Security.exchange_id==exc.id, m.Security.id==company.security_id)).one_or_none()
+                    if sec is not None:
+                        missing += [sec.ticker]
 
         logger.info(f'{__name__}: {len(missing)} with incomplete company info')
         return missing
 
-    def identify_incomplete_securities_price(self, exchange):
+    def identify_incomplete_securities_price(self, exchange, live=False, log=True):
         missing = []
-        with self.session() as session:
-            exc = session.query(m.Exchange.id).filter(m.Exchange.abbreviation==exchange).one()
-            sec = session.query(m.Security.ticker, m.Security.id).filter(m.Security.exchange_id==exc.id).all()
-            for t in sec:
-                c = session.query(m.Price.id).filter(m.Price.security_id==t.id).limit(1)
-                if c.first() is None:
-                    missing += [t.ticker]
+        if live:
+            with self.session() as session:
+                exc = session.query(m.Exchange.id).filter(m.Exchange.abbreviation==exchange).one()
+                sec = session.query(m.Security.ticker, m.Security.id).filter(m.Security.exchange_id==exc.id).all()
+                for t in sec:
+                    c = session.query(m.Price.id).filter(m.Price.security_id==t.id).limit(1)
+                    if c.first() is None:
+                        missing += [t.ticker]
+                        mc = session.query(m.MissingPrice.id).filter(m.MissingPrice.security_id==t.id).one_or_none()
+                        if mc is None:
+                            mc = m.MissingPrice(security_id=t.id)
+                            session.add(mc)
+                        logger.info(f'{__name__}: {t.ticker} added pricing info')
+
+            if log:
+                filename = f'{LOG_DIR}/incomplete_price_{exchange.upper()}.log'
+                if len(missing) > 0:
+                    with open(filename, 'w') as f:
+                        json.dump(missing, f, indent=2)
+                elif os.path.exists(filename):
+                    os.remove(filename)
+        else:
+            with self.session() as session:
+                exc = session.query(m.Exchange.id).filter(m.Exchange.abbreviation==exchange).one()
+                companies = session.query(m.MissingPrice.id).all()
+                for company in companies:
+                    sec = session.query(m.Security.ticker, m.Security.id).filter(
+                        and_(m.Security.exchange_id==exc.id, m.Security.id==company.security_id)).one_or_none()
+                    if sec is not None:
+                        missing += [sec.ticker]
 
         logger.info(f'{__name__}: {len(missing)} incomplete symbol price info')
         return missing
@@ -448,6 +511,9 @@ class Manager(Threaded):
                 added = True
                 logger.info(f'{__name__}: Added company information for {ticker}')
 
+                # Remove from 'missing' table if there
+                session.query(m.MissingCompany).filter(m.MissingCompany.security_id==sec.id).delete()
+
         return added
 
     def _add_pricing_to_security(self, ticker):
@@ -476,6 +542,9 @@ class Manager(Threaded):
                         sec.pricing += [p]
                         added = True
                         logger.info(f'{__name__}: Added pricing to {ticker}')
+
+                        # Remove from 'missing' table if there
+                        session.query(m.MissingPrice).filter(m.MissingPrice.security_id==sec.id).delete()
                     else:
                         sec.active = False
 
@@ -504,16 +573,17 @@ class Manager(Threaded):
 
 
 if __name__ == '__main__':
-    import sys
-    from logging import DEBUG
-    logger = u.get_logger(DEBUG)
+    # import sys
+    # from logging import DEBUG
+    # logger = u.get_logger(DEBUG)
 
     manager = Manager()
-    # missing = manager.identify_incomplete_securities_companies('NYSE')
-    if len(sys.argv) > 1:
-        data = manager.populate_exchange(sys.argv[1])
-    else:
-        data = manager.populate_exchange('AMEX')
+    missing = manager.identify_incomplete_securities_companies('AMEX', log=True)
+
+    # if len(sys.argv) > 1:
+    #     data = manager.populate_exchange(sys.argv[1])
+    # else:
+    #     data = manager.populate_exchange('AMEX')
 
     # print(len(data))
     # invalid = manager.validate_list('NASDAQ')

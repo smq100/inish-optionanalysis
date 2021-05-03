@@ -85,58 +85,58 @@ class Interface:
         u.print_message(f'Database Information ({d.ACTIVE_DB})')
         info = self.manager.get_database_info()
         for i in info:
-            print(f'{i["table"].title():>9}:\t{i["count"]} records')
+            print(f'{i["table"]:>16}:\t{i["count"]} records')
 
         u.print_message('Exchange Information')
         info = self.manager.get_exchange_info()
         for i in info:
-            print(f'{i["exchange"]:>9}:\t{i["count"]} symbols')
+            print(f'{i["exchange"]:>16}:\t{i["count"]} symbols')
 
         u.print_message('Index Information')
         info = self.manager.get_index_info()
         for i in info:
-            print(f'{i["index"]:>9}:\t{i["count"]} symbols')
+            print(f'{i["index"]:>16}:\t{i["count"]} symbols')
 
         if all:
             u.print_message('Missing Symbols')
             exchanges = s.get_exchanges()
             for e in exchanges:
                 count = len(self.manager.identify_missing_securities(e))
-                print(f'{e:>9}:\t{count}')
+                print(f'{e:>16}:\t{count}')
 
             u.print_message('Inactive Symbols')
             exchanges = s.get_exchanges()
             for e in exchanges:
                 count = len(self.manager.identify_inactive_securities(e))
-                print(f'{e:>9}:\t{count}')
+                print(f'{e:>16}:\t{count}')
 
             u.print_message('Missing Information')
             exchanges = s.get_exchanges()
             for e in exchanges:
                 count = len(self.manager.identify_incomplete_securities_companies(e))
-                print(f'{e:>9}:\t{count} missing company')
+                print(f'{e:>16}:\t{count} missing company')
 
-            # for e in exchanges:
-            #     count = len(self.manager.identify_incomplete_securities_price(e))
-            #     print(f'{e:>9}:\t{count} missing price')
+            for e in exchanges:
+                count = len(self.manager.identify_incomplete_securities_price(e))
+                print(f'{e:>16}:\t{count} missing price')
 
             u.print_message('Master Exchange Symbol List')
             for exchange in d.EXCHANGES:
                 exc = list(s.get_exchange_symbols_master(exchange['abbreviation']))
                 count = len(exc)
-                print(f'{exchange["abbreviation"]:>9}:\t{count} symbols')
+                print(f'{exchange["abbreviation"]:>16}:\t{count} symbols')
 
             u.print_message('Master Exchange Common Symbols')
             nasdaq_nyse, nasdaq_amex, nyse_amex = self.manager.identify_common_securities()
             count = len(nasdaq_nyse)
             name = 'NASDAQ-NYSE'
-            print(f'{name:>12}:\t{count} symbols')
+            print(f'{name:>16}:\t{count} symbols')
             count = len(nasdaq_amex)
             name = 'NASDAQ-AMEX'
-            print(f'{name:>12}:\t{count} symbols')
+            print(f'{name:>16}:\t{count} symbols')
             count = len(nyse_amex)
             name = 'NYSE-AMEX'
-            print(f'{name:>12}:\t{count} symbols')
+            print(f'{name:>16}:\t{count} symbols')
 
     def show_symbol_information(self):
         symbol = u.input_text('Enter symbol: ')

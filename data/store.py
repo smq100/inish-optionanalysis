@@ -69,15 +69,15 @@ def get_current_price(ticker):
     return history.iloc[-1]['close']
 
 def get_history(ticker, days, live=False):
+    results = pd.DataFrame
     if live:
         results = f.get_history(ticker, days)
     else:
-        results = pd.DataFrame
         engine = create_engine(d.ACTIVE_URI, echo=False)
         session = sessionmaker(bind=engine)
 
         with session() as session:
-            t = session.query(m.Security.id).filter(and_(m.Security.ticker==ticker.upper(), m.Security.active)).one()
+            t = session.query(m.Security.id).filter(and_(m.Security.ticker==ticker.upper(), m.Security.active)).one_or_none()
             if t is not None:
                 if days < 0:
                     p = session.query(m.Price).filter(m.Price.security_id==t.id).order_by(m.Price.date)
