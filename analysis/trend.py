@@ -73,7 +73,7 @@ class SupportResistance:
         if best < 1:
             raise AssertionError("'best' value must be > 0")
 
-        if (s.is_ticker_valid(ticker)):
+        if (s.is_symbol_valid(ticker)):
             self.ticker = ticker.upper()
             self.best = best
             self.start = start

@@ -142,7 +142,7 @@ class Interface:
         symbol = u.input_text('Enter symbol: ')
         if symbol:
             symbol = symbol[:4].upper()
-            if s.is_ticker_valid(symbol):
+            if s.is_symbol_valid(symbol):
                 company = s.get_company(symbol)
                 if company is not None:
                     u.print_message(f'{symbol} Company Information')

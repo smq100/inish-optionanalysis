@@ -6,7 +6,7 @@ logger = u.get_logger()
 
 class Chain:
     def __init__(self, ticker):
-        if not s.is_ticker_valid(ticker):
+        if not s.is_symbol_valid(ticker):
             logger.error(f'Error initializing {__class__}')
         else:
             self.ticker = ticker

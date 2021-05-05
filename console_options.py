@@ -39,7 +39,7 @@ class Interface:
                     u.print_error('File read error')
             else:
                 u.print_error(f'File "{script}" not found')
-        elif o.is_ticker_valid(ticker):
+        elif o.is_symbol_valid(ticker):
             self.chain = Chain(ticker)
 
             if autoload:
@@ -264,7 +264,7 @@ class Interface:
         while not valid:
             ticker = input('Please enter symbol, or 0 to cancel: ').upper()
             if ticker != '0':
-                valid = o.is_ticker_valid(ticker)
+                valid = o.is_symbol_valid(ticker)
                 if not valid:
                     u.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
             else:

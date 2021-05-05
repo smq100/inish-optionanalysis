@@ -23,22 +23,27 @@ qd.ApiConfig.api_key = config['DEFAULT']['APIKEY']
 def validate_ticker(ticker):
     valid = False
 
-    t = yf.Ticker(ticker).history(period='1d')
-    if len(t) > 0:
-        valid = True
+    # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
+    try:
+        if yf.Ticker(ticker) is not None:
+            valid = True
+    except:
+        valid = False
 
     return valid
 
 def get_company_ex(ticker):
     company = None
 
-    if validate_ticker(ticker):
-        try:
-            company = yf.Ticker(ticker)
+    # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
+    try:
+        company = yf.Ticker(ticker)
+
+        # Check if getting 'info' throws any exceptions
+        if company is not None:
             _ = company.info
-        except Exception as e:
-            # YFinance (pandas) throws exceptions with bad info (YFinance bug)
-            company = None
+    except:
+        company = None
 
     return company
 
@@ -56,6 +61,7 @@ def get_history(ticker, days=-1):
 
     company = get_company_ex(ticker)
     if company is not None:
+        # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
         try:
             if days < 0:
                 days = 7300 # 20 years
@@ -70,17 +76,7 @@ def get_history(ticker, days=-1):
                 if history is not None:
                     history.reset_index(inplace=True)
                     history.rename(columns={'Date':'date', 'Open':'open', 'High':'high', 'Low':'low', 'Close':'close', 'Volume':'volume'}, inplace=True)
-            # else:
-            #     start = dt.datetime.today() - dt.timedelta(days=5)
-            #     history = company.history(start=f'{start:%Y-%m-%d}')
-            #     if history is not None:
-            #         history.reset_index(inplace=True)
-            #         history.rename(columns={'Date':'date', 'Open':'open', 'High':'high', 'Low':'low', 'Close':'close', 'Volume':'volume'}, inplace=True)
-            #         history = history.iloc[-1].to_frame()
-            #         history = history.transpose().convert_dtypes()
-
-        except Exception:
-            # YFinance (pandas) throws exceptions with bad info (YFinance bug)
+        except:
             history = None
 
     return history
