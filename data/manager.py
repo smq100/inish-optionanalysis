@@ -101,11 +101,20 @@ class Manager(Threaded):
             missing = self.identify_incomplete_securities_companies(exchange, live=True, log=True)
             self.items_total = len(missing)
 
-            for ticker in missing:
-                self.items_symbol = ticker
-                if self._add_company_to_security(ticker):
-                    self.items_success += 1
-                self.items_completed += 1
+            # Split the list and remove any empty lists
+            lists = np.array_split(missing, self._concurrency)
+            lists = [i for i in lists if i is not None]
+
+            def _companies(tickers):
+                for ticker in tickers:
+                    self.items_symbol = ticker
+                    if self._add_company_to_security(ticker):
+                        self.items_success += 1
+                    self.items_completed += 1
+
+            with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
+                for list in lists:
+                    self.items_futures += [executor.submit(_companies, list)]
 
             self.items_error = 'Done'
         elif area == 'pricing':
@@ -113,11 +122,20 @@ class Manager(Threaded):
             missing = self.identify_incomplete_securities_price(exchange, live=True, log=True)
             self.items_total = len(missing)
 
-            for ticker in missing:
-                self.items_symbol = ticker
-                if self._add_pricing_to_security(ticker):
-                    self.items_success += 1
-                self.items_completed += 1
+            # Split the list and remove any empty lists
+            lists = np.array_split(missing, self._concurrency)
+            lists = [i for i in lists if i is not None]
+
+            def _pricing(tickers):
+                for ticker in tickers:
+                    self.items_symbol = ticker
+                    if self._add_pricing_to_security(ticker):
+                        self.items_success += 1
+                    self.items_completed += 1
+
+            with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
+                for list in lists:
+                    self.items_futures += [executor.submit(_pricing, list)]
 
             self.items_error = 'Done'
         else:
@@ -147,6 +165,10 @@ class Manager(Threaded):
         tickers = s.get_symbols(exchange)
         self.items_total = len(tickers)
 
+        # Split the list and remove any empty lists
+        lists = np.array_split(tickers, self._concurrency)
+        lists = [i for i in lists if i is not None]
+
         def _pricing(tickers):
             for sec in tickers:
                 self.items_symbol = sec
@@ -157,13 +179,8 @@ class Manager(Threaded):
 
         self.items_error = 'None'
 
-        # Split the list and remove any empty lists
-        lists = np.array_split(tickers, self._concurrency)
-        lists = [i for i in lists if i is not None]
-
         with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
             for list in lists:
-            # self.items_futures = executor.map(_pricing, lists)
                 self.items_futures += [executor.submit(_pricing, list)]
 
         self.items_error = 'Done'
@@ -320,7 +337,7 @@ class Manager(Threaded):
                         if mc is None:
                             mc = m.MissingCompany(security_id=t.id)
                             session.add(mc)
-                        logger.info(f'{__name__}: {t.ticker} added company info')
+                        logger.info(f'{__name__}: {t.ticker} added missing company entry')
 
             if log:
                 filename = f'{LOG_DIR}/incomplete_companies_{exchange.upper()}.log'
@@ -345,7 +362,7 @@ class Manager(Threaded):
     def identify_incomplete_securities_price(self, exchange, live=False, log=True):
         missing = []
         if live:
-            with self.session() as session:
+            with self.session() as session, session.begin():
                 exc = session.query(m.Exchange.id).filter(m.Exchange.abbreviation==exchange).one()
                 sec = session.query(m.Security.ticker, m.Security.id).filter(m.Security.exchange_id==exc.id).all()
                 for t in sec:
@@ -356,7 +373,7 @@ class Manager(Threaded):
                         if mc is None:
                             mc = m.MissingPrice(security_id=t.id)
                             session.add(mc)
-                        logger.info(f'{__name__}: {t.ticker} added pricing info')
+                        logger.info(f'{__name__}: {t.ticker} added missing price entry')
 
             if log:
                 filename = f'{LOG_DIR}/incomplete_price_{exchange.upper()}.log'
@@ -368,7 +385,7 @@ class Manager(Threaded):
         else:
             with self.session() as session:
                 exc = session.query(m.Exchange.id).filter(m.Exchange.abbreviation==exchange).one()
-                companies = session.query(m.MissingPrice.id).all()
+                companies = session.query(m.MissingPrice).all()
                 for company in companies:
                     sec = session.query(m.Security.ticker, m.Security.id).filter(
                         and_(m.Security.exchange_id==exc.id, m.Security.id==company.security_id)).one_or_none()
