@@ -9,6 +9,7 @@ class Threaded:
         self.items_error = ''
         self.items_results = []
         self.items_time = 0
+        self.items_futures = []
 
     def threaded(func):
         def wrapper(self, *args, **kwargs):
@@ -16,9 +17,10 @@ class Threaded:
             self.items_completed = 0
             self.items_success = 0
             self.items_symbol = ''
-            self.items_time = 0.0
             self.items_error = ''
             self.items_results = []
+            self.items_time = 0.0
+            self.items_futures = []
 
             tic = time.perf_counter()
             func(self, *args, **kwargs)

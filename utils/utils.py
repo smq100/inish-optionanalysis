@@ -102,7 +102,7 @@ def input_text(message):
 
 position = 0
 direction = 'f'
-def progress_bar(iteration, total, prefix='', suffix='', symbol='', decimals=1, length=100, fill='█', end='\r', percent=False, reset=False, success=-1):
+def progress_bar(iteration, total, prefix='', suffix='', symbol='', decimals=1, length=100, fill='█', end='\r', percent=False, reset=False, success=-1, tasks=0):
     global position
     global direction
 
@@ -120,7 +120,7 @@ def progress_bar(iteration, total, prefix='', suffix='', symbol='', decimals=1, 
         elif success < 0:
             print(f'\r{prefix} |{bar}| {iteration}/{total} {suffix} {symbol}', end=end)
         else:
-            print(f'\r{prefix} |{bar}| {iteration}/{total} ({success}) {suffix} {symbol}', end=end)
+            print(f'\r{prefix} |{bar}| {iteration}/{total} ({success}) [{tasks}] {suffix} {symbol}', end=end)
 
         if iteration == total:
             print()

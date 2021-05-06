@@ -326,14 +326,16 @@ class Interface:
                 completed = self.manager.items_completed
                 success = self.manager.items_success
                 symbol = self.manager.items_symbol
+                tasks = len([True for future in self.manager.items_futures if future.running()])
 
                 if total > 0:
-                    u.progress_bar(completed, total, prefix=prefix, suffix=suffix, symbol=symbol, length=50, success=success)
+                    u.progress_bar(completed, total, prefix=prefix, suffix=suffix, symbol=symbol, length=50, success=success, tasks=tasks)
                 else:
                     u.progress_bar(completed, total, prefix=prefix, suffix='Calculating...', length=50)
             print()
         else:
             u.print_message(f'{self.manager.items_error}')
+
 
 if __name__ == '__main__':
     import argparse

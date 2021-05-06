@@ -1,5 +1,5 @@
 import os, time, json
-from concurrent.futures import ThreadPoolExecutor
+from concurrent import futures
 from urllib.error import HTTPError
 
 from sqlalchemy import create_engine, inspect, and_, or_
@@ -26,7 +26,7 @@ class Manager(Threaded):
         self.exchange = ''
         self.invalid_symbols = []
         self.retry = 0
-        self._concurrency = 3 if d.ACTIVE_DB == 'SQLite' else 5
+        self._concurrency = 3 if d.ACTIVE_DB == 'SQLite' else 10
 
     def create_database(self):
         m.Base.metadata.create_all(self.engine)
@@ -73,11 +73,10 @@ class Manager(Threaded):
             lists = np.array_split(tickers, self._concurrency)
             lists = [i for i in lists if i is not None]
 
-            futures = []
-            with ThreadPoolExecutor() as executor:
-                futures = executor.map(self._add_securities_to_exchange, lists, [abbrev]*len(lists))
+            with futures.ThreadPoolExecutor() as executor:
+                self.items_futures = executor.map(self._add_securities_to_exchange, lists, [abbrev]*len(lists))
 
-            for future in futures:
+            for future in self.items_futures:
                 if future is None:
                     self.items_results += ['Ok']
                 else:
@@ -162,15 +161,10 @@ class Manager(Threaded):
         lists = np.array_split(tickers, self._concurrency)
         lists = [i for i in lists if i is not None]
 
-        futures = []
-        with ThreadPoolExecutor() as executor:
-            futures = executor.map(_pricing, lists)
-
-        for future in futures:
-            if future is None:
-                self.items_results += ['Ok']
-            else:
-                self.items_results += [future.result()]
+        with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
+            for list in lists:
+            # self.items_futures = executor.map(_pricing, lists)
+                self.items_futures += [executor.submit(_pricing, list)]
 
         self.items_error = 'Done'
 
