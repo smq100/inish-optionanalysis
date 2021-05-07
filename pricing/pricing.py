@@ -11,14 +11,14 @@ import datetime as dt
 import numpy as np
 import pandas as pd
 
-from data import store as s
-from fetcher import fetcher as f
-from utils import utils as u
+from data import store as store
+from fetcher import fetcher as fetcher
+from utils import utils as utils
 
 
 METHODS = ('black-scholes', 'monte-carlo')
 
-logger = u.get_logger()
+logger = utils.get_logger()
 
 
 class Pricing(ABC):
@@ -61,7 +61,7 @@ class Pricing(ABC):
         self.expiry = self.expiry.replace(hour=0, minute=0, second=0, microsecond=0)
 
         # Initialize
-        if s.is_symbol_valid(ticker):
+        if store.is_symbol_valid(ticker):
             self.initialize_variables()
         else:
             raise IOError('Problem fetching ticker information')
@@ -121,7 +121,7 @@ class Pricing(ABC):
         :return:
         '''
         if self._underlying_asset_data.empty:
-            history = s.get_history(self.ticker, days=self.LOOK_BACK_WINDOW)
+            history = store.get_history(self.ticker, days=self.LOOK_BACK_WINDOW)
             self._underlying_asset_data = pd.DataFrame(history)
 
             if self._underlying_asset_data.empty:
@@ -134,7 +134,7 @@ class Pricing(ABC):
 
         :return: <void>
         '''
-        self.risk_free_rate = f.get_treasury_rate()
+        self.risk_free_rate = fetcher.get_treasury_rate()
         logger.info(f'{__name__}: Risk-free rate = {self.risk_free_rate:.4f}')
 
     def _calc_time_to_maturity(self):

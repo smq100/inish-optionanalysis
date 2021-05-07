@@ -1,4 +1,5 @@
 import os, time, json
+from datetime import date
 from concurrent import futures
 from urllib.error import HTTPError
 
@@ -8,12 +9,12 @@ import numpy as np
 
 from base import Threaded
 import data as d
-from data import store as s
-from data import models as m
-from fetcher import fetcher as f
-from utils import utils as u
+from data import store as store
+from data import models as models
+from fetcher import fetcher as fetcher
+from utils import utils as utils
 
-logger = u.get_logger()
+logger = utils.get_logger()
 
 LOG_DIR = './log'
 
@@ -29,7 +30,7 @@ class Manager(Threaded):
         self._concurrency = 3 if d.ACTIVE_DB == 'SQLite' else 10
 
     def create_database(self):
-        m.Base.metadata.create_all(self.engine)
+        models.Base.metadata.create_all(self.engine)
 
     def delete_database(self, recreate=True):
         if d.ACTIVE_DB == d.OPTIONS_DB[1]:
@@ -39,7 +40,7 @@ class Manager(Threaded):
             else:
                 logger.warning(f'{__name__}: File does not exist: {d.SQLITE_DATABASE_PATH}')
         else:
-            m.Base.metadata.drop_all(self.engine)
+            models.Base.metadata.drop_all(self.engine)
 
         if recreate:
             self.create_database()
@@ -47,9 +48,9 @@ class Manager(Threaded):
     def create_exchanges(self):
         with self.session() as session, session.begin():
             for exchange in d.EXCHANGES:
-                e = session.query(m.Exchange.id).filter(m.Exchange.abbreviation==exchange['abbreviation']).one_or_none()
+                e = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange['abbreviation']).one_or_none()
                 if e is None:
-                    exc = m.Exchange(abbreviation=exchange['abbreviation'], name=exchange['name'])
+                    exc = models.Exchange(abbreviation=exchange['abbreviation'], name=exchange['name'])
                     session.add(exc)
                     logger.info(f'{__name__}: Added exchange {exchange["abbreviation"]}')
 
@@ -60,10 +61,10 @@ class Manager(Threaded):
         abbrev = ''
 
         with self.session() as session:
-            e = session.query(m.Exchange.abbreviation).filter(m.Exchange.abbreviation==exchange).one()
+            e = session.query(models.Exchange.abbreviation).filter(models.Exchange.abbreviation==exchange).one()
             abbrev = e.abbreviation
 
-        tickers = s.get_exchange_symbols_master(abbrev)
+        tickers = store.get_exchange_symbols_master(abbrev)
 
         if len(tickers) > 10:
             self.items_total = len(tickers)
@@ -94,7 +95,7 @@ class Manager(Threaded):
 
         with self.session() as session:
             # Throws exception if does not exist
-            session.query(m.Exchange.abbreviation).filter(m.Exchange.abbreviation==exchange).one()
+            session.query(models.Exchange.abbreviation).filter(models.Exchange.abbreviation==exchange).one()
 
         if area == 'companies':
             self.items_error = 'None'
@@ -146,7 +147,7 @@ class Manager(Threaded):
     def delete_exchange(self, exchange):
         self.items_error = 'None'
         with self.session() as session, session.begin():
-            exc = session.query(m.Exchange).filter(m.Exchange.abbreviation==exchange)
+            exc = session.query(models.Exchange).filter(models.Exchange.abbreviation==exchange)
             if exc is not None:
                 exc.delete(synchronize_session=False)
         self.items_error = 'Done'
@@ -154,15 +155,15 @@ class Manager(Threaded):
     def create_indexes(self):
         with self.session() as session, session.begin():
             for index in d.INDEXES:
-                i = session.query(m.Index.id).filter(m.Index.abbreviation==index['abbreviation']).one_or_none()
+                i = session.query(models.Index.id).filter(models.Index.abbreviation==index['abbreviation']).one_or_none()
                 if i is None:
-                    ind = m.Index(abbreviation=index['abbreviation'], name=index['name'])
+                    ind = models.Index(abbreviation=index['abbreviation'], name=index['name'])
                     session.add(ind)
                     logger.info(f'{__name__}: Added index {index["abbreviation"]}')
 
     @Threaded.threaded
     def update_pricing(self, exchange=''):
-        tickers = s.get_symbols(exchange)
+        tickers = store.get_symbols(exchange)
         self.items_total = len(tickers)
 
         # Split the list and remove any empty lists
@@ -172,7 +173,8 @@ class Manager(Threaded):
         def _pricing(tickers):
             for sec in tickers:
                 self.items_symbol = sec
-                if self._refresh_pricing(sec):
+                days = self._refresh_pricing(sec)
+                if days > 0:
                     self.items_success += 1
 
                 self.items_completed += 1
@@ -192,7 +194,7 @@ class Manager(Threaded):
         with self.session() as session, session.begin():
             self.items_error = 'None'
             try:
-                i = session.query(m.Index.abbreviation).filter(m.Index.abbreviation==index).one()
+                i = session.query(models.Index.abbreviation).filter(models.Index.abbreviation==index).one()
             except Exception:
                 self.items_error = f'No index {index}'
             else:
@@ -200,13 +202,13 @@ class Manager(Threaded):
 
             index_index = next((ii for (ii, d) in enumerate(d.INDEXES) if d["abbreviation"] == index), -1)
             if index_index >= 0:
-                ind = m.Index(abbreviation=index, name=d.INDEXES[index_index]['name'])
+                ind = models.Index(abbreviation=index, name=d.INDEXES[index_index]['name'])
                 session.add(ind)
                 logger.info(f'{__name__}: Recreated index {index}')
 
-                symbols = s.get_index_symbols_master(index)
+                symbols = store.get_index_symbols_master(index)
                 for symbol in symbols:
-                    ticker = session.query(m.Security.ticker).filter(m.Security.ticker==symbol).one_or_none()
+                    ticker = session.query(models.Security.ticker).filter(models.Security.ticker==symbol).one_or_none()
                     if ticker is not None:
                         valid += [ticker.ticker]
 
@@ -220,7 +222,7 @@ class Manager(Threaded):
 
     def delete_index(self, index):
         with self.session() as session, session.begin():
-            ind = session.query(m.Index).filter(m.Index.abbreviation==index)
+            ind = session.query(models.Index).filter(models.Index.abbreviation==index)
             if ind is not None:
                 ind.delete(synchronize_session=False)
                 logger.info(f'{__name__}: Deleted index {index}')
@@ -234,12 +236,12 @@ class Manager(Threaded):
 
         if (len(tables) > 0):
             with self.session() as session:
-                tables = m.Base.metadata.tables
+                tables = models.Base.metadata.tables
                 for table in tables:
                     count = session.query(tables[table]).count()
                     info += [{'table':table, 'count':count}]
         else:
-            u.print_error('No tables in database')
+            utils.print_error('No tables in database')
             logger.warning('{__name__}: No tables in database')
 
         return info
@@ -251,9 +253,9 @@ class Manager(Threaded):
 
         if len(tables) > 0:
             with self.session() as session:
-                exchanges = session.query(m.Exchange).all()
+                exchanges = session.query(models.Exchange).all()
                 for e in exchanges:
-                    s = session.query(m.Security).filter(m.Security.exchange_id == e.id)
+                    s = session.query(models.Security).filter(models.Security.exchange_id == e.id)
                     if s is not None:
                         info += [{'exchange':e.abbreviation, 'count':s.count()}]
 
@@ -267,25 +269,25 @@ class Manager(Threaded):
         if (len(tables) > 0):
             with self.session() as session:
                 if not index:
-                    indexes = session.query(m.Index)
+                    indexes = session.query(models.Index)
                     for i in indexes:
-                        s = session.query(m.Security).filter(or_(m.Security.index1_id == i.id, m.Security.index2_id == i.id))
+                        s = session.query(models.Security).filter(or_(models.Security.index1_id == i.id, models.Security.index2_id == i.id))
                         info += [{'index':i.abbreviation, 'count':s.count()}]
                 else:
-                    i = session.query(m.Index).filter(m.Index.abbreviation == index).first()
-                    s = session.query(m.Security).filter(or_(m.Security.index1_id == i.id, m.Security.index2_id == i.id))
+                    i = session.query(models.Index).filter(models.Index.abbreviation == index).first()
+                    s = session.query(models.Security).filter(or_(models.Security.index1_id == i.id, models.Security.index2_id == i.id))
                     info = [{'index':i.abbreviation, 'count':s.count()}]
 
         return info
 
     def identify_missing_securities(self, exchange, log=True):
         missing = []
-        tickers = s.get_exchange_symbols_master(exchange)
+        tickers = store.get_exchange_symbols_master(exchange)
         logger.info(f'{__name__}: {len(tickers)} total symbols in {exchange}')
         with self.session() as session:
-            exc = session.query(m.Exchange.id, m.Exchange.abbreviation).filter(m.Exchange.abbreviation==exchange).one()
+            exc = session.query(models.Exchange.id, models.Exchange.abbreviation).filter(models.Exchange.abbreviation==exchange).one()
             for sec in tickers:
-                t = session.query(m.Security.ticker).filter(and_(m.Security.ticker==sec, m.Security.exchange_id==exc.id)).one_or_none()
+                t = session.query(models.Security.ticker).filter(and_(models.Security.ticker==sec, models.Security.exchange_id==exc.id)).one_or_none()
                 if t is None:
                     missing += [sec]
 
@@ -302,13 +304,13 @@ class Manager(Threaded):
 
     def identify_inactive_securities(self, exchange, log=True):
         missing = []
-        tickers = s.get_symbols(exchange)
+        tickers = store.get_symbols(exchange)
         if len(tickers) > 0:
             with self.session() as session:
-                exc = session.query(m.Exchange.id, m.Exchange.abbreviation).filter(m.Exchange.abbreviation==exchange).one()
+                exc = session.query(models.Exchange.id, models.Exchange.abbreviation).filter(models.Exchange.abbreviation==exchange).one()
                 for sec in tickers:
-                    t = session.query(m.Security.ticker).filter(and_(m.Security.ticker==sec,
-                        m.Security.exchange_id==exc.id, m.Security.active)).one_or_none()
+                    t = session.query(models.Security.ticker).filter(and_(models.Security.ticker==sec,
+                        models.Security.exchange_id==exc.id, models.Security.active)).one_or_none()
                     if t is None:
                         missing += [sec]
 
@@ -327,15 +329,15 @@ class Manager(Threaded):
         missing = []
         if live:
             with self.session() as session, session.begin():
-                exc = session.query(m.Exchange.id).filter(m.Exchange.abbreviation==exchange).one()
-                sec = session.query(m.Security.ticker, m.Security.id).filter(m.Security.exchange_id==exc.id).all()
+                exc = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange).one()
+                sec = session.query(models.Security.ticker, models.Security.id).filter(models.Security.exchange_id==exc.id).all()
                 for t in sec:
-                    c = session.query(m.Company.id).filter(m.Company.security_id==t.id).limit(1)
+                    c = session.query(models.Company.id).filter(models.Company.security_id==t.id).limit(1)
                     if c.first() is None:
                         missing += [t.ticker]
-                        mc = session.query(m.MissingCompany).filter(m.MissingCompany.security_id==t.id).one_or_none()
+                        mc = session.query(models.MissingCompany).filter(models.MissingCompany.security_id==t.id).one_or_none()
                         if mc is None:
-                            mc = m.MissingCompany(security_id=t.id)
+                            mc = models.MissingCompany(security_id=t.id)
                             session.add(mc)
                         logger.info(f'{__name__}: {t.ticker} added missing company entry')
 
@@ -348,11 +350,11 @@ class Manager(Threaded):
                     os.remove(filename)
         else:
             with self.session() as session:
-                exc = session.query(m.Exchange.id).filter(m.Exchange.abbreviation==exchange).one()
-                companies = session.query(m.MissingCompany).all()
+                exc = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange).one()
+                companies = session.query(models.MissingCompany).all()
                 for company in companies:
-                    sec = session.query(m.Security.ticker, m.Security.id).filter(
-                        and_(m.Security.exchange_id==exc.id, m.Security.id==company.security_id)).one_or_none()
+                    sec = session.query(models.Security.ticker, models.Security.id).filter(
+                        and_(models.Security.exchange_id==exc.id, models.Security.id==company.security_id)).one_or_none()
                     if sec is not None:
                         missing += [sec.ticker]
 
@@ -363,15 +365,15 @@ class Manager(Threaded):
         missing = []
         if live:
             with self.session() as session, session.begin():
-                exc = session.query(m.Exchange.id).filter(m.Exchange.abbreviation==exchange).one()
-                sec = session.query(m.Security.ticker, m.Security.id).filter(m.Security.exchange_id==exc.id).all()
+                exc = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange).one()
+                sec = session.query(models.Security.ticker, models.Security.id).filter(models.Security.exchange_id==exc.id).all()
                 for t in sec:
-                    c = session.query(m.Price.id).filter(m.Price.security_id==t.id).limit(1)
+                    c = session.query(models.Price.id).filter(models.Price.security_id==t.id).limit(1)
                     if c.first() is None:
                         missing += [t.ticker]
-                        mc = session.query(m.MissingPrice.id).filter(m.MissingPrice.security_id==t.id).one_or_none()
+                        mc = session.query(models.MissingPrice.id).filter(models.MissingPrice.security_id==t.id).one_or_none()
                         if mc is None:
-                            mc = m.MissingPrice(security_id=t.id)
+                            mc = models.MissingPrice(security_id=t.id)
                             session.add(mc)
                         logger.info(f'{__name__}: {t.ticker} added missing price entry')
 
@@ -384,11 +386,11 @@ class Manager(Threaded):
                     os.remove(filename)
         else:
             with self.session() as session:
-                exc = session.query(m.Exchange.id).filter(m.Exchange.abbreviation==exchange).one()
-                companies = session.query(m.MissingPrice).all()
+                exc = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange).one()
+                companies = session.query(models.MissingPrice).all()
                 for company in companies:
-                    sec = session.query(m.Security.ticker, m.Security.id).filter(
-                        and_(m.Security.exchange_id==exc.id, m.Security.id==company.security_id)).one_or_none()
+                    sec = session.query(models.Security.ticker, models.Security.id).filter(
+                        and_(models.Security.exchange_id==exc.id, models.Security.id==company.security_id)).one_or_none()
                     if sec is not None:
                         missing += [sec.ticker]
 
@@ -396,9 +398,9 @@ class Manager(Threaded):
         return missing
 
     def identify_common_securities(self):
-        nasdaq = s.get_exchange_symbols_master('NASDAQ')
-        nyse = s.get_exchange_symbols_master('NYSE')
-        amex = s.get_exchange_symbols_master('AMEX')
+        nasdaq = store.get_exchange_symbols_master('NASDAQ')
+        nyse = store.get_exchange_symbols_master('NYSE')
+        amex = store.get_exchange_symbols_master('AMEX')
 
         nasdaq_nyse = nasdaq.intersection(nyse)
         nasdaq_amex = nasdaq.intersection(amex)
@@ -409,73 +411,80 @@ class Manager(Threaded):
     def validate_list(self, list):
         symbols = []
         invalid = []
-        if s.is_exchange(list):
+        if store.is_exchange(list):
             symbols = self.get_exchange_symbols_master(list)
-        elif s.is_index(list):
-            symbols = s.get_index_symbols_master(list)
+        elif store.is_index(list):
+            symbols = store.get_index_symbols_master(list)
 
         if len(symbols) > 0:
             for s in symbols:
-                if not f.validate_ticker(s):
+                if not fetcher.validate_ticker(s):
                     invalid += [s]
 
         return invalid
 
     def _refresh_pricing(self, ticker):
-        updated = False
-        history = s.get_history(ticker, 0)
+        ticker = ticker.upper()
+        today = date.today()
+        days = 0
+
+        history = store.get_history(ticker, 0)
         if history.empty:
             logger.warning(f'{__name__}: No price history')
         else:
             date_db = history['date']
             if date_db is not None:
-                logger.info(f'{__name__}: Last price in database: {date_db:%Y-%m-%d}')
-
-            history = s.get_history(ticker, 0, live=True)
-            if history is None:
-                logger.info(f'{__name__}: No pricing information for {ticker}')
-            elif history.empty:
-                logger.info(f'{__name__}: No pricing information for {ticker}')
+                logger.info(f'{__name__}: Last {ticker} price in database: {date_db:%Y-%m-%d}')
             else:
-                date_cloud = history['date'].date()
-                logger.info(f'{__name__}: Last price in cloud: {date_cloud:%Y-%m-%d}')
+                date_db = today - date(2000,1,1)
+                logger.info(f'{__name__}: No date history for {ticker} in database')
 
-                delta = date_cloud - date_db
-                if delta.days > 1:
-                    history = s.get_history(ticker, delta.days, live=True)
-                    if history is None:
-                        logger.info(f'{__name__}: No pricing information for {ticker}')
-                    elif history.empty:
-                        logger.info(f'{__name__}: No pricing information for {ticker}')
-                    else:
-                        history.reset_index(inplace=True)
-                        with self.session() as session, session.begin():
-                            sec = session.query(m.Security).filter(m.Security.ticker==ticker).one()
-                            for _, price in history.iterrows():
-                                if price['date']:
-                                    p = m.Price()
-                                    p.date = price['date']
-                                    p.open = price['open']
-                                    p.high = price['high']
-                                    p.low = price['low']
-                                    p.close = price['close']
-                                    p.volume = price['volume']
+            if (today - date_db).days > 0:
+                history = store.get_history(ticker, 0, live=True)
+                if history is None:
+                    logger.info(f'{__name__}: No pricing information for {ticker}')
+                elif history.empty:
+                    logger.info(f'{__name__}: No pricing information for {ticker}')
+                else:
+                    date_cloud = history.iloc[-1]['date'].to_pydatetime().date()
+                    logger.info(f'{__name__}: Last {ticker} price in cloud: {date_cloud:%Y-%m-%d}')
 
-                                    sec.pricing += [p]
-                                    updated = True
+                    delta = date_cloud - date_db
+                    if delta.days > 1:
+                        history = store.get_history(ticker, delta.days, live=True)
+                        if history is None:
+                            logger.info(f'{__name__}: No pricing information for {ticker}')
+                        elif history.empty:
+                            logger.info(f'{__name__}: No pricing information for {ticker}')
+                        else:
+                            history.reset_index(inplace=True)
+                            with self.session() as session, session.begin():
+                                sec = session.query(models.Security).filter(models.Security.ticker==ticker).one()
+                                days = delta.days
+                                for _, price in history.iterrows():
+                                    if price['date']:
+                                        p = models.Price()
+                                        p.date = price['date']
+                                        p.open = price['open']
+                                        p.high = price['high']
+                                        p.low = price['low']
+                                        p.close = price['close']
+                                        p.volume = price['volume']
 
-                            logger.info(f'{__name__}: Updated pricing for {ticker.upper()} to {date_cloud:%Y-%m-%d}')
-        return updated
+                                        sec.pricing += [p]
+
+                                logger.info(f'{__name__}: Updated {days} days pricing for {ticker.upper()} to {date_cloud:%Y-%m-%d}')
+        return days
 
     def _add_securities_to_exchange(self, tickers, exchange):
         with self.session() as session:
-            exc = session.query(m.Exchange).filter(m.Exchange.abbreviation==exchange).one()
+            exc = session.query(models.Exchange).filter(models.Exchange.abbreviation==exchange).one()
 
             for sec in tickers:
-                s = session.query(m.Security).filter(m.Security.ticker==sec).one_or_none()
+                s = session.query(models.Security).filter(models.Security.ticker==sec).one_or_none()
                 if s is None:
                     self.items_symbol = sec
-                    exc.securities += [m.Security(sec)]
+                    exc.securities += [models.Security(sec)]
                     session.commit()
 
                     try:
@@ -512,14 +521,14 @@ class Manager(Threaded):
     def _add_company_to_security(self, ticker):
         added = False
         with self.session() as session, session.begin():
-            sec = session.query(m.Security).filter(m.Security.ticker==ticker).one()
-            company = s.get_company(ticker, live=True)
+            sec = session.query(models.Security).filter(models.Security.ticker==ticker).one()
+            company = store.get_company(ticker, live=True)
             if company is None:
                 logger.info(f'{__name__}: No company for {ticker}')
             elif len(company) == 0:
                 logger.info(f'{__name__}: No company information for {ticker}')
             else:
-                c = m.Company()
+                c = models.Company()
                 c.name = company['name'] if company['name'] else '<error>'
                 c.description = company['description'][:4995]
                 c.url = company['url']
@@ -531,15 +540,15 @@ class Manager(Threaded):
                 logger.info(f'{__name__}: Added company information for {ticker}')
 
                 # Remove from 'missing' table if there
-                session.query(m.MissingCompany).filter(m.MissingCompany.security_id==sec.id).delete()
+                session.query(models.MissingCompany).filter(models.MissingCompany.security_id==sec.id).delete()
 
         return added
 
     def _add_pricing_to_security(self, ticker):
         added = False
         with self.session() as session, session.begin():
-            sec = session.query(m.Security).filter(m.Security.ticker==ticker).one()
-            history = s.get_history(ticker, -1, live=True)
+            sec = session.query(models.Security).filter(models.Security.ticker==ticker).one()
+            history = store.get_history(ticker, -1, live=True)
             if history is None:
                 sec.active = False
                 logger.info(f'{__name__}: No pricing information for {ticker}')
@@ -550,7 +559,7 @@ class Manager(Threaded):
                 history.reset_index(inplace=True)
                 for _, price in history.iterrows():
                     if price['date']:
-                        p = m.Price()
+                        p = models.Price()
                         p.date = price['date']
                         p.open = price['open']
                         p.high = price['high']
@@ -563,7 +572,7 @@ class Manager(Threaded):
                         logger.info(f'{__name__}: Added pricing to {ticker}')
 
                         # Remove from 'missing' table if there
-                        session.query(m.MissingPrice).filter(m.MissingPrice.security_id==sec.id).delete()
+                        session.query(models.MissingPrice).filter(models.MissingPrice.security_id==sec.id).delete()
                     else:
                         sec.active = False
 
@@ -571,14 +580,14 @@ class Manager(Threaded):
 
     def _add_securities_to_index(self, tickers, index):
         with self.session() as session, session.begin():
-            ind = session.query(m.Index.id).filter(m.Index.abbreviation==index).one()
+            ind = session.query(models.Index.id).filter(models.Index.abbreviation==index).one()
 
             self.items_total = len(tickers)
             for t in tickers:
                 self.items_symbol = t
                 self.items_success += 1
 
-                s = session.query(m.Security).filter(m.Security.ticker==t).one()
+                s = session.query(models.Security).filter(models.Security.ticker==t).one()
                 if s.index1_id is None:
                     s.index1_id = ind.id
                 elif s.index2_id is None:
@@ -594,10 +603,11 @@ class Manager(Threaded):
 if __name__ == '__main__':
     # import sys
     from logging import DEBUG
-    logger = u.get_logger(DEBUG)
+    logger = utils.get_logger(DEBUG)
 
     manager = Manager()
-    missing = manager.populate_index('CUSTOM')
+    missing = manager._refresh_pricing('ibm')
+    print(missing)
 
     # if len(sys.argv) > 1:
     #     data = manager.populate_exchange(sys.argv[1])

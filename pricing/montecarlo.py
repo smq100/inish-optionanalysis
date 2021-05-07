@@ -5,9 +5,9 @@ from random import gauss
 import numpy as np
 
 from .pricing import Pricing, METHODS
-from utils import utils as u
+from utils import utils as utils
 
-logger = u.get_logger()
+logger = utils.get_logger()
 
 class MonteCarlo(Pricing):
     '''

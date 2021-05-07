@@ -1,13 +1,13 @@
 import datetime as dt
 import re
 
-from fetcher import fetcher as f
-from utils import utils as u
+from fetcher import fetcher as fetcher
+from utils import utils as utils
 
 PRODUCTS = ('call', 'put')
 DIRECTIONS = ('long', 'short')
 
-logger = u.get_logger()
+logger = utils.get_logger()
 
 
 class Option:
@@ -121,9 +121,9 @@ def _get_contract(contract_symbol):
 
     try:
         if product == 'call':
-            chain = f.get_option_chain(ticker)(expiry).calls
+            chain = fetcher.get_option_chain(ticker)(expiry).calls
         else:
-            chain = f.get_option_chain(ticker)(expiry).puts
+            chain = fetcher.get_option_chain(ticker)(expiry).puts
 
         contract = chain.loc[chain['contractSymbol'] == contract_symbol]
         return contract.iloc[0]

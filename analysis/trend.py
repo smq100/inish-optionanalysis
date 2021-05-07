@@ -9,10 +9,10 @@ import yfinance as yf
 import trendln
 import matplotlib.pyplot as plt
 
-from data import store as s
-from utils import utils as u
+from data import store as store
+from utils import utils as utils
 
-logger = u.get_logger()
+logger = utils.get_logger()
 
 
 class Line:
@@ -73,7 +73,7 @@ class SupportResistance:
         if best < 1:
             raise AssertionError("'best' value must be > 0")
 
-        if (s.is_symbol_valid(ticker)):
+        if (store.is_symbol_valid(ticker)):
             self.ticker = ticker.upper()
             self.best = best
             self.start = start
@@ -101,7 +101,7 @@ class SupportResistance:
             self.history = yf.Ticker(self.ticker).history(start=f'{self.start:%Y-%m-%d}', rounding=True)
 
         self.points = len(self.history)
-        self.price = s.get_current_price(self.ticker)
+        self.price = store.get_current_price(self.ticker)
 
         logger.info(f'{__name__}: {self.points} pivot points identified from {self.history.iloc[0].name} to {self.history.iloc[-1].name}')
 
@@ -372,7 +372,7 @@ class SupportResistance:
         dates = []
         values = []
         for index, line in enumerate(self.get_resistance()):
-            ep = u.mround(line.end_point, 0.1)
+            ep = utils.mround(line.end_point, 0.1)
             if ep not in values:
                 date = self.history.iloc[-1].name
                 dates += [date.date().strftime('%Y-%m-%d')]
@@ -383,7 +383,7 @@ class SupportResistance:
         dates = []
         values = []
         for index, line in enumerate(self.get_support()):
-            ep = u.mround(line.end_point, 0.1)
+            ep = utils.mround(line.end_point, 0.1)
             if ep not in values:
                 date = self.history.iloc[-1].name
                 dates += [date.date().strftime('%Y-%m-%d')]

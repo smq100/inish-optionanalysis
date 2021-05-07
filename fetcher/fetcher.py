@@ -9,9 +9,9 @@ import quandl as qd
 import yfinance as yf
 import pandas as pd
 
-from utils import utils as u
+from utils import utils as utils
 
-logger = u.get_logger()
+logger = utils.get_logger()
 
 
 # Quandl credentials
@@ -61,21 +61,23 @@ def get_history(ticker, days=-1):
 
     company = get_company_ex(ticker)
     if company is not None:
+        if days < 0:
+            days = 7300 # 20 years
+        elif days > 1:
+            pass
+        else:
+            days = 100
+
+        start = dt.datetime.today() - dt.timedelta(days=days)
+
         # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
         try:
-            if days < 0:
-                days = 7300 # 20 years
-                start = dt.datetime.today() - dt.timedelta(days=days)
-                history = company.history(start=f'{start:%Y-%m-%d}')
-                if history is not None:
-                    history.reset_index(inplace=True)
-                    history.rename(columns={'Date':'date', 'Open':'open', 'High':'high', 'Low':'low', 'Close':'close', 'Volume':'volume'}, inplace=True)
-            elif days > 1:
-                start = dt.datetime.today() - dt.timedelta(days=days)
-                history = company.history(start=f'{start:%Y-%m-%d}')
-                if history is not None:
-                    history.reset_index(inplace=True)
-                    history.rename(columns={'Date':'date', 'Open':'open', 'High':'high', 'Low':'low', 'Close':'close', 'Volume':'volume'}, inplace=True)
+            history = company.history(start=f'{start:%Y-%m-%d}')
+            if history is not None:
+                history.reset_index(inplace=True)
+                history.rename(columns={'Date':'date', 'Open':'open', 'High':'high', 'Low':'low', 'Close':'close', 'Volume':'volume'}, inplace=True)
+
+                logger.info(f'{__name__}: Fetched {days} history of {ticker} starting {start:%Y-%m-%d}')
         except:
             history = None
 
@@ -94,7 +96,7 @@ def get_treasury_rate(ticker='DTB3'):
 
 if __name__ == '__main__':
     from logging import DEBUG
-    logger = u.get_logger(DEBUG)
+    logger = utils.get_logger(DEBUG)
 
     # c = get_company('AAPL', force=True)
     c = get_history('AAPL', days=0)

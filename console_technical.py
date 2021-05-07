@@ -7,10 +7,10 @@ import matplotlib.pyplot as plt
 from analysis.technical import Technical
 from analysis.trend import SupportResistance
 from data import store as o
-from utils import utils as u
+from utils import utils as utils
 
 
-logger = u.get_logger(logging.WARNING)
+logger = utils.get_logger(logging.WARNING)
 
 class Interface:
     def __init__(self, ticker, script=''):
@@ -23,9 +23,9 @@ class Interface:
                         data = json.load(file_)
                         print(data)
                 except Exception as e:
-                    u.print_error('File read error')
+                    utils.print_error('File read error')
             else:
-                u.print_error(f'File "{script}" not found')
+                utils.print_error(f'File "{script}" not found')
         elif o.is_symbol_valid(ticker.upper()):
             self.technical = Technical(ticker.upper(), None, 365)
             self.main_menu()
@@ -45,7 +45,7 @@ class Interface:
             if self.technical is not None:
                 menu_items['1'] = f'Change Symbol ({self.technical.ticker})'
 
-            selection = u.menu(menu_items, 'Select Operation', 0, 4)
+            selection = utils.menu(menu_items, 'Select Operation', 0, 4)
 
             if selection == 1:
                 self.select_symbol()
@@ -68,7 +68,7 @@ class Interface:
                 if valid:
                     self.technical = Technical(ticker, None, 365)
                 else:
-                    u.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
+                    utils.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
             else:
                 break
 
@@ -84,38 +84,38 @@ class Interface:
                     '0': 'Done',
                 }
 
-                selection = u.menu(menu_items, 'Select Indicator', 0, 5)
+                selection = utils.menu(menu_items, 'Select Indicator', 0, 5)
 
                 if selection == 1:
-                    interval = u.input_integer('Enter interval: ', 5, 200)
+                    interval = utils.input_integer('Enter interval: ', 5, 200)
                     df = self.technical.calc_ema(interval)
-                    u.print_message(f'EMA {interval}')
+                    utils.print_message(f'EMA {interval}')
                     print(f'Yesterday: {df.iloc[-1]:.2f}')
                     self.plot(df, f'EMA {interval}')
                 elif selection == 2:
                     df = self.technical.calc_rsi()
-                    u.print_message('RSI')
+                    utils.print_message('RSI')
                     print(f'Yesterday: {df.iloc[-1]:.2f}')
                 elif selection == 3:
                     df = self.technical.calc_vwap()
-                    u.print_message('VWAP')
+                    utils.print_message('VWAP')
                     print(f'Yesterday: {df.iloc[-1]:.2f}')
                 elif selection == 4:
                     df = self.technical.calc_macd()
-                    u.print_message('MACD')
+                    utils.print_message('MACD')
                     print(f'Diff: {df.iloc[-1]["Diff"]:.2f}')
                     print(f'MACD: {df.iloc[-1]["MACD"]:.2f}')
                     print(f'Sig:  {df.iloc[-1]["Signal"]:.2f}')
                 elif selection == 5:
                     df = self.technical.calc_bb()
-                    u.print_message('Bollinger Band')
+                    utils.print_message('Bollinger Band')
                     print(f'High: {df.iloc[-1]["High"]:.2f}')
                     print(f'Mid:  {df.iloc[-1]["Mid"]:.2f}')
                     print(f'Low:  {df.iloc[-1]["Low"]:.2f}')
                 elif selection == 0:
                     break
         else:
-            u.print_error('Please forst select symbol')
+            utils.print_error('Please forst select symbol')
 
     def get_trend_parameters(self):
         if self.technical is not None:
@@ -133,16 +133,16 @@ class Interface:
                     '0': 'Cancel'
                 }
 
-                selection = u.menu(menu_items, 'Select option', 0, 4)
+                selection = utils.menu(menu_items, 'Select option', 0, 4)
 
                 if selection == 1:
-                    days = u.input_integer('Enter number of days (0=max): ', 0, 9999)
+                    days = utils.input_integer('Enter number of days (0=max): ', 0, 9999)
 
                 if selection == 2:
                     filename = input('Enter filename: ')
 
                 if selection == 3:
-                    show = True if u.input_integer('Show Window? (1=Yes, 0=No): ', 0, 1) == 1 else False
+                    show = True if utils.input_integer('Show Window? (1=Yes, 0=No): ', 0, 1) == 1 else False
 
                 if selection == 4:
                     start = None
@@ -153,7 +153,7 @@ class Interface:
                     sr.calculate()
 
                     sup = sr.get_support()
-                    u.print_message(f'{sr.ticker} Support & Resistance Levels (${sr.price:.2f})')
+                    utils.print_message(f'{sr.ticker} Support & Resistance Levels (${sr.price:.2f})')
                     for line in sup:
                         print(f'Support:    ${line.end_point:.2f} ({line.get_score():.2f})')
 
@@ -167,7 +167,7 @@ class Interface:
                 if selection == 0:
                     break
         else:
-            u.print_error('Please forst select symbol')
+            utils.print_error('Please forst select symbol')
 
 
     def plot_all(self):
@@ -185,7 +185,7 @@ class Interface:
             plt.legend()
             plt.show()
         else:
-            u.print_error('Please forst select symbol')
+            utils.print_error('Please forst select symbol')
 
     def plot(self, df, title=''):
         if df is not None:

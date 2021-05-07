@@ -4,11 +4,11 @@ import time
 import threading
 
 import data as d
-from data import store as s
-from data import manager as m
-from utils import utils as u
+from data import store as store
+from data import manager as manager
+from utils import utils as utils
 
-logger = u.get_logger(logging.ERROR)
+logger = utils.get_logger(logging.ERROR)
 
 
 class Interface:
@@ -18,7 +18,7 @@ class Interface:
         self.indexes = []
         self.task = None
 
-        self.manager = m.Manager()
+        self.manager = manager.Manager()
         for e in d.EXCHANGES:
             self.exchanges += [e['abbreviation']]
 
@@ -32,17 +32,17 @@ class Interface:
                         data = json.load(file_)
                         print(data)
                 except Exception as e:
-                    u.print_error('File read error')
+                    utils.print_error('File read error')
             else:
-                u.print_error(f'File "{script}" not found')
+                utils.print_error(f'File "{script}" not found')
         elif not list:
             self.main_menu()
-        elif m.Manager.is_exchange(list):
+        elif manager.Manager.is_exchange(list):
             self.main_menu()
-        elif m.Manager.is_index(list):
+        elif manager.Manager.is_index(list):
             self.main_menu()
         else:
-            u.print_error('Invalid list specified')
+            utils.print_error('Invalid list specified')
 
     def main_menu(self):
         self.show_database_information()
@@ -60,7 +60,7 @@ class Interface:
         }
 
         while True:
-            selection = u.menu(menu_items, 'Select Operation', 0, 8)
+            selection = utils.menu(menu_items, 'Select Operation', 0, 8)
 
             if selection == 1:
                 self.show_database_information(all=True)
@@ -82,36 +82,36 @@ class Interface:
                 break
 
     def show_database_information(self, all=False):
-        u.print_message(f'Database Information ({d.ACTIVE_DB})')
+        utils.print_message(f'Database Information ({d.ACTIVE_DB})')
         info = self.manager.get_database_info()
         for i in info:
             print(f'{i["table"]:>16}:\t{i["count"]} records')
 
-        u.print_message('Exchange Information')
+        utils.print_message('Exchange Information')
         info = self.manager.get_exchange_info()
         for i in info:
             print(f'{i["exchange"]:>16}:\t{i["count"]} symbols')
 
-        u.print_message('Index Information')
+        utils.print_message('Index Information')
         info = self.manager.get_index_info()
         for i in info:
             print(f'{i["index"]:>16}:\t{i["count"]} symbols')
 
         if all:
-            u.print_message('Missing Symbols')
-            exchanges = s.get_exchanges()
+            utils.print_message('Missing Symbols')
+            exchanges = store.get_exchanges()
             for e in exchanges:
                 count = len(self.manager.identify_missing_securities(e))
                 print(f'{e:>16}:\t{count}')
 
-            u.print_message('Inactive Symbols')
-            exchanges = s.get_exchanges()
+            utils.print_message('Inactive Symbols')
+            exchanges = store.get_exchanges()
             for e in exchanges:
                 count = len(self.manager.identify_inactive_securities(e))
                 print(f'{e:>16}:\t{count}')
 
-            u.print_message('Missing Information')
-            exchanges = s.get_exchanges()
+            utils.print_message('Missing Information')
+            exchanges = store.get_exchanges()
             for e in exchanges:
                 count = len(self.manager.identify_incomplete_securities_companies(e))
                 print(f'{e:>16}:\t{count} missing company')
@@ -120,13 +120,13 @@ class Interface:
                 count = len(self.manager.identify_incomplete_securities_price(e))
                 print(f'{e:>16}:\t{count} missing price')
 
-            u.print_message('Master Exchange Symbol List')
+            utils.print_message('Master Exchange Symbol List')
             for exchange in d.EXCHANGES:
-                exc = list(s.get_exchange_symbols_master(exchange['abbreviation']))
+                exc = list(store.get_exchange_symbols_master(exchange['abbreviation']))
                 count = len(exc)
                 print(f'{exchange["abbreviation"]:>16}:\t{count} symbols')
 
-            u.print_message('Master Exchange Common Symbols')
+            utils.print_message('Master Exchange Common Symbols')
             nasdaq_nyse, nasdaq_amex, nyse_amex = self.manager.identify_common_securities()
             count = len(nasdaq_nyse)
             name = 'NASDAQ-NYSE'
@@ -139,13 +139,13 @@ class Interface:
             print(f'{name:>16}:\t{count} symbols')
 
     def show_symbol_information(self):
-        symbol = u.input_text('Enter symbol: ')
+        symbol = utils.input_text('Enter symbol: ')
         if symbol:
             symbol = symbol[:4].upper()
-            if s.is_symbol_valid(symbol):
-                company = s.get_company(symbol)
+            if store.is_symbol_valid(symbol):
+                company = store.get_company(symbol)
                 if company is not None:
-                    u.print_message(f'{symbol} Company Information')
+                    utils.print_message(f'{symbol} Company Information')
                     print(f'Name:\t\t{company["name"]}')
                     print(f'Sector:\t\t{company["sector"]}')
                     print(f'Industry:\t{company["industry"]}')
@@ -153,20 +153,20 @@ class Interface:
                     print(f'URL:\t\t{company["url"]}')
                     print(f'Price Records:\t{company["precords"]}')
                 else:
-                    u.print_error(f'{symbol} has no company information')
+                    utils.print_error(f'{symbol} has no company information')
 
-                history = s.get_history(symbol, 0)
+                history = store.get_history(symbol, 0)
                 if not history.empty:
                     print(f'Latest Record:\t{history["date"]:%Y-%m-%d}, closed at ${history["close"]:.2f}')
 
-                u.print_message(f'{symbol} Recent Price History')
-                history = s.get_history(symbol, 10)
+                utils.print_message(f'{symbol} Recent Price History')
+                history = store.get_history(symbol, 10)
                 history.set_index('date', inplace=True)
                 if not history.empty:
                     print(history)
 
             else:
-                u.print_error(f'{symbol} not found')
+                utils.print_error(f'{symbol} not found')
 
     def populate_exchange(self, progressbar=True):
         menu_items = {}
@@ -174,7 +174,7 @@ class Interface:
             menu_items[f'{i+1}'] = f'{exchange}'
         menu_items['0'] = 'Cancel'
 
-        select = u.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
+        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
         if select > 0:
             exc = self.exchanges[select-1]
 
@@ -186,11 +186,11 @@ class Interface:
                 self._show_progress('Progress', 'Completed')
 
             if self.manager.items_error == 'Done':
-                u.print_message(f'{self.manager.items_total} {exc} '\
+                utils.print_message(f'{self.manager.items_total} {exc} '\
                     f'Symbols populated in {self.manager.items_time:.2f} seconds with {len(self.manager.invalid_symbols)} invalid symbols')
 
             for i, result in enumerate(self.manager.items_results):
-                u.print_message(f'{i+1:>2}: {result}', creturn=False)
+                utils.print_message(f'{i+1:>2}: {result}', creturn=False)
 
     def refresh_exchange(self, progressbar=True):
         menu_items = {
@@ -198,7 +198,7 @@ class Interface:
             '2': 'Missing Price Information',
             '0': 'Cancel',
         }
-        area = u.menu(menu_items, 'Select item to refresh, or 0 to cancel: ', 0, 2)
+        area = utils.menu(menu_items, 'Select item to refresh, or 0 to cancel: ', 0, 2)
 
         if area > 0:
             areaname = ['companies', 'pricing']
@@ -207,7 +207,7 @@ class Interface:
                 menu_items[f'{i+1}'] = f'{e}'
             menu_items['0'] = 'Cancel'
 
-            exchange = u.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
+            exchange = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
             if exchange > 0:
                 exc = self.exchanges[exchange-1]
                 self.task = threading.Thread(target=self.manager.refresh_exchange, args=[exc, areaname[area-1]])
@@ -218,8 +218,8 @@ class Interface:
                     self._show_progress('Progress', 'Completed')
 
                 print()
-                u.print_message(f'Completed {exc} {areaname[area-1]} refresh in {self.manager.items_time:.2f} seconds', creturn=2)
-                u.print_message(f'Identified {self.manager.items_total} missing items. {self.manager.items_success} items filled', creturn=0)
+                utils.print_message(f'Completed {exc} {areaname[area-1]} refresh in {self.manager.items_time:.2f} seconds', creturn=2)
+                utils.print_message(f'Identified {self.manager.items_total} missing items. {self.manager.items_success} items filled', creturn=0)
 
     def update_pricing(self, progressbar=True):
         menu_items = {}
@@ -228,7 +228,7 @@ class Interface:
         menu_items[f'{i+2}'] = 'All'
         menu_items['0'] = 'Cancel'
 
-        select = u.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.EXCHANGES)+1)
+        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.EXCHANGES)+1)
         if select > 0:
             exc = self.exchanges[select-1] if select <= len(d.EXCHANGES) else ''
             self.task = threading.Thread(target=self.manager.update_pricing, args=[exc])
@@ -239,11 +239,11 @@ class Interface:
                 self._show_progress('Progress', 'Completed')
 
             if self.manager.items_error == 'Done':
-                u.print_message(f'{self.manager.items_total} {exc} '\
+                utils.print_message(f'{self.manager.items_total} {exc} '\
                     f'Ticker pricing refreshed in {self.manager.items_time:.2f} seconds')
 
             for i, result in enumerate(self.manager.items_results):
-                u.print_message(f'{i+1:>2}: {result}', creturn=False)
+                utils.print_message(f'{i+1:>2}: {result}', creturn=False)
 
     def delete_exchange(self, progressbar=True):
         menu_items = {}
@@ -251,7 +251,7 @@ class Interface:
             menu_items[f'{i+1}'] = f'{exchange}'
         menu_items['0'] = 'Cancel'
 
-        select = u.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
+        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
         if select > 0:
             exc = self.exchanges[select-1]
 
@@ -265,7 +265,7 @@ class Interface:
             self.create_missing_tables()
 
             if self.manager.items_error == 'Done':
-                u.print_message(f'Deleted exchange {exc} in {self.manager.items_time:.2f} seconds')
+                utils.print_message(f'Deleted exchange {exc} in {self.manager.items_time:.2f} seconds')
 
     def populate_index(self, progressbar=True):
         menu_items = {}
@@ -273,7 +273,7 @@ class Interface:
             menu_items[f'{i+1}'] = f'{index}'
         menu_items['0'] = 'Cancel'
 
-        select = u.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(d.INDEXES))
+        select = utils.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(d.INDEXES))
         if select > 0:
             self.task = threading.Thread(target=self.manager.populate_index, args=[self.indexes[select-1]])
             self.task.start()
@@ -283,9 +283,9 @@ class Interface:
                 self._show_progress('Progress', 'Completed')
 
             if self.manager.items_error == 'Done':
-                u.print_message(f'{self.manager.items_total} {index} Symbols populated in {self.manager.items_time:.2f} seconds')
+                utils.print_message(f'{self.manager.items_total} {index} Symbols populated in {self.manager.items_time:.2f} seconds')
             else:
-                u.print_error(self.manager.items_error)
+                utils.print_error(self.manager.items_error)
 
     def delete_index(self):
         menu_items = {}
@@ -293,7 +293,7 @@ class Interface:
             menu_items[f'{i+1}'] = f'{index}'
         menu_items['0'] = 'Cancel'
 
-        select = u.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(d.INDEXES))
+        select = utils.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(d.INDEXES))
         if select > 0:
             ind = self.indexes[select-1]
             self.manager.delete_index(ind)
@@ -303,23 +303,23 @@ class Interface:
         self.manager.create_indexes()
 
     def reset_database(self):
-        select = u.input_integer('Are you sure? 1 to reset or 0 to cancel: ', 0, 1)
+        select = utils.input_integer('Are you sure? 1 to reset or 0 to cancel: ', 0, 1)
         if select == 1:
             self.manager.delete_database()
             self.manager.create_exchanges()
             self.manager.create_indexes()
-            u.print_message(f'Reset the database')
+            utils.print_message(f'Reset the database')
         else:
-            u.print_message('Database not reset')
+            utils.print_message('Database not reset')
 
     def list_invalid(self):
-        u.print_message(f'Invalid: {self.manager.invalid_symbols}')
+        utils.print_message(f'Invalid: {self.manager.invalid_symbols}')
 
     def _show_progress(self, prefix, suffix):
         while not self.manager.items_error: pass
 
         if self.manager.items_error == 'None':
-            u.progress_bar(self.manager.items_completed, self.manager.items_total, prefix=prefix, suffix=suffix, length=50, reset=True)
+            utils.progress_bar(self.manager.items_completed, self.manager.items_total, prefix=prefix, suffix=suffix, length=50, reset=True)
             while self.task.is_alive and self.manager.items_error == 'None':
                 time.sleep(0.20)
                 total = self.manager.items_total
@@ -329,12 +329,13 @@ class Interface:
                 tasks = len([True for future in self.manager.items_futures if future.running()])
 
                 if total > 0:
-                    u.progress_bar(completed, total, prefix=prefix, suffix=suffix, symbol=symbol, length=50, success=success, tasks=tasks)
+                    utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, symbol=symbol, length=50, success=success, tasks=tasks)
                 else:
-                    u.progress_bar(completed, total, prefix=prefix, suffix='Calculating...', length=50)
+                    utils.progress_bar(completed, total, prefix=prefix, suffix='Calculating...', length=50)
             print()
+            [print(future.result()) for future in self.manager.items_futures]
         else:
-            u.print_message(f'{self.manager.items_error}')
+            utils.print_message(f'{self.manager.items_error}')
 
 
 if __name__ == '__main__':

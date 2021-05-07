@@ -5,10 +5,10 @@ import datetime as dt
 from analysis.scoring import ScoringAnalysis
 from analysis.technical import Technical
 from data import store as o
-from utils import utils as u
+from utils import utils as utils
 
 
-logger = u.get_logger(logging.WARNING)
+logger = utils.get_logger(logging.WARNING)
 
 
 class Interface:
@@ -22,9 +22,9 @@ class Interface:
                         data = json.load(file_)
                         print(data)
                 except Exception as e:
-                    u.print_error('File read error')
+                    utils.print_error('File read error')
             else:
-                u.print_error(f'File "{script}" not found')
+                utils.print_error(f'File "{script}" not found')
         elif o.is_symbol_valid(ticker):
             self.technical = Technical(ticker, None, 365)
             self.scoring = ScoringAnalysis(ticker)
@@ -32,7 +32,7 @@ class Interface:
             self.calculate(True)
             self.main_menu()
         else:
-            u.print_error('Invalid ticker symbol specified')
+            utils.print_error('Invalid ticker symbol specified')
 
     def main_menu(self):
         while True:
@@ -42,7 +42,7 @@ class Interface:
                 '0': 'Exit'
             }
 
-            selection = u.menu(menu_items, 'Select Operation', 0, 2)
+            selection = utils.menu(menu_items, 'Select Operation', 0, 2)
 
             if selection == 1:
                 self.select_symbol()
@@ -61,7 +61,7 @@ class Interface:
                 if valid:
                     self.scoring = ScoringAnalysis(ticker)
                 else:
-                    u.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
+                    utils.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
             else:
                 break
 
@@ -86,7 +86,7 @@ class Interface:
         self.scoring.bb = self.technical.calc_bb()
 
         if show:
-            u.print_message(f"Yesterday's {self.scoring.ticker} Technicals")
+            utils.print_message(f"Yesterday's {self.scoring.ticker} Technicals")
             print(f'EMA 21:    {self.scoring.ema["21"].iloc[-1]:.2f}')
             print(f'EMA 50:    {self.scoring.ema["50"].iloc[-1]:.2f}')
             print(f'EMA 200:   {self.scoring.ema["200"].iloc[-1]:.2f}')

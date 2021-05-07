@@ -3,9 +3,9 @@ from sqlalchemy import UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
-from utils import utils as u
+from utils import utils as utils
 
-logger = u.get_logger()
+logger = utils.get_logger()
 Base = declarative_base()
 
 class Exchange(Base):

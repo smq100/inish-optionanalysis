@@ -1,7 +1,7 @@
 from data import store as o
-from utils import utils as u
+from utils import utils as utils
 
-logger = u.get_logger()
+logger = utils.get_logger()
 
 
 class ScoringAnalysis:

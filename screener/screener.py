@@ -6,12 +6,12 @@ import numpy as np
 
 from base import Threaded
 from company.company import Company
-from utils import utils as u
+from utils import utils as utils
 from data import store as o
 from .interpreter import Interpreter
 
 
-logger = u.get_logger()
+logger = utils.get_logger()
 
 class Screener(Threaded):
     def __init__(self, table, script='', days=365, live=False):
@@ -180,9 +180,9 @@ class Screener(Threaded):
 
 if __name__ == '__main__':
     import logging
-    from fetcher import fetcher as f
+    from fetcher import fetcher as fetcher
 
-    u.get_logger(logging.DEBUG)
+    utils.get_logger(logging.DEBUG)
 
     s = Screener('DOW')
     s.load_script('/Users/steve/Documents/Source Code/Personal/OptionAnalysis/screener/screens/test.screen')

@@ -12,13 +12,13 @@ from pricing.pricing import METHODS
 from pricing.blackscholes import BlackScholes
 from pricing.montecarlo import MonteCarlo
 from analysis.strategy import StrategyAnalysis
-from utils import utils as u
+from utils import utils as utils
 
 
 IV_CUTOFF = 0.020
 STRATEGIES = ['call', 'put', 'vertical']
 
-logger = u.get_logger()
+logger = utils.get_logger()
 
 
 class Strategy(ABC):
@@ -107,7 +107,7 @@ class Strategy(ABC):
             max_ = self.legs[0].symbol.spot * (1 + percent)
 
             step_ = (max_ - min_) / 40.0
-            step_ = u.mround(step_, step_ / 10.0)
+            step_ = utils.mround(step_, step_ / 10.0)
 
             if min_ < step_:
                 min_ = step_
@@ -257,7 +257,7 @@ class Leg:
             return True
         except Exception as e:
             self.symbol = ticker
-            u.print_error(sys.exc_info()[1])
+            utils.print_error(sys.exc_info()[1])
             return False
 
     def modify_values(self, quantity, product, direction, strike):
@@ -322,15 +322,15 @@ class Leg:
 
                     # Create row index
                     if spot > 500.0:
-                        spot = u.mround(spot, 10.0)
+                        spot = utils.mround(spot, 10.0)
                     elif spot > 100.0:
-                        spot = u.mround(spot, 1.00)
+                        spot = utils.mround(spot, 1.00)
                     elif spot > 50.0:
-                        spot = u.mround(spot, 0.50)
+                        spot = utils.mround(spot, 0.50)
                     elif spot > 20.0:
-                        spot = u.mround(spot, 0.10)
+                        spot = utils.mround(spot, 0.10)
                     else:
-                        spot = u.mround(spot, 0.01)
+                        spot = utils.mround(spot, 0.01)
 
 
                     row_index.append(spot)

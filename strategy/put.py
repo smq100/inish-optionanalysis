@@ -1,9 +1,9 @@
 import datetime as dt
 
 from strategy.strategy import Strategy, STRATEGIES
-from utils import utils as u
+from utils import utils as utils
 
-logger = u.get_logger()
+logger = utils.get_logger()
 
 class Put(Strategy):
     def __init__(self, ticker, product, direction):
@@ -80,7 +80,7 @@ class Put(Strategy):
 
 if __name__ == '__main__':
     import logging
-    u.get_logger(logging.INFO)
+    utils.get_logger(logging.INFO)
 
     call = Put('MSFT', 'call', 'long')
     call.legs[0].calculate(table=False, greeks=False)

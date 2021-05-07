@@ -7,9 +7,9 @@ import logging
 from screener.screener import Screener
 import data as d
 from data import store as o
-from utils import utils as u
+from utils import utils as utils
 
-logger = u.get_logger(logging.ERROR)
+logger = utils.get_logger(logging.ERROR)
 
 BASEPATH = os.getcwd()+'/screener/screens/'
 SCREEN_SUFFIX = '.screen'
@@ -33,9 +33,9 @@ class Interface:
                         data = json.load(file_)
                         print(data)
                 except Exception as e:
-                    u.print_error('File read error')
+                    utils.print_error('File read error')
             else:
-                u.print_error(f'File "{script}" not found')
+                utils.print_error(f'File "{script}" not found')
         else:
             if self.table:
                 if o.is_exchange(self.table):
@@ -52,9 +52,9 @@ class Interface:
                     self.screen = BASEPATH + self.screen + SCREEN_SUFFIX
                     if not self.screener.load_script(self.screen):
                         self.screen = ''
-                        u.print_error('Invalid screen script')
+                        utils.print_error('Invalid screen script')
                 else:
-                    u.print_error(f'File "{self.screen}" not found')
+                    utils.print_error(f'File "{self.screen}" not found')
                     self.screen = ''
 
             self.main_menu()
@@ -86,7 +86,7 @@ class Interface:
             if len(self.results) > 0:
                 menu_items['6'] = f'Show Results ({self.valids})'
 
-            selection = u.menu(menu_items, 'Select Operation', 0, 6)
+            selection = utils.menu(menu_items, 'Select Operation', 0, 6)
 
             if selection == 1:
                 self.select_source()
@@ -110,7 +110,7 @@ class Interface:
             '0': 'Cancel',
         }
 
-        selection = u.menu(menu_items, 'Select Data Source', 0, 2)
+        selection = utils.menu(menu_items, 'Select Data Source', 0, 2)
         if selection == 1:
             self.live = False
         elif selection == 2:
@@ -125,7 +125,7 @@ class Interface:
             menu_items[f'{exchange+1}'] = f'{item["abbreviation"]}'
         menu_items['0'] = 'Cancel'
 
-        selection = u.menu(menu_items, 'Select Exchange', 0, len(d.EXCHANGES))
+        selection = utils.menu(menu_items, 'Select Exchange', 0, len(d.EXCHANGES))
         if selection > 0:
             exc = d.EXCHANGES[selection-1]['abbreviation']
             if len(o.get_exchange_symbols(exc)) > 0:
@@ -136,7 +136,7 @@ class Interface:
             else:
                 self.table = ''
                 self.screener = None
-                u.print_error(f'Exchange {exc} has no symbols')
+                utils.print_error(f'Exchange {exc} has no symbols')
 
     def select_index(self):
         menu_items = {}
@@ -144,7 +144,7 @@ class Interface:
             menu_items[f'{index+1}'] = f'{item["abbreviation"]}'
         menu_items['0'] = 'Cancel'
 
-        selection = u.menu(menu_items, 'Select Index', 0, len(d.INDEXES))
+        selection = utils.menu(menu_items, 'Select Index', 0, len(d.INDEXES))
         if selection > 0:
             index = d.INDEXES[selection-1]['abbreviation']
             if len(o.get_index_symbols(index)) > 0:
@@ -155,7 +155,7 @@ class Interface:
             else:
                 self.table = ''
                 self.screener = None
-                u.print_error(f'Index {index} has no symbols')
+                utils.print_error(f'Index {index} has no symbols')
 
     def select_script(self):
         self.script = []
@@ -179,23 +179,23 @@ class Interface:
                 menu_items[f'{index+1}'] = f'{item}'
             menu_items['0'] = 'Cancel'
 
-            selection = u.menu(menu_items, 'Select Screen', 0, index+1)
+            selection = utils.menu(menu_items, 'Select Screen', 0, index+1)
             if selection > 0:
                 self.screen = self.script[selection-1]
                 self.results = []
 
                 if self.screener is not None:
                     if not self.screener.load_script(self.screen):
-                        u.print_error('Error in script file')
+                        utils.print_error('Error in script file')
 
         else:
-            u.print_message('No script files found')
+            utils.print_message('No script files found')
 
     def run_script(self, progressbar):
         if not self.table:
-            u.print_error('No table specified')
+            utils.print_error('No table specified')
         elif not self.screen:
-            u.print_error('No script specified')
+            utils.print_error('No script specified')
         elif self.screener.load_script(self.screen):
             self.results = []
             self.valids = 0
@@ -214,26 +214,26 @@ class Interface:
                     if result:
                         self.valids += 1
 
-                u.print_message(f'{self.valids} Symbols Identified in {self.screener.items_time:.2f} seconds')
+                utils.print_message(f'{self.valids} Symbols Identified in {self.screener.items_time:.2f} seconds')
 
                 for i, result in enumerate(self.screener.items_results):
-                    u.print_message(f'{i+1:>2}: {result}', creturn=False)
+                    utils.print_message(f'{i+1:>2}: {result}', creturn=False)
             else:
                 self.results = []
                 self.valids = 0
-                u.print_error(self.screener.items_error)
+                utils.print_error(self.screener.items_error)
         else:
-            u.print_error('Script error')
+            utils.print_error('Script error')
 
     def print_results(self, all=False):
         if not self.table:
-            u.print_error('No table specified')
+            utils.print_error('No table specified')
         elif not self.screen:
-            u.print_error('No script specified')
+            utils.print_error('No script specified')
         elif len(self.results) == 0:
-            u.print_message('No symbols were located')
+            utils.print_message('No symbols were located')
         else:
-            u.print_message('Symbols Identified')
+            utils.print_message('Symbols Identified')
             index = 0
             for result in self.results:
                 if all:
@@ -257,13 +257,13 @@ class Interface:
             total = self.screener.items_total
             completed = self.screener.items_completed
 
-            u.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50)
+            utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50)
             while completed < total:
                 time.sleep(0.25)
                 completed = self.screener.items_completed
                 success = self.screener.items_success
                 symbol = self.screener.items_symbol
-                u.progress_bar(completed, total, prefix=prefix, suffix=suffix, symbol=symbol, length=50, success=success)
+                utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, symbol=symbol, length=50, success=success)
             print()
 
 
