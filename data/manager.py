@@ -27,7 +27,7 @@ class Manager(Threaded):
         self.exchange = ''
         self.invalid_symbols = []
         self.retry = 0
-        self._concurrency = 3 if d.ACTIVE_DB == 'SQLite' else 10
+        self._concurrency = 3 if d.ACTIVE_DB == 'SQLite' else 6
 
     def create_database(self):
         models.Base.metadata.create_all(self.engine)
@@ -46,7 +46,7 @@ class Manager(Threaded):
             self.create_database()
 
     def create_exchanges(self):
-        with self.session() as session, session.begin():
+        with self.session.begin() as session:
             for exchange in d.EXCHANGES:
                 e = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange['abbreviation']).one_or_none()
                 if e is None:
@@ -67,26 +67,26 @@ class Manager(Threaded):
         tickers = store.get_exchange_symbols_master(abbrev)
 
         if len(tickers) > 10:
-            self.items_total = len(tickers)
-            self.items_error = 'None'
+            self.task_total = len(tickers)
+            self.task_error = 'None'
 
             # Split the list and remove any empty lists
             lists = np.array_split(tickers, self._concurrency)
             lists = [i for i in lists if i is not None]
 
             with futures.ThreadPoolExecutor() as executor:
-                self.items_futures = executor.map(self._add_securities_to_exchange, lists, [abbrev]*len(lists))
+                self.task_futures = executor.map(self._add_securities_to_exchange, lists, [abbrev]*len(lists))
 
-            for future in self.items_futures:
+            for future in self.task_futures:
                 if future is None:
-                    self.items_results += ['Ok']
+                    self.task_results += ['Ok']
                 else:
-                    self.items_results += [future.result()]
+                    self.task_results += [future.result()]
 
         else:
             logger.warning(f'{__name__}: No symbols for {exchange}')
 
-        self.items_error = 'Done'
+        self.task_error = 'Done'
 
     @Threaded.threaded
     def refresh_exchange(self, exchange, area):
@@ -98,9 +98,9 @@ class Manager(Threaded):
             session.query(models.Exchange.abbreviation).filter(models.Exchange.abbreviation==exchange).one()
 
         if area == 'companies':
-            self.items_error = 'None'
+            self.task_error = 'None'
             missing = self.identify_incomplete_securities_companies(exchange, live=True, log=True)
-            self.items_total = len(missing)
+            self.task_total = len(missing)
 
             # Split the list and remove any empty lists
             lists = np.array_split(missing, self._concurrency)
@@ -108,20 +108,20 @@ class Manager(Threaded):
 
             def _companies(tickers):
                 for ticker in tickers:
-                    self.items_symbol = ticker
+                    self.task_symbol = ticker
                     if self._add_company_to_security(ticker):
-                        self.items_success += 1
-                    self.items_completed += 1
+                        self.task_success += 1
+                    self.task_completed += 1
 
             with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
                 for list in lists:
-                    self.items_futures += [executor.submit(_companies, list)]
+                    self.task_futures += [executor.submit(_companies, list)]
 
-            self.items_error = 'Done'
+            self.task_error = 'Done'
         elif area == 'pricing':
-            self.items_error = 'None'
+            self.task_error = 'None'
             missing = self.identify_incomplete_securities_price(exchange, live=True, log=True)
-            self.items_total = len(missing)
+            self.task_total = len(missing)
 
             # Split the list and remove any empty lists
             lists = np.array_split(missing, self._concurrency)
@@ -129,31 +129,31 @@ class Manager(Threaded):
 
             def _pricing(tickers):
                 for ticker in tickers:
-                    self.items_symbol = ticker
+                    self.task_symbol = ticker
                     if self._add_pricing_to_security(ticker):
-                        self.items_success += 1
-                    self.items_completed += 1
+                        self.task_success += 1
+                    self.task_completed += 1
 
             with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
                 for list in lists:
-                    self.items_futures += [executor.submit(_pricing, list)]
+                    self.task_futures += [executor.submit(_pricing, list)]
 
-            self.items_error = 'Done'
+            self.task_error = 'Done'
         else:
-            self.items_error = 'Invalid area'
-            raise ValueError(f'{self.items_error}: {area}')
+            self.task_error = 'Invalid area'
+            raise ValueError(f'{self.task_error}: {area}')
 
     @Threaded.threaded
     def delete_exchange(self, exchange):
-        self.items_error = 'None'
-        with self.session() as session, session.begin():
+        self.task_error = 'None'
+        with self.session.begin() as session:
             exc = session.query(models.Exchange).filter(models.Exchange.abbreviation==exchange)
             if exc is not None:
                 exc.delete(synchronize_session=False)
-        self.items_error = 'Done'
+        self.task_error = 'Done'
 
     def create_indexes(self):
-        with self.session() as session, session.begin():
+        with self.session.begin() as session:
             for index in d.INDEXES:
                 i = session.query(models.Index.id).filter(models.Index.abbreviation==index['abbreviation']).one_or_none()
                 if i is None:
@@ -164,39 +164,42 @@ class Manager(Threaded):
     @Threaded.threaded
     def update_pricing(self, exchange=''):
         tickers = store.get_symbols(exchange)
-        self.items_total = len(tickers)
+        self.task_total = len(tickers)
 
         # Split the list and remove any empty lists
         lists = np.array_split(tickers, self._concurrency)
         lists = [i for i in lists if i is not None]
 
         def _pricing(tickers):
-            for sec in tickers:
-                self.items_symbol = sec
-                days = self._refresh_pricing(sec)
-                if days > 0:
-                    self.items_success += 1
+            with self.session() as session:
+                for sec in tickers:
+                    self.task_symbol = sec
+                    days = self._refresh_pricing(sec, session)
+                    session.commit()
 
-                self.items_completed += 1
+                    if days > 0:
+                        self.task_success += 1
 
-        self.items_error = 'None'
+                    self.task_completed += 1
+
+        self.task_error = 'None'
 
         with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
             for list in lists:
-                self.items_futures += [executor.submit(_pricing, list)]
+                self.task_futures += [executor.submit(_pricing, list)]
 
-        self.items_error = 'Done'
+        self.task_error = 'Done'
 
     @Threaded.threaded
     def populate_index(self, index):
         valid = []
 
-        with self.session() as session, session.begin():
-            self.items_error = 'None'
+        with self.session.begin() as session:
+            self.task_error = 'None'
             try:
                 i = session.query(models.Index.abbreviation).filter(models.Index.abbreviation==index).one()
             except Exception:
-                self.items_error = f'No index {index}'
+                self.task_error = f'No index {index}'
             else:
                 self.delete_index(index)
 
@@ -215,13 +218,13 @@ class Manager(Threaded):
         if len(valid) > 0:
             self._add_securities_to_index(valid, index)
             logger.info(f'{__name__}: Populated index {index}')
-            self.items_error = 'Done'
-        elif not self.items_error:
-            self.items_error = 'No symbols'
+            self.task_error = 'Done'
+        elif not self.task_error:
+            self.task_error = 'No symbols'
             logger.warning(f'{__name__}: No symbols found for {index}')
 
     def delete_index(self, index):
-        with self.session() as session, session.begin():
+        with self.session.begin() as session:
             ind = session.query(models.Index).filter(models.Index.abbreviation==index)
             if ind is not None:
                 ind.delete(synchronize_session=False)
@@ -328,7 +331,7 @@ class Manager(Threaded):
     def identify_incomplete_securities_companies(self, exchange, live=False, log=True):
         missing = []
         if live:
-            with self.session() as session, session.begin():
+            with self.session.begin() as session:
                 exc = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange).one()
                 sec = session.query(models.Security.ticker, models.Security.id).filter(models.Security.exchange_id==exc.id).all()
                 for t in sec:
@@ -364,7 +367,7 @@ class Manager(Threaded):
     def identify_incomplete_securities_price(self, exchange, live=False, log=True):
         missing = []
         if live:
-            with self.session() as session, session.begin():
+            with self.session.begin() as session:
                 exc = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange).one()
                 sec = session.query(models.Security.ticker, models.Security.id).filter(models.Security.exchange_id==exc.id).all()
                 for t in sec:
@@ -423,7 +426,7 @@ class Manager(Threaded):
 
         return invalid
 
-    def _refresh_pricing(self, ticker):
+    def _refresh_pricing(self, ticker, session):
         ticker = ticker.upper()
         today = date.today()
         days = 0
@@ -439,8 +442,8 @@ class Manager(Threaded):
                 date_db = today - date(2000,1,1)
                 logger.info(f'{__name__}: No date history for {ticker} in database')
 
-            if (today - date_db).days > 0:
-                history = store.get_history(ticker, 0, live=True)
+            if (today - date_db).days > 1:
+                history = store.get_history(ticker, 365, live=True)
                 if history is None:
                     logger.info(f'{__name__}: No pricing information for {ticker}')
                 elif history.empty:
@@ -449,31 +452,25 @@ class Manager(Threaded):
                     date_cloud = history.iloc[-1]['date'].to_pydatetime().date()
                     logger.info(f'{__name__}: Last {ticker} price in cloud: {date_cloud:%Y-%m-%d}')
 
-                    delta = date_cloud - date_db
-                    if delta.days > 1:
-                        history = store.get_history(ticker, delta.days, live=True)
-                        if history is None:
-                            logger.info(f'{__name__}: No pricing information for {ticker}')
-                        elif history.empty:
-                            logger.info(f'{__name__}: No pricing information for {ticker}')
-                        else:
-                            history.reset_index(inplace=True)
-                            with self.session() as session, session.begin():
-                                sec = session.query(models.Security).filter(models.Security.ticker==ticker).one()
-                                days = delta.days
-                                for _, price in history.iterrows():
-                                    if price['date']:
-                                        p = models.Price()
-                                        p.date = price['date']
-                                        p.open = price['open']
-                                        p.high = price['high']
-                                        p.low = price['low']
-                                        p.close = price['close']
-                                        p.volume = price['volume']
+                    delta = (date_cloud - date_db).days
+                    if delta > 1:
+                        history = history[-delta:]
+                        history.reset_index(inplace=True)
+                        sec = session.query(models.Security).filter(models.Security.ticker==ticker).one()
+                        days = delta
+                        for _, price in history.iterrows():
+                            if price['date']:
+                                p = models.Price()
+                                p.date = price['date']
+                                p.open = price['open']
+                                p.high = price['high']
+                                p.low = price['low']
+                                p.close = price['close']
+                                p.volume = price['volume']
 
-                                        sec.pricing += [p]
+                                sec.pricing += [p]
 
-                                logger.info(f'{__name__}: Updated {days} days pricing for {ticker.upper()} to {date_cloud:%Y-%m-%d}')
+                        logger.info(f'{__name__}: Updated {days} days pricing for {ticker.upper()} to {date_cloud:%Y-%m-%d}')
         return days
 
     def _add_securities_to_exchange(self, tickers, exchange):
@@ -483,7 +480,7 @@ class Manager(Threaded):
             for sec in tickers:
                 s = session.query(models.Security).filter(models.Security.ticker==sec).one_or_none()
                 if s is None:
-                    self.items_symbol = sec
+                    self.task_symbol = sec
                     exc.securities += [models.Security(sec)]
                     session.commit()
 
@@ -498,29 +495,29 @@ class Manager(Threaded):
                         self.retry += 1
                         logger.warning(f'{__name__}: HTTP Error. Retrying... {self.retry}, {str(e)}')
                         if self.retry > 10:
-                            self.items_error = 'HTTP Error'
+                            self.task_error = 'HTTP Error'
                             logger.error(f'{__name__}: HTTP Error. Too many retries. {str(e)}')
                         else:
                             time.sleep(5.0)
                     except RuntimeError as e:
-                        self.items_error = 'Runtime Error'
+                        self.task_error = 'Runtime Error'
                         logger.error(f'{__name__}: Runtime Error, {str(e)}')
                     else:
                         self.retry = 0
-                        self.items_success += 1
+                        self.task_success += 1
                         logger.info(f'{__name__}: Added {sec} to exchange {exchange}')
                 else:
                     logger.info(f'{__name__}: {sec} already exists')
 
-                self.items_completed += 1
+                self.task_completed += 1
 
-                if self.items_error != 'None':
+                if self.task_error != 'None':
                     logger.warning(f'{__name__}: Cancelling operation')
                     break
 
     def _add_company_to_security(self, ticker):
         added = False
-        with self.session() as session, session.begin():
+        with self.session.begin() as session:
             sec = session.query(models.Security).filter(models.Security.ticker==ticker).one()
             company = store.get_company(ticker, live=True)
             if company is None:
@@ -546,7 +543,7 @@ class Manager(Threaded):
 
     def _add_pricing_to_security(self, ticker):
         added = False
-        with self.session() as session, session.begin():
+        with self.session.begin() as session:
             sec = session.query(models.Security).filter(models.Security.ticker==ticker).one()
             history = store.get_history(ticker, -1, live=True)
             if history is None:
@@ -579,13 +576,13 @@ class Manager(Threaded):
         return added
 
     def _add_securities_to_index(self, tickers, index):
-        with self.session() as session, session.begin():
+        with self.session.begin() as session:
             ind = session.query(models.Index.id).filter(models.Index.abbreviation==index).one()
 
-            self.items_total = len(tickers)
+            self.task_total = len(tickers)
             for t in tickers:
-                self.items_symbol = t
-                self.items_success += 1
+                self.task_symbol = t
+                self.task_success += 1
 
                 s = session.query(models.Security).filter(models.Security.ticker==t).one()
                 if s.index1_id is None:
@@ -595,7 +592,7 @@ class Manager(Threaded):
                 elif s.index3_id is None:
                     s.index3_id = ind.id
 
-                self.items_completed += 1
+                self.task_completed += 1
 
                 logger.info(f'{__name__}: Added {t} to index {index}')
 

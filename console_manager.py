@@ -120,23 +120,23 @@ class Interface:
                 count = len(self.manager.identify_incomplete_securities_price(e))
                 print(f'{e:>16}:\t{count} missing price')
 
-            utils.print_message('Master Exchange Symbol List')
-            for exchange in d.EXCHANGES:
-                exc = list(store.get_exchange_symbols_master(exchange['abbreviation']))
-                count = len(exc)
-                print(f'{exchange["abbreviation"]:>16}:\t{count} symbols')
+            # utils.print_message('Master Exchange Symbol List')
+            # for exchange in d.EXCHANGES:
+            #     exc = list(store.get_exchange_symbols_master(exchange['abbreviation']))
+            #     count = len(exc)
+            #     print(f'{exchange["abbreviation"]:>16}:\t{count} symbols')
 
-            utils.print_message('Master Exchange Common Symbols')
-            nasdaq_nyse, nasdaq_amex, nyse_amex = self.manager.identify_common_securities()
-            count = len(nasdaq_nyse)
-            name = 'NASDAQ-NYSE'
-            print(f'{name:>16}:\t{count} symbols')
-            count = len(nasdaq_amex)
-            name = 'NASDAQ-AMEX'
-            print(f'{name:>16}:\t{count} symbols')
-            count = len(nyse_amex)
-            name = 'NYSE-AMEX'
-            print(f'{name:>16}:\t{count} symbols')
+            # utils.print_message('Master Exchange Common Symbols')
+            # nasdaq_nyse, nasdaq_amex, nyse_amex = self.manager.identify_common_securities()
+            # count = len(nasdaq_nyse)
+            # name = 'NASDAQ-NYSE'
+            # print(f'{name:>16}:\t{count} symbols')
+            # count = len(nasdaq_amex)
+            # name = 'NASDAQ-AMEX'
+            # print(f'{name:>16}:\t{count} symbols')
+            # count = len(nyse_amex)
+            # name = 'NYSE-AMEX'
+            # print(f'{name:>16}:\t{count} symbols')
 
     def show_symbol_information(self):
         symbol = utils.input_text('Enter symbol: ')
@@ -185,11 +185,11 @@ class Interface:
                 print()
                 self._show_progress('Progress', 'Completed')
 
-            if self.manager.items_error == 'Done':
-                utils.print_message(f'{self.manager.items_total} {exc} '\
-                    f'Symbols populated in {self.manager.items_time:.2f} seconds with {len(self.manager.invalid_symbols)} invalid symbols')
+            if self.manager.task_error == 'Done':
+                utils.print_message(f'{self.manager.task_total} {exc} '\
+                    f'Symbols populated in {self.manager.task_time:.2f} seconds with {len(self.manager.invalid_symbols)} invalid symbols')
 
-            for i, result in enumerate(self.manager.items_results):
+            for i, result in enumerate(self.manager.task_results):
                 utils.print_message(f'{i+1:>2}: {result}', creturn=False)
 
     def refresh_exchange(self, progressbar=True):
@@ -218,8 +218,8 @@ class Interface:
                     self._show_progress('Progress', 'Completed')
 
                 print()
-                utils.print_message(f'Completed {exc} {areaname[area-1]} refresh in {self.manager.items_time:.2f} seconds', creturn=2)
-                utils.print_message(f'Identified {self.manager.items_total} missing items. {self.manager.items_success} items filled', creturn=0)
+                utils.print_message(f'Completed {exc} {areaname[area-1]} refresh in {self.manager.task_time:.2f} seconds', creturn=2)
+                utils.print_message(f'Identified {self.manager.task_total} missing items. {self.manager.task_success} items filled', creturn=0)
 
     def update_pricing(self, progressbar=True):
         menu_items = {}
@@ -238,11 +238,11 @@ class Interface:
                 print()
                 self._show_progress('Progress', 'Completed')
 
-            if self.manager.items_error == 'Done':
-                utils.print_message(f'{self.manager.items_total} {exc} '\
-                    f'Ticker pricing refreshed in {self.manager.items_time:.2f} seconds')
+            if self.manager.task_error == 'Done':
+                utils.print_message(f'{self.manager.task_total} {exc} '\
+                    f'Ticker pricing refreshed in {self.manager.task_time:.2f} seconds')
 
-            for i, result in enumerate(self.manager.items_results):
+            for i, result in enumerate(self.manager.task_results):
                 utils.print_message(f'{i+1:>2}: {result}', creturn=False)
 
     def delete_exchange(self, progressbar=True):
@@ -264,8 +264,8 @@ class Interface:
 
             self.create_missing_tables()
 
-            if self.manager.items_error == 'Done':
-                utils.print_message(f'Deleted exchange {exc} in {self.manager.items_time:.2f} seconds')
+            if self.manager.task_error == 'Done':
+                utils.print_message(f'Deleted exchange {exc} in {self.manager.task_time:.2f} seconds')
 
     def populate_index(self, progressbar=True):
         menu_items = {}
@@ -282,10 +282,10 @@ class Interface:
                 print()
                 self._show_progress('Progress', 'Completed')
 
-            if self.manager.items_error == 'Done':
-                utils.print_message(f'{self.manager.items_total} {index} Symbols populated in {self.manager.items_time:.2f} seconds')
+            if self.manager.task_error == 'Done':
+                utils.print_message(f'{self.manager.task_total} {index} Symbols populated in {self.manager.task_time:.2f} seconds')
             else:
-                utils.print_error(self.manager.items_error)
+                utils.print_error(self.manager.task_error)
 
     def delete_index(self):
         menu_items = {}
@@ -316,26 +316,26 @@ class Interface:
         utils.print_message(f'Invalid: {self.manager.invalid_symbols}')
 
     def _show_progress(self, prefix, suffix):
-        while not self.manager.items_error: pass
+        while not self.manager.task_error: pass
 
-        if self.manager.items_error == 'None':
-            utils.progress_bar(self.manager.items_completed, self.manager.items_total, prefix=prefix, suffix=suffix, length=50, reset=True)
-            while self.task.is_alive and self.manager.items_error == 'None':
+        if self.manager.task_error == 'None':
+            utils.progress_bar(self.manager.task_completed, self.manager.task_total, prefix=prefix, suffix=suffix, length=50, reset=True)
+            while self.task.is_alive and self.manager.task_error == 'None':
                 time.sleep(0.20)
-                total = self.manager.items_total
-                completed = self.manager.items_completed
-                success = self.manager.items_success
-                symbol = self.manager.items_symbol
-                tasks = len([True for future in self.manager.items_futures if future.running()])
+                total = self.manager.task_total
+                completed = self.manager.task_completed
+                success = self.manager.task_success
+                symbol = self.manager.task_symbol
+                tasks = len([True for future in self.manager.task_futures if future.running()])
 
                 if total > 0:
                     utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, symbol=symbol, length=50, success=success, tasks=tasks)
                 else:
                     utils.progress_bar(completed, total, prefix=prefix, suffix='Calculating...', length=50)
             print()
-            [print(future.result()) for future in self.manager.items_futures]
+            [print(future.result()) for future in self.manager.task_futures if future is not None]
         else:
-            utils.print_message(f'{self.manager.items_error}')
+            utils.print_message(f'{self.manager.task_error}')
 
 
 if __name__ == '__main__':
