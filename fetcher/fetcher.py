@@ -77,7 +77,7 @@ def get_history(ticker, days=-1):
                 history.reset_index(inplace=True)
                 history.rename(columns={'Date':'date', 'Open':'open', 'High':'high', 'Low':'low', 'Close':'close', 'Volume':'volume'}, inplace=True)
 
-                logger.info(f'{__name__}: Fetched {days} history of {ticker} starting {start:%Y-%m-%d}')
+                logger.info(f'{__name__}: Fetched {days} days history of {ticker} starting {start:%Y-%m-%d}')
         except:
             history = None
 

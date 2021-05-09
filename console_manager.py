@@ -8,7 +8,7 @@ from data import store as store
 from data import manager as manager
 from utils import utils as utils
 
-logger = utils.get_logger(logging.ERROR)
+logger = utils.get_logger(logging.WARNING)
 
 
 class Interface:
@@ -332,8 +332,13 @@ class Interface:
                     utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, symbol=symbol, length=50, success=success, tasks=tasks)
                 else:
                     utils.progress_bar(completed, total, prefix=prefix, suffix='Calculating...', length=50)
-            print()
-            [print(future.result()) for future in self.manager.task_futures if future is not None]
+
+            utils.print_message('Processed Messages')
+            results = [future.result() for future in self.manager.task_futures if future.result() is not None]
+            if len(results) > 0:
+                [print(result) for result in results]
+            else:
+                print('None')
         else:
             utils.print_message(f'{self.manager.task_error}')
 
