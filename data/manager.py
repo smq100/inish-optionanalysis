@@ -14,7 +14,7 @@ from data import models as models
 from fetcher import fetcher as fetcher
 from utils import utils as utils
 
-logger = utils.get_logger()
+_logger = utils.get_logger()
 
 LOG_DIR = './log'
 
@@ -36,9 +36,9 @@ class Manager(Threaded):
         if d.ACTIVE_DB == d.OPTIONS_DB[1]:
             if os.path.exists(d.SQLITE_DATABASE_PATH):
                 os.remove(d.SQLITE_DATABASE_PATH)
-                logger.info(f'{__name__}: Deleted {d.SQLITE_DATABASE_PATH}')
+                _logger.info(f'{__name__}: Deleted {d.SQLITE_DATABASE_PATH}')
             else:
-                logger.warning(f'{__name__}: File does not exist: {d.SQLITE_DATABASE_PATH}')
+                _logger.warning(f'{__name__}: File does not exist: {d.SQLITE_DATABASE_PATH}')
         else:
             models.Base.metadata.drop_all(self.engine)
 
@@ -52,7 +52,7 @@ class Manager(Threaded):
                 if e is None:
                     exc = models.Exchange(abbreviation=exchange['abbreviation'], name=exchange['name'])
                     session.add(exc)
-                    logger.info(f'{__name__}: Added exchange {exchange["abbreviation"]}')
+                    _logger.info(f'{__name__}: Added exchange {exchange["abbreviation"]}')
 
     @Threaded.threaded
     def populate_exchange(self, exchange):
@@ -77,7 +77,7 @@ class Manager(Threaded):
             with futures.ThreadPoolExecutor() as executor:
                 self.task_futures = [executor.submit(self._add_securities_to_exchange, list, exchange) for list in lists]
         else:
-            logger.warning(f'{__name__}: No symbols for {exchange}')
+            _logger.warning(f'{__name__}: No symbols for {exchange}')
 
         self.task_error = 'Done'
 
@@ -92,7 +92,7 @@ class Manager(Threaded):
 
         if area == 'companies':
             self.task_error = 'None'
-            missing = self.identify_incomplete_securities_companies(exchange, live=True, log=True)
+            missing = self.identify_incomplete_securities_companies(exchange, live=True)
             self.task_total = len(missing)
 
             def _companies(tickers):
@@ -112,7 +112,7 @@ class Manager(Threaded):
             self.task_error = 'Done'
         elif area == 'pricing':
             self.task_error = 'None'
-            missing = self.identify_incomplete_securities_price(exchange, live=True, log=True)
+            missing = self.identify_incomplete_securities_price(exchange, live=True)
             self.task_total = len(missing)
 
             def _pricing(tickers):
@@ -150,7 +150,7 @@ class Manager(Threaded):
                 if i is None:
                     ind = models.Index(abbreviation=index['abbreviation'], name=index['name'])
                     session.add(ind)
-                    logger.info(f'{__name__}: Added index {index["abbreviation"]}')
+                    _logger.info(f'{__name__}: Added index {index["abbreviation"]}')
 
     @Threaded.threaded
     def update_pricing(self, exchange=''):
@@ -197,7 +197,7 @@ class Manager(Threaded):
             if index_index >= 0:
                 ind = models.Index(abbreviation=index, name=d.INDEXES[index_index]['name'])
                 session.add(ind)
-                logger.info(f'{__name__}: Recreated index {index}')
+                _logger.info(f'{__name__}: Recreated index {index}')
 
                 symbols = store.get_index_symbols_master(index)
                 for symbol in symbols:
@@ -207,20 +207,20 @@ class Manager(Threaded):
 
         if len(valid) > 0:
             self._add_securities_to_index(valid, index)
-            logger.info(f'{__name__}: Populated index {index}')
+            _logger.info(f'{__name__}: Populated index {index}')
             self.task_error = 'Done'
         elif not self.task_error:
             self.task_error = 'No symbols'
-            logger.warning(f'{__name__}: No symbols found for {index}')
+            _logger.warning(f'{__name__}: No symbols found for {index}')
 
     def delete_index(self, index):
         with self.session.begin() as session:
             ind = session.query(models.Index).filter(models.Index.abbreviation==index)
             if ind is not None:
                 ind.delete(synchronize_session=False)
-                logger.info(f'{__name__}: Deleted index {index}')
+                _logger.info(f'{__name__}: Deleted index {index}')
             else:
-                logger.error(f'{__name__}: Index {index} does not exist')
+                _logger.error(f'{__name__}: Index {index} does not exist')
 
     def get_database_info(self):
         info = []
@@ -235,7 +235,7 @@ class Manager(Threaded):
                     info += [{'table':table, 'count':count}]
         else:
             utils.print_error('No tables in database')
-            logger.warning('{__name__}: No tables in database')
+            _logger.warning('{__name__}: No tables in database')
 
         return info
 
@@ -273,10 +273,10 @@ class Manager(Threaded):
 
         return info
 
-    def identify_missing_securities(self, exchange, log=True):
+    def identify_missing_securities(self, exchange, log=False):
         missing = []
         tickers = store.get_exchange_symbols_master(exchange)
-        logger.info(f'{__name__}: {len(tickers)} total symbols in {exchange}')
+        _logger.info(f'{__name__}: {len(tickers)} total symbols in {exchange}')
         with self.session() as session:
             exc = session.query(models.Exchange.id, models.Exchange.abbreviation).filter(models.Exchange.abbreviation==exchange).one()
             for sec in tickers:
@@ -292,10 +292,10 @@ class Manager(Threaded):
             elif os.path.exists(filename):
                 os.remove(filename)
 
-        logger.info(f'{__name__}: {len(missing)} missing symbols in {exchange}')
+        _logger.info(f'{__name__}: {len(missing)} missing symbols in {exchange}')
         return missing
 
-    def identify_inactive_securities(self, exchange, log=True):
+    def identify_inactive_securities(self, exchange, log=False):
         missing = []
         tickers = store.get_symbols(exchange)
         if len(tickers) > 0:
@@ -315,10 +315,10 @@ class Manager(Threaded):
             elif os.path.exists(filename):
                 os.remove(filename)
 
-        logger.info(f'{__name__}: {len(missing)} inactive symbols in {exchange}')
+        _logger.info(f'{__name__}: {len(missing)} inactive symbols in {exchange}')
         return missing
 
-    def identify_incomplete_securities_companies(self, exchange, live=False, log=True):
+    def identify_incomplete_securities_companies(self, exchange, live=False, log=False):
         missing = []
         if live:
             with self.session.begin() as session:
@@ -332,7 +332,7 @@ class Manager(Threaded):
                         if mc is None:
                             mc = models.MissingCompany(security_id=t.id)
                             session.add(mc)
-                        logger.info(f'{__name__}: {t.ticker} added missing company entry')
+                        _logger.info(f'{__name__}: {t.ticker} added missing company entry')
 
             if log:
                 filename = f'{LOG_DIR}/incomplete_companies_{exchange.upper()}.log'
@@ -351,10 +351,10 @@ class Manager(Threaded):
                     if sec is not None:
                         missing += [sec.ticker]
 
-        logger.info(f'{__name__}: {len(missing)} with incomplete company info')
+        _logger.info(f'{__name__}: {len(missing)} with incomplete company info')
         return missing
 
-    def identify_incomplete_securities_price(self, exchange, live=False, log=True):
+    def identify_incomplete_securities_price(self, exchange, live=False, log=False):
         missing = []
         if live:
             with self.session.begin() as session:
@@ -368,7 +368,7 @@ class Manager(Threaded):
                         if mc is None:
                             mc = models.MissingPrice(security_id=t.id)
                             session.add(mc)
-                        logger.info(f'{__name__}: {t.ticker} added missing price entry')
+                        _logger.info(f'{__name__}: {t.ticker} added missing price entry')
 
             if log:
                 filename = f'{LOG_DIR}/incomplete_price_{exchange.upper()}.log'
@@ -387,7 +387,7 @@ class Manager(Threaded):
                     if sec is not None:
                         missing += [sec.ticker]
 
-        logger.info(f'{__name__}: {len(missing)} incomplete symbol price info')
+        _logger.info(f'{__name__}: {len(missing)} incomplete symbol price info')
         return missing
 
     def identify_common_securities(self):
@@ -423,24 +423,24 @@ class Manager(Threaded):
 
         history = store.get_history(ticker, 0)
         if history.empty:
-            logger.warning(f'{__name__}: No price history')
+            _logger.warning(f'{__name__}: No price history')
         else:
             date_db = history['date']
             if date_db is not None:
-                logger.info(f'{__name__}: Last {ticker} price in database: {date_db:%Y-%m-%d}')
+                _logger.info(f'{__name__}: Last {ticker} price in database: {date_db:%Y-%m-%d}')
             else:
                 date_db = today - date(2000,1,1)
-                logger.info(f'{__name__}: No date history for {ticker} in database')
+                _logger.info(f'{__name__}: No date history for {ticker} in database')
 
             if (today - date_db).days > 1:
                 history = store.get_history(ticker, 365, live=True)
                 if history is None:
-                    logger.info(f'{__name__}: No pricing information for {ticker}')
+                    _logger.info(f'{__name__}: No pricing information for {ticker}')
                 elif history.empty:
-                    logger.info(f'{__name__}: No pricing information for {ticker}')
+                    _logger.info(f'{__name__}: No pricing information for {ticker}')
                 else:
                     date_cloud = history.iloc[-1]['date'].to_pydatetime().date()
-                    logger.info(f'{__name__}: Last {ticker} price in cloud: {date_cloud:%Y-%m-%d}')
+                    _logger.info(f'{__name__}: Last {ticker} price in cloud: {date_cloud:%Y-%m-%d}')
 
                     delta = (date_cloud - date_db).days
                     if delta > 1:
@@ -460,7 +460,7 @@ class Manager(Threaded):
 
                                 sec.pricing += [p]
 
-                        logger.info(f'{__name__}: Updated {days} days pricing for {ticker.upper()} to {date_cloud:%Y-%m-%d}')
+                        _logger.info(f'{__name__}: Updated {days} days pricing for {ticker.upper()} to {date_cloud:%Y-%m-%d}')
         return days
 
     def _add_securities_to_exchange(self, tickers, exchange):
@@ -473,36 +473,36 @@ class Manager(Threaded):
                     self.task_symbol = ticker
                     exc.securities += [models.Security(ticker)]
                     session.commit()
-                    logger.info(f'{__name__}: Added {ticker} to exchange {exchange}')
+                    _logger.info(f'{__name__}: Added {ticker} to exchange {exchange}')
 
                     try:
                         self._add_company_to_security(ticker)
                         self._add_pricing_to_security(ticker, False)
                     except (ValueError, KeyError, IndexError) as e:
                         self.invalid_symbols += [ticker]
-                        logger.warning(f'{__name__}: Company info invalid: {ticker}, {str(e)}')
+                        _logger.warning(f'{__name__}: Company info invalid: {ticker}, {str(e)}')
                     except HTTPError as e:
                         self.invalid_symbols += [ticker]
                         self.retry += 1
-                        logger.warning(f'{__name__}: HTTP Error. Retrying... {self.retry}, {str(e)}')
+                        _logger.warning(f'{__name__}: HTTP Error. Retrying... {self.retry}, {str(e)}')
                         if self.retry > 10:
                             self.task_error = 'HTTP Error'
-                            logger.error(f'{__name__}: HTTP Error. Too many retries. {str(e)}')
+                            _logger.error(f'{__name__}: HTTP Error. Too many retries. {str(e)}')
                         else:
                             time.sleep(5.0)
                     except RuntimeError as e:
                         self.task_error = 'Runtime Error'
-                        logger.error(f'{__name__}: Runtime Error, {str(e)}')
+                        _logger.error(f'{__name__}: Runtime Error, {str(e)}')
                     else:
                         self.retry = 0
                         self.task_success += 1
                 else:
-                    logger.info(f'{__name__}: {ticker} already exists')
+                    _logger.info(f'{__name__}: {ticker} already exists')
 
                 self.task_completed += 1
 
                 if self.task_error != 'None':
-                    logger.warning(f'{__name__}: Cancelling operation')
+                    _logger.warning(f'{__name__}: Cancelling operation')
                     break
 
     def _add_company_to_security(self, ticker):
@@ -511,9 +511,9 @@ class Manager(Threaded):
             sec = session.query(models.Security).filter(models.Security.ticker==ticker).one()
             company = store.get_company(ticker, live=True)
             if company is None:
-                logger.info(f'{__name__}: No company for {ticker}')
+                _logger.info(f'{__name__}: No company for {ticker}')
             elif len(company) == 0:
-                logger.info(f'{__name__}: No company information for {ticker}')
+                _logger.info(f'{__name__}: No company information for {ticker}')
             else:
                 c = models.Company()
                 c.name = company['name'] if company['name'] else '<error>'
@@ -524,7 +524,7 @@ class Manager(Threaded):
 
                 sec.company = [c]
                 added = True
-                logger.info(f'{__name__}: Added company information for {ticker}')
+                _logger.info(f'{__name__}: Added company information for {ticker}')
 
                 # Remove from 'missing' table if there
                 session.query(models.MissingCompany).filter(models.MissingCompany.security_id==sec.id).delete()
@@ -538,10 +538,10 @@ class Manager(Threaded):
             history = store.get_history(ticker, -1, live=True)
             if history is None:
                 sec.active = False
-                logger.info(f'{__name__}: No pricing information for {ticker}')
+                _logger.info(f'{__name__}: No pricing information for {ticker}')
             elif history.empty:
                 sec.active = False
-                logger.info(f'{__name__}: No pricing information for {ticker}')
+                _logger.info(f'{__name__}: No pricing information for {ticker}')
             else:
                 history.reset_index(inplace=True)
                 for _, price in history.iterrows():
@@ -563,7 +563,7 @@ class Manager(Threaded):
                     else:
                         sec.active = False
 
-                logger.info(f'{__name__}: Added pricing information for {ticker}')
+                _logger.info(f'{__name__}: Added pricing information for {ticker}')
 
         return added
 
@@ -586,13 +586,13 @@ class Manager(Threaded):
 
                 self.task_completed += 1
 
-                logger.info(f'{__name__}: Added {t} to index {index}')
+                _logger.info(f'{__name__}: Added {t} to index {index}')
 
 
 if __name__ == '__main__':
     # import sys
     from logging import DEBUG
-    logger = utils.get_logger(DEBUG)
+    _logger = utils.get_logger(DEBUG)
 
     manager = Manager()
     manager.populate_exchange('AMEX')

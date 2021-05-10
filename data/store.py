@@ -11,7 +11,11 @@ import data as d
 from data import models as models
 from fetcher import fetcher as fetcher
 
-logger = utils.get_logger()
+_logger = utils.get_logger()
+
+_engine = create_engine(d.ACTIVE_URI, echo=False)
+_session = sessionmaker(bind=_engine)
+
 _master_exchanges = {
     d.EXCHANGES[0]['abbreviation']: set(),
     d.EXCHANGES[1]['abbreviation']: set(),
@@ -24,11 +28,9 @@ _master_indexes = {
     d.INDEXES[2]['abbreviation']: set()
     }
 
-def is_symbol_valid(symbol):
-    engine = create_engine(d.ACTIVE_URI, echo=False)
-    session = sessionmaker(bind=engine)
 
-    with session() as session:
+def is_symbol_valid(symbol):
+    with _session() as session:
         e = session.query(models.Security).filter(models.Security.ticker==symbol.upper()).one_or_none()
 
     return (e is not None)
@@ -51,10 +53,8 @@ def is_index(index):
 
 def get_symbols(exchange=''):
     tickers = []
-    engine = create_engine(d.ACTIVE_URI, echo=False)
-    session = sessionmaker(bind=engine)
 
-    with session() as session:
+    with _session() as session:
         if exchange:
             exc = session.query(models.Exchange.id, models.Exchange.abbreviation).filter(models.Exchange.abbreviation==exchange).one()
             sym = session.query(models.Security.ticker).filter(and_(models.Security.exchange_id==exc.id, models.Security.active)).order_by(models.Security.ticker)
@@ -66,10 +66,8 @@ def get_symbols(exchange=''):
 
 def get_exchanges():
     results = []
-    engine = create_engine(d.ACTIVE_URI, echo=False)
-    session = sessionmaker(bind=engine)
 
-    with session() as session:
+    with _session() as session:
         exchange = session.query(models.Exchange.abbreviation).all()
         for exc in exchange:
             results += [exc.abbreviation]
@@ -78,10 +76,8 @@ def get_exchanges():
 
 def get_indexes():
     results = []
-    engine = create_engine(d.ACTIVE_URI, echo=False)
-    session = sessionmaker(bind=engine)
 
-    with session() as session:
+    with _session() as session:
         index = session.query(models.Index.abbreviation).all()
         for ind in index:
             results += [ind.abbreviation]
@@ -90,10 +86,8 @@ def get_indexes():
 
 def get_exchange_symbols(exchange):
     results = []
-    engine = create_engine(d.ACTIVE_URI, echo=False)
-    session = sessionmaker(bind=engine)
 
-    with session() as session:
+    with _session() as session:
         exc = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange.upper()).first()
         if exc is not None:
             symbols = session.query(models.Security).filter(and_(models.Security.exchange_id==exc.id, models.Security.active)).all()
@@ -106,10 +100,8 @@ def get_exchange_symbols(exchange):
 
 def get_index_symbols(index):
     results = []
-    engine = create_engine(d.ACTIVE_URI, echo=False)
-    session = sessionmaker(bind=engine)
 
-    with session() as session:
+    with _session() as session:
         ind = session.query(models.Index.id).filter(models.Index.abbreviation==index.upper()).first()
         if ind is not None:
             symbols = session.query(models.Security).filter(and_(models.Security.active,
@@ -134,40 +126,35 @@ def get_history(ticker, days, live=False):
     if live:
         results = fetcher.get_history(ticker, days)
     else:
-        engine = create_engine(d.ACTIVE_URI, echo=False)
-        session = sessionmaker(bind=engine)
-
-        with session() as session:
+        with _session() as session:
             symbols = session.query(models.Security.id).filter(and_(models.Security.ticker==ticker.upper(), models.Security.active)).one_or_none()
             if symbols is not None:
                 if days < 0:
                     p = session.query(models.Price).filter(models.Price.security_id==symbols.id).order_by(models.Price.date)
-                    results = pd.read_sql(p.statement, engine)
-                    logger.info(f'{__name__}: Fetched max price history for {ticker}')
+                    results = pd.read_sql(p.statement, _engine)
+                    _logger.info(f'{__name__}: Fetched max price history for {ticker}')
                 elif days > 1:
                     start = dt.datetime.today() - dt.timedelta(days=days)
                     p = session.query(models.Price).filter(and_(models.Price.security_id==symbols.id, models.Price.date >= start)).order_by(models.Price.date)
-                    results = pd.read_sql(p.statement, engine)
-                    logger.info(f'{__name__}: Fetched {days} days of price history for {ticker}')
+                    results = pd.read_sql(p.statement, _engine)
+                    _logger.info(f'{__name__}: Fetched {days} days of price history for {ticker}')
                 else:
                     days = 50
                     start = dt.datetime.today() - dt.timedelta(days=days)
                     p = session.query(models.Price).filter(and_(models.Price.security_id==symbols.id, models.Price.date >= start)).order_by(models.Price.date)
-                    results = pd.read_sql(p.statement, engine)
+                    results = pd.read_sql(p.statement, _engine)
                     if not results.empty:
                         results = results.iloc[-1]
-                        logger.info(f'{__name__}: Fetched {days} days of price history for {ticker}')
+                        _logger.info(f'{__name__}: Fetched {days} days of price history for {ticker}')
                     else:
-                        logger.warning(f'{__name__}: No price history for {ticker}')
+                        _logger.warning(f'{__name__}: No price history for {ticker}')
             else:
-                logger.warning(f'{__name__}: No history found for {ticker}')
+                _logger.warning(f'{__name__}: No history found for {ticker}')
 
     return results
 
 def get_company(ticker, live=False):
     results = {}
-    engine = create_engine(d.ACTIVE_URI, echo=False)
-    session = sessionmaker(bind=engine)
 
     if live:
         company = fetcher.get_company_ex(ticker)
@@ -191,7 +178,7 @@ def get_company(ticker, live=False):
         results['indexes'] = ''
         results['precords'] = 0
 
-        with session() as session:
+        with _session() as session:
             symbol = session.query(models.Security).filter(models.Security.ticker==ticker.upper()).one_or_none()
             if symbol is not None:
                 company = session.query(models.Company).filter(models.Company.security_id==symbol.id).one_or_none()
@@ -210,6 +197,10 @@ def get_company(ticker, live=False):
                     if symbol.index2_id is not None:
                         index = session.query(models.Index).filter(models.Index.id==symbol.index2_id).one().abbreviation
                         results['indexes'] += f', {index}'
+
+                        if symbol.index3_id is not None:
+                            index = session.query(models.Index).filter(models.Index.id==symbol.index3_id).one().abbreviation
+                            results['indexes'] += f', {index}'
 
                 p = session.query(models.Price).filter(models.Price.security_id==symbol.id).count()
                 results['precords'] = p
@@ -237,7 +228,7 @@ def get_exchange_symbols_master(exchange, type='google'):
                 symbols = table.get_column(1)
                 _master_exchanges[exchange] = set(symbols)
             else:
-                logger.warning(f'{__name__}: Unable to open index spreadsheet {exchange}')
+                _logger.warning(f'{__name__}: Unable to open index spreadsheet {exchange}')
     else:
         raise ValueError(f'Invalid exchange name: {exchange}')
 
@@ -263,7 +254,7 @@ def get_index_symbols_master(index, type='google'):
                 symbols = table.get_column(1)
                 _master_indexes[index] = set(symbols)
             else:
-                logger.warning(f'{__name__}: Unable to open exchange spreadsheet {index}')
+                _logger.warning(f'{__name__}: Unable to open exchange spreadsheet {index}')
     else:
         raise ValueError(f'Invalid index name: {index}')
 

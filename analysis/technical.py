@@ -8,8 +8,6 @@ from ta import trend, momentum, volatility, volume
 from data import store as o
 from utils import utils as utils
 
-logger = utils.get_logger()
-
 
 class Technical:
     def __init__(self, ticker, history, days, live=False):

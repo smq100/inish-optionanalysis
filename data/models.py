@@ -5,7 +5,6 @@ from sqlalchemy.orm import relationship
 
 from utils import utils as utils
 
-logger = utils.get_logger()
 Base = declarative_base()
 
 class Exchange(Base):

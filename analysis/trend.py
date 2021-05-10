@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 from data import store as store
 from utils import utils as utils
 
-logger = utils.get_logger()
+_logger = utils.get_logger()
 
 
 class Line:
@@ -87,7 +87,7 @@ class SupportResistance:
             self.extmethod = trendln.METHOD_NUMDIFF # METHOD_NAIVE, METHOD_NAIVECONSEC, METHOD_NUMDIFF*
             self.method = trendln.METHOD_NSQUREDLOGN # METHOD_NCUBED, METHOD_NSQUREDLOGN*, METHOD_HOUGHPOINTS, METHOD_HOUGHLINES, METHOD_PROBHOUGH
         else:
-            logger.error('{__name__}: Error initializing {__class__}')
+            _logger.error('{__name__}: Error initializing {__class__}')
 
     def __str__(self):
         return f'Support and resistance analysis for {self.ticker} (${self.price:.2f})'
@@ -103,7 +103,7 @@ class SupportResistance:
         self.points = len(self.history)
         self.price = store.get_current_price(self.ticker)
 
-        logger.info(f'{__name__}: {self.points} pivot points identified from {self.history.iloc[0].name} to {self.history.iloc[-1].name}')
+        _logger.info(f'{__name__}: {self.points} pivot points identified from {self.history.iloc[0].name} to {self.history.iloc[-1].name}')
 
         # Calculate support and resistance lines
         maxs = trendln.calc_support_resistance((None, self.history.High), extmethod=self.extmethod, method=self.method, accuracy=8) #resistance
@@ -227,15 +227,15 @@ class SupportResistance:
             else:
                 countr += 1
 
-        logger.info(f'{__name__}: {countr} resistance lines identified')
+        _logger.info(f'{__name__}: {countr} resistance lines identified')
         for line in self.get_resistance():
             line = f'{__name__}: Res:{line}'
-            logger.debug(line)
+            _logger.debug(line)
 
-        logger.info(f'{__name__}: {counts} support lines identified')
+        _logger.info(f'{__name__}: {counts} support lines identified')
         for line in self.get_support():
             line = f'{__name__}: Sup:{line}'
-            logger.debug(line)
+            _logger.debug(line)
 
     def get_resistance(self):
         res = []
@@ -448,7 +448,7 @@ class SupportResistance:
 
         if filename:
             fig.savefig(filename, dpi=150)
-            logger.info(f'{__name__}: Saved plot as {filename}')
+            _logger.info(f'{__name__}: Saved plot as {filename}')
 
         if show:
             plt.show()

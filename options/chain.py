@@ -2,12 +2,12 @@ from data import store as store
 from fetcher import fetcher as fetcher
 from utils import utils as utils
 
-logger = utils.get_logger()
+_logger = utils.get_logger()
 
 class Chain:
     def __init__(self, ticker):
         if not store.is_symbol_valid(ticker):
-            logger.error(f'Error initializing {__class__}')
+            _logger.error(f'Error initializing {__class__}')
         else:
             self.ticker = ticker
             self.company = None

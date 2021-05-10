@@ -3,7 +3,7 @@ import datetime as dt
 from strategy.strategy import Strategy, STRATEGIES
 from utils import utils as utils
 
-logger = utils.get_logger()
+_logger = utils.get_logger()
 
 class Call(Strategy):
     def __init__(self, ticker, product, direction):

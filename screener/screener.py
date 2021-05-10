@@ -11,7 +11,7 @@ from data import store as o
 from .interpreter import Interpreter
 
 
-logger = utils.get_logger()
+_logger = utils.get_logger()
 
 class Screener(Threaded):
     def __init__(self, table, script='', days=365, live=False):
@@ -79,14 +79,14 @@ class Screener(Threaded):
                 try:
                     self.symbols += [Company(s, self.days, live=self.live)]
                 except ValueError as e:
-                    logger.warning(f'{__name__}: Invalid ticker {s}')
+                    _logger.warning(f'{__name__}: Invalid ticker {s}')
 
                 self.items_completed += 1
 
             self.items_total = len(self.symbols)
-            logger.debug(f'{__name__}: Opened {self.items_total} symbols from {self.table} table')
+            _logger.debug(f'{__name__}: Opened {self.items_total} symbols from {self.table} table')
         else:
-            logger.debug(f'{__name__}: No symbols available')
+            _logger.debug(f'{__name__}: No symbols available')
             self.items_error = 'No symbols'
 
         return self.items_total > 0
@@ -99,9 +99,9 @@ class Screener(Threaded):
                     self.script = json.load(f)
             except:
                 self.script = None
-                logger.error(f'{__name__}: File format error')
+                _logger.error(f'{__name__}: File format error')
         else:
-            logger.warning(f'{__name__}: File "{script}" not found')
+            _logger.warning(f'{__name__}: File "{script}" not found')
 
         return self.script is not None
 
@@ -114,12 +114,12 @@ class Screener(Threaded):
             self.items_completed = self.items_total
             self.results = []
             self.items_error = 'No symbols'
-            logger.warning(f'{__name__}: {self.items_error}')
+            _logger.warning(f'{__name__}: {self.items_error}')
         elif len(self.script) == 0:
             self.items_completed = self.items_total
             self.results = []
             self.items_error = 'Illegal script'
-            logger.warning(f'{__name__}: {self.items_error}')
+            _logger.warning(f'{__name__}: {self.items_error}')
         else:
             self.items_error = 'None'
 

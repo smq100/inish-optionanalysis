@@ -7,7 +7,7 @@ from utils import utils as utils
 PRODUCTS = ('call', 'put')
 DIRECTIONS = ('long', 'short')
 
-logger = utils.get_logger()
+_logger = utils.get_logger()
 
 
 class Option:
@@ -104,7 +104,7 @@ class Option:
             if self.last_price > 0.0:
                 diff = self.calc_price / self.last_price
                 if diff > 1.25 or diff < 0.75:
-                    logger.debug(f'{__name__}: The calculated price is significantly different than the last traded price')
+                    _logger.debug(f'{__name__}: The calculated price is significantly different than the last traded price')
 
         else:
             ret = False

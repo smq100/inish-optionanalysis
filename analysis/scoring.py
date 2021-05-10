@@ -1,7 +1,7 @@
 from data import store as o
 from utils import utils as utils
 
-logger = utils.get_logger()
+_logger = utils.get_logger()
 
 
 class ScoringAnalysis:
@@ -14,7 +14,7 @@ class ScoringAnalysis:
             self.macd = None
             self.bb = None
         else:
-            logger.error(f'Error initializing {__class__}')
+            _logger.error(f'Error initializing {__class__}')
 
     def __str__(self):
         return f'Scoring Analysis for {self.ticker}'

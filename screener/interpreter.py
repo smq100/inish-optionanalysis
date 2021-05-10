@@ -3,7 +3,7 @@ import pandas as pd
 from utils import utils as utils
 
 
-logger = utils.get_logger()
+_logger = utils.get_logger()
 
 VALID_TECHNICALS = ('high', 'low', 'close', 'volume', 'sma', 'value')
 VALID_CONDITIONALS = ('lt', 'eq', 'gt')
@@ -138,13 +138,13 @@ class Interpreter:
                         if base > value:
                             result = True
 
-            logger.info(
+            _logger.info(
                 f'{self.note}: {str(self.symbol)}:{str(result)} ' +
                 f'{self.base_technical}{self.base_length}/{base:.2f}*{self.base_factor:.2f} ' +
                 f'{self.criteria_conditional} ' +
                 f'{self.criteria_technical}{self.criteria_length}/{self.criteria_start}/{self.criteria_series}/{value:.2f}*{self.criteria_factor:.2f}')
         else:
-            logger.warning(f'{__name__}: No price information for {self.symbol}')
+            _logger.warning(f'{__name__}: No price information for {self.symbol}')
 
         return result
 

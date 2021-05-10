@@ -18,7 +18,7 @@ from utils import utils as utils
 IV_CUTOFF = 0.020
 STRATEGIES = ['call', 'put', 'vertical']
 
-logger = utils.get_logger()
+_logger = utils.get_logger()
 
 
 class Strategy(ABC):
@@ -173,15 +173,15 @@ class Leg:
             else:
                 raise ValueError('Unknown pricing model')
 
-            logger.debug(f'{__name__}: Calculating price using {self.pricing_method}')
+            _logger.debug(f'{__name__}: Calculating price using {self.pricing_method}')
 
             # Calculate prices
             if self.option.implied_volatility < IV_CUTOFF:
                 self.pricer.calculate_price()
-                logger.debug(f'{__name__}: Using calculated volatility')
+                _logger.debug(f'{__name__}: Using calculated volatility')
             else:
                 self.pricer.calculate_price(volatility=self.option.implied_volatility)
-                logger.debug(f'{__name__}: Using implied volatility = {self.option.implied_volatility:.4f}')
+                _logger.debug(f'{__name__}: Using implied volatility = {self.option.implied_volatility:.4f}')
 
             if self.product == 'call':
                 self.option.calc_price = price = self.pricer.price_call
@@ -197,14 +197,14 @@ class Leg:
             if table:
                 self.table = self.generate_value_table()
 
-            logger.info(f'{__name__}: Strike {self.option.strike:.2f}')
-            logger.info(f'{__name__}: Expiry {self.option.expiry}')
-            logger.info(f'{__name__}: Price {price:.4f}')
-            logger.info(f'{__name__}: Spot {self.option.spot:.2f}')
-            logger.info(f'{__name__}: Rate {self.option.rate:.4f}')
-            logger.info(f'{__name__}: Cvol {self.option.calc_volatility:.4f}')
-            logger.info(f'{__name__}: Ivol {self.option.implied_volatility:.4f}')
-            logger.info(f'{__name__}: TTM {self.option.time_to_maturity:.4f}')
+            _logger.info(f'{__name__}: Strike {self.option.strike:.2f}')
+            _logger.info(f'{__name__}: Expiry {self.option.expiry}')
+            _logger.info(f'{__name__}: Price {price:.4f}')
+            _logger.info(f'{__name__}: Spot {self.option.spot:.2f}')
+            _logger.info(f'{__name__}: Rate {self.option.rate:.4f}')
+            _logger.info(f'{__name__}: Cvol {self.option.calc_volatility:.4f}')
+            _logger.info(f'{__name__}: Ivol {self.option.implied_volatility:.4f}')
+            _logger.info(f'{__name__}: TTM {self.option.time_to_maturity:.4f}')
 
             # Calculate Greeks
             if greeks:
@@ -226,13 +226,13 @@ class Leg:
                     self.option.vega = self.pricer.vega_put
                     self.option.rho = self.pricer.rho_put
 
-                logger.info(f'{__name__}: Delta {self.option.delta:.4f}')
-                logger.info(f'{__name__}: Gamma {self.option.gamma:.4f}')
-                logger.info(f'{__name__}: Theta {self.option.theta:.4f}')
-                logger.info(f'{__name__}: Vega {self.option.vega:.4f}')
-                logger.info(f'{__name__}: Rho {self.option.rho:.4f}')
+                _logger.info(f'{__name__}: Delta {self.option.delta:.4f}')
+                _logger.info(f'{__name__}: Gamma {self.option.gamma:.4f}')
+                _logger.info(f'{__name__}: Theta {self.option.theta:.4f}')
+                _logger.info(f'{__name__}: Vega {self.option.vega:.4f}')
+                _logger.info(f'{__name__}: Rho {self.option.rho:.4f}')
         else:
-            logger.error(f'{__name__}: Validation error')
+            _logger.error(f'{__name__}: Validation error')
 
         return price
 

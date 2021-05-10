@@ -11,7 +11,7 @@ import pandas as pd
 
 from utils import utils as utils
 
-logger = utils.get_logger()
+_logger = utils.get_logger()
 
 
 # Quandl credentials
@@ -77,7 +77,7 @@ def get_history(ticker, days=-1):
                 history.reset_index(inplace=True)
                 history.rename(columns={'Date':'date', 'Open':'open', 'High':'high', 'Low':'low', 'Close':'close', 'Volume':'volume'}, inplace=True)
 
-                logger.info(f'{__name__}: Fetched {days} days history of {ticker} starting {start:%Y-%m-%d}')
+                _logger.info(f'{__name__}: Fetched {days} days history of {ticker} starting {start:%Y-%m-%d}')
         except:
             history = None
 
@@ -88,7 +88,7 @@ def get_treasury_rate(ticker='DTB3'):
     df = pd.DataFrame()
     df = qd.get(f'FRED/{ticker}')
     if df.empty:
-        logger.error(f'{__name__}: Unable to get Treasury Rates from Quandl. Please check connection')
+        _logger.error(f'{__name__}: Unable to get Treasury Rates from Quandl. Please check connection')
         raise IOError('Unable to get Treasury Rate from Quandl')
 
     return df['Value'][0] / 100.0
@@ -96,7 +96,7 @@ def get_treasury_rate(ticker='DTB3'):
 
 if __name__ == '__main__':
     from logging import DEBUG
-    logger = utils.get_logger(DEBUG)
+    _logger = utils.get_logger(DEBUG)
 
     # c = get_company('AAPL', force=True)
     c = get_history('AAPL', days=0)

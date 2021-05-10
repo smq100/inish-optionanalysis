@@ -1,7 +1,6 @@
 import pandas as pd
 from utils import utils as utils
 
-logger = utils.get_logger()
 
 class StrategyAnalysis:
     def __init__(self):

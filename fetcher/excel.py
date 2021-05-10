@@ -8,7 +8,7 @@ from openpyxl import load_workbook
 from .sheet import Sheet
 from utils import utils as utils
 
-logger = utils.get_logger()
+_logger = utils.get_logger()
 
 COLUMNS = ['','A','B','C','D','E','F']
 
@@ -26,9 +26,9 @@ class Excel(Sheet):
                 wb = load_workbook(filename=self.sheet_name, data_only=True)
                 self.sheet = wb[self.tab_name]
             except Exception as e:
-                logger.debug(f'{__name__}: Unable to open file {self.sheet_name}/{self.tab_name}')
+                _logger.debug(f'{__name__}: Unable to open file {self.sheet_name}/{self.tab_name}')
             else:
-                logger.info(f'{__name__}: Opened file {self.sheet_name}/{self.tab_name}')
+                _logger.info(f'{__name__}: Opened file {self.sheet_name}/{self.tab_name}')
                 self.opened = True
 
         return self.opened

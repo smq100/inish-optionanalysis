@@ -18,7 +18,7 @@ from utils import utils as utils
 
 METHODS = ('black-scholes', 'monte-carlo')
 
-logger = utils.get_logger()
+_logger = utils.get_logger()
 
 
 class Pricing(ABC):
@@ -109,8 +109,8 @@ class Pricing(ABC):
         lhs = call_price - put_price
         rhs = self.spot_price - np.exp(-1 * self.risk_free_rate * self.time_to_maturity) * self.strike_price
 
-        logger.info(f'{__name__}: Put-Call Parity LHS = %f', lhs)
-        logger.info(f'{__name__}: Put-Call Parity RHS = %f', rhs)
+        _logger.info(f'{__name__}: Put-Call Parity LHS = %f', lhs)
+        _logger.info(f'{__name__}: Put-Call Parity RHS = %f', rhs)
 
         return bool(round(lhs) == round(rhs))
 
@@ -125,7 +125,7 @@ class Pricing(ABC):
             self._underlying_asset_data = pd.DataFrame(history)
 
             if self._underlying_asset_data.empty:
-                logger.error(f'{__name__}: Unable to get historical stock data')
+                _logger.error(f'{__name__}: Unable to get historical stock data')
                 raise IOError(f'Unable to get historical stock data for {self.ticker}!')
 
     def _calc_risk_free_rate(self):
@@ -135,7 +135,7 @@ class Pricing(ABC):
         :return: <void>
         '''
         self.risk_free_rate = fetcher.get_treasury_rate()
-        logger.info(f'{__name__}: Risk-free rate = {self.risk_free_rate:.4f}')
+        _logger.info(f'{__name__}: Risk-free rate = {self.risk_free_rate:.4f}')
 
     def _calc_time_to_maturity(self):
         '''
@@ -145,11 +145,11 @@ class Pricing(ABC):
         :return: <void>
         '''
         if self.expiry < dt.datetime.today():
-            logger.error(f'{__name__}: Expiry/Maturity Date is in the past. Please check')
+            _logger.error(f'{__name__}: Expiry/Maturity Date is in the past. Please check')
             raise ValueError('Expiry/Maturity Date is in the past. Please check')
 
         self.time_to_maturity = (self.expiry - dt.datetime.today()).days / 365.0
-        logger.info(f'{__name__}: Time to maturity = {self.time_to_maturity:.5f}')
+        _logger.info(f'{__name__}: Time to maturity = {self.time_to_maturity:.5f}')
 
     def _calc_volatility(self):
         '''
@@ -165,7 +165,7 @@ class Pricing(ABC):
         std = d_std * 252 ** 0.5
 
         self.volatility = std
-        logger.info(f'{__name__}: Calculated volatility = {self.volatility:.4f}')
+        _logger.info(f'{__name__}: Calculated volatility = {self.volatility:.4f}')
 
     def _calc_spot_price(self):
         '''
@@ -174,4 +174,4 @@ class Pricing(ABC):
         '''
         self._calc_underlying_asset_data()
         self.spot_price = self._underlying_asset_data['close'][-1]
-        logger.info(f'{__name__}: Spot price = {self.spot_price:.2f}')
+        _logger.info(f'{__name__}: Spot price = {self.spot_price:.2f}')

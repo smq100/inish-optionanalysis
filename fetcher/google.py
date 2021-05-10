@@ -9,7 +9,7 @@ from .sheet import Sheet
 from utils import utils as utils
 
 
-logger = utils.get_logger()
+_logger = utils.get_logger()
 
 CREDENTIALS = 'fetcher/google.json'
 
@@ -36,11 +36,11 @@ class Google(Sheet):
                 sheet = client.open(self.sheet_name)
                 self.sheet = sheet.worksheet(self.tab_name)
             except gspread.exceptions.SpreadsheetNotFound:
-                logger.debug(f'{__name__}: Unable to open file {self.sheet_name}/{self.tab_name}')
+                _logger.debug(f'{__name__}: Unable to open file {self.sheet_name}/{self.tab_name}')
             except Exception as e:
-                logger.error(f'{__name__}: Error opening file {self.sheet_name}/{self.tab_name}')
+                _logger.error(f'{__name__}: Error opening file {self.sheet_name}/{self.tab_name}')
             else:
-                logger.info(f'{__name__}: Opened file {self.sheet_name}/{self.tab_name}')
+                _logger.info(f'{__name__}: Opened file {self.sheet_name}/{self.tab_name}')
                 self.opened = True
 
         return self.opened

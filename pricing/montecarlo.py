@@ -7,7 +7,6 @@ import numpy as np
 from .pricing import Pricing, METHODS
 from utils import utils as utils
 
-logger = utils.get_logger()
 
 class MonteCarlo(Pricing):
     '''
