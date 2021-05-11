@@ -1,9 +1,10 @@
-import os, json
+import os
+import json
 import logging
 import time
 import threading
 
-import data as d
+import data as data
 from data import store as store
 from data import manager as manager
 from utils import utils as utils
@@ -19,10 +20,10 @@ class Interface:
         self.task = None
 
         self.manager = manager.Manager()
-        for e in d.EXCHANGES:
+        for e in data.EXCHANGES:
             self.exchanges += [e['abbreviation']]
 
-        for i in d.INDEXES:
+        for i in data.INDEXES:
             self.indexes += [i['abbreviation']]
 
         if script:
@@ -82,7 +83,7 @@ class Interface:
                 break
 
     def show_database_information(self, all=False):
-        utils.print_message(f'Database Information ({d.ACTIVE_DB})')
+        utils.print_message(f'Database Information ({data.ACTIVE_DB})')
         info = self.manager.get_database_info()
         for i in info:
             print(f'{i["table"]:>16}:\t{i["count"]} records')
@@ -174,7 +175,7 @@ class Interface:
             menu_items[f'{i+1}'] = f'{exchange}'
         menu_items['0'] = 'Cancel'
 
-        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
+        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(data.INDEXES))
         if select > 0:
             exc = self.exchanges[select-1]
 
@@ -207,7 +208,7 @@ class Interface:
                 menu_items[f'{i+1}'] = f'{e}'
             menu_items['0'] = 'Cancel'
 
-            exchange = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
+            exchange = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(data.INDEXES))
             if exchange > 0:
                 exc = self.exchanges[exchange-1]
                 self.task = threading.Thread(target=self.manager.refresh_exchange, args=[exc, areaname[area-1]])
@@ -228,9 +229,9 @@ class Interface:
         menu_items[f'{i+2}'] = 'All'
         menu_items['0'] = 'Cancel'
 
-        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.EXCHANGES)+1)
+        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(data.EXCHANGES)+1)
         if select > 0:
-            exc = self.exchanges[select-1] if select <= len(d.EXCHANGES) else ''
+            exc = self.exchanges[select-1] if select <= len(data.EXCHANGES) else ''
             self.task = threading.Thread(target=self.manager.update_pricing, args=[exc])
             self.task.start()
 
@@ -251,7 +252,7 @@ class Interface:
             menu_items[f'{i+1}'] = f'{exchange}'
         menu_items['0'] = 'Cancel'
 
-        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
+        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(data.INDEXES))
         if select > 0:
             exc = self.exchanges[select-1]
 
@@ -273,7 +274,7 @@ class Interface:
             menu_items[f'{i+1}'] = f'{index}'
         menu_items['0'] = 'Cancel'
 
-        select = utils.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(d.INDEXES))
+        select = utils.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(data.INDEXES))
         if select > 0:
             self.task = threading.Thread(target=self.manager.populate_index, args=[self.indexes[select-1]])
             self.task.start()
@@ -293,7 +294,7 @@ class Interface:
             menu_items[f'{i+1}'] = f'{index}'
         menu_items['0'] = 'Cancel'
 
-        select = utils.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(d.INDEXES))
+        select = utils.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(data.INDEXES))
         if select > 0:
             ind = self.indexes[select-1]
             self.manager.delete_index(ind)

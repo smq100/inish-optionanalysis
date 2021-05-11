@@ -1,6 +1,6 @@
 import os
 import json
-from concurrent.futures import ThreadPoolExecutor
+from concurrent import futures
 
 import numpy as np
 
@@ -39,6 +39,7 @@ class Screener(Threaded):
         self.script = []
         self.symbols = []
         self.results = []
+        self._concurrency = 10
 
         if script:
             if not self.load_script(script):
@@ -61,9 +62,9 @@ class Screener(Threaded):
             return all(self.values)
 
     def open(self):
-        self.items_total = 0
-        self.items_completed = 0
-        self.items_error = ''
+        self.task_total = 0
+        self.task_completed = 0
+        self.task_error = ''
         symbols = []
 
         if self.type == 'exchange':
@@ -71,25 +72,25 @@ class Screener(Threaded):
         elif self.type == 'index':
             symbols = o.get_index_symbols(self.table)
         else:
-            self.items_error = 'Invalid table name'
+            self.task_error = 'Invalid table name'
 
         if len(symbols) > 0:
-            self.items_total = len(symbols)
+            self.task_total = len(symbols)
             for s in symbols:
                 try:
                     self.symbols += [Company(s, self.days, live=self.live)]
                 except ValueError as e:
                     _logger.warning(f'{__name__}: Invalid ticker {s}')
 
-                self.items_completed += 1
+                self.task_completed += 1
 
-            self.items_total = len(self.symbols)
-            _logger.debug(f'{__name__}: Opened {self.items_total} symbols from {self.table} table')
+            self.task_total = len(self.symbols)
+            _logger.debug(f'{__name__}: Opened {self.task_total} symbols from {self.table} table')
         else:
             _logger.debug(f'{__name__}: No symbols available')
-            self.items_error = 'No symbols'
+            self.task_error = 'No symbols'
 
-        return self.items_total > 0
+        return self.task_total > 0
 
     def load_script(self, script):
         self.script = None
@@ -108,58 +109,54 @@ class Screener(Threaded):
     @Threaded.threaded
     def run_script(self):
         self.results = []
-        self.items_total = len(self.symbols)
+        self.task_total = len(self.symbols)
 
-        if self.items_total == 0:
-            self.items_completed = self.items_total
+        if self.task_total == 0:
+            self.task_completed = self.task_total
             self.results = []
-            self.items_error = 'No symbols'
-            _logger.warning(f'{__name__}: {self.items_error}')
+            self.task_error = 'No symbols'
+            _logger.warning(f'{__name__}: {self.task_error}')
         elif len(self.script) == 0:
-            self.items_completed = self.items_total
+            self.task_completed = self.task_total
             self.results = []
-            self.items_error = 'Illegal script'
-            _logger.warning(f'{__name__}: {self.items_error}')
+            self.task_error = 'Illegal script'
+            _logger.warning(f'{__name__}: {self.task_error}')
         else:
-            self.items_error = 'None'
+            self.task_error = 'None'
 
             # Split the list and remove any empty lists
-            lists = np.array_split(self.symbols, 3)
+            lists = np.array_split(self.symbols, self._concurrency)
             lists = [i for i in lists if i is not None]
 
-            with ThreadPoolExecutor() as executor:
-                futures = executor.map(self._run, lists)
+            with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
+                self.task_futures = [executor.submit(self._run, list) for list in lists]
 
-            for future in futures:
-                if future is None:
-                    self.items_results += ['Ok']
-                else:
-                    self.items_results += [future.result()]
+            self.task_error = 'Done'
 
         return self.results
 
     def _run(self, tickers):
         for symbol in tickers:
             result = []
-            self.items_symbol = symbol
+            self.task_symbol = symbol
             for condition in self.script:
                 i = Interpreter(symbol, condition)
                 try:
                     result += [i.run()]
                 except SyntaxError as e:
-                    self.items_error = str(e)
+                    self.task_error = str(e)
                     break
                 except RuntimeError as e:
-                    self.items_error = str(e)
+                    self.task_error = str(e)
                     break
 
-            if self.items_error == 'None':
-                self.items_completed += 1
+            if self.task_error == 'None':
+                self.task_completed += 1
                 self.results += [self.Result(symbol, result)]
                 if (bool(self.results[-1])):
-                    self.items_success += 1
+                    self.task_success += 1
             else:
-                self.items_completed = self.items_total
+                self.task_completed = self.task_total
                 self.results = []
                 break
 

@@ -5,7 +5,7 @@ import threading
 import logging
 
 from screener.screener import Screener
-import data as d
+import data as data
 from data import store as o
 from utils import utils as utils
 
@@ -25,6 +25,7 @@ class Interface:
         self.valids = 0
         self.screener = None
         self.type = ''
+        self.task = None
 
         if script:
             if os.path.exists(script):
@@ -61,7 +62,7 @@ class Interface:
 
     def main_menu(self):
         while True:
-            source = 'live' if self.live else d.ACTIVE_DB
+            source = 'live' if self.live else data.ACTIVE_DB
             menu_items = {
                 '1': f'Select Data Source ({source})',
                 '2': 'Select Exchange',
@@ -121,13 +122,13 @@ class Interface:
 
     def select_exchange(self):
         menu_items = {}
-        for exchange, item in enumerate(d.EXCHANGES):
+        for exchange, item in enumerate(data.EXCHANGES):
             menu_items[f'{exchange+1}'] = f'{item["abbreviation"]}'
         menu_items['0'] = 'Cancel'
 
-        selection = utils.menu(menu_items, 'Select Exchange', 0, len(d.EXCHANGES))
+        selection = utils.menu(menu_items, 'Select Exchange', 0, len(data.EXCHANGES))
         if selection > 0:
-            exc = d.EXCHANGES[selection-1]['abbreviation']
+            exc = data.EXCHANGES[selection-1]['abbreviation']
             if len(o.get_exchange_symbols(exc)) > 0:
                 self.screener = Screener(exc, script=self.screen, live=self.live)
                 if self.screener.valid():
@@ -140,13 +141,13 @@ class Interface:
 
     def select_index(self):
         menu_items = {}
-        for index, item in enumerate(d.INDEXES):
+        for index, item in enumerate(data.INDEXES):
             menu_items[f'{index+1}'] = f'{item["abbreviation"]}'
         menu_items['0'] = 'Cancel'
 
-        selection = utils.menu(menu_items, 'Select Index', 0, len(d.INDEXES))
+        selection = utils.menu(menu_items, 'Select Index', 0, len(data.INDEXES))
         if selection > 0:
-            index = d.INDEXES[selection-1]['abbreviation']
+            index = data.INDEXES[selection-1]['abbreviation']
             if len(o.get_index_symbols(index)) > 0:
                 self.screener = Screener(index, script=self.screen, live=self.live)
                 if self.screener.valid():
@@ -199,29 +200,28 @@ class Interface:
         elif self.screener.load_script(self.screen):
             self.results = []
             self.valids = 0
-            task = threading.Thread(target=self.screener.run_script)
-            task.start()
+            self.task = threading.Thread(target=self.screener.run_script)
+            self.task.start()
 
             if progressbar:
                 self._show_progress('Progress', 'Completed')
 
             # Wait for thread to finish
-            while task.is_alive(): pass
+            while self.task.is_alive(): pass
 
-            if self.screener.items_error == 'None':
+            if self.screener.task_error == 'None':
                 self.results = self.screener.results
                 for result in self.results:
                     if result:
                         self.valids += 1
 
-                utils.print_message(f'{self.valids} Symbols Identified in {self.screener.items_time:.2f} seconds')
+                utils.print_message(f'{self.valids} Symbols Identified in {self.screener.task_time:.2f} seconds')
 
-                for i, result in enumerate(self.screener.items_results):
+                for i, result in enumerate(self.screener.task_results):
                     utils.print_message(f'{i+1:>2}: {result}', creturn=False)
             else:
                 self.results = []
                 self.valids = 0
-                utils.print_error(self.screener.items_error)
         else:
             utils.print_error('Script error')
 
@@ -250,22 +250,28 @@ class Interface:
         print()
 
     def _show_progress(self, prefix, suffix):
-        # Wait for either an error or running to start, or not, the progress bar
-        while not self.screener.items_error: pass
+        while not self.screener.task_error: pass
 
-        if self.screener.items_error == 'None':
-            total = self.screener.items_total
-            completed = self.screener.items_completed
+        if self.screener.task_error == 'None':
+            utils.progress_bar(self.screener.task_completed, self.screener.task_total, prefix=prefix, suffix=suffix, length=50, reset=True)
+            while self.task.is_alive and self.screener.task_error == 'None':
+                time.sleep(0.20)
+                total = self.screener.task_total
+                completed = self.screener.task_completed
+                success = self.screener.task_success
+                symbol = self.screener.task_symbol
+                tasks = len([True for future in self.screener.task_futures if future.running()])
 
-            utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, length=50)
-            while completed < total:
-                time.sleep(0.25)
-                completed = self.screener.items_completed
-                success = self.screener.items_success
-                symbol = self.screener.items_symbol
-                utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, symbol=symbol, length=50, success=success)
-            print()
+                utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, symbol=symbol, length=50, success=success, tasks=tasks)
 
+            utils.print_message('Processed Messages')
+            results = [future.result() for future in self.screener.task_futures if future.result() is not None]
+            if len(results) > 0:
+                [print(result) for result in results]
+            else:
+                print('None')
+        else:
+            utils.print_message(f'{self.screener.task_error}')
 
 if __name__ == '__main__':
     import argparse

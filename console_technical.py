@@ -145,11 +145,7 @@ class Interface:
                     show = True if utils.input_integer('Show Window? (1=Yes, 0=No): ', 0, 1) == 1 else False
 
                 if selection == 4:
-                    start = None
-                    if days > 0:
-                        start = dt.datetime.today() - dt.timedelta(days=days)
-
-                    sr = SupportResistance(self.technical.ticker, start=start)
+                    sr = SupportResistance(self.technical.ticker, days=days)
                     sr.calculate()
 
                     sup = sr.get_support()

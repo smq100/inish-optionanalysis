@@ -1,31 +1,31 @@
 import datetime as dt
 
-from sqlalchemy import create_engine, func, and_, or_
+from sqlalchemy import create_engine, and_, or_
 from sqlalchemy.orm import sessionmaker
 import pandas as pd
 
+import data as data
 from fetcher.google import Google
 from fetcher.excel import Excel
 from utils import utils as utils
-import data as d
 from data import models as models
 from fetcher import fetcher as fetcher
 
 _logger = utils.get_logger()
 
-_engine = create_engine(d.ACTIVE_URI, echo=False)
+_engine = create_engine(data.ACTIVE_URI, echo=False)
 _session = sessionmaker(bind=_engine)
 
 _master_exchanges = {
-    d.EXCHANGES[0]['abbreviation']: set(),
-    d.EXCHANGES[1]['abbreviation']: set(),
-    d.EXCHANGES[2]['abbreviation']: set()
+    data.EXCHANGES[0]['abbreviation']: set(),
+    data.EXCHANGES[1]['abbreviation']: set(),
+    data.EXCHANGES[2]['abbreviation']: set()
     }
 
 _master_indexes = {
-    d.INDEXES[0]['abbreviation']: set(),
-    d.INDEXES[1]['abbreviation']: set(),
-    d.INDEXES[2]['abbreviation']: set()
+    data.INDEXES[0]['abbreviation']: set(),
+    data.INDEXES[1]['abbreviation']: set(),
+    data.INDEXES[2]['abbreviation']: set()
     }
 
 
@@ -37,7 +37,7 @@ def is_symbol_valid(symbol):
 
 def is_exchange(exchange):
     ret = False
-    for e in d.EXCHANGES:
+    for e in data.EXCHANGES:
         if exchange == e['abbreviation']:
             ret = True
             break
@@ -45,7 +45,7 @@ def is_exchange(exchange):
 
 def is_index(index):
     ret = False
-    for i in d.INDEXES:
+    for i in data.INDEXES:
         if index == i['abbreviation']:
             ret = True
             break
@@ -207,7 +207,6 @@ def get_company(ticker, live=False):
 
     return results
 
-
 def get_exchange_symbols_master(exchange, type='google'):
     global _master_exchanges
     symbols = []
@@ -218,9 +217,9 @@ def get_exchange_symbols_master(exchange, type='google'):
             symbols = _master_exchanges[exchange]
         else:
             if type == 'google':
-                table = Google(d.GOOGLE_SHEETNAME_EXCHANGES)
+                table = Google(data.GOOGLE_SHEETNAME_EXCHANGES)
             elif type == 'excel':
-                table = Excel(d.EXCEL_SHEETNAME_EXCHANGES)
+                table = Excel(data.EXCEL_SHEETNAME_EXCHANGES)
             else:
                 raise ValueError(f'Invalid table type: {type}')
 
@@ -244,9 +243,9 @@ def get_index_symbols_master(index, type='google'):
             symbols = _master_indexes[index]
         else:
             if type == 'google':
-                table = Google(d.GOOGLE_SHEETNAME_INDEXES)
+                table = Google(data.GOOGLE_SHEETNAME_INDEXES)
             elif type == 'excel':
-                table = Excel(d.EXCEL_SHEETNAME_INDEXES)
+                table = Excel(data.EXCEL_SHEETNAME_INDEXES)
             else:
                 raise ValueError(f'Invalid spreadsheet type: {type}')
 

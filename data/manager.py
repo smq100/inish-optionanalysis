@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 import numpy as np
 
 from base import Threaded
-import data as d
+import data as data
 from data import store as store
 from data import models as models
 from fetcher import fetcher as fetcher
@@ -22,23 +22,23 @@ class Manager(Threaded):
     def __init__(self):
         super().__init__()
 
-        self.engine = create_engine(d.ACTIVE_URI, echo=False)
+        self.engine = create_engine(data.ACTIVE_URI, echo=False)
         self.session = sessionmaker(bind=self.engine)
         self.exchange = ''
         self.invalid_symbols = []
         self.retry = 0
-        self._concurrency = 5 if d.ACTIVE_DB == 'SQLite' else 10
+        self._concurrency = 5 if data.ACTIVE_DB == 'SQLite' else 10
 
     def create_database(self):
         models.Base.metadata.create_all(self.engine)
 
     def delete_database(self, recreate=True):
-        if d.ACTIVE_DB == d.OPTIONS_DB[1]:
-            if os.path.exists(d.SQLITE_DATABASE_PATH):
-                os.remove(d.SQLITE_DATABASE_PATH)
-                _logger.info(f'{__name__}: Deleted {d.SQLITE_DATABASE_PATH}')
+        if data.ACTIVE_DB == data.OPTIONS_DB[1]:
+            if os.path.exists(data.SQLITE_DATABASE_PATH):
+                os.remove(data.SQLITE_DATABASE_PATH)
+                _logger.info(f'{__name__}: Deleted {data.SQLITE_DATABASE_PATH}')
             else:
-                _logger.warning(f'{__name__}: File does not exist: {d.SQLITE_DATABASE_PATH}')
+                _logger.warning(f'{__name__}: File does not exist: {data.SQLITE_DATABASE_PATH}')
         else:
             models.Base.metadata.drop_all(self.engine)
 
@@ -47,7 +47,7 @@ class Manager(Threaded):
 
     def create_exchanges(self):
         with self.session.begin() as session:
-            for exchange in d.EXCHANGES:
+            for exchange in data.EXCHANGES:
                 e = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange['abbreviation']).one_or_none()
                 if e is None:
                     exc = models.Exchange(abbreviation=exchange['abbreviation'], name=exchange['name'])
@@ -145,7 +145,7 @@ class Manager(Threaded):
 
     def create_indexes(self):
         with self.session.begin() as session:
-            for index in d.INDEXES:
+            for index in data.INDEXES:
                 i = session.query(models.Index.id).filter(models.Index.abbreviation==index['abbreviation']).one_or_none()
                 if i is None:
                     ind = models.Index(abbreviation=index['abbreviation'], name=index['name'])
@@ -193,9 +193,9 @@ class Manager(Threaded):
             else:
                 self.delete_index(index)
 
-            index_index = next((ii for (ii, d) in enumerate(d.INDEXES) if d["abbreviation"] == index), -1)
+            index_index = next((ii for (ii, d) in enumerate(data.INDEXES) if d["abbreviation"] == index), -1)
             if index_index >= 0:
-                ind = models.Index(abbreviation=index, name=d.INDEXES[index_index]['name'])
+                ind = models.Index(abbreviation=index, name=data.INDEXES[index_index]['name'])
                 session.add(ind)
                 _logger.info(f'{__name__}: Recreated index {index}')
 
