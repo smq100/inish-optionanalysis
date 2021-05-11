@@ -7,7 +7,7 @@ import numpy as np
 from base import Threaded
 from company.company import Company
 from utils import utils as utils
-from data import store as o
+from data import store as store
 from .interpreter import Interpreter
 
 
@@ -21,9 +21,9 @@ class Screener(Threaded):
         self.type = ''
 
         if table:
-            if o.is_exchange(table):
+            if store.is_exchange(table):
                 self.type = 'exchange'
-            elif o.is_index(table):
+            elif store.is_index(table):
                 self.type = 'index'
             else:
                 raise ValueError(f'Table not found: {table}')
@@ -39,7 +39,7 @@ class Screener(Threaded):
         self.script = []
         self.symbols = []
         self.results = []
-        self._concurrency = 10
+        self._concurrency = 6
 
         if script:
             if not self.load_script(script):
@@ -68,21 +68,20 @@ class Screener(Threaded):
         symbols = []
 
         if self.type == 'exchange':
-            symbols = o.get_exchange_symbols(self.table)
+            symbols = store.get_exchange_symbols(self.table)
         elif self.type == 'index':
-            symbols = o.get_index_symbols(self.table)
+            symbols = store.get_index_symbols(self.table)
         else:
             self.task_error = 'Invalid table name'
 
         if len(symbols) > 0:
             self.task_total = len(symbols)
-            for s in symbols:
-                try:
-                    self.symbols += [Company(s, self.days, live=self.live)]
-                except ValueError as e:
-                    _logger.warning(f'{__name__}: Invalid ticker {s}')
+            try:
+                self.symbols = [Company(s, self.days, live=self.live) for s in symbols]
+            except ValueError as e:
+                _logger.warning(f'{__name__}: Invalid ticker {s}')
 
-                self.task_completed += 1
+            self.task_completed += 1
 
             self.task_total = len(self.symbols)
             _logger.debug(f'{__name__}: Opened {self.task_total} symbols from {self.table} table')
@@ -130,6 +129,8 @@ class Screener(Threaded):
 
             with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
                 self.task_futures = [executor.submit(self._run, list) for list in lists]
+
+            # self._run(self.symbols)
 
             self.task_error = 'Done'
 

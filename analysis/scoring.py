@@ -1,4 +1,4 @@
-from data import store as o
+from data import store as store
 from utils import utils as utils
 
 _logger = utils.get_logger()
@@ -6,7 +6,7 @@ _logger = utils.get_logger()
 
 class ScoringAnalysis:
     def __init__(self, ticker):
-        if (o.is_symbol_valid(ticker)):
+        if (store.is_symbol_valid(ticker)):
             self.ticker = ticker.upper()
             self.ema = {}
             self.rsa = None

@@ -3,10 +3,8 @@ trendln: https://github.com/GregoryMorse/trendln
          https://towardsdatascience.com/programmatic-identification-of-support-resistance-trend-lines-with-python-d797a4a90530,
 '''
 
-import datetime
-
-import trendln
 import matplotlib.pyplot as plt
+import trendln
 
 from data import store as store
 from utils import utils as utils
@@ -49,9 +47,7 @@ class Line:
         return score
 
     def __str__(self):
-        dates = []
-        for point in self.points:
-            dates += point['date']
+        dates = [point['date'] for point in self.points]
 
         output = f'score={self.get_score():.2f}, '\
                  f'fit={self.fit:4n} '\
@@ -98,11 +94,11 @@ class SupportResistance:
         self.points = len(self.history)
         self.price = store.get_current_price(self.ticker)
 
-        _logger.info(f'{__name__}: {self.points} pivot points identified from {self.history["date"].iloc[0]} to {self.history["date"].iloc[-1]}')
+        _logger.info(f'{__name__}: {self.points} pivot points identified from {self.history.iloc[0]["date"]} to {self.history.iloc[-1]["date"]}')
 
         # Calculate support and resistance lines
-        maxs = trendln.calc_support_resistance((None, self.history['high']), extmethod=self.extmethod, method=self.method, accuracy=8) #resistance
-        mins = trendln.calc_support_resistance((self.history['low'], None), extmethod=self.extmethod, method=self.method, accuracy=8)  #support
+        maxs = trendln.calc_support_resistance((None, self.history['high']), extmethod=self.extmethod, method=self.method, accuracy=8)
+        mins = trendln.calc_support_resistance((self.history['low'], None), extmethod=self.extmethod, method=self.method, accuracy=8)
 
         maximaIdxs, pmax, maxtrend, maxwindows = maxs
         minimaIdxs, pmin, mintrend, minwindows = mins
@@ -122,8 +118,7 @@ class SupportResistance:
             newline.intercept_err = line[1][4]
             newline.area_avg = line[1][5]
 
-            for point in line[0]:
-                newline.points += [{'index':point, 'date':''}]
+            newline.points = [{'index':point, 'date':''} for point in line[0]]
             newline.width = newline.points[-1]['index'] - newline.points[0]['index']
             newline.age = self.points - newline.points[-1]['index']
 
@@ -144,8 +139,7 @@ class SupportResistance:
             newline.intercept_err = line[1][4]
             newline.area_avg = line[1][5]
 
-            for point in line[0]:
-                newline.points += [{'index':point, 'date':''}]
+            newline.points = [{'index':point, 'date':''} for point in line[0]]
             newline.width = newline.points[-1]['index'] - newline.points[0]['index']
             newline.age = self.points - newline.points[-1]['index']
 
@@ -233,21 +227,13 @@ class SupportResistance:
             _logger.debug(line)
 
     def get_resistance(self):
-        res = []
-        for line in self.lines:
-            if not line.support:
-                res += [line]
-
+        res = [line for line in self.lines if not line.support]
         resistance = sorted(res, reverse=True, key=lambda l: l.get_score())
 
         return resistance[:self.best]
 
     def get_support(self):
-        sup = []
-        for line in self.lines:
-            if line.support:
-                sup += [line]
-
+        sup = [line for line in self.lines if line.support]
         support = sorted(sup, reverse=True, key=lambda l: l.get_score())
 
         return support[:self.best]

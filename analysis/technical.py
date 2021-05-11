@@ -5,18 +5,18 @@ ta: https://technical-analysis-library-in-python.readthedocs.io/en/latest/index.
 import pandas as pd
 from ta import trend, momentum, volatility, volume
 
-from data import store as o
+from data import store as store
 from utils import utils as utils
 
 
 class Technical:
     def __init__(self, ticker, history, days, live=False):
-        if o.is_symbol_valid(ticker):
+        if store.is_symbol_valid(ticker):
             self.ticker = ticker.upper()
             self.days = days
 
             if history is None or history.empty:
-                self.history = o.get_history(self.ticker, self.days, live=live)
+                self.history = store.get_history(self.ticker, self.days, live=live)
             else:
                 self.history = history
 

@@ -1,6 +1,6 @@
 
 from analysis.technical import Technical
-from data import store as o
+from data import store as store
 from utils import utils as utils
 
 
@@ -16,7 +16,7 @@ class Company:
         if days < 1:
             raise ValueError('Invalid number of days')
 
-        if not o.is_symbol_valid(ticker):
+        if not store.is_symbol_valid(ticker):
             raise ValueError('Invalid ticker')
 
         if not lazy:
@@ -57,7 +57,7 @@ class Company:
         return self.history['volume']
 
     def _load_history(self):
-        self.history = o.get_history(self.ticker, self.days, live=self.live)
+        self.history = store.get_history(self.ticker, self.days, live=self.live)
         if self.history is None:
             raise RuntimeError('history is None')
 

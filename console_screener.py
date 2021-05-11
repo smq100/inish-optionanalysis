@@ -6,7 +6,7 @@ import logging
 
 from screener.screener import Screener
 import data as data
-from data import store as o
+from data import store as store
 from utils import utils as utils
 
 logger = utils.get_logger(logging.ERROR)
@@ -39,9 +39,9 @@ class Interface:
                 utils.print_error(f'File "{script}" not found')
         else:
             if self.table:
-                if o.is_exchange(self.table):
+                if store.is_exchange(self.table):
                     self.type = 'exchange'
-                elif o.is_index(self.table):
+                elif store.is_index(self.table):
                     self.type = 'index'
                 else:
                     raise ValueError(f'Table not found: {table}')
@@ -129,7 +129,7 @@ class Interface:
         selection = utils.menu(menu_items, 'Select Exchange', 0, len(data.EXCHANGES))
         if selection > 0:
             exc = data.EXCHANGES[selection-1]['abbreviation']
-            if len(o.get_exchange_symbols(exc)) > 0:
+            if len(store.get_exchange_symbols(exc)) > 0:
                 self.screener = Screener(exc, script=self.screen, live=self.live)
                 if self.screener.valid():
                     self.table = exc
@@ -148,7 +148,7 @@ class Interface:
         selection = utils.menu(menu_items, 'Select Index', 0, len(data.INDEXES))
         if selection > 0:
             index = data.INDEXES[selection-1]['abbreviation']
-            if len(o.get_index_symbols(index)) > 0:
+            if len(store.get_index_symbols(index)) > 0:
                 self.screener = Screener(index, script=self.screen, live=self.live)
                 if self.screener.valid():
                     self.table = index
@@ -209,7 +209,7 @@ class Interface:
             # Wait for thread to finish
             while self.task.is_alive(): pass
 
-            if self.screener.task_error == 'None':
+            if self.screener.task_error == 'Done':
                 self.results = self.screener.results
                 for result in self.results:
                     if result:

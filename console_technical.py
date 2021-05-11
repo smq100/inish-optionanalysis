@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 from analysis.technical import Technical
 from analysis.trend import SupportResistance
-from data import store as o
+from data import store as store
 from utils import utils as utils
 
 
@@ -26,7 +26,7 @@ class Interface:
                     utils.print_error('File read error')
             else:
                 utils.print_error(f'File "{script}" not found')
-        elif o.is_symbol_valid(ticker.upper()):
+        elif store.is_symbol_valid(ticker.upper()):
             self.technical = Technical(ticker.upper(), None, 365)
             self.main_menu()
         else:
@@ -64,7 +64,7 @@ class Interface:
         while not valid:
             ticker = input('Please enter symbol, or 0 to cancel: ').upper()
             if ticker != '0':
-                valid = o.is_symbol_valid(ticker)
+                valid = store.is_symbol_valid(ticker)
                 if valid:
                     self.technical = Technical(ticker, None, 365)
                 else:

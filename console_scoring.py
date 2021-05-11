@@ -4,7 +4,7 @@ import datetime as dt
 
 from analysis.scoring import ScoringAnalysis
 from analysis.technical import Technical
-from data import store as o
+from data import store as store
 from utils import utils as utils
 
 
@@ -25,7 +25,7 @@ class Interface:
                     utils.print_error('File read error')
             else:
                 utils.print_error(f'File "{script}" not found')
-        elif o.is_symbol_valid(ticker):
+        elif store.is_symbol_valid(ticker):
             self.technical = Technical(ticker, None, 365)
             self.scoring = ScoringAnalysis(ticker)
 
@@ -57,7 +57,7 @@ class Interface:
         while not valid:
             ticker = input('Please enter symbol, or 0 to cancel: ').upper()
             if ticker != '0':
-                valid = o.is_symbol_valid(ticker)
+                valid = store.is_symbol_valid(ticker)
                 if valid:
                     self.scoring = ScoringAnalysis(ticker)
                 else:
