@@ -8,4 +8,4 @@ This is my personal securities and markets analysis framework.
 * Technical Analysis with sophisticated support & resistence analysis
 * Local pricing database support
 
-The state and functioanlity of code is variable and should not be considered production-worthy.
+The state and functionality of code is variable and should not be considered production-worthy.
