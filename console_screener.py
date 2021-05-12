@@ -5,7 +5,7 @@ import threading
 import logging
 
 from screener.screener import Screener
-import data as data
+import data as d
 from data import store as store
 from utils import utils as utils
 
@@ -62,7 +62,7 @@ class Interface:
 
     def main_menu(self):
         while True:
-            source = 'live' if self.live else data.ACTIVE_DB
+            source = 'live' if self.live else d.ACTIVE_DB
             menu_items = {
                 '1': f'Select Data Source ({source})',
                 '2': 'Select Exchange',
@@ -122,13 +122,13 @@ class Interface:
 
     def select_exchange(self):
         menu_items = {}
-        for exchange, item in enumerate(data.EXCHANGES):
+        for exchange, item in enumerate(d.EXCHANGES):
             menu_items[f'{exchange+1}'] = f'{item["abbreviation"]}'
         menu_items['0'] = 'Cancel'
 
-        selection = utils.menu(menu_items, 'Select Exchange', 0, len(data.EXCHANGES))
+        selection = utils.menu(menu_items, 'Select Exchange', 0, len(d.EXCHANGES))
         if selection > 0:
-            exc = data.EXCHANGES[selection-1]['abbreviation']
+            exc = d.EXCHANGES[selection-1]['abbreviation']
             if len(store.get_exchange_symbols(exc)) > 0:
                 self.screener = Screener(exc, script=self.screen, live=self.live)
                 if self.screener.valid():
@@ -141,13 +141,13 @@ class Interface:
 
     def select_index(self):
         menu_items = {}
-        for index, item in enumerate(data.INDEXES):
+        for index, item in enumerate(d.INDEXES):
             menu_items[f'{index+1}'] = f'{item["abbreviation"]}'
         menu_items['0'] = 'Cancel'
 
-        selection = utils.menu(menu_items, 'Select Index', 0, len(data.INDEXES))
+        selection = utils.menu(menu_items, 'Select Index', 0, len(d.INDEXES))
         if selection > 0:
-            index = data.INDEXES[selection-1]['abbreviation']
+            index = d.INDEXES[selection-1]['abbreviation']
             if len(store.get_index_symbols(index)) > 0:
                 self.screener = Screener(index, script=self.screen, live=self.live)
                 if self.screener.valid():

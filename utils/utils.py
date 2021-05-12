@@ -1,22 +1,29 @@
 import logging
 
-import pandas as pd
+LOG_DIR = './log'
+
 
 def get_logger(level=None):
     logger = logging.getLogger('analysis')
 
     if level is not None:
         logger.handlers = []
-    else:
-        level = logging.WARNING
-
-    if not logger.handlers:
+        logger.setLevel(logging.DEBUG)
         logger.propagate = 0 # Prevent logging from propagating to the root logger
-        logger.setLevel(level)
+
+        # Console handler
         cformat = logging.Formatter('%(levelname)s: %(message)s')
-        handler = logging.StreamHandler()
-        handler.setFormatter(cformat)
-        logger.addHandler(handler)
+        ch = logging.StreamHandler()
+        ch.setFormatter(cformat)
+        ch.setLevel(level)
+        logger.addHandler(ch)
+
+        # File handler
+        fformat = logging.Formatter('%(asctime)s: %(levelname)s: %(message)s', datefmt='%H:%M:%S')
+        fh = logging.FileHandler(f'{LOG_DIR}/output.log', 'w+')
+        fh.setFormatter(fformat)
+        fh.setLevel(logging.INFO)
+        logger.addHandler(fh)
 
     return logger
 
@@ -24,9 +31,7 @@ def menu(menu_items, header, minvalue, maxvalue):
     print(f'\n{header}')
     print('---------------------------------------------')
 
-    options = menu_items.keys()
-    for entry in options:
-        print(f'{entry:>2})\t{menu_items[entry]}')
+    [print(f'{entry:>2})\t{menu_items[entry]}') for entry in menu_items.keys()]
 
     return input_integer('Please select: ', minvalue, maxvalue)
 

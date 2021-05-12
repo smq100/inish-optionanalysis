@@ -1,4 +1,4 @@
-import os, time, json
+import os, time
 from datetime import date
 from concurrent import futures
 from urllib.error import HTTPError
@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 import numpy as np
 
 from base import Threaded
-import data as data
+import data as d
 from data import store as store
 from data import models as models
 from fetcher import fetcher as fetcher
@@ -16,29 +16,27 @@ from utils import utils as utils
 
 _logger = utils.get_logger()
 
-LOG_DIR = './log'
-
 class Manager(Threaded):
     def __init__(self):
         super().__init__()
 
-        self.engine = create_engine(data.ACTIVE_URI, echo=False)
+        self.engine = create_engine(d.ACTIVE_URI, echo=False)
         self.session = sessionmaker(bind=self.engine)
         self.exchange = ''
         self.invalid_symbols = []
         self.retry = 0
-        self._concurrency = 5 if data.ACTIVE_DB == 'SQLite' else 10
+        self._concurrency = 5 if d.ACTIVE_DB == 'SQLite' else 10
 
     def create_database(self):
         models.Base.metadata.create_all(self.engine)
 
     def delete_database(self, recreate=True):
-        if data.ACTIVE_DB == data.OPTIONS_DB[1]:
-            if os.path.exists(data.SQLITE_DATABASE_PATH):
-                os.remove(data.SQLITE_DATABASE_PATH)
-                _logger.info(f'{__name__}: Deleted {data.SQLITE_DATABASE_PATH}')
+        if d.ACTIVE_DB == d.OPTIONS_DB[1]:
+            if os.path.exists(d.SQLITE_DATABASE_PATH):
+                os.remove(d.SQLITE_DATABASE_PATH)
+                _logger.info(f'{__name__}: Deleted {d.SQLITE_DATABASE_PATH}')
             else:
-                _logger.warning(f'{__name__}: File does not exist: {data.SQLITE_DATABASE_PATH}')
+                _logger.warning(f'{__name__}: File does not exist: {d.SQLITE_DATABASE_PATH}')
         else:
             models.Base.metadata.drop_all(self.engine)
 
@@ -47,7 +45,7 @@ class Manager(Threaded):
 
     def create_exchanges(self):
         with self.session.begin() as session:
-            for exchange in data.EXCHANGES:
+            for exchange in d.EXCHANGES:
                 e = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange['abbreviation']).one_or_none()
                 if e is None:
                     exc = models.Exchange(abbreviation=exchange['abbreviation'], name=exchange['name'])
@@ -145,7 +143,7 @@ class Manager(Threaded):
 
     def create_indexes(self):
         with self.session.begin() as session:
-            for index in data.INDEXES:
+            for index in d.INDEXES:
                 i = session.query(models.Index.id).filter(models.Index.abbreviation==index['abbreviation']).one_or_none()
                 if i is None:
                     ind = models.Index(abbreviation=index['abbreviation'], name=index['name'])
@@ -193,9 +191,9 @@ class Manager(Threaded):
             else:
                 self.delete_index(index)
 
-            index_index = next((ii for (ii, d) in enumerate(data.INDEXES) if d["abbreviation"] == index), -1)
+            index_index = next((ii for (ii, d) in enumerate(d.INDEXES) if d["abbreviation"] == index), -1)
             if index_index >= 0:
-                ind = models.Index(abbreviation=index, name=data.INDEXES[index_index]['name'])
+                ind = models.Index(abbreviation=index, name=d.INDEXES[index_index]['name'])
                 session.add(ind)
                 _logger.info(f'{__name__}: Recreated index {index}')
 
@@ -273,7 +271,7 @@ class Manager(Threaded):
 
         return info
 
-    def identify_missing_securities(self, exchange, log=False):
+    def identify_missing_securities(self, exchange):
         missing = []
         tickers = store.get_exchange_symbols_master(exchange)
         _logger.info(f'{__name__}: {len(tickers)} total symbols in {exchange}')
@@ -284,18 +282,10 @@ class Manager(Threaded):
                 if t is None:
                     missing += [sec]
 
-        if log:
-            filename = f'{LOG_DIR}/missing_securities_{exchange.upper()}.log'
-            if len(missing) > 0:
-                with open(filename, 'w') as f:
-                    json.dump(missing, f, indent=2)
-            elif os.path.exists(filename):
-                os.remove(filename)
-
         _logger.info(f'{__name__}: {len(missing)} missing symbols in {exchange}')
         return missing
 
-    def identify_inactive_securities(self, exchange, log=False):
+    def identify_inactive_securities(self, exchange):
         missing = []
         tickers = store.get_symbols(exchange)
         if len(tickers) > 0:
@@ -307,18 +297,10 @@ class Manager(Threaded):
                     if t is None:
                         missing += [sec]
 
-        if log:
-            filename = f'{LOG_DIR}/inactive_securities_{exchange.upper()}.log'
-            if len(missing) > 0:
-                with open(filename, 'w') as f:
-                    json.dump(missing, f, indent=2)
-            elif os.path.exists(filename):
-                os.remove(filename)
-
         _logger.info(f'{__name__}: {len(missing)} inactive symbols in {exchange}')
         return missing
 
-    def identify_incomplete_securities_companies(self, exchange, live=False, log=False):
+    def identify_incomplete_securities_companies(self, exchange, live=False):
         missing = []
         if live:
             with self.session.begin() as session:
@@ -334,13 +316,6 @@ class Manager(Threaded):
                             session.add(mc)
                         _logger.info(f'{__name__}: {t.ticker} added missing company entry')
 
-            if log:
-                filename = f'{LOG_DIR}/incomplete_companies_{exchange.upper()}.log'
-                if len(missing) > 0:
-                    with open(filename, 'w') as f:
-                        json.dump(missing, f, indent=2)
-                elif os.path.exists(filename):
-                    os.remove(filename)
         else:
             with self.session() as session:
                 exc = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange).one()
@@ -354,7 +329,7 @@ class Manager(Threaded):
         _logger.info(f'{__name__}: {len(missing)} with incomplete company info')
         return missing
 
-    def identify_incomplete_securities_price(self, exchange, live=False, log=False):
+    def identify_incomplete_securities_price(self, exchange, live=False):
         missing = []
         if live:
             with self.session.begin() as session:
@@ -370,13 +345,6 @@ class Manager(Threaded):
                             session.add(mc)
                         _logger.info(f'{__name__}: {t.ticker} added missing price entry')
 
-            if log:
-                filename = f'{LOG_DIR}/incomplete_price_{exchange.upper()}.log'
-                if len(missing) > 0:
-                    with open(filename, 'w') as f:
-                        json.dump(missing, f, indent=2)
-                elif os.path.exists(filename):
-                    os.remove(filename)
         else:
             with self.session() as session:
                 exc = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange).one()
