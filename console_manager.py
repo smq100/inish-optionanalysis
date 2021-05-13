@@ -20,11 +20,9 @@ class Interface:
         self.task = None
 
         self.manager = manager.Manager()
-        for e in d.EXCHANGES:
-            self.exchanges += [e['abbreviation']]
 
-        for i in d.INDEXES:
-            self.indexes += [i['abbreviation']]
+        self.exchanges = [e['abbreviation'] for e in d.EXCHANGES]
+        self.indexes = [i['abbreviation'] for i in d.INDEXES]
 
         if script:
             if os.path.exists(script):

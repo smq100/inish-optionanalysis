@@ -6,6 +6,7 @@ from urllib.error import HTTPError
 from sqlalchemy import create_engine, inspect, and_, or_
 from sqlalchemy.orm import sessionmaker
 import numpy as np
+from sqlalchemy.orm.session import Session
 
 from base import Threaded
 import data as d
@@ -389,23 +390,24 @@ class Manager(Threaded):
         today = date.today()
         days = 0
 
-        history = store.get_history(ticker, 0)
+        history = store.get_history(ticker, 50)
         if history.empty:
             _logger.warning(f'{__name__}: No price history')
         else:
-            date_db = history['date']
+            date_db = history.iloc[-1]['date']
             if date_db is not None:
                 _logger.info(f'{__name__}: Last {ticker} price in database: {date_db:%Y-%m-%d}')
             else:
                 date_db = today - date(2000,1,1)
                 _logger.info(f'{__name__}: No date history for {ticker} in database')
 
-            if (today - date_db).days > 1:
+            delta = (today - date_db).days
+            if delta > 1:
                 history = store.get_history(ticker, 365, live=True)
                 if history is None:
-                    _logger.info(f'{__name__}: No pricing information for {ticker}')
+                    _logger.info(f'{__name__}: No pricing dataframe for {ticker}')
                 elif history.empty:
-                    _logger.info(f'{__name__}: No pricing information for {ticker}')
+                    _logger.info(f'{__name__}: Empty pricing dataframe for {ticker}')
                 else:
                     date_cloud = history.iloc[-1]['date'].to_pydatetime().date()
                     _logger.info(f'{__name__}: Last {ticker} price in cloud: {date_cloud:%Y-%m-%d}')
@@ -429,6 +431,9 @@ class Manager(Threaded):
                                 sec.pricing += [p]
 
                         _logger.info(f'{__name__}: Updated {days} days pricing for {ticker.upper()} to {date_cloud:%Y-%m-%d}')
+            else:
+                _logger.info(f'{__name__}: {ticker} up to date; {delta} days')
+
         return days
 
     def _add_securities_to_exchange(self, tickers, exchange):
@@ -563,7 +568,7 @@ if __name__ == '__main__':
     _logger = utils.get_logger(DEBUG)
 
     manager = Manager()
-    manager.populate_exchange('AMEX')
+    manager._refresh_pricing('PVAC', None)
 
     # if len(sys.argv) > 1:
     #     data = manager.populate_exchange(sys.argv[1])

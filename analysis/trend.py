@@ -359,7 +359,7 @@ class SupportResistance:
                 dates += [date.strftime('%Y-%m-%d')]
                 values += [ep]
                 text += [{'text':f'{line.end_point:.2f}:{index+1}', 'value':line.end_point, 'color':'green'}]
-        ax1.plot(dates, values, '.g', marker='.')
+        ax1.plot(dates, values, '.g')
 
         dates = []
         values = []
@@ -370,7 +370,7 @@ class SupportResistance:
                 dates += [date.strftime('%Y-%m-%d')]
                 values += [ep]
                 text += [{'text':f'{line.end_point:.2f}:{index+1}', 'value':line.end_point, 'color':'red'}]
-        ax1.plot(dates, values, '.r', marker='.')
+        ax1.plot(dates, values, '.r')
 
         # End point text
         ylimits = ax1.get_ylim()

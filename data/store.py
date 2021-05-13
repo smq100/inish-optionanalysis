@@ -69,8 +69,7 @@ def get_exchanges():
 
     with _session() as session:
         exchange = session.query(models.Exchange.abbreviation).all()
-        for exc in exchange:
-            results += [exc.abbreviation]
+        results = [exc.abbreviation for exc in exchange]
 
     return results
 
@@ -79,8 +78,7 @@ def get_indexes():
 
     with _session() as session:
         index = session.query(models.Index.abbreviation).all()
-        for ind in index:
-            results += [ind.abbreviation]
+        results = [ind.abbreviation for ind in index]
 
     return results
 
@@ -91,8 +89,7 @@ def get_exchange_symbols(exchange):
         exc = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange.upper()).first()
         if exc is not None:
             symbols = session.query(models.Security).filter(and_(models.Security.exchange_id==exc.id, models.Security.active)).all()
-            for symbol in symbols:
-                results += [symbol.ticker]
+            results = [symbol.ticker for symbol in symbols]
         else:
             raise ValueError(f'Invalid exchange: {exchange}')
 
@@ -106,8 +103,7 @@ def get_index_symbols(index):
         if ind is not None:
             symbols = session.query(models.Security).filter(and_(models.Security.active,
                 or_(models.Security.index1_id==ind.id, models.Security.index2_id==ind.id, models.Security.index3_id==ind.id))).all()
-            for symbol in symbols:
-                results += [symbol.ticker]
+            results = [symbol.ticker for symbol in symbols]
         else:
             raise ValueError(f'Invalid index: {index}')
 
@@ -264,7 +260,6 @@ if __name__ == '__main__':
     # from logging import DEBUG
     # logger = u.get_logger(DEBUG)
 
-    t = get_history('APT', 0, live=True)['close']
-    # t = get_current_price('APT')
+    t = get_history('PVAC', 20, live=True)
     print(t)
     print(type(t))
