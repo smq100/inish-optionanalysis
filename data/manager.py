@@ -379,9 +379,7 @@ class Manager(Threaded):
             symbols = store.get_index_symbols_master(list)
 
         if len(symbols) > 0:
-            for s in symbols:
-                if not fetcher.validate_ticker(s):
-                    invalid += [s]
+            invalid = [s for s in symbols if not fetcher.validate_ticker(s)]
 
         return invalid
 

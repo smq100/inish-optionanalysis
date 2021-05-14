@@ -1,7 +1,7 @@
 import datetime as dt
 import re
 
-from fetcher import fetcher as fetcher
+from data import store as store
 from utils import utils as utils
 
 PRODUCTS = ('call', 'put')
@@ -121,9 +121,9 @@ def _get_contract(contract_symbol):
 
     try:
         if product == 'call':
-            chain = fetcher.get_option_chain(ticker)(expiry).calls
+            chain = store.get_option_chain(ticker)(expiry).calls
         else:
-            chain = fetcher.get_option_chain(ticker)(expiry).puts
+            chain = store.get_option_chain(ticker)(expiry).puts
 
         contract = chain.loc[chain['contractSymbol'] == contract_symbol]
         return contract.iloc[0]

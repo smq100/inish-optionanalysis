@@ -12,7 +12,6 @@ import numpy as np
 import pandas as pd
 
 from data import store as store
-from fetcher import fetcher as fetcher
 from utils import utils as utils
 
 
@@ -134,7 +133,7 @@ class Pricing(ABC):
 
         :return: <void>
         '''
-        self.risk_free_rate = fetcher.get_treasury_rate()
+        self.risk_free_rate = store.get_treasury_rate()
         _logger.info(f'{__name__}: Risk-free rate = {self.risk_free_rate:.4f}')
 
     def _calc_time_to_maturity(self):

@@ -47,6 +47,12 @@ def get_company_ex(ticker):
 
     return company
 
+def get_option_expiry(ticker):
+    company = get_company_ex(ticker)
+    value = company.options
+
+    return value
+
 def get_option_chain(ticker):
     chain = None
 
@@ -75,7 +81,8 @@ def get_history(ticker, days=-1):
             history = company.history(start=f'{start:%Y-%m-%d}')
             if history is not None:
                 history.reset_index(inplace=True)
-                history.rename(columns={'Date':'date', 'Open':'open', 'High':'high', 'Low':'low', 'Close':'close', 'Volume':'volume'}, inplace=True)
+                history.columns = history.columns.str.lower()
+                # history.rename(columns={'Date':'date', 'Open':'open', 'High':'high', 'Low':'low', 'Close':'close', 'Volume':'volume'}, inplace=True)
 
                 _logger.info(f'{__name__}: Fetched {days} days history of {ticker} starting {start:%Y-%m-%d}')
         except:
@@ -83,26 +90,45 @@ def get_history(ticker, days=-1):
 
     return history
 
-def get_treasury_rate(ticker='DTB3'):
+def get_history_q(ticker, days=-1):
+    if days < 0:
+        days = 7300 # 20 years
+    elif days > 1:
+        pass
+    else:
+        days = 100
+
+    start = dt.datetime.today() - dt.timedelta(days=days)
+
+    history = pd.DataFrame()
+    history = qd.get(f'EOD/{ticker}')#, start_date=f'{start:%Y-%m-%d}')
+    if history is not None:
+        history.reset_index(inplace=True)
+        history.columns = history.columns.str.lower()
+        history.rename(columns={'Date':'date', 'Open':'open', 'High':'high', 'Low':'low', 'Close':'close', 'Volume':'volume'}, inplace=True)
+
+    return history
+
+def get_treasury_rate(ticker):
     # DTB3: Default to 3-Month Treasury Rate
     df = pd.DataFrame()
     df = qd.get(f'FRED/{ticker}')
     if df.empty:
-        _logger.error(f'{__name__}: Unable to get Treasury Rates from Quandl. Please check connection')
+        _logger.error(f'{__name__}: Unable to get Treasury Rates from Quandl')
         raise IOError('Unable to get Treasury Rate from Quandl')
 
     return df['Value'][0] / 100.0
 
 
 if __name__ == '__main__':
-    from logging import DEBUG
-    _logger = utils.get_logger(DEBUG)
+    # from logging import DEBUG
+    # _logger = utils.get_logger(DEBUG)
 
     # c = get_company('AAPL', force=True)
-    c = get_history('AAPL', days=0)
+    c = get_history_q('AAPL', days=-1)
+    print(c)
     print(c.shape)
     print(type(c))
-    print(c)
     print(c['close'])
     print(type(c['close']))
 

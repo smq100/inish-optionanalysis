@@ -1,5 +1,5 @@
 from data import store as store
-from fetcher import fetcher as fetcher
+from data import store as store
 from utils import utils as utils
 
 _logger = utils.get_logger()
@@ -15,13 +15,10 @@ class Chain:
             self.width = 1
 
     def get_expiry(self):
-        self.company = fetcher.get_company_ex(self.ticker)
-        value = self.company.options
-
-        return value
+        return store.get_option_expiry(self.ticker)
 
     def get_chain(self, product):
-        value = fetcher.get_option_chain(self.ticker)(date=self.expire)
+        value = store.get_option_chain(self.ticker)(date=self.expire)
 
         if product == 'call':
             value = value.calls

@@ -5,11 +5,11 @@ from sqlalchemy.orm import sessionmaker
 import pandas as pd
 
 import data as d
+from fetcher import fetcher as fetcher
 from fetcher.google import Google
 from fetcher.excel import Excel
 from utils import utils as utils
 from data import models as models
-from fetcher import fetcher as fetcher
 
 _logger = utils.get_logger()
 
@@ -254,6 +254,15 @@ def get_index_symbols_master(index, type='google'):
         raise ValueError(f'Invalid index name: {index}')
 
     return symbols
+
+def get_option_expiry(ticker):
+    return fetcher.get_option_expiry(ticker)
+
+def get_option_chain(ticker):
+    return fetcher.get_option_chain(ticker)
+
+def get_treasury_rate(ticker='DTB3'):
+    return fetcher.get_treasury_rate(ticker)
 
 
 if __name__ == '__main__':

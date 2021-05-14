@@ -130,8 +130,6 @@ class Screener(Threaded):
             with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
                 self.task_futures = [executor.submit(self._run, list) for list in lists]
 
-            # self._run(self.symbols)
-
             self.task_error = 'Done'
 
         return self.results
@@ -178,7 +176,6 @@ class Screener(Threaded):
 
 if __name__ == '__main__':
     import logging
-    from fetcher import fetcher as fetcher
 
     utils.get_logger(logging.DEBUG)
 
