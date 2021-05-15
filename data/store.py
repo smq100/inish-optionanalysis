@@ -13,9 +13,6 @@ from data import models as models
 
 _logger = utils.get_logger()
 
-_engine = create_engine(d.ACTIVE_URI, echo=False)
-_session = sessionmaker(bind=_engine)
-
 _master_exchanges = {
     d.EXCHANGES[0]['abbreviation']: set(),
     d.EXCHANGES[1]['abbreviation']: set(),
@@ -27,6 +24,9 @@ _master_indexes = {
     d.INDEXES[1]['abbreviation']: set(),
     d.INDEXES[2]['abbreviation']: set()
     }
+
+_engine = create_engine(d.ACTIVE_URI, echo=False)
+_session = sessionmaker(bind=_engine)
 
 
 def is_symbol_valid(symbol):
@@ -117,35 +117,35 @@ def get_current_price(ticker):
 
     return price
 
-def get_history(ticker, days, live=False):
+def get_history_live(ticker, days):
+    return fetcher.get_history(ticker, days)
+
+def get_history(ticker, days):
     results = pd.DataFrame
-    if live:
-        results = fetcher.get_history(ticker, days)
-    else:
-        with _session() as session:
-            symbols = session.query(models.Security.id).filter(and_(models.Security.ticker==ticker.upper(), models.Security.active)).one_or_none()
-            if symbols is not None:
-                if days < 0:
-                    p = session.query(models.Price).filter(models.Price.security_id==symbols.id).order_by(models.Price.date)
-                    results = pd.read_sql(p.statement, _engine)
-                    _logger.info(f'{__name__}: Fetched max price history for {ticker}')
-                elif days > 1:
-                    start = dt.datetime.today() - dt.timedelta(days=days)
-                    p = session.query(models.Price).filter(and_(models.Price.security_id==symbols.id, models.Price.date >= start)).order_by(models.Price.date)
-                    results = pd.read_sql(p.statement, _engine)
+    with _session() as session:
+        symbols = session.query(models.Security.id).filter(and_(models.Security.ticker==ticker.upper(), models.Security.active)).one_or_none()
+        if symbols is not None:
+            if days < 0:
+                p = session.query(models.Price).filter(models.Price.security_id==symbols.id).order_by(models.Price.date)
+                results = pd.read_sql(p.statement, _engine)
+                _logger.info(f'{__name__}: Fetched max price history for {ticker}')
+            elif days > 1:
+                start = dt.datetime.today() - dt.timedelta(days=days)
+                p = session.query(models.Price).filter(and_(models.Price.security_id==symbols.id, models.Price.date >= start)).order_by(models.Price.date)
+                results = pd.read_sql(p.statement, _engine)
+                _logger.info(f'{__name__}: Fetched {days} days of price history for {ticker}')
+            else:
+                days = 50
+                start = dt.datetime.today() - dt.timedelta(days=days)
+                p = session.query(models.Price).filter(and_(models.Price.security_id==symbols.id, models.Price.date >= start)).order_by(models.Price.date)
+                results = pd.read_sql(p.statement, _engine)
+                if not results.empty:
+                    results = results.iloc[-1]
                     _logger.info(f'{__name__}: Fetched {days} days of price history for {ticker}')
                 else:
-                    days = 50
-                    start = dt.datetime.today() - dt.timedelta(days=days)
-                    p = session.query(models.Price).filter(and_(models.Price.security_id==symbols.id, models.Price.date >= start)).order_by(models.Price.date)
-                    results = pd.read_sql(p.statement, _engine)
-                    if not results.empty:
-                        results = results.iloc[-1]
-                        _logger.info(f'{__name__}: Fetched {days} days of price history for {ticker}')
-                    else:
-                        _logger.warning(f'{__name__}: No price history for {ticker}')
-            else:
-                _logger.warning(f'{__name__}: No history found for {ticker}')
+                    _logger.warning(f'{__name__}: No price history for {ticker}')
+        else:
+            _logger.warning(f'{__name__}: No history found for {ticker}')
 
     return results
 
@@ -262,6 +262,7 @@ def get_option_chain(ticker):
     return fetcher.get_option_chain(ticker)
 
 def get_treasury_rate(ticker='DTB3'):
+    # DTB3: Default to 3-Month Treasury Rate
     return fetcher.get_treasury_rate(ticker)
 
 

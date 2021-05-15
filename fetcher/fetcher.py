@@ -2,6 +2,7 @@
 yfinance: https://github.com/ranaroussi/yfinance
 '''
 
+import time
 import datetime as dt
 import configparser
 
@@ -20,6 +21,8 @@ config = configparser.ConfigParser()
 config.read(CREDENTIALS)
 qd.ApiConfig.api_key = config['DEFAULT']['APIKEY']
 
+THROTTLE = 0.050 # Min secs between calls to Yahoo
+
 def validate_ticker(ticker):
     valid = False
 
@@ -32,35 +35,24 @@ def validate_ticker(ticker):
 
     return valid
 
+elasped = 0.0
 def get_company_ex(ticker):
+    global elasped
     company = None
 
-    # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
-    try:
-        company = yf.Ticker(ticker)
+    # Throttle requests to help avoid being cut off by Yahoo
+    while time.perf_counter() - elasped < THROTTLE: time.sleep(THROTTLE)
+    elasped = time.perf_counter()
 
-        # Check if getting 'info' throws any exceptions
+    try:
+        # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
+        company = yf.Ticker(ticker)
         if company is not None:
             _ = company.info
     except:
         company = None
 
     return company
-
-def get_option_expiry(ticker):
-    company = get_company_ex(ticker)
-    value = company.options
-
-    return value
-
-def get_option_chain(ticker):
-    chain = None
-
-    company = get_company_ex(ticker)
-    if company is not None:
-        chain = company.option_chain
-
-    return chain
 
 def get_history(ticker, days=-1):
     history = None
@@ -109,8 +101,22 @@ def get_history_q(ticker, days=-1):
 
     return history
 
+def get_option_expiry(ticker):
+    company = get_company_ex(ticker)
+    value = company.options
+
+    return value
+
+def get_option_chain(ticker):
+    chain = None
+
+    company = get_company_ex(ticker)
+    if company is not None:
+        chain = company.option_chain
+
+    return chain
+
 def get_treasury_rate(ticker):
-    # DTB3: Default to 3-Month Treasury Rate
     df = pd.DataFrame()
     df = qd.get(f'FRED/{ticker}')
     if df.empty:

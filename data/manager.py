@@ -6,16 +6,15 @@ from urllib.error import HTTPError
 from sqlalchemy import create_engine, inspect, and_, or_
 from sqlalchemy.orm import sessionmaker
 import numpy as np
-from sqlalchemy.orm.session import Session
 
 from base import Threaded
 import data as d
 from data import store as store
 from data import models as models
-from fetcher import fetcher as fetcher
 from utils import utils as utils
 
 _logger = utils.get_logger()
+
 
 class Manager(Threaded):
     def __init__(self):
@@ -370,19 +369,6 @@ class Manager(Threaded):
 
         return nasdaq_nyse, nasdaq_amex, nyse_amex
 
-    def validate_list(self, list):
-        symbols = []
-        invalid = []
-        if store.is_exchange(list):
-            symbols = self.get_exchange_symbols_master(list)
-        elif store.is_index(list):
-            symbols = store.get_index_symbols_master(list)
-
-        if len(symbols) > 0:
-            invalid = [s for s in symbols if not fetcher.validate_ticker(s)]
-
-        return invalid
-
     def _refresh_pricing(self, ticker, session):
         ticker = ticker.upper()
         today = date.today()
@@ -401,7 +387,7 @@ class Manager(Threaded):
 
             delta = (today - date_db).days
             if delta > 1:
-                history = store.get_history(ticker, 365, live=True)
+                history = store.get_history_live(ticker, 365)
                 if history is None:
                     _logger.info(f'{__name__}: No pricing dataframe for {ticker}')
                 elif history.empty:
@@ -506,7 +492,7 @@ class Manager(Threaded):
         added = False
         with self.session.begin() as session:
             sec = session.query(models.Security).filter(models.Security.ticker==ticker).one()
-            history = store.get_history(ticker, -1, live=True)
+            history = store.get_history_live(ticker, -1)
             if history is None:
                 sec.active = False
                 _logger.info(f'{__name__}: No pricing information for {ticker}')

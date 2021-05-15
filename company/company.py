@@ -57,7 +57,7 @@ class Company:
         return self.history['volume']
 
     def _load_history(self):
-        self.history = store.get_history(self.ticker, self.days, live=self.live)
+        self.history = store.get_history(self.ticker, self.days)
         if self.history is None:
             raise RuntimeError('history is None')
 
