@@ -117,35 +117,38 @@ def get_current_price(ticker):
 
     return price
 
-def get_history_live(ticker, days):
-    return fetcher.get_history(ticker, days)
-
-def get_history(ticker, days):
+def get_history(ticker, days, live=False):
     results = pd.DataFrame
-    with _session() as session:
-        symbols = session.query(models.Security.id).filter(and_(models.Security.ticker==ticker.upper(), models.Security.active)).one_or_none()
-        if symbols is not None:
-            if days < 0:
-                p = session.query(models.Price).filter(models.Price.security_id==symbols.id).order_by(models.Price.date)
-                results = pd.read_sql(p.statement, _engine)
-                _logger.info(f'{__name__}: Fetched max price history for {ticker}')
-            elif days > 1:
-                start = dt.datetime.today() - dt.timedelta(days=days)
-                p = session.query(models.Price).filter(and_(models.Price.security_id==symbols.id, models.Price.date >= start)).order_by(models.Price.date)
-                results = pd.read_sql(p.statement, _engine)
-                _logger.info(f'{__name__}: Fetched {days} days of price history for {ticker}')
-            else:
-                days = 50
-                start = dt.datetime.today() - dt.timedelta(days=days)
-                p = session.query(models.Price).filter(and_(models.Price.security_id==symbols.id, models.Price.date >= start)).order_by(models.Price.date)
-                results = pd.read_sql(p.statement, _engine)
-                if not results.empty:
-                    results = results.iloc[-1]
+    if live:
+        results = fetcher.get_history(ticker, days)
+    else:
+        with _session() as session:
+            symbols = session.query(models.Security.id).filter(and_(models.Security.ticker==ticker.upper(), models.Security.active)).one_or_none()
+            if symbols is not None:
+                if days < 0:
+                    p = session.query(models.Price).filter(models.Price.security_id==symbols.id).order_by(models.Price.date)
+                    results = pd.read_sql(p.statement, _engine)
+                    _logger.info(f'{__name__}: Fetched max price history for {ticker}')
+                elif days > 1:
+                    start = dt.datetime.today() - dt.timedelta(days=days)
+                    p = session.query(models.Price).filter(and_(models.Price.security_id==symbols.id, models.Price.date >= start)).order_by(models.Price.date)
+                    results = pd.read_sql(p.statement, _engine)
                     _logger.info(f'{__name__}: Fetched {days} days of price history for {ticker}')
                 else:
-                    _logger.warning(f'{__name__}: No price history for {ticker}')
-        else:
-            _logger.warning(f'{__name__}: No history found for {ticker}')
+                    days = 50
+                    start = dt.datetime.today() - dt.timedelta(days=days)
+                    p = session.query(models.Price).filter(and_(models.Price.security_id==symbols.id, models.Price.date >= start)).order_by(models.Price.date)
+                    results = pd.read_sql(p.statement, _engine)
+                    if not results.empty:
+                        results = results.iloc[-1]
+                        _logger.info(f'{__name__}: Fetched {days} days of price history for {ticker}')
+                    else:
+                        _logger.warning(f'{__name__}: No price history for {ticker}')
+            else:
+                _logger.warning(f'{__name__}: No history found for {ticker}')
+
+        if not results.empty:
+            results.drop(['id', 'security_id'], 1, inplace=True)
 
     return results
 

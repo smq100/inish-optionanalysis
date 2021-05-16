@@ -387,7 +387,7 @@ class Manager(Threaded):
 
             delta = (today - date_db).days
             if delta > 1:
-                history = store.get_history_live(ticker, 365)
+                history = store.get_history(ticker, 365, live=True)
                 if history is None:
                     _logger.info(f'{__name__}: No pricing dataframe for {ticker}')
                 elif history.empty:
@@ -492,7 +492,7 @@ class Manager(Threaded):
         added = False
         with self.session.begin() as session:
             sec = session.query(models.Security).filter(models.Security.ticker==ticker).one()
-            history = store.get_history_live(ticker, -1)
+            history = store.get_history(ticker, -1, live=True)
             if history is None:
                 sec.active = False
                 _logger.info(f'{__name__}: No pricing information for {ticker}')

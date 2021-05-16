@@ -16,7 +16,7 @@ class Technical:
             self.days = days
 
             if history is None or history.empty:
-                self.history = store.get_history(self.ticker, self.days)
+                self.history = store.get_history(self.ticker, self.days, live=live)
             else:
                 self.history = history
 
