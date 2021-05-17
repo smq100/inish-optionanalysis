@@ -30,7 +30,9 @@ if __name__ == '__main__':
     # from logging import DEBUG
     # logger = u.get_logger(DEBUG)
 
-    symbols = store.get_index_symbols('DOW')
-    df = correlate(symbols)
+    df = store.get_history('CAT', 30)
 
-    print(df)
+    # symbols = store.get_index_symbols('DOW')
+    # df = correlate(symbols[:5])
+
+    print(df.to_string())

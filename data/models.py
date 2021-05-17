@@ -84,6 +84,7 @@ class Company(Base):
 
 class Price(Base):
     __tablename__ = 'price'
+    __table_args__ = (UniqueConstraint('date', 'security_id', name='date_id_uc'), )
     id = Column(Integer, primary_key=True, autoincrement=True)
     date = Column('date', Date, nullable=False)
     open = Column('open', Float)
@@ -93,7 +94,6 @@ class Price(Base):
     volume = Column('volume', Float)
     security_id = Column(Integer, ForeignKey('security.id', onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
     security = relationship('Security')
-    UniqueConstraint('date', 'security_id')
 
     def __repr__(self):
         return f'<Price Model ({self.security_id})>'

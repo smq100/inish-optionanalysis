@@ -278,7 +278,7 @@ class Leg:
         self.calculate()
 
     def generate_value_table(self):
-        dframe = pd.DataFrame()
+        df = pd.DataFrame()
 
         if self.option.calc_price > 0.0:
             cols, step = self._calc_date_step()
@@ -332,7 +332,6 @@ class Leg:
                     else:
                         spot = utils.mround(spot, 0.01)
 
-
                     row_index.append(spot)
 
                 # Strip the time from the datetime string
@@ -340,12 +339,12 @@ class Leg:
                     day = datetime.datetime.strptime(item, '%Y-%m-%d %H:%M:%S').date()
                     col_index[index] = f'{str(day.strftime("%b"))}-{str(day.day)}'
 
-                # Finally, create the Pandas dataframe then reverse the row order
+                # Finally, create the dataframe then reverse the row order
                 col_index[-1] = 'Exp'
-                dframe = pd.DataFrame(table, index=row_index, columns=col_index)
-                dframe = dframe.iloc[::-1]
+                df = pd.DataFrame(table, index=row_index, columns=col_index)
+                df = df.iloc[::-1]
 
-        return dframe
+        return df
 
     def _calc_date_step(self):
         cols = int(math.ceil(self.option.time_to_maturity * 365))

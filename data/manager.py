@@ -415,8 +415,10 @@ class Manager(Threaded):
                                 sec.pricing += [p]
 
                         _logger.info(f'{__name__}: Updated {days} days pricing for {ticker.upper()} to {date_cloud:%Y-%m-%d}')
+                    else:
+                        _logger.info(f'{__name__}: {ticker} already up to date with cloud data')
             else:
-                _logger.info(f'{__name__}: {ticker} up to date; {delta} days')
+                _logger.info(f'{__name__}: {ticker} already up to date')
 
         return days
 
@@ -552,20 +554,5 @@ if __name__ == '__main__':
     _logger = utils.get_logger(DEBUG)
 
     manager = Manager()
-    manager._refresh_pricing('PVAC', None)
-
-    # if len(sys.argv) > 1:
-    #     data = manager.populate_exchange(sys.argv[1])
-    # else:
-    #     data = manager.populate_exchange('AMEX')
-
-    # print(len(data))
-    # invalid = manager.validate_list('NASDAQ')
-    # print (invalid)
-
-    # manager.delete_database(recreate=True)
-    # manager.build_exchanges()
-    # manager.build_indexes()
-    # manager.populate_exchange('AMEX')
-    # manager.populate_index('SP500')
-    # manager.populate_index('DOW')
+    with manager.session() as session:
+        manager._refresh_pricing('CAT', None)
