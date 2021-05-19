@@ -273,9 +273,12 @@ def get_treasury_rate(ticker='DTB3'):
 
 
 if __name__ == '__main__':
+    import sys
     # from logging import DEBUG
     # logger = u.get_logger(DEBUG)
 
-    t = get_history('PVAC', 20, live=True)
+    if len(sys.argv) > 1:
+        t = get_history(sys.argv[1], 20)
+    else:
+        t = get_history('AAPL', 20)
     print(t)
-    print(type(t))

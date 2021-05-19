@@ -1,10 +1,12 @@
-import os, time
+import os
+import time
 from datetime import date
 from concurrent import futures
 from urllib.error import HTTPError
 
 from sqlalchemy import create_engine, inspect, and_, or_
 from sqlalchemy.orm import sessionmaker
+from psycopg2.errors import UniqueViolation
 import numpy as np
 
 from base import Threaded
@@ -169,12 +171,13 @@ class Manager(Threaded):
 
         self.task_error = 'None'
 
-        # Split the list and remove any empty lists
-        lists = np.array_split(tickers, self._concurrency)
-        lists = [i for i in lists if i is not None]
+        if self.task_total > 0:
+            # Split the list and remove any empty lists
+            lists = np.array_split(tickers, self._concurrency)
+            lists = [i for i in lists if i is not None]
 
-        with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
-            self.task_futures = [executor.submit(_pricing, list) for list in lists]
+            with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
+                self.task_futures = [executor.submit(_pricing, list) for list in lists]
 
         self.task_error = 'Done'
 
@@ -374,9 +377,9 @@ class Manager(Threaded):
         today = date.today()
         days = 0
 
-        history = store.get_history(ticker, 50)
+        history = store.get_history(ticker, 365)
         if history.empty:
-            _logger.warning(f'{__name__}: No price history')
+            _logger.info(f'{__name__}: No price history for {ticker}')
         else:
             date_db = history.iloc[-1]['date']
             if date_db is not None:
@@ -397,24 +400,27 @@ class Manager(Threaded):
                     _logger.info(f'{__name__}: Last {ticker} price in cloud: {date_cloud:%Y-%m-%d}')
 
                     delta = (date_cloud - date_db).days
-                    if delta > 1:
+                    if delta > 0:
                         history = history[-delta:]
                         history.reset_index(inplace=True)
                         sec = session.query(models.Security).filter(models.Security.ticker==ticker).one()
                         days = delta
-                        for _, price in history.iterrows():
-                            if price['date']:
-                                p = models.Price()
-                                p.date = price['date']
-                                p.open = price['open']
-                                p.high = price['high']
-                                p.low = price['low']
-                                p.close = price['close']
-                                p.volume = price['volume']
+                        try:
+                            for _, price in history.iterrows():
+                                if price['date']:
+                                    p = models.Price()
+                                    p.date = price['date']
+                                    p.open = price['open']
+                                    p.high = price['high']
+                                    p.low = price['low']
+                                    p.close = price['close']
+                                    p.volume = price['volume']
 
-                                sec.pricing += [p]
+                                    sec.pricing += [p]
 
-                        _logger.info(f'{__name__}: Updated {days} days pricing for {ticker.upper()} to {date_cloud:%Y-%m-%d}')
+                            _logger.info(f'{__name__}: Updated {days} days pricing for {ticker.upper()} to {date_cloud:%Y-%m-%d}')
+                        except UniqueViolation as e:
+                            _logger.info(f'{__name__}: {ticker} UniqueViolation exception occurred: {e}')
                     else:
                         _logger.info(f'{__name__}: {ticker} already up to date with cloud data')
             else:
@@ -503,24 +509,27 @@ class Manager(Threaded):
                 _logger.info(f'{__name__}: No pricing information for {ticker}')
             else:
                 history.reset_index(inplace=True)
-                for _, price in history.iterrows():
-                    if price['date']:
-                        p = models.Price()
-                        p.date = price['date']
-                        p.open = price['open']
-                        p.high = price['high']
-                        p.low = price['low']
-                        p.close = price['close']
-                        p.volume = price['volume']
+                try:
+                    for _, price in history.iterrows():
+                        if price['date']:
+                            p = models.Price()
+                            p.date = price['date']
+                            p.open = price['open']
+                            p.high = price['high']
+                            p.low = price['low']
+                            p.close = price['close']
+                            p.volume = price['volume']
 
-                        sec.pricing += [p]
-                        added = True
+                            sec.pricing += [p]
+                            added = True
 
-                        if missing:
-                            # Remove from 'missing' table if there
-                            session.query(models.MissingPrice).filter(models.MissingPrice.security_id==sec.id).delete()
-                    else:
-                        sec.active = False
+                            if missing:
+                                # Remove from 'missing' table if there
+                                session.query(models.MissingPrice).filter(models.MissingPrice.security_id==sec.id).delete()
+                        else:
+                            sec.active = False
+                except UniqueViolation as e:
+                    _logger.info(f'{__name__}: {ticker} UniqueViolation exception occurred: {e}')
 
                 _logger.info(f'{__name__}: Added pricing information for {ticker}')
 
