@@ -70,14 +70,12 @@ class Manager(Threaded):
             self.task_total = len(tickers)
             self.task_error = 'None'
 
-            if self._concurrency > 1:
-                random.shuffle(tickers)
-                lists = np.array_split(tickers, self._concurrency)
-
-                with futures.ThreadPoolExecutor() as executor:
+            with futures.ThreadPoolExecutor() as executor:
+                if self._concurrency > 1:
+                    random.shuffle(tickers)
+                    lists = np.array_split(tickers, self._concurrency)
                     self.task_futures = [executor.submit(self._add_securities_to_exchange, list, exchange) for list in lists]
-            else:
-                with futures.ThreadPoolExecutor() as executor:
+                else:
                     self.task_futures = [executor.submit(self._add_securities_to_exchange, tickers, exchange)]
         else:
             _logger.warning(f'{__name__}: No symbols for {exchange}')

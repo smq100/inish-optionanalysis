@@ -51,17 +51,18 @@ def is_index(index):
             break
     return ret
 
-def get_symbols(exchange=''):
+def get_symbols(list=''):
     tickers = []
 
-    with _session() as session:
-        if exchange:
-            exc = session.query(models.Exchange.id, models.Exchange.abbreviation).filter(models.Exchange.abbreviation==exchange).one()
-            sym = session.query(models.Security.ticker).filter(and_(models.Security.exchange_id==exc.id, models.Security.active)).order_by(models.Security.ticker)
-        else:
-            sym = session.query(models.Security.ticker).filter(models.Security.active).order_by(models.Security.ticker)
+    if not list:
+        with _session() as session:
+            sym = session.query(models.Security.ticker).filter(models.Security.active).order_by(models.Security.ticker).all()
+        tickers = [x[0] for x in sym]
+    elif is_exchange(list):
+        tickers = get_exchange_symbols(list)
+    elif is_index(list):
+        tickers = get_index_symbols(list)
 
-    tickers = list(map(lambda x: x[0], sym.all()))
     return tickers
 
 def get_exchanges():
@@ -86,7 +87,7 @@ def get_exchange_symbols(exchange):
     results = []
 
     with _session() as session:
-        exc = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange.upper()).first()
+        exc = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange.upper()).one()
         if exc is not None:
             symbols = session.query(models.Security).filter(and_(models.Security.exchange_id==exc.id, models.Security.active)).all()
             results = [symbol.ticker for symbol in symbols]
