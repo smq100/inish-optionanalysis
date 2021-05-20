@@ -9,7 +9,7 @@ port = config['DEFAULT']['PORT']
 db = config['DEFAULT']['DB']
 
 OPTIONS_DB = ('Postgres', 'SQLite')
-ACTIVE_DB = OPTIONS_DB[0]
+ACTIVE_DB = OPTIONS_DB[1]
 
 SQLITE_DATABASE_PATH = 'data/securities.db'
 SQLITE_URI = f'sqlite:///{SQLITE_DATABASE_PATH}'

@@ -1,5 +1,6 @@
 import os
 import time
+import random
 from datetime import date
 from concurrent import futures
 from urllib.error import HTTPError
@@ -27,7 +28,7 @@ class Manager(Threaded):
         self.exchange = ''
         self.invalid_symbols = []
         self.retry = 0
-        self._concurrency = 5 if d.ACTIVE_DB == 'SQLite' else 10
+        self._concurrency = 1 if d.ACTIVE_DB == 'SQLite' else 10
 
     def create_database(self):
         models.Base.metadata.create_all(self.engine)
@@ -69,13 +70,15 @@ class Manager(Threaded):
             self.task_total = len(tickers)
             self.task_error = 'None'
 
-            # Split the list and remove any empty lists
-            lists = np.array_split(tickers, self._concurrency)
-            lists = [i for i in lists if i is not None]
+            if self._concurrency > 1:
+                random.shuffle(tickers)
+                lists = np.array_split(tickers, self._concurrency)
 
-            # self._add_securities_to_exchange(tickers, exchange)
-            with futures.ThreadPoolExecutor() as executor:
-                self.task_futures = [executor.submit(self._add_securities_to_exchange, list, exchange) for list in lists]
+                with futures.ThreadPoolExecutor() as executor:
+                    self.task_futures = [executor.submit(self._add_securities_to_exchange, list, exchange) for list in lists]
+            else:
+                with futures.ThreadPoolExecutor() as executor:
+                    self.task_futures = [executor.submit(self._add_securities_to_exchange, tickers, exchange)]
         else:
             _logger.warning(f'{__name__}: No symbols for {exchange}')
 
@@ -102,9 +105,9 @@ class Manager(Threaded):
                         self.task_success += 1
                     self.task_completed += 1
 
-            # Split the list and remove any empty lists
+            # Split the list
+            random.shuffle(missing)
             lists = np.array_split(missing, self._concurrency)
-            lists = [i for i in lists if i is not None]
 
             with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
                 self.task_futures = [executor.submit(_companies, list) for list in lists]
@@ -122,9 +125,9 @@ class Manager(Threaded):
                         self.task_success += 1
                     self.task_completed += 1
 
-            # Split the list and remove any empty lists
+            # Split the list
+            random.shuffle(missing)
             lists = np.array_split(missing, self._concurrency)
-            lists = [i for i in lists if i is not None]
 
             with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
                 self.task_futures = [executor.submit(_pricing, list) for list in lists]
@@ -169,12 +172,12 @@ class Manager(Threaded):
 
                     self.task_completed += 1
 
-        self.task_error = 'None'
-
         if self.task_total > 0:
-            # Split the list and remove any empty lists
+            self.task_error = 'None'
+
+            # Split the list
+            random.shuffle(tickers)
             lists = np.array_split(tickers, self._concurrency)
-            lists = [i for i in lists if i is not None]
 
             with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
                 self.task_futures = [executor.submit(_pricing, list) for list in lists]
@@ -435,12 +438,13 @@ class Manager(Threaded):
             for ticker in tickers:
                 s = session.query(models.Security).filter(models.Security.ticker==ticker).one_or_none()
                 if s is None:
-                    self.task_symbol = ticker
-                    exc.securities += [models.Security(ticker)]
-                    session.commit()
-                    _logger.info(f'{__name__}: Added {ticker} to exchange {exchange}')
-
                     try:
+                        self.task_symbol = ticker
+                        exc.securities += [models.Security(ticker)]
+                        session.commit()
+
+                        _logger.info(f'{__name__}: Added {ticker} to exchange {exchange}')
+
                         self._add_company_to_security(ticker)
                         self._add_pricing_to_security(ticker, False)
                     except (ValueError, KeyError, IndexError) as e:
@@ -452,12 +456,15 @@ class Manager(Threaded):
                         _logger.warning(f'{__name__}: HTTP Error. Retrying... {self.retry}, {str(e)}')
                         if self.retry > 10:
                             self.task_error = 'HTTP Error'
-                            _logger.error(f'{__name__}: HTTP Error. Too many retries. {str(e)}')
+                            _logger.error(f'{__name__}: HTTP Error. Too many retries, {str(e)}')
                         else:
                             time.sleep(5.0)
                     except RuntimeError as e:
                         self.task_error = 'Runtime Error'
-                        _logger.error(f'{__name__}: Runtime Error, {str(e)}')
+                        _logger.error(f'{__name__}: Runtime Error for {ticker}, {str(e)}')
+                    except Exception as e:
+                        self.task_error = 'Unknown Error'
+                        _logger.error(f'{__name__}: Unknown Error for {ticker}, {str(e)}')
                     else:
                         self.retry = 0
                         self.task_success += 1

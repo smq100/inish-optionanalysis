@@ -53,13 +53,12 @@ class Interface:
             '4': 'Refresh Exchange',
             '5': 'Update Pricing',
             '6': 'Populate Index',
-            '7': 'Create Missing Exchanges and Indexes',
-            '8': 'Reset Database',
+            '7': 'Reset Database',
             '0': 'Exit'
         }
 
         while True:
-            selection = utils.menu(menu_items, 'Select Operation', 0, 8)
+            selection = utils.menu(menu_items, 'Select Operation', 0, 7)
 
             if selection == 1:
                 self.show_database_information(all=True)
@@ -74,8 +73,6 @@ class Interface:
             elif selection == 6:
                 self.populate_index()
             elif selection == 7:
-                self.create_missing_tables()
-            elif selection == 8:
                 self.reset_database()
             elif selection == 0:
                 break
