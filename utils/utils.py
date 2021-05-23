@@ -57,6 +57,9 @@ def print_warning(message, creturn=1):
 def print_error(message, creturn=1):
     print(_delimeter(f'Error: {message}', creturn))
 
+def print_line(message):
+    print(_delimeter(message, creturn=0), end='\r')
+
 def input_integer(message, min_, max_):
     val = min_ - 1
     while val < min_:

@@ -1,6 +1,5 @@
 import os, json
 import logging
-import datetime as dt
 
 import matplotlib.pyplot as plt
 
@@ -10,11 +9,13 @@ from data import store as store
 from utils import utils as utils
 
 
-logger = utils.get_logger(logging.WARNING)
+_logger = utils.get_logger(logging.WARNING)
 
 class Interface:
     def __init__(self, ticker, script=''):
         self.technical = None
+        self.coorelate = None
+        self.symbols = []
 
         if script:
             if os.path.exists(script):
@@ -164,7 +165,6 @@ class Interface:
                     break
         else:
             utils.print_error('Please forst select symbol')
-
 
     def plot_all(self):
         if self.technical is not None:

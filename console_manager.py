@@ -170,7 +170,7 @@ class Interface:
             menu_items[f'{i+1}'] = f'{exchange}'
         menu_items['0'] = 'Cancel'
 
-        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
+        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.EXCHANGES))
         if select > 0:
             exc = self.exchanges[select-1]
 
