@@ -51,6 +51,15 @@ def is_index(index):
             break
     return ret
 
+def is_list(list):
+    ret = False
+    if is_exchange(list):
+        ret = True
+    elif is_index(list):
+        ret = True
+
+    return ret
+
 def get_symbols(list=''):
     tickers = []
 

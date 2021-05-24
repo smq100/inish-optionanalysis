@@ -42,6 +42,7 @@ class Correlate(Threaded):
 
         self.task_error = 'Done'
 
+
 if __name__ == '__main__':
     symbols = store.get_symbols('DOW')
     c = Correlate()
