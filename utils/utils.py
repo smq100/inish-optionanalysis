@@ -110,7 +110,7 @@ def input_text(message):
 
 position = 0
 direction = 'f'
-def progress_bar(iteration, total, prefix='', suffix='', symbol='', decimals=1, length=100, fill='█', end='\r', percent=False, reset=False, success=-1, tasks=0):
+def progress_bar(iteration, total, prefix='', suffix='', symbol='', length=100, fill='█', reset=False, success=-1, tasks=0):
     global position
     global direction
 
@@ -122,17 +122,14 @@ def progress_bar(iteration, total, prefix='', suffix='', symbol='', decimals=1, 
         filled = int(length * iteration // total)
         bar = fill * filled + '-' * (length - filled)
 
-        if percent:
-            percent = ('{0:.' + str(decimals) + 'f}').format(100 * (iteration / float(total)))
-            print(f'\r{prefix} |{bar}| {percent}% {suffix} {symbol}     ', end=end)
-        elif success < 0:
-            print(f'\r{prefix} |{bar}| {iteration}/{total} {suffix} {symbol}     ', end=end)
+        if success < 0:
+            print(f'\r{prefix} |{bar}| {iteration}/{total} {suffix} {symbol}     ', end='\r')
         else:
-            print(f'\r{prefix} |{bar}| {iteration}/{total} ({success}) [{tasks}] {suffix} {symbol}     ', end=end)
+            print(f'\r{prefix} |{bar}| {iteration}/{total} ({success}) [{tasks}] {suffix} {symbol}     ', end='\r')
 
         if iteration == total:
             print()
-    else:
+    else: # Use oscillating marker when the total is not known
         if direction == 'f':
             if position < length:
                 position += 1
@@ -150,7 +147,7 @@ def progress_bar(iteration, total, prefix='', suffix='', symbol='', decimals=1, 
         back = length - position
         bar = ('-' * front) + fill + ('-' * back)
 
-        print(f'\rWorking |{bar}| {suffix}', end=end)
+        print(f'\rWorking |{bar}| {suffix}', end='\r')
 
 def mround(n, precision):
     val = round(n / precision) * precision

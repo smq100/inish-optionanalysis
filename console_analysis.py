@@ -1,4 +1,4 @@
-import os, json, time
+import time
 import threading
 import logging
 
@@ -11,47 +11,41 @@ from utils import utils as utils
 _logger = utils.get_logger(logging.WARNING)
 
 class Interface:
-    def __init__(self, list='', coor=False):
-        self.list = list.upper()
-        self.technical = None
+    def __init__(self, coor=''):
+        self.list = coor.upper()
         self.coorelate = None
         self.exchanges = [e['abbreviation'] for e in d.EXCHANGES]
         self.indexes = [i['abbreviation'] for i in d.INDEXES]
         self.symbols = []
 
-        if list:
-            if store.is_list(self.list):
-                if coor:
-                    self.main_menu(selection=1)
-                else:
-                    self.main_menu()
-            else:
-                print('Invalid list specified')
-        elif coor:
-            print('Must specifiy list to coorelate')
-        else:
+        if not coor:
             self.main_menu()
+        elif store.is_list(self.list):
+            self.main_menu(selection=1)
+        else:
+            utils.print_error('Invalid list specified')
 
     def main_menu(self, selection=0):
         while True:
             menu_items = {
-                '1': 'Coorelation',
+                '1': 'Compute Coorelation',
+                '2': 'Coorelate Symbol',
                 '0': 'Exit'
             }
 
-            if self.technical is not None:
-                menu_items['1'] = f'Change Symbol ({self.technical.ticker})'
-
             if selection == 0:
-                selection = utils.menu(menu_items, 'Select Operation', 0, 1)
+                selection = utils.menu(menu_items, 'Select Operation', 0, 2)
 
             if selection == 1:
-                self.coorelation()
-                selection = 0
+                self.compute_coorelation()
+            elif selection == 2:
+                self.get_symbol_coorelation()
             elif selection == 0:
                 break
 
-    def coorelation(self, progressbar=True):
+            selection = 0
+
+    def compute_coorelation(self, progressbar=True):
         if not self.list:
             self.list = self._get_list()
 
@@ -60,7 +54,7 @@ class Interface:
             self.coorelate = Correlate(self.symbols)
 
             if self.coorelate:
-                self.task = threading.Thread(target=self.coorelate.correlate)
+                self.task = threading.Thread(target=self.coorelate.compute_correlation)
                 self.task.start()
 
                 if progressbar:
@@ -69,10 +63,26 @@ class Interface:
 
                 utils.print_message(f'Coorelation Among {list} Symbols')
                 print(self.coorelate.task_object)
-                print(self.coorelate.task_object.min(numeric_only=True))
             else:
                 utils.print_error('Invaid symbol list')
                 _logger.error(f'{__name__}: Invalid symbol list')
+
+    def get_symbol_coorelation(self):
+        if not self.coorelate:
+            utils.print_error('Run coorelation first')
+        elif not self.coorelate.compute_correlation:
+            utils.print_error('Run coorelation first')
+        else:
+            symbol = utils.input_text('Enter symbol: ').upper()
+            if not store.is_symbol_valid(symbol):
+                utils.print_error('Invalid symbol')
+            else:
+                ds = self.coorelate.get_symbol_coorelation(symbol)
+                print(ds)
+                utils.print_message(f'Highest correlation for {symbol}')
+                [print(f'{sym:>5}: {val:.5f}') for sym, val in ds[-1:-6:-1].iteritems()]
+                utils.print_message(f'Lowest correlation for {symbol}')
+                [print(f'{sym:>5}: {val:.5f}') for sym, val in ds[:5].iteritems()]
 
     def _get_list(self):
         list = ''
@@ -99,20 +109,17 @@ class Interface:
                 time.sleep(0.20)
                 completed = self.coorelate.task_completed
                 symbol = self.coorelate.task_symbol
-
                 utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, symbol=symbol, length=50)
-
 
 
 if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser(description='Analysis')
-    parser.add_argument('-l', '--list', help='Specify the list')
-    parser.add_argument('-c', '--coorelate', help='Coorelate the list', action='store_true')
+    parser.add_argument('-c', '--coorelate', help='Coorelate the list')
 
     command = vars(parser.parse_args())
-    if command['list']:
-        Interface(command['list'], coor=command['coorelate'])
-    else:
+    if command['coorelate']:
         Interface(coor=command['coorelate'])
+    else:
+        Interface()

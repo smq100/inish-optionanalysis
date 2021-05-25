@@ -15,12 +15,14 @@ class Correlate(Threaded):
             raise ValueError('Invalid list of tickers')
 
         self.tickers = tickers
+        self.correlation = None
 
     @Threaded.threaded
-    def correlate(self):
+    def compute_correlation(self):
         main_df = pd.DataFrame()
         self.task_total = len(self.tickers)
         self.task_error = 'None'
+        self.correlation = None
 
         for ticker in self.tickers:
             self.task_symbol = ticker
@@ -38,13 +40,29 @@ class Correlate(Threaded):
                     main_df = main_df.join(df, how='outer')
 
         if not main_df.empty:
-            self.task_object = main_df.fillna(main_df.mean()).corr()
+            self.correlation = main_df.fillna(main_df.mean()).corr()
+            self.task_object = self.correlation
 
         self.task_error = 'Done'
+
+    def get_symbol_coorelation(self, ticker):
+        df = pd.DataFrame()
+        ticker = ticker.upper()
+
+        if self.correlation is not None and not self.correlation.empty:
+            if ticker in self.correlation.index:
+                df = self.correlation[ticker].sort_values()
+                df.drop(ticker, inplace=True) # Drop own entry (coor = 1.0)
+            else:
+                _logger.warning(f'{__name__}: Invalid ticker {ticker}')
+        else:
+                _logger.warning(f'{__name__}: No dataframe')
+
+        return df
 
 
 if __name__ == '__main__':
     symbols = store.get_symbols('DOW')
     c = Correlate()
-    df = c.correlate(symbols)
+    df = c.compute_correlation(symbols)
     print(df)
