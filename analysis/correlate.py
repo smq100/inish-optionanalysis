@@ -45,6 +45,16 @@ class Correlate(Threaded):
 
         self.task_error = 'Done'
 
+    def get_best_coorelation(self):
+        df = pd.DataFrame()
+        if self.correlation is not None and not self.correlation.empty:
+            coor = [self.get_symbol_coorelation(sym) for sym in self.correlation]
+
+            # for sym in self.correlation:
+            #     ds = self.get_symbol_coorelation(sym)
+            #     print(f'{sym}, {ds.idxmax(axis=1)}, {ds.max():.3f}')
+            #     print(f'{sym}, {ds.idxmin(axis=1)}, {ds.min():.3f}')
+
     def get_symbol_coorelation(self, ticker):
         df = pd.DataFrame()
         ticker = ticker.upper()

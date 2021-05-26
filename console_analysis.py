@@ -29,16 +29,19 @@ class Interface:
         while True:
             menu_items = {
                 '1': 'Compute Coorelation',
-                '2': 'Coorelate Symbol',
+                '2': 'Best Coorelation',
+                '3': 'Symbol Coorelation',
                 '0': 'Exit'
             }
 
             if selection == 0:
-                selection = utils.menu(menu_items, 'Select Operation', 0, 2)
+                selection = utils.menu(menu_items, 'Select Operation', 0, 3)
 
             if selection == 1:
                 self.compute_coorelation()
             elif selection == 2:
+                self.get_best_coorelation()
+            elif selection == 3:
                 self.get_symbol_coorelation()
             elif selection == 0:
                 break
@@ -67,6 +70,14 @@ class Interface:
                 utils.print_error('Invaid symbol list')
                 _logger.error(f'{__name__}: Invalid symbol list')
 
+    def get_best_coorelation(self):
+        if not self.coorelate:
+            utils.print_error('Run coorelation first')
+        elif not self.coorelate.compute_correlation:
+            utils.print_error('Run coorelation first')
+        else:
+            ds = self.coorelate.get_best_coorelation()
+
     def get_symbol_coorelation(self):
         if not self.coorelate:
             utils.print_error('Run coorelation first')
@@ -78,11 +89,10 @@ class Interface:
                 utils.print_error('Invalid symbol')
             else:
                 ds = self.coorelate.get_symbol_coorelation(symbol)
-                print(ds)
                 utils.print_message(f'Highest correlation for {symbol}')
-                [print(f'{sym:>5}: {val:.5f}') for sym, val in ds[-1:-6:-1].iteritems()]
+                [print(f'{sym:>5}: {val:.5f}') for sym, val in ds[-1:-11:-1].iteritems()]
                 utils.print_message(f'Lowest correlation for {symbol}')
-                [print(f'{sym:>5}: {val:.5f}') for sym, val in ds[:5].iteritems()]
+                [print(f'{sym:>5}: {val:.5f}') for sym, val in ds[:10].iteritems()]
 
     def _get_list(self):
         list = ''
