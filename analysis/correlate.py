@@ -45,15 +45,29 @@ class Correlate(Threaded):
 
         self.task_error = 'Done'
 
-    def get_best_coorelation(self):
-        df = pd.DataFrame()
-        if self.correlation is not None and not self.correlation.empty:
-            coor = [self.get_symbol_coorelation(sym) for sym in self.correlation]
+    def get_sorted_coorelations(self, count, best):
+        all = self.get_all_coorelations()
+        if all is not None:
+            all.sort(key=lambda x: x[2], reverse=best)
 
-            # for sym in self.correlation:
-            #     ds = self.get_symbol_coorelation(sym)
-            #     print(f'{sym}, {ds.idxmax(axis=1)}, {ds.max():.3f}')
-            #     print(f'{sym}, {ds.idxmin(axis=1)}, {ds.min():.3f}')
+        return all[:count]
+
+    def get_all_coorelations(self):
+        all = []
+        if self.correlation is not None and not self.correlation.empty:
+            coors = (self.get_symbol_coorelation(sym) for sym in self.correlation)
+            for sym in coors:
+                for s in sym.iteritems():
+                    # Arrange the symbol names so we can more easily remove duplicaates
+                    if sym.name < tuple(s)[0]:
+                        t = (sym.name, tuple(s)[0], tuple(s)[1])
+                    else:
+                        t = (tuple(s)[0], sym.name, tuple(s)[1])
+
+                    if t not in all:
+                        all += [t]
+
+        return all
 
     def get_symbol_coorelation(self, ticker):
         df = pd.DataFrame()

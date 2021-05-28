@@ -2,6 +2,8 @@ import time
 import threading
 import logging
 
+from sqlalchemy.sql.expression import false
+
 import data as d
 from analysis.correlate import Correlate
 from data import store as store
@@ -30,18 +32,21 @@ class Interface:
             menu_items = {
                 '1': 'Compute Coorelation',
                 '2': 'Best Coorelation',
-                '3': 'Symbol Coorelation',
+                '3': 'Least Coorelation',
+                '4': 'Symbol Coorelation',
                 '0': 'Exit'
             }
 
             if selection == 0:
-                selection = utils.menu(menu_items, 'Select Operation', 0, 3)
+                selection = utils.menu(menu_items, 'Select Operation', 0, 4)
 
             if selection == 1:
                 self.compute_coorelation()
             elif selection == 2:
                 self.get_best_coorelation()
             elif selection == 3:
+                self.get_least_coorelation()
+            elif selection == 4:
                 self.get_symbol_coorelation()
             elif selection == 0:
                 break
@@ -76,7 +81,19 @@ class Interface:
         elif not self.coorelate.compute_correlation:
             utils.print_error('Run coorelation first')
         else:
-            ds = self.coorelate.get_best_coorelation()
+            utils.print_message(f'Best Coorelations in {self.list}')
+            best = self.coorelate.get_sorted_coorelations(20, True)
+            [print(f'{item[0]}/{item[1]:<5}\t{item[2]:.4f}') for item in best]
+
+    def get_least_coorelation(self):
+        if not self.coorelate:
+            utils.print_error('Run coorelation first')
+        elif not self.coorelate.compute_correlation:
+            utils.print_error('Run coorelation first')
+        else:
+            utils.print_message(f'Least Coorelations in {self.list}')
+            best = self.coorelate.get_sorted_coorelations(20, False)
+            [print(f'{item[0]}/{item[1]:<5}\t{item[2]:.4f}') for item in best]
 
     def get_symbol_coorelation(self):
         if not self.coorelate:
