@@ -20,6 +20,6 @@ venv
 *.session.*
 *.png
 *.bak
-*.xlsx
+#*.xlsx
 *.csv
 *.db
