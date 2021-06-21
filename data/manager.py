@@ -162,8 +162,11 @@ class Manager(Threaded):
             with self.session() as session:
                 for sec in tickers:
                     self.task_symbol = sec
-                    days = self._refresh_pricing(sec, session)
-                    session.commit()
+                    try:
+                        days = self._refresh_pricing(sec, session)
+                        session.commit()
+                    except UniqueViolation as e:
+                        _logger.warning(f'{__name__}: UniqueViolation exception occurred for {sec}: {e}')
 
                     if days > 0:
                         self.task_success += 1
@@ -387,7 +390,7 @@ class Manager(Threaded):
                 _logger.info(f'{__name__}: Last {ticker} price in database: {date_db:%Y-%m-%d}')
             else:
                 date_db = today - date(2000,1,1)
-                _logger.info(f'{__name__}: No date history for {ticker} in database')
+                _logger.info(f'{__name__}: No price history for {ticker} in database')
 
             delta = (today - date_db).days
             if delta > 1:
@@ -402,13 +405,15 @@ class Manager(Threaded):
 
                     delta = (date_cloud - date_db).days
                     if delta > 0:
+                        days = delta
                         history = history[-delta:]
                         history.reset_index(inplace=True)
                         sec = session.query(models.Security).filter(models.Security.ticker==ticker).one()
-                        days = delta
-                        try:
-                            for _, price in history.iterrows():
-                                if price['date']:
+
+                        for _, price in history.iterrows():
+                            if price['date']:
+                                pri = session.query(models.Price.date).filter(and_(models.Price.security_id==sec.id, models.Price.date==price['date'])).one_or_none()
+                                if pri is None:
                                     p = models.Price()
                                     p.date = price['date']
                                     p.open = price['open']
@@ -419,9 +424,7 @@ class Manager(Threaded):
 
                                     sec.pricing += [p]
 
-                            _logger.info(f'{__name__}: Updated {days} days pricing for {ticker.upper()} to {date_cloud:%Y-%m-%d}')
-                        except UniqueViolation as e:
-                            _logger.info(f'{__name__}: {ticker} UniqueViolation exception occurred: {e}')
+                        _logger.info(f'{__name__}: Updated {days} days pricing for {ticker.upper()} to {date_cloud:%Y-%m-%d}')
                     else:
                         _logger.info(f'{__name__}: {ticker} already up to date with cloud data')
             else:

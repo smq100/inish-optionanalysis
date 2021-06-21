@@ -1,5 +1,10 @@
 import configparser
 
+
+OPTIONS_DB = ('Postgres', 'SQLite')
+ACTIVE_DB = OPTIONS_DB[0]
+
+# Postgres credentials
 CREDENTIALS = './data/postgres.ini'
 config = configparser.ConfigParser()
 config.read(CREDENTIALS)
@@ -8,9 +13,7 @@ dbpw = config['DEFAULT']['PW']
 port = config['DEFAULT']['PORT']
 db = config['DEFAULT']['DB']
 
-OPTIONS_DB = ('Postgres', 'SQLite')
-ACTIVE_DB = OPTIONS_DB[0]
-
+# SQLite
 SQLITE_DATABASE_PATH = 'data/securities.db'
 SQLITE_URI = f'sqlite:///{SQLITE_DATABASE_PATH}'
 POSTGRES_URI = f'postgresql+psycopg2://{dbuser}:{dbpw}@localhost:{port}/{db}'
@@ -20,6 +23,7 @@ if ACTIVE_DB == OPTIONS_DB[0]:
 elif ACTIVE_DB == OPTIONS_DB[1]:
     ACTIVE_URI = SQLITE_URI
 
+# Symbol master spreadsheets
 VALID_SPREADSHEETS = ('google', 'excel')
 GOOGLE_SHEETNAME_EXCHANGES = 'Exchanges'
 GOOGLE_SHEETNAME_INDEXES = 'Indexes'

@@ -116,24 +116,6 @@ class Interface:
                 count = len(self.manager.identify_incomplete_securities_price(e))
                 print(f'{e:>16}:\t{count} missing price')
 
-            # utils.print_message('Master Exchange Symbol List')
-            # for exchange in d.EXCHANGES:
-            #     exc = list(store.get_exchange_symbols_master(exchange['abbreviation']))
-            #     count = len(exc)
-            #     print(f'{exchange["abbreviation"]:>16}:\t{count} symbols')
-
-            # utils.print_message('Master Exchange Common Symbols')
-            # nasdaq_nyse, nasdaq_amex, nyse_amex = self.manager.identify_common_securities()
-            # count = len(nasdaq_nyse)
-            # name = 'NASDAQ-NYSE'
-            # print(f'{name:>16}:\t{count} symbols')
-            # count = len(nasdaq_amex)
-            # name = 'NASDAQ-AMEX'
-            # print(f'{name:>16}:\t{count} symbols')
-            # count = len(nyse_amex)
-            # name = 'NYSE-AMEX'
-            # print(f'{name:>16}:\t{count} symbols')
-
     def show_symbol_information(self):
         symbol = utils.input_text('Enter symbol: ')
         if symbol:

@@ -1,4 +1,6 @@
 import datetime as dt
+from pandas.core.base import DataError
+from pandas.core.frame import DataFrame
 
 from sqlalchemy import create_engine, and_, or_
 from sqlalchemy.orm import sessionmaker
