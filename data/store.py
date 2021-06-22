@@ -1,6 +1,4 @@
 import datetime as dt
-from pandas.core.base import DataError
-from pandas.core.frame import DataFrame
 
 from sqlalchemy import create_engine, and_, or_
 from sqlalchemy.orm import sessionmaker
@@ -129,7 +127,7 @@ def get_current_price(ticker):
 
     return price
 
-def get_history(ticker, days, live=False):
+def get_history(ticker, days, live=False) -> pd.DataFrame:
     results = pd.DataFrame
     if live:
         results = fetcher.get_history(ticker, days)
@@ -179,6 +177,7 @@ def get_company(ticker, live=False):
                 results['url'] = company.info['website']
                 results['sector'] = company.info['sector']
                 results['industry'] = company.info['industry']
+                results['exchange'] = company.info['exchange']
                 results['indexes'] = ''
                 results['precords'] = 0
             except KeyError:
@@ -189,6 +188,7 @@ def get_company(ticker, live=False):
         results['url'] = ''
         results['sector'] = ''
         results['industry'] = ''
+        results['exchange'] = ''
         results['indexes'] = ''
         results['precords'] = 0
 
@@ -203,6 +203,12 @@ def get_company(ticker, live=False):
                     results['sector'] = company.sector
                     results['industry'] = company.industry
 
+                # Exchange
+                exc = session.query(models.Exchange.abbreviation).filter(models.Exchange.id==symbol.exchange_id).one_or_none()
+                if exc is not None:
+                    results['exchange'] = exc.abbreviation
+
+                # Indexes
                 results['indexes'] = 'None'
                 if symbol.index1_id is not None:
                     index = session.query(models.Index).filter(models.Index.id==symbol.index1_id).one().abbreviation

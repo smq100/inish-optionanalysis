@@ -125,9 +125,10 @@ class Interface:
                 if company is not None:
                     utils.print_message(f'{symbol} Company Information')
                     print(f'Name:\t\t{company["name"]}')
+                    print(f'Exchange:\t{company["exchange"]}')
+                    print(f'Indexes:\t{company["indexes"]}')
                     print(f'Sector:\t\t{company["sector"]}')
                     print(f'Industry:\t{company["industry"]}')
-                    print(f'Indexes:\t{company["indexes"]}')
                     print(f'URL:\t\t{company["url"]}')
                     print(f'Price Records:\t{company["precords"]}')
                 else:
