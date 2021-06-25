@@ -29,6 +29,8 @@ class Manager(Threaded):
         self.exchange = ''
         self.invalid_symbols = []
         self.retry = 0
+
+        # No multi-threading for SQLite
         self._concurrency = 1 if d.ACTIVE_DB == 'SQLite' else 10
 
     def create_database(self):
@@ -65,13 +67,13 @@ class Manager(Threaded):
         with self.session() as session:
             session.query(models.Exchange.abbreviation).filter(models.Exchange.abbreviation==exchange).one()
 
-        tickers = store.get_exchange_symbols_master(exchange)
+        tickers = list(store.get_exchange_symbols_master(exchange))
 
         if len(tickers) > 10:
             self.task_total = len(tickers)
             self.task_error = 'None'
 
-            with futures.ThreadPoolExecutor() as executor:
+            with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
                 if self._concurrency > 1:
                     random.shuffle(tickers)
                     lists = np.array_split(tickers, self._concurrency)
@@ -89,7 +91,6 @@ class Manager(Threaded):
         self.retry = 0
 
         with self.session() as session:
-            # Throws exception if does not exist
             session.query(models.Exchange.abbreviation).filter(models.Exchange.abbreviation==exchange).one()
 
         if area == 'companies':
@@ -296,7 +297,7 @@ class Manager(Threaded):
         _logger.info(f'{__name__}: {len(missing)} missing symbols in {exchange}')
         return missing
 
-    def identify_inactive_securities(self, exchange: str):
+    def identify_inactive_securities(self, exchange: str) -> list[str]:
         missing = []
         tickers = store.get_symbols(exchange)
         if len(tickers) > 0:
@@ -311,7 +312,7 @@ class Manager(Threaded):
         _logger.info(f'{__name__}: {len(missing)} inactive symbols in {exchange}')
         return missing
 
-    def identify_incomplete_securities_companies(self, exchange: str, live: bool =False) -> list:
+    def identify_incomplete_securities_companies(self, exchange: str, live: bool =False) -> list[str]:
         missing = []
         if live:
             with self.session.begin() as session:
