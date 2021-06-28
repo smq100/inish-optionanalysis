@@ -2,8 +2,6 @@ import time
 import threading
 import logging
 
-from sqlalchemy.sql.expression import false
-
 import data as d
 from analysis.correlate import Correlate
 from data import store as store
