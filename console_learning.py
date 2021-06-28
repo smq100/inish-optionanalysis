@@ -46,7 +46,7 @@ class Interface:
         if self.ticker:
             predict = Prediction(self.ticker)
             predict.prepare()
-            predict.create_net()
+            predict.create_model()
             predict.test()
             predict.plot()
         else:
