@@ -8,8 +8,9 @@ from utils import utils as utils
 _logger = utils.get_logger(logging.WARNING)
 
 class Interface:
-    def __init__(self, ticker='', exit=False):
+    def __init__(self, ticker='', days=0, exit=False):
         self.ticker = ticker.upper()
+        self.days = days
         self.exit = exit
 
         if not ticker:
@@ -44,10 +45,15 @@ class Interface:
 
     def run_model(self):
         if self.ticker:
-            predict = Prediction(self.ticker)
+            predict = Prediction(self.ticker, future=self.days)
             predict.prepare()
             predict.create_model()
             predict.test()
+
+            utils.print_message(f'Results for {self.ticker}')
+            print(f'Accuracy: {predict.accuracy:.3e}')
+            print(f'Loss: {predict.loss:.3e}')
+
             predict.plot()
         else:
             utils.print_error('Please first specify ticker')
@@ -73,13 +79,14 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Learning')
     parser.add_argument('-t', '--ticker', help='Run using ticker')
+    parser.add_argument('-f', '--future', help='Future days', default=0)
     parser.add_argument('-x', help='Exit after running (only valid with -t)', action='store_true')
 
     command = vars(parser.parse_args())
     if command['ticker']:
         if command['x']:
-            Interface(ticker=command['ticker'], exit=True)
+            Interface(ticker=command['ticker'], days=int(command['future']), exit=True)
         else:
-            Interface(ticker=command['ticker'])
+            Interface(ticker=command['ticker'], days=int(command['future']))
     else:
         Interface()
