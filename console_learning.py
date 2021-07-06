@@ -48,12 +48,12 @@ class Interface:
             predict = Prediction(self.ticker, future=self.days)
             predict.prepare()
             predict.create_model()
-            predict.test()
 
-            utils.print_message(f'Results for {self.ticker}')
+            utils.print_message(f'Metrics for {self.ticker}')
             print(f'Accuracy: {predict.accuracy:.3e}')
             print(f'Loss: {predict.loss:.3e}')
 
+            predict.test()
             predict.plot()
         else:
             utils.print_error('Please first specify ticker')

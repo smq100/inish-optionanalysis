@@ -38,6 +38,11 @@ class Prediction(Threaded):
     def prepare(self):
         self._data = store.get_history(self.ticker, _days_train)
 
+        self._data['returns'] = self._data.close.pct_change()
+        self._data['log_returns'] = np.log(1 + self._data['returns'])
+
+        # _logger.debug(f'\r{self._data.tail(15)}')
+
         self._scaler = MinMaxScaler(feature_range=(0,1))
         scaled_data = self._scaler.fit_transform(self._data[_value].values.reshape(-1,1))
 
@@ -101,8 +106,11 @@ class Prediction(Threaded):
 
 
 if __name__ == '__main__':
-    predict = Prediction('INTC')
+    import logging
+    _logger = utils.get_logger(logging.DEBUG)
+
+    predict = Prediction('MSFT')
     predict.prepare()
     predict.create_model()
-    # predict.test()
-    # predict.plot()
+    predict.test()
+    predict.plot()

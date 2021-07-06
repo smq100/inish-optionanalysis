@@ -5,7 +5,6 @@ __pycache__
 venv
 *._*
 .ipynb_checkpoints
-.pylintrc
 models
 
 # Other file types
@@ -21,6 +20,6 @@ models
 *.session.*
 *.png
 *.bak
-#*.xlsx
 *.csv
 *.db
+*.ipynb
