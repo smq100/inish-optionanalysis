@@ -2,6 +2,7 @@
 yfinance: https://github.com/ranaroussi/yfinance
 '''
 
+import os
 import time
 import datetime as dt
 import configparser
@@ -16,7 +17,7 @@ _logger = utils.get_logger()
 
 
 # Quandl credentials
-CREDENTIALS = 'fetcher/quandl.ini'
+CREDENTIALS = os.path.join(os.path.dirname(__file__), 'quandl.ini')
 config = configparser.ConfigParser()
 config.read(CREDENTIALS)
 qd.ApiConfig.api_key = config['DEFAULT']['APIKEY']
