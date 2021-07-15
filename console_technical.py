@@ -1,4 +1,3 @@
-import os, json
 import logging
 
 import matplotlib.pyplot as plt
@@ -12,62 +11,55 @@ from utils import utils as utils
 _logger = utils.get_logger(logging.WARNING)
 
 class Interface:
-    def __init__(self, ticker, script=''):
+    def __init__(self, ticker, run=False, exit=False):
+        self.ticker = ticker.upper()
+        self.run = run
         self.technical = None
-        self.coorelate = None
         self.symbols = []
 
-        if script:
-            if os.path.exists(script):
-                try:
-                    with open(script) as file_:
-                        data = json.load(file_)
-                        print(data)
-                except Exception as e:
-                    utils.print_error('File read error')
+        if store.is_symbol_valid(ticker.upper()):
+            if self.run:
+                self.show_trend()
             else:
-                utils.print_error(f'File "{script}" not found')
-        elif store.is_symbol_valid(ticker.upper()):
-            self.technical = Technical(ticker.upper(), None, 365)
-            self.main_menu()
+                self.technical = Technical(self.ticker, None, 365)
+                self.main_menu()
         else:
+            self.ticker = ''
+            self.run = False
             self.main_menu()
 
     def main_menu(self):
         while True:
             menu_items = {
-                '1': 'Change Symbol',
-                '2': 'Technical Analysis',
-                '3': 'Support & Resistance Chart',
-                '4': 'Plot All',
+                '1': 'Change Ticker',
+                '2': 'Support & Resistance Chart',
+                '3': 'Technical Analysis',
                 '0': 'Exit'
             }
 
             if self.technical is not None:
-                menu_items['1'] = f'Change Symbol ({self.technical.ticker})'
+                menu_items['1'] = f'Change Ticker ({self.ticker})'
 
-            selection = utils.menu(menu_items, 'Select Operation', 0, 4)
+            selection = utils.menu(menu_items, 'Select Operation', 0, 3)
 
             if selection == 1:
-                self.select_symbol()
+                self.select_ticker()
             elif selection == 2:
-                self.select_technical()
-            elif selection == 3:
                 self.get_trend_parameters()
-            elif selection == 4:
-                self.plot_all()
+            elif selection == 3:
+                self.select_technical()
             elif selection == 0:
                 break
 
-    def select_symbol(self):
+    def select_ticker(self):
         valid = False
 
         while not valid:
-            ticker = input('Please enter symbol, or 0 to cancel: ').upper()
-            if ticker != '0':
-                valid = store.is_symbol_valid(ticker)
+            self.ticker = input('Please enter symbol, or 0 to cancel: ').upper()
+            if self.ticker != '0':
+                valid = store.is_symbol_valid(self.ticker)
                 if valid:
-                    self.technical = Technical(ticker, None, 365)
+                    self.technical = Technical(self.ticker, None, 365)
                 else:
                     utils.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
             else:
@@ -116,7 +108,7 @@ class Interface:
                 elif selection == 0:
                     break
         else:
-            utils.print_error('Please forst select symbol')
+            utils.print_error('Please first select a ticker')
 
     def get_trend_parameters(self):
         if self.technical is not None:
@@ -146,7 +138,7 @@ class Interface:
                     show = True if utils.input_integer('Show Window? (1=Yes, 0=No): ', 0, 1) == 1 else False
 
                 if selection == 4:
-                    sr = SupportResistance(self.technical.ticker, days=days)
+                    sr = SupportResistance(self.ticker, days=days)
                     sr.calculate()
 
                     sup = sr.get_support()
@@ -165,6 +157,11 @@ class Interface:
                     break
         else:
             utils.print_error('Please forst select symbol')
+
+    def show_trend(self):
+        sr = SupportResistance(self.ticker)
+        sr.calculate()
+        sr.plot()
 
     def plot_all(self):
         if self.technical is not None:
@@ -198,23 +195,12 @@ class Interface:
 if __name__ == '__main__':
     import argparse
 
-    # Create the top-level parser
     parser = argparse.ArgumentParser(description='Technical Analysis')
-    subparser = parser.add_subparsers(help='Specify the desired command')
-
-    # Create the parser for the "load" command
-    parser_a = subparser.add_parser('load', help='Load an operation')
-    parser_a.add_argument('-t', '--ticker', help='Specify the ticker symbol', required=False, default='IBM')
-
-    # Create the parser for the "execute" command
-    parser_b = subparser.add_parser('execute', help='Execute a JSON command script')
-    parser_b.add_argument('-f', '--script', help='Specify a script', required=False, default='scripts/script.json')
+    parser.add_argument('-t', '--ticker', help='Run using ticker')
+    parser.add_argument('-r', help='Run trend analysis (only valid with -t)', action='store_true')
 
     command = vars(parser.parse_args())
-
-    if 'script' in command.keys():
-        Interface('IBM', script=command['script'])
-    elif 'ticker' in command.keys():
-        Interface(command['ticker'])
+    if command['ticker']:
+        Interface(ticker=command['ticker'], run=command['r'])
     else:
         Interface('AAPL')

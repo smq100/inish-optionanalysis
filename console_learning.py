@@ -32,11 +32,11 @@ class Interface:
                 selection = utils.menu(menu_items, 'Select Operation', 0, 2)
 
             if selection == 1:
-                self.select_symbol()
+                self.select_ticker()
             elif selection == 2:
                 self.run_model()
             elif selection == 0:
-                break
+                self.exit = True
 
             if self.exit:
                 break
@@ -58,7 +58,7 @@ class Interface:
         else:
             utils.print_error('Please first specify ticker')
 
-    def select_symbol(self):
+    def select_ticker(self):
         valid = False
 
         while not valid:

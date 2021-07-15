@@ -1,5 +1,4 @@
 import os
-import json
 import time
 import threading
 import logging
@@ -16,10 +15,10 @@ SCREEN_SUFFIX = '.screen'
 
 
 class Interface:
-    def __init__(self, table='', screen='', script='', live=False):
+    def __init__(self, table='', screen='', run=False, live=False):
         self.table = table.upper()
         self.screen = screen
-        self.script = []
+        self.run = run
         self.live = live
         self.results = []
         self.valids = 0
@@ -27,40 +26,32 @@ class Interface:
         self.type = ''
         self.task = None
 
-        if script:
-            if os.path.exists(script):
-                try:
-                    with open(script) as file_:
-                        data = json.load(file_)
-                        print(data)
-                except Exception as e:
-                    utils.print_error('File read error')
+        if self.table:
+            if store.is_exchange(self.table):
+                self.type = 'exchange'
+            elif store.is_index(self.table):
+                self.type = 'index'
             else:
-                utils.print_error(f'File "{script}" not found')
-        else:
-            if self.table:
-                if store.is_exchange(self.table):
-                    self.type = 'exchange'
-                elif store.is_index(self.table):
-                    self.type = 'index'
-                else:
-                    raise ValueError(f'Table not found: {table}')
+                raise ValueError(f'Exchange or index not found: {table}')
 
-                self.screener = Screener(table=self.table, live=self.live)
+            self.screener = Screener(table=self.table, live=self.live)
 
-            if self.screen:
-                if os.path.exists(BASEPATH+screen+SCREEN_SUFFIX):
-                    self.screen = BASEPATH + self.screen + SCREEN_SUFFIX
-                    if not self.screener.load_script(self.screen):
-                        self.screen = ''
-                        utils.print_error('Invalid screen script')
-                else:
-                    utils.print_error(f'File "{self.screen}" not found')
+        if self.screen:
+            if os.path.exists(BASEPATH+screen+SCREEN_SUFFIX):
+                self.screen = BASEPATH + self.screen + SCREEN_SUFFIX
+                if not self.screener.load_script(self.screen):
                     self.screen = ''
+                    utils.print_error('Invalid screen script')
+            else:
+                utils.print_error(f'File "{self.screen}" not found')
+                self.screen = ''
 
+        if self.run:
+            self.main_menu(selection=5)
+        else:
             self.main_menu()
 
-    def main_menu(self):
+    def main_menu(self, selection=0):
         while True:
             source = 'live' if self.live else d.ACTIVE_DB
             menu_items = {
@@ -87,7 +78,8 @@ class Interface:
             if len(self.results) > 0:
                 menu_items['6'] = f'Show Results ({self.valids})'
 
-            selection = utils.menu(menu_items, 'Select Operation', 0, 6)
+            if selection == 0:
+                selection = utils.menu(menu_items, 'Select Operation', 0, 6)
 
             if selection == 1:
                 self.select_source()
@@ -98,11 +90,16 @@ class Interface:
             elif selection == 4:
                 self.select_script()
             elif selection == 5:
-                self.run_script(True)
+                self.run_script()
             elif selection == 6:
                 self.print_results()
             elif selection == 0:
+                self.run = True
+
+            if self.run:
                 break
+
+            selection = 0
 
     def select_source(self):
         menu_items = {
@@ -192,7 +189,7 @@ class Interface:
         else:
             utils.print_message('No script files found')
 
-    def run_script(self, progressbar):
+    def run_script(self, progressbar=True):
         if not self.table:
             utils.print_error('No table specified')
         elif not self.screen:
@@ -278,29 +275,23 @@ if __name__ == '__main__':
 
     # Create the top-level parser
     parser = argparse.ArgumentParser(description='Screener')
-    subparser = parser.add_subparsers(help='Specify the desired command')
 
-    # Create the parser for the "load" command
-    parser_a = subparser.add_parser('load', help='Load a symbol table')
-    parser_a.add_argument('-t', '--table', help='Specify a symbol table', required=False, default='')
-    parser_a.add_argument('-s', '--screen', help='Specify a screening script', required=False, default='')
-
-    # Create the parser for the "execute" command
-    parser_b = subparser.add_parser('execute', help='Execute a JSON command script')
-    parser_b.add_argument('-f', '--script', help='Specify a script', required=False, default='scripts/script.json')
+    parser.add_argument('-t', '--table', help='Specify a symbol table', required=False, default='')
+    parser.add_argument('-s', '--screen', help='Specify a screening script', required=False, default='')
+    parser.add_argument('-r', '--run', help='Run the script (only valid with -t and -s)', action='store_true')
 
     command = vars(parser.parse_args())
 
-    if 'script' in command.keys():
-        Interface('TEST', script=command['script'])
+    table = ''
+    screen = ''
+
+    if 'table' in command.keys():
+        table = command['table']
+
+    if 'screen' in command.keys():
+        screen = command['screen']
+
+    if screen and table and command['run']:
+        Interface(table, screen, run=True)
     else:
-        table = ''
-        screen = ''
-
-        if 'table' in command.keys():
-            table = command['table']
-
-        if 'screen' in command.keys():
-            screen = command['screen']
-
         Interface(table, screen)

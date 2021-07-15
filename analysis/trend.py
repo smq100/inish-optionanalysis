@@ -79,8 +79,9 @@ class SupportResistance:
             self.intercept_sup = 0.0
             self.slope_res = 0.0
             self.intercept_res = 0.0
-            self.extmethod = trendln.METHOD_NUMDIFF # METHOD_NAIVE, METHOD_NAIVECONSEC, METHOD_NUMDIFF*
-            self.method = trendln.METHOD_NSQUREDLOGN # METHOD_NCUBED, METHOD_NSQUREDLOGN*, METHOD_HOUGHPOINTS, METHOD_HOUGHLINES, METHOD_PROBHOUGH
+            self.extmethod = trendln.METHOD_NUMDIFF # METHOD_NAIVE, METHOD_NAIVECONSEC, *METHOD_NUMDIFF
+            self.method = trendln.METHOD_NSQUREDLOGN # METHOD_NCUBED, *METHOD_NSQUREDLOGN, METHOD_HOUGHPOINTS, METHOD_HOUGHLINES, METHOD_PROBHOUGH
+            self.accuracy = 8
         else:
             _logger.error('{__name__}: Error initializing {__class__}')
 
@@ -102,8 +103,8 @@ class SupportResistance:
         _logger.info(f'{__name__}: {self.points} pivot points identified from {self.history.iloc[0]["date"]} to {self.history.iloc[-1]["date"]}')
 
         # Calculate support and resistance lines
-        maxs = trendln.calc_support_resistance((None, self.history['high']), extmethod=self.extmethod, method=self.method, accuracy=8)
-        mins = trendln.calc_support_resistance((self.history['low'], None), extmethod=self.extmethod, method=self.method, accuracy=8)
+        maxs = trendln.calc_support_resistance((None, self.history['high']), extmethod=self.extmethod, method=self.method, accuracy=self.accuracy)
+        mins = trendln.calc_support_resistance((self.history['low'], None), extmethod=self.extmethod, method=self.method, accuracy=self.accuracy)
 
         maximaIdxs, pmax, maxtrend, maxwindows = maxs
         minimaIdxs, pmin, mintrend, minwindows = mins
@@ -244,7 +245,7 @@ class SupportResistance:
         return support[:self.best]
 
     def plot(self, show=True, filename='', legend=True, srlines=False, trendlines=True):
-        fig, ax1 = plt.subplots()
+        fig, ax1 = plt.subplots(figsize=(17,10))
         ax2 = ax1.secondary_yaxis('right')
         plt.style.use('seaborn')
         plt.grid()
