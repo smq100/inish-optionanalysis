@@ -22,15 +22,17 @@ _logger = utils.get_logger()
 
 
 class Strategy(ABC):
-    def __init__(self, ticker, product, direction):
+    def __init__(self, ticker, product, direction, quantity):
         if product not in PRODUCTS:
-            raise AssertionError('Invalid product')
+            raise ValueError('Invalid product')
         if direction not in DIRECTIONS:
-            raise AssertionError('Invalid direction')
+            raise ValueError('Invalid direction')
 
         self.name = ''
         self.ticker = ticker
         self.product = product
+        self.direction = direction
+        self.quantity = 1
         self.width = 1
         self.analysis = StrategyAnalysis()
         self.legs = []
@@ -49,7 +51,6 @@ class Strategy(ABC):
         pass
 
     def reset(self):
-        # Clear the analysis
         self.analysis = StrategyAnalysis()
 
     def update_expiry(self, date):
@@ -61,7 +62,7 @@ class Strategy(ABC):
         expiry += datetime.timedelta(days=1)
 
         leg = Leg(self, self.ticker, quantity, product, direction, strike, expiry)
-        self.legs.append(leg)
+        self.legs += [leg]
 
         return len(self.legs)
 
@@ -81,7 +82,7 @@ class Strategy(ABC):
             for leg in self.legs:
                 leg.pricing_method = method
         else:
-            raise AssertionError('Invalid pricing method')
+            raise ValueError('Invalid pricing method')
 
     @abc.abstractmethod
     def generate_profit_table(self):
@@ -120,9 +121,9 @@ class Strategy(ABC):
 class Leg:
     def __init__(self, strategy, ticker, quantity, product, direction, strike, expiry):
         if product not in PRODUCTS:
-            raise AssertionError('Invalid product')
+            raise ValueError('Invalid product')
         if direction not in DIRECTIONS:
-            raise AssertionError('Invalid direction')
+            raise ValueError('Invalid direction')
 
         self.symbol = Company(ticker, days=1)
         self.option = Option(ticker, product, strike, expiry)
@@ -148,7 +149,7 @@ class Leg:
             f'=${self.option.last_price:.2f}{d3} each (${self.option.calc_price:.2f}{d1}/{d2})'
 
             if not self.option.contract_symbol:
-                output += ' *actual option not selected'
+                output += ' *option not selected'
 
             if self.option.last_price > 0.0:
                 if self.option.implied_volatility < IV_CUTOFF and self.option.implied_volatility > 0.0:

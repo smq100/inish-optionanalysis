@@ -39,7 +39,7 @@ class Screener(Threaded):
         self.script = []
         self.symbols = []
         self.results = []
-        self._concurrency = 6
+        self._concurrency = 10
 
         if script:
             if not self.load_script(script):

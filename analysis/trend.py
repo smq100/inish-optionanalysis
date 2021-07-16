@@ -64,7 +64,7 @@ class Line:
         return output
 
 class SupportResistance:
-    def __init__(self, ticker, best=5, days=1000):
+    def __init__(self, ticker, best=3, days=1000):
         if best < 1:
             raise AssertionError("'best' value must be > 0")
 
@@ -79,8 +79,9 @@ class SupportResistance:
             self.intercept_sup = 0.0
             self.slope_res = 0.0
             self.intercept_res = 0.0
-            self.extmethod = trendln.METHOD_NUMDIFF # METHOD_NAIVE, METHOD_NAIVECONSEC, METHOD_NUMDIFF*
-            self.method = trendln.METHOD_NSQUREDLOGN # METHOD_NCUBED, METHOD_NSQUREDLOGN*, METHOD_HOUGHPOINTS, METHOD_HOUGHLINES, METHOD_PROBHOUGH
+            self.extmethod = trendln.METHOD_NUMDIFF # METHOD_NAIVE, METHOD_NAIVECONSEC, *METHOD_NUMDIFF
+            self.method = trendln.METHOD_PROBHOUGH # METHOD_NCUBED, *METHOD_NSQUREDLOGN, METHOD_HOUGHPOINTS, METHOD_HOUGHLINES, METHOD_PROBHOUGH
+            self.accuracy = 8
         else:
             _logger.error('{__name__}: Error initializing {__class__}')
 
@@ -91,14 +92,19 @@ class SupportResistance:
         self.lines = []
 
         self.history = store.get_history(self.ticker, self.days)
-        self.points = len(self.history)
-        self.price = store.get_current_price(self.ticker)
+        if self.history is None:
+            raise ValueError('Unable to get history')
 
+        self.price = store.get_current_price(self.ticker)
+        if self.price is None:
+            raise ValueError('Unable to get price')
+
+        self.points = len(self.history)
         _logger.info(f'{__name__}: {self.points} pivot points identified from {self.history.iloc[0]["date"]} to {self.history.iloc[-1]["date"]}')
 
         # Calculate support and resistance lines
-        maxs = trendln.calc_support_resistance((None, self.history['high']), extmethod=self.extmethod, method=self.method, accuracy=8)
-        mins = trendln.calc_support_resistance((self.history['low'], None), extmethod=self.extmethod, method=self.method, accuracy=8)
+        maxs = trendln.calc_support_resistance((None, self.history['high']), extmethod=self.extmethod, method=self.method, accuracy=self.accuracy)
+        mins = trendln.calc_support_resistance((self.history['low'], None), extmethod=self.extmethod, method=self.method, accuracy=self.accuracy)
 
         maximaIdxs, pmax, maxtrend, maxwindows = maxs
         minimaIdxs, pmin, mintrend, minwindows = mins
@@ -239,7 +245,7 @@ class SupportResistance:
         return support[:self.best]
 
     def plot(self, show=True, filename='', legend=True, srlines=False, trendlines=True):
-        fig, ax1 = plt.subplots()
+        fig, ax1 = plt.subplots(figsize=(17,10))
         ax2 = ax1.secondary_yaxis('right')
         plt.style.use('seaborn')
         plt.grid()
@@ -447,5 +453,9 @@ if __name__ == '__main__':
     else:
         sr = SupportResistance('IBM', best=5)
 
-    sr.calculate()
-    sr.plot()
+    try:
+        sr.calculate()
+    except:
+        raise ValueError('Unable to calculate')
+    else:
+        sr.plot()

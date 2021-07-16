@@ -1,3 +1,4 @@
+import os
 import configparser
 
 
@@ -5,7 +6,7 @@ OPTIONS_DB = ('Postgres', 'SQLite')
 ACTIVE_DB = OPTIONS_DB[0]
 
 # Postgres credentials
-CREDENTIALS = './data/postgres.ini'
+CREDENTIALS = os.path.join(os.path.dirname(__file__), 'postgres.ini')
 config = configparser.ConfigParser()
 config.read(CREDENTIALS)
 dbuser = config['DEFAULT']['USER']

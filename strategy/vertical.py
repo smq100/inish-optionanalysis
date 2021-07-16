@@ -6,8 +6,8 @@ from utils import utils as utils
 _logger = utils.get_logger()
 
 class Vertical(Strategy):
-    def __init__(self, ticker, product, direction):
-        super().__init__(ticker, product, direction)
+    def __init__(self, ticker, product, direction, quantity):
+        super().__init__(ticker, product, direction, quantity)
 
         self.name = STRATEGIES[2]
 
@@ -20,18 +20,18 @@ class Vertical(Strategy):
         # Add legs (long leg is always first)
         if product == 'call':
             if direction == 'long':
-                self.add_leg(1, product, 'long', self.initial_spot, expiry)
-                self.add_leg(1, product, 'short', self.initial_spot + 2.0, expiry)
+                self.add_leg(self.quantity, product, 'long', self.initial_spot, expiry)
+                self.add_leg(self.quantity, product, 'short', self.initial_spot + 2.0, expiry)
             else:
-                self.add_leg(1, product, 'long', self.initial_spot + 2.0, expiry)
-                self.add_leg(1, product, 'short', self.initial_spot, expiry)
+                self.add_leg(self.quantity, product, 'long', self.initial_spot + 2.0, expiry)
+                self.add_leg(self.quantity, product, 'short', self.initial_spot, expiry)
         else:
             if direction == 'long':
-                self.add_leg(1, product, 'long', self.initial_spot + 2.0, expiry)
-                self.add_leg(1, product, 'short', self.initial_spot, expiry)
+                self.add_leg(self.quantity, product, 'long', self.initial_spot + 2.0, expiry)
+                self.add_leg(self.quantity, product, 'short', self.initial_spot, expiry)
             else:
-                self.add_leg(1, product, 'long', self.initial_spot, expiry)
-                self.add_leg(1, product, 'short', self.initial_spot + 2.0, expiry)
+                self.add_leg(self.quantity, product, 'long', self.initial_spot, expiry)
+                self.add_leg(self.quantity, product, 'short', self.initial_spot + 2.0, expiry)
 
     def __str__(self):
         return f'{self.name} {self.product} {self.analysis.credit_debit} spread'
@@ -63,19 +63,17 @@ class Vertical(Strategy):
             self.analysis.breakeven = self.calc_breakeven()
 
     def generate_profit_table(self):
-        # Create net-value table
+        profit = self.legs[0].table - self.legs[1].table + self.analysis.amount
 
-        dframe = self.legs[0].table - self.legs[1].table + self.analysis.amount
-
-        return dframe
+        return profit
 
     def calc_max_gain_loss(self):
         gain = loss = 0.0
 
         dlong = (self.legs[0].option.calc_price > self.legs[1].option.calc_price)
         if dlong:
-            gain = abs(self.legs[0].option.strike - self.legs[1].option.strike)
             loss = abs(self.analysis.amount)
+            gain = abs(self.legs[0].option.strike - self.legs[1].option.strike) - loss
 
             if self.product == 'call':
                 self.analysis.sentiment = 'bullish'
@@ -83,7 +81,7 @@ class Vertical(Strategy):
                 self.analysis.sentiment = 'bearish'
         else:
             gain = abs(self.analysis.amount)
-            loss = abs(self.legs[0].option.strike - self.legs[1].option.strike)
+            loss = abs(self.legs[0].option.strike - self.legs[1].option.strike) - gain
 
             if self.product == 'call':
                 self.analysis.sentiment = 'bearish'
@@ -116,10 +114,10 @@ class Vertical(Strategy):
                 elif self.legs[1].option.strike >= self.legs[0].option.strike:
                     error = 'Bad option configuration'
             else:
-                if self.analysis.credit_debit == 'credit':
-                    if self.legs[0].option.strike >= self.legs[1].option.strike:
+                if self.analysis.credit_debit == 'debit':
+                    if self.legs[1].option.strike >= self.legs[0].option.strike:
                         error = 'Bad option configuration'
-                elif self.legs[1].option.strike >= self.legs[0].option.strike:
+                elif self.legs[0].option.strike >= self.legs[1].option.strike:
                     error = 'Bad option configuration'
 
         return error

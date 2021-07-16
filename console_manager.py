@@ -13,8 +13,7 @@ logger = utils.get_logger(logging.WARNING)
 
 
 class Interface:
-    def __init__(self, list='', script=''):
-        self.list = list.upper()
+    def __init__(self):
         self.exchanges = []
         self.indexes = []
         self.task = None
@@ -24,24 +23,7 @@ class Interface:
         self.exchanges = [e['abbreviation'] for e in d.EXCHANGES]
         self.indexes = [i['abbreviation'] for i in d.INDEXES]
 
-        if script:
-            if os.path.exists(script):
-                try:
-                    with open(script) as file_:
-                        data = json.load(file_)
-                        print(data)
-                except Exception as e:
-                    utils.print_error('File read error')
-            else:
-                utils.print_error(f'File "{script}" not found')
-        elif not list:
-            self.main_menu()
-        elif manager.Manager.is_exchange(list):
-            self.main_menu()
-        elif manager.Manager.is_index(list):
-            self.main_menu()
-        else:
-            utils.print_error('Invalid list specified')
+        self.main_menu()
 
     def main_menu(self):
         self.show_database_information()
@@ -323,25 +305,4 @@ class Interface:
 
 
 if __name__ == '__main__':
-    import argparse
-
-    # Create the top-level parser
-    parser = argparse.ArgumentParser(description='Data Management')
-    subparser = parser.add_subparsers(help='Specify the desired command')
-
-    # Create the parser for the "load" command
-    parser_a = subparser.add_parser('load', help='Load a list')
-    parser_a.add_argument('-l', '--list', help='Specify the list', required=False, default='TEST')
-
-    # Create the parser for the "execute" command
-    parser_b = subparser.add_parser('execute', help='Execute a JSON command script')
-    parser_b.add_argument('-f', '--script', help='Specify a script', required=False, default='scripts/script.json')
-
-    command = vars(parser.parse_args())
-
-    if 'script' in command.keys():
-        Interface(script=command['script'])
-    elif 'list' in command.keys():
-        Interface(command['list'])
-    else:
-        Interface()
+    Interface()

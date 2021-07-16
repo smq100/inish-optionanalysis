@@ -2,6 +2,7 @@
 yfinance: https://github.com/ranaroussi/yfinance
 '''
 
+import os
 import time
 import datetime as dt
 import configparser
@@ -16,7 +17,7 @@ _logger = utils.get_logger()
 
 
 # Quandl credentials
-CREDENTIALS = 'fetcher/quandl.ini'
+CREDENTIALS = os.path.join(os.path.dirname(__file__), 'quandl.ini')
 config = configparser.ConfigParser()
 config.read(CREDENTIALS)
 qd.ApiConfig.api_key = config['DEFAULT']['APIKEY']
@@ -69,16 +70,20 @@ def get_history(ticker, days=-1):
         start = dt.datetime.today() - dt.timedelta(days=days)
 
         # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
-        try:
-            history = company.history(start=f'{start:%Y-%m-%d}')
-            if history is not None:
-                history.reset_index(inplace=True)
-                history.columns = history.columns.str.lower()
-                # history.rename(columns={'Date':'date', 'Open':'open', 'High':'high', 'Low':'low', 'Close':'close', 'Volume':'volume'}, inplace=True)
+        for _ in range(3):
+            try:
+                history = company.history(start=f'{start:%Y-%m-%d}')
+                if history is not None:
+                    history.reset_index(inplace=True)
 
-                _logger.info(f'{__name__}: Fetched {days} days history of {ticker} starting {start:%Y-%m-%d}')
-        except:
-            history = None
+                    # Lower case columns to make consistent with Postgress column names
+                    history.columns = history.columns.str.lower()
+                    _logger.info(f'{__name__}: Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
+                    break
+            except Exception as e:
+                _logger.error(f'{__name__}: Unable to fetch live history of {ticker} starting {start:%Y-%m-%d}: {e}')
+                time.sleep(1)
+                history = None
 
     return history
 
@@ -97,7 +102,6 @@ def get_history_q(ticker, days=-1):
     if history is not None:
         history.reset_index(inplace=True)
         history.columns = history.columns.str.lower()
-        history.rename(columns={'Date':'date', 'Open':'open', 'High':'high', 'Low':'low', 'Close':'close', 'Volume':'volume'}, inplace=True)
 
     return history
 
