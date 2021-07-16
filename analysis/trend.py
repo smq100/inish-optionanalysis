@@ -64,7 +64,7 @@ class Line:
         return output
 
 class SupportResistance:
-    def __init__(self, ticker, best=5, days=1000):
+    def __init__(self, ticker, best=3, days=1000):
         if best < 1:
             raise AssertionError("'best' value must be > 0")
 
@@ -80,7 +80,7 @@ class SupportResistance:
             self.slope_res = 0.0
             self.intercept_res = 0.0
             self.extmethod = trendln.METHOD_NUMDIFF # METHOD_NAIVE, METHOD_NAIVECONSEC, *METHOD_NUMDIFF
-            self.method = trendln.METHOD_NSQUREDLOGN # METHOD_NCUBED, *METHOD_NSQUREDLOGN, METHOD_HOUGHPOINTS, METHOD_HOUGHLINES, METHOD_PROBHOUGH
+            self.method = trendln.METHOD_PROBHOUGH # METHOD_NCUBED, *METHOD_NSQUREDLOGN, METHOD_HOUGHPOINTS, METHOD_HOUGHLINES, METHOD_PROBHOUGH
             self.accuracy = 8
         else:
             _logger.error('{__name__}: Error initializing {__class__}')

@@ -6,9 +6,9 @@ from utils import utils as utils
 _logger = utils.get_logger()
 
 class Put(Strategy):
-    def __init__(self, ticker, product, direction):
+    def __init__(self, ticker, product, direction, quantity):
         product = 'put'
-        super().__init__(ticker, product, direction)
+        super().__init__(ticker, product, direction, quantity)
 
         self.name = STRATEGIES[1]
 
@@ -18,14 +18,12 @@ class Put(Strategy):
             d += dt.timedelta(1)
         expiry = d + dt.timedelta(days=6)
 
-        self.add_leg(1, product, direction, self.initial_spot, expiry)
+        self.add_leg(self.quantity, product, direction, self.initial_spot, expiry)
 
     def __str__(self):
         return f'{self.legs[0].direction} {self.name}'
 
     def analyze(self):
-        dframe = None
-
         if self._validate():
             self.legs[0].calculate()
 
@@ -47,6 +45,7 @@ class Put(Strategy):
             self.analysis.breakeven = self.calc_breakeven()
 
     def generate_profit_table(self):
+        dframe = None
         price = self.legs[0].option.calc_price
 
         if self.legs[0].direction == 'long':

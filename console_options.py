@@ -1,4 +1,4 @@
-import sys, os, json, math
+import sys, math
 import datetime as dt
 
 import pandas as pd
@@ -21,38 +21,25 @@ _logger = utils.get_logger()
 
 
 class Interface:
-    def __init__(self, ticker, strategy, direction, autoload='', script='', exit=False):
-        self.ticker = ticker
+    def __init__(self, ticker, strategy, direction, quantity=1, autoload=''):
+        self.ticker = ticker.upper()
         self.strategy = None
+        self.quantity = quantity
         self.dirty_calculate = True
         self.dirty_analyze = True
 
         pd.options.display.float_format = '{:,.2f}'.format
 
-        if script:
-            if os.path.exists(script):
-                try:
-                    with open(script) as file_:
-                        data = json.load(file_)
-                        print(data)
-                except Exception as e:
-                    utils.print_error('File read error')
-            else:
-                utils.print_error(f'File "{script}" not found')
-        elif store.is_symbol_valid(ticker):
+        if store.is_symbol_valid(ticker):
             self.chain = Chain(ticker)
 
             if autoload:
-                if self.load_strategy(ticker, autoload, direction):
-                    if not exit:
-                        self.main_menu()
-            else:
-                if not exit:
-                    self.strategy = Call(ticker, strategy, direction)
-                    self.calculate()
+                if self.load_strategy(self.ticker, autoload, direction, self.quantity):
                     self.main_menu()
-                else:
-                    utils.print_error('Nothing to do')
+            else:
+                self.strategy = Call(self.ticker, strategy, direction, self.quantity)
+                self.calculate()
+                self.main_menu()
         else:
             utils.print_error('Invalid ticker symbol specified')
 
@@ -164,8 +151,8 @@ class Interface:
                     val = utils.input_integer('(1) Summary, (2) Table, (3) Chart, (4) Contour, (5) Surface, or (0) Cancel: ', 0, 5)
                 if val > 0:
                     title = f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].symbol}) {str(self.strategy).title()}'
-                    rows, cols = table_.shape
 
+                    rows, cols = table_.shape
                     if rows > MAX_ROWS:
                         rows = MAX_ROWS
                     else:
@@ -258,8 +245,6 @@ class Interface:
 
     def select_symbol(self):
         valid = False
-        vol = 0.0
-        div = 0.0
 
         while not valid:
             ticker = input('Please enter symbol, or 0 to cancel: ').upper()
@@ -287,49 +272,38 @@ class Interface:
             '0': 'Done/Cancel',
         }
 
-        # Select strategy
-        strategy = ''
         modified = False
-        while True:
-            selection = utils.menu(menu_items, 'Select Strategy', 0, 4)
+        selection = utils.menu(menu_items, 'Select Strategy', 0, 3)
 
-            if selection == 1:
-                direction = utils.input_integer('Long (1), or short (2): ', 1, 2)
-                direction = 'long' if direction == 1 else 'short'
-                self.strategy = Call(self.strategy.ticker, 'call', direction)
+        if selection == 1:
+            direction = utils.input_integer('Long (1), or short (2): ', 1, 2)
+            direction = 'long' if direction == 1 else 'short'
+            self.strategy = Call(self.strategy.ticker, 'call', direction, self.quantity)
 
-                self.dirty_calculate = True
-                self.dirty_analyze = True
-                modified = True
-                break
+            self.dirty_calculate = True
+            self.dirty_analyze = True
+            modified = True
 
-            if selection == 2:
-                direction = utils.input_integer('Long (1), or short (2): ', 1, 2)
-                direction = 'long' if direction == 1 else 'short'
-                self.strategy = Put(self.strategy.ticker, 'put', direction)
+        elif selection == 2:
+            direction = utils.input_integer('Long (1), or short (2): ', 1, 2)
+            direction = 'long' if direction == 1 else 'short'
+            self.strategy = Put(self.strategy.ticker, 'put', direction, self.quantity)
 
-                self.dirty_calculate = True
-                self.dirty_analyze = True
-                modified = True
-                break
+            self.dirty_calculate = True
+            self.dirty_analyze = True
+            modified = True
 
-            if selection == 3:
-                product = utils.input_integer('Call (1), or Put (2): ', 1, 2)
-                product = 'call' if product == 1 else 'put'
-                direction = utils.input_integer('Debit (1), or credit (2): ', 1, 2)
-                direction = 'long' if direction == 1 else 'short'
+        elif selection == 3:
+            product = utils.input_integer('Call (1), or Put (2): ', 1, 2)
+            product = 'call' if product == 1 else 'put'
+            direction = utils.input_integer('Debit (1), or credit (2): ', 1, 2)
+            direction = 'long' if direction == 1 else 'short'
 
-                self.strategy = Vertical(self.strategy.ticker, product, direction)
+            self.strategy = Vertical(self.strategy.ticker, product, direction, self.quantity)
 
-                self.dirty_calculate = True
-                self.dirty_analyze = True
-                modified = True
-                break
-
-            if selection == 0:
-                break
-
-            utils.print_error('Unknown strategy selected')
+            self.dirty_calculate = True
+            self.dirty_analyze = True
+            modified = True
 
         return modified
 
@@ -516,22 +490,22 @@ class Interface:
         try:
             if name.lower() == 'call':
                 modified = True
-                self.strategy = Call(ticker, 'call', direction)
+                self.strategy = Call(ticker, 'call', direction, self.quantity)
                 if analyze:
                     self.analyze()
             elif name.lower() == 'put':
                 modified = True
-                self.strategy = Put(ticker, 'put', direction)
+                self.strategy = Put(ticker, 'put', direction, self.quantity)
                 if analyze:
                     self.analyze()
             elif name.lower() == 'vertc':
                 modified = True
-                self.strategy = Vertical(ticker, 'call', direction)
+                self.strategy = Vertical(ticker, 'call', direction, self.quantity)
                 if analyze:
                     self.analyze()
             elif name.lower() == 'vertp':
                 modified = True
-                self.strategy = Vertical(ticker, 'put', direction)
+                self.strategy = Vertical(ticker, 'put', direction, self.quantity)
                 if analyze:
                     self.analyze()
             else:
@@ -545,15 +519,14 @@ class Interface:
 
     def _show_chart(self, table, title, charttype):
         if not isinstance(table, pd.DataFrame):
-            raise AssertionError("'table' must be a Pandas DataFrame")
+            raise ValueError("'table' must be a Pandas DataFrame")
 
         if charttype == 'surface':
             dim = 3
         else:
             dim = 2
 
-        # The plot
-        fig = plt.figure()
+        fig = plt.figure(figsize=(8, 8))
 
         if dim == 3:
             ax = fig.add_subplot(111, projection='3d')
@@ -610,7 +583,7 @@ class Interface:
         elif charttype == 'surface':
             ax.plot_surface(X, Y, Z, norm=norm, cmap=cmap)
         else:
-            raise AssertionError('Bad chart type')
+            raise ValueError('Bad chart type')
 
         breakeven = self.strategy.analysis.breakeven
         ax.axhline(breakeven, color='k', linestyle='-', linewidth=0.5)
@@ -620,7 +593,7 @@ class Interface:
     @staticmethod
     def _compress_table(table, rows, cols):
         if not isinstance(table, pd.DataFrame):
-            raise AssertionError("'table' must be a Pandas DataFrame")
+            raise ValueError("'table' must be a Pandas DataFrame")
         else:
             srows, scols = table.shape
 
@@ -674,27 +647,14 @@ class Interface:
 if __name__ == '__main__':
     import argparse
 
-    # Create the top-level parser
     parser = argparse.ArgumentParser(description='Option Strategy Analyzer')
-    subparser = parser.add_subparsers(help='Specify the desired command')
-
-    parser.add_argument('-x', '--exit', help='Exit after running loaded strategy or script', action='store_true', required=False, default=False)
-
-    # Create the parser for the "load" command
-    parser_a = subparser.add_parser('load', help='Load a strategy')
-    parser_a.add_argument('-t', '--ticker', help='Specify the ticker symbol', required=False, default='IBM')
-    parser_a.add_argument('-s', '--strategy', help='Load and analyze strategy', required=False, choices=['call', 'put', 'vertc', 'vertp'], default=None)
-    parser_a.add_argument('-d', '--direction', help='Specify the direction', required=False, choices=['long', 'short'], default='long')
-
-    # Create the parser for the "execute" command
-    parser_b = subparser.add_parser('execute', help='Execute a JSON command script')
-    parser_b.add_argument('-f', '--script', help='Specify a script', required=False, default='scripts/script.json')
+    parser.add_argument('-t', '--ticker', help='Specify the ticker symbol', required=False, default='AAPL')
+    parser.add_argument('-s', '--strategy', help='Load and analyze strategy', required=False, choices=['call', 'put', 'vertc', 'vertp'], default=None)
+    parser.add_argument('-d', '--direction', help='Specify the direction', required=False, choices=['long', 'short'], default='long')
 
     command = vars(parser.parse_args())
 
-    if 'strategy' in command.keys():
-        Interface(ticker=command['ticker'], strategy='call', direction=command['direction'], autoload=command['strategy'], exit=command['exit'])
-    elif 'script' in command.keys():
-        Interface('FB', 'call', 'long', script=command['script'], exit=command['exit'])
+    if command['strategy']:
+        Interface(ticker=command['ticker'], strategy='call', direction=command['direction'], autoload=command['strategy'])
     else:
-        Interface('IBM', 'call', 'long', exit=command['exit'])
+        Interface(command['ticker'], 'call', 'long')

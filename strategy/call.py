@@ -6,9 +6,9 @@ from utils import utils as utils
 _logger = utils.get_logger()
 
 class Call(Strategy):
-    def __init__(self, ticker, product, direction):
+    def __init__(self, ticker, product, direction, quantity):
         product = 'call'
-        super().__init__(ticker, product, direction)
+        super().__init__(ticker, product, direction, quantity)
 
         self.name = STRATEGIES[0]
 
@@ -18,14 +18,12 @@ class Call(Strategy):
             d += dt.timedelta(1)
         expiry = d + dt.timedelta(days=6)
 
-        self.add_leg(1, product, direction, self.initial_spot, expiry)
+        self.add_leg(self.quantity, product, direction, self.initial_spot, expiry)
 
     def __str__(self):
         return f'{self.legs[0].direction} {self.name}'
 
     def analyze(self):
-        dframe = None
-
         if self._validate():
             self.legs[0].calculate()
 
@@ -47,15 +45,16 @@ class Call(Strategy):
             self.analysis.breakeven = self.calc_breakeven()
 
     def generate_profit_table(self):
+        profit = None
         price = self.legs[0].option.calc_price
 
         if self.legs[0].direction == 'long':
-            dframe = self.legs[0].table - price
+            profit = self.legs[0].table - price
         else:
-            dframe = self.legs[0].table
-            dframe = dframe.applymap(lambda x: (price - x) if x < price else -(x - price))
+            profit = self.legs[0].table
+            profit = profit.applymap(lambda x: (price - x) if x < price else -(x - price))
 
-        return dframe
+        return profit
 
     def calc_max_gain_loss(self):
         if self.legs[0].direction == 'long':

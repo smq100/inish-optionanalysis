@@ -11,8 +11,9 @@ from utils import utils as utils
 _logger = utils.get_logger(logging.WARNING)
 
 class Interface:
-    def __init__(self, ticker, run=False, exit=False):
+    def __init__(self, ticker, days=1000, run=False, exit=False):
         self.ticker = ticker.upper()
+        self.days = days
         self.run = run
         self.technical = None
         self.symbols = []
@@ -112,7 +113,6 @@ class Interface:
 
     def get_trend_parameters(self):
         if self.technical is not None:
-            days = 1000
             filename = ''
             show = True
 
@@ -138,7 +138,7 @@ class Interface:
                     show = True if utils.input_integer('Show Window? (1=Yes, 0=No): ', 0, 1) == 1 else False
 
                 if selection == 4:
-                    sr = SupportResistance(self.ticker, days=days)
+                    sr = SupportResistance(self.ticker, days=self.days)
                     sr.calculate()
 
                     sup = sr.get_support()
@@ -159,7 +159,7 @@ class Interface:
             utils.print_error('Please forst select symbol')
 
     def show_trend(self):
-        sr = SupportResistance(self.ticker)
+        sr = SupportResistance(self.ticker, days=self.days)
         sr.calculate()
         sr.plot()
 
@@ -197,10 +197,11 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Technical Analysis')
     parser.add_argument('-t', '--ticker', help='Run using ticker')
+    parser.add_argument('-d', '--days', help='Days to run analysis', default=1000)
     parser.add_argument('-r', help='Run trend analysis (only valid with -t)', action='store_true')
 
     command = vars(parser.parse_args())
     if command['ticker']:
-        Interface(ticker=command['ticker'], run=command['r'])
+        Interface(ticker=command['ticker'], days=int(command['days']), run=command['r'])
     else:
         Interface('AAPL')
