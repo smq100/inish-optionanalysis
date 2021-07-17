@@ -83,8 +83,8 @@ class Interface:
                 self.select_strategy()
             elif selection == 3:
                 if self.select_chain():
-                    self.calculate()
-                    self.show_options()
+                    if self.calculate():
+                        self.analyze()
             elif selection == 4:
                 self.show_options()
             elif selection == 5:
@@ -651,10 +651,11 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--ticker', help='Specify the ticker symbol', required=False, default='AAPL')
     parser.add_argument('-s', '--strategy', help='Load and analyze strategy', required=False, choices=['call', 'put', 'vertc', 'vertp'], default=None)
     parser.add_argument('-d', '--direction', help='Specify the direction', required=False, choices=['long', 'short'], default='long')
+    parser.add_argument('-q', '--quantity', help='Specify the quantity', required=False, default='1')
 
     command = vars(parser.parse_args())
 
     if command['strategy']:
-        Interface(ticker=command['ticker'], strategy='call', direction=command['direction'], autoload=command['strategy'])
+        Interface(ticker=command['ticker'], strategy='call', direction=command['direction'], quantity=int(command['quantity']), autoload=command['strategy'])
     else:
         Interface(command['ticker'], 'call', 'long')

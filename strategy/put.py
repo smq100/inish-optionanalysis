@@ -27,13 +27,15 @@ class Put(Strategy):
         if self._validate():
             self.legs[0].calculate()
 
+            price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
+
             if self.legs[0].direction == 'long':
                 self.analysis.credit_debit = 'debit'
             else:
                 self.analysis.credit_debit = 'credit'
 
             # Calculate net debit or credit
-            self.analysis.amount = self.legs[0].option.calc_price * self.legs[0].quantity
+            self.analysis.amount = price * self.quantity
 
             # Generate profit table
             self.analysis.table = self.generate_profit_table()
@@ -60,12 +62,12 @@ class Put(Strategy):
     def calc_max_gain_loss(self):
         if self.legs[0].direction == 'long':
             self.analysis.sentiment = 'bearish'
-            max_gain = self.legs[0].option.strike - self.legs[0].option.calc_price
-            max_loss = self.legs[0].option.calc_price
+            max_gain = (self.quantityself.legs[0].option.strike - self.legs[0].option.calc_price) * self.quantity
+            max_loss = self.legs[0].option.calc_price * self.quantity
         else:
             self.analysis.sentiment = 'bullish'
-            max_gain = self.legs[0].option.calc_price
-            max_loss = self.legs[0].option.strike - self.legs[0].option.calc_price
+            max_gain = self.legs[0].option.calc_price * self.quantity
+            max_loss = (self.legs[0].option.strike - self.legs[0].option.calc_price) * self.quantity
 
         return max_gain, max_loss
 

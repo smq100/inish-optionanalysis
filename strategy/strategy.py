@@ -32,7 +32,7 @@ class Strategy(ABC):
         self.ticker = ticker
         self.product = product
         self.direction = direction
-        self.quantity = 1
+        self.quantity = quantity
         self.width = 1
         self.analysis = StrategyAnalysis()
         self.legs = []
@@ -124,6 +124,8 @@ class Leg:
             raise ValueError('Invalid product')
         if direction not in DIRECTIONS:
             raise ValueError('Invalid direction')
+        if quantity < 1:
+            raise ValueError('Invalid quantity')
 
         self.symbol = Company(ticker, days=1)
         self.option = Option(ticker, product, strike, expiry)
@@ -293,10 +295,10 @@ class Leg:
                 today = datetime.datetime.today()
                 today = today.replace(hour=0, minute=0, second=0, microsecond=0)
 
-                col_index.append(str(today))
+                col_index += [str(today)]
                 while today < self.option.expiry:
                     today += datetime.timedelta(days=step)
-                    col_index.append(str(today))
+                    col_index += [str(today)]
 
                 # Calculate cost of option every day till expiry
                 min_, max_, step_ = self.strategy._calc_price_min_max_step()
@@ -315,11 +317,11 @@ class Leg:
                         price_call, price_put = self.recalculate(spot_price=spot, time_to_maturity=decimaldays_to_maturity)
 
                         if self.product == 'call':
-                            row.append(price_call)
+                            row += [price_call]
                         else:
-                            row.append(price_put)
+                            row += [price_put]
 
-                    table.append(row)
+                    table += [row]
 
                     # Create row index
                     if spot > 500.0:
@@ -333,7 +335,7 @@ class Leg:
                     else:
                         spot = utils.mround(spot, 0.01)
 
-                    row_index.append(spot)
+                    row_index += [spot]
 
                 # Strip the time from the datetime string
                 for index, item in enumerate(col_index):

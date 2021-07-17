@@ -1,6 +1,7 @@
 import datetime as dt
 
 from strategy.strategy import Strategy, STRATEGIES
+from options import option
 from utils import utils as utils
 
 _logger = utils.get_logger()
@@ -43,15 +44,17 @@ class Vertical(Strategy):
             self.legs[0].calculate()
             self.legs[1].calculate()
 
-            dlong = (self.legs[0].option.calc_price > self.legs[1].option.calc_price)
+            price_long = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
+            price_short = self.legs[1].option.last_price if self.legs[1].option.last_price > 0.0 else self.legs[1].option.calc_price
+
+            dlong = (price_long > price_short)
             if dlong:
                 self.analysis.credit_debit = 'debit'
             else:
                 self.analysis.credit_debit = 'credit'
 
             # Calculate net debit or credit
-            self.analysis.amount = self.legs[1].option.calc_price * self.legs[1].quantity
-            self.analysis.amount -= (self.legs[0].option.calc_price * self.legs[0].quantity)
+            self.analysis.amount = abs(price_long - price_short) * self.quantity
 
             # Generate profit table
             self.analysis.table = self.generate_profit_table()
@@ -63,7 +66,7 @@ class Vertical(Strategy):
             self.analysis.breakeven = self.calc_breakeven()
 
     def generate_profit_table(self):
-        profit = self.legs[0].table - self.legs[1].table + self.analysis.amount
+        profit = ((self.legs[0].table - self.legs[1].table) * self.quantity) + self.analysis.amount
 
         return profit
 
@@ -72,16 +75,16 @@ class Vertical(Strategy):
 
         dlong = (self.legs[0].option.calc_price > self.legs[1].option.calc_price)
         if dlong:
-            loss = abs(self.analysis.amount)
-            gain = abs(self.legs[0].option.strike - self.legs[1].option.strike) - loss
+            loss = self.analysis.amount
+            gain = (self.quantity * (self.legs[0].option.strike - self.legs[1].option.strike)) - loss
 
             if self.product == 'call':
                 self.analysis.sentiment = 'bullish'
             else:
                 self.analysis.sentiment = 'bearish'
         else:
-            gain = abs(self.analysis.amount)
-            loss = abs(self.legs[0].option.strike - self.legs[1].option.strike) - gain
+            gain = self.analysis.amount
+            loss = (self.quantity * (self.legs[1].option.strike - self.legs[0].option.strike)) - gain
 
             if self.product == 'call':
                 self.analysis.sentiment = 'bearish'

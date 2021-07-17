@@ -27,13 +27,15 @@ class Call(Strategy):
         if self._validate():
             self.legs[0].calculate()
 
+            price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
+
             if self.legs[0].direction == 'long':
                 self.analysis.credit_debit = 'debit'
             else:
                 self.analysis.credit_debit = 'credit'
 
             # Calculate net debit or credit
-            self.analysis.amount = self.legs[0].option.calc_price * self.legs[0].quantity
+            self.analysis.amount = price * self.quantity
 
             # Generate profit table
             self.analysis.table = self.generate_profit_table()
@@ -60,10 +62,10 @@ class Call(Strategy):
         if self.legs[0].direction == 'long':
             self.analysis.sentiment = 'bullish'
             max_gain = -1.0
-            max_loss = self.legs[0].option.calc_price
+            max_loss = self.legs[0].option.calc_price * self.quantity
         else:
             self.analysis.sentiment = 'bearish'
-            max_gain = self.legs[0].option.calc_price
+            max_gain = self.legs[0].option.calc_price * self.quantity
             max_loss = -1.0
 
         return max_gain, max_loss
