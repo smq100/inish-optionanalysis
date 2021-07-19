@@ -50,11 +50,10 @@ class Interface:
                 '2': f'Change Strategy ({self.strategy})',
                 '3': 'Select Options',
                 '4': 'View Option Details',
-                '5': 'Calculate Value',
-                '6': 'View Value',
-                '7': 'Analyze Stategy',
-                '8': 'View Analysis',
-                '9': 'Settings',
+                '5': 'View Value',
+                '6': 'Analyze Stategy',
+                '7': 'View Analysis',
+                '8': 'Settings',
                 '0': 'Exit'
             }
 
@@ -67,20 +66,21 @@ class Interface:
             else:
                 menu_items['3'] += f' (${self.strategy.legs[0].option.strike:.2f}{loaded})'
 
-            if self.dirty_calculate:
-                menu_items['5'] += ' *'
-
             if self.dirty_analyze:
-                menu_items['7'] += ' *'
+                menu_items['6'] += ' *'
 
             self.show_legs()
 
-            selection = utils.menu(menu_items, 'Select Operation', 0, 9)
+            selection = utils.menu(menu_items, 'Select Operation', 0, 8)
 
             if selection == 1:
-                self.select_symbol()
+                if self.select_symbol():
+                    if self.calculate():
+                        self.analyze()
             elif selection == 2:
-                self.select_strategy()
+                if self.select_strategy():
+                    if self.calculate():
+                        self.analyze()
             elif selection == 3:
                 if self.select_chain():
                     if self.calculate():
@@ -88,14 +88,12 @@ class Interface:
             elif selection == 4:
                 self.show_options()
             elif selection == 5:
-                self.calculate()
-            elif selection == 6:
                 self.show_value()
-            elif selection == 7:
+            elif selection == 6:
                 self.analyze()
-            elif selection == 8:
+            elif selection == 7:
                 self.show_analysis()
-            elif selection == 9:
+            elif selection == 8:
                 self.select_settings()
             elif selection == 0:
                 break
@@ -245,6 +243,7 @@ class Interface:
 
     def select_symbol(self):
         valid = False
+        modified = False
 
         while not valid:
             ticker = input('Please enter symbol, or 0 to cancel: ').upper()
@@ -259,10 +258,13 @@ class Interface:
             self.ticker = ticker
             self.dirty_calculate = True
             self.dirty_analyze = True
+            modified = True
 
             self.chain = Chain(ticker)
             self.load_strategy(ticker, 'call', 'long', False)
-            utils.print_message('The initial strategy has been set to a long call', False)
+            utils.print_message('The strategy has been set to a long call', False)
+
+        return modified
 
     def select_strategy(self):
         menu_items = {
@@ -322,7 +324,6 @@ class Interface:
                     else:
                         contract = self.select_chain_option('put')
 
-                    # Load the new contract
                     if contract:
                         self.strategy.legs[0].option.load_contract(contract)
 
@@ -341,7 +342,8 @@ class Interface:
                 menu_items = {
                     '1': f'Select Expiry Date ({expiry})',
                     '2': f'Select {product} Option',
-                    '3': 'Done',
+                    '3': f'Quantity ({self.quantity})',
+                    '4': 'Done',
                 }
 
                 loaded = '' if  self.strategy.legs[0].option.last_price > 0 else '*'
@@ -354,7 +356,7 @@ class Interface:
                 else:
                     menu_items['2'] += f' (${self.strategy.legs[0].option.strike:.2f}{loaded})'
 
-                selection = utils.menu(menu_items, 'Select Operation', 0, 3)
+                selection = utils.menu(menu_items, 'Select Operation', 0, 4)
 
                 ret = True
                 if selection == 1:
@@ -383,6 +385,8 @@ class Interface:
                     else:
                         utils.print_error('Please first select expiry date')
                 elif selection == 3:
+                    self.quantity = utils.input_integer('Enter quantity (1 - 10): ', 1, 10)
+                elif selection == 4:
                     break
                 elif selection == 0:
                     break

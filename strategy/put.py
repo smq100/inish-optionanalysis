@@ -62,7 +62,7 @@ class Put(Strategy):
     def calc_max_gain_loss(self):
         if self.legs[0].direction == 'long':
             self.analysis.sentiment = 'bearish'
-            max_gain = (self.quantityself.legs[0].option.strike - self.legs[0].option.calc_price) * self.quantity
+            max_gain = (self.legs[0].option.strike - self.legs[0].option.calc_price) * self.quantity
             max_loss = self.legs[0].option.calc_price * self.quantity
         else:
             self.analysis.sentiment = 'bullish'

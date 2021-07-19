@@ -1,7 +1,6 @@
 import datetime as dt
 
 from strategy.strategy import Strategy, STRATEGIES
-from options import option
 from utils import utils as utils
 
 _logger = utils.get_logger()
@@ -38,7 +37,7 @@ class Vertical(Strategy):
         return f'{self.name} {self.product} {self.analysis.credit_debit} spread'
 
     def analyze(self):
-        ''' Analyze the stratwgy (Important: Assumes the long leg is the index-0 leg)'''
+        ''' Analyze the strategy (Important: Assumes the long leg is the index-0 leg)'''
 
         if self._validate():
             self.legs[0].calculate()

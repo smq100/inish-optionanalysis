@@ -29,7 +29,7 @@ def get_logger(level=None):
 
 def menu(menu_items, header, minvalue, maxvalue):
     print(f'\n{header}')
-    print('---------------------------------------------')
+    print('-' * 50)
 
     [print(f'{entry:>2})\t{menu_items[entry]}') for entry in menu_items.keys()]
 
@@ -109,14 +109,14 @@ def input_text(message):
     return val
 
 position = 0
-direction = 'f'
+forward = True
 def progress_bar(iteration, total, prefix='', suffix='', symbol='', length=100, fill='█', reset=False, success=-1, tasks=0):
     global position
-    global direction
+    global forward
 
     if reset:
         position = 0
-        direction = 'f'
+        forward = True
 
     if total > 0:
         filled = int(length * iteration // total)
@@ -130,18 +130,18 @@ def progress_bar(iteration, total, prefix='', suffix='', symbol='', length=100, 
         if iteration == total:
             print()
     else: # Use oscillating marker when the total is not known
-        if direction == 'f':
+        if forward:
             if position < length:
                 position += 1
             else:
                 position -= 1
-                direction = 'r'
+                forward = False
         else:
             if position > 1:
                 position -= 1
             else:
                 position = 2
-                direction = 'f'
+                forward = True
 
         front = position - 1
         back = length - position
