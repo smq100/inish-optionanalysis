@@ -157,8 +157,16 @@ class Manager(Threaded):
                     session.add(ind)
                     _logger.info(f'{__name__}: Added index {index["abbreviation"]}')
 
+    def update_pricing_ticker(self, ticker: str=''):
+        days = 0
+        if store.is_symbol_valid(ticker):
+            with self.session.begin() as session:
+                days = self._refresh_pricing(ticker, session)
+
+        return days
+
     @Threaded.threaded
-    def update_pricing(self, exchange: str=''):
+    def update_pricing_exchange(self, exchange: str=''):
         tickers = store.get_symbols(exchange)
         self.task_total = len(tickers)
 

@@ -98,14 +98,16 @@ class Interface:
                 count = len(self.manager.identify_incomplete_securities_price(e))
                 print(f'{e:>16}:\t{count} missing price')
 
-    def show_symbol_information(self):
-        symbol = utils.input_text('Enter symbol: ')
-        if symbol:
-            symbol = symbol[:4].upper()
-            if store.is_symbol_valid(symbol):
-                company = store.get_company(symbol)
+    def show_symbol_information(self, ticker:str =''):
+        if not ticker:
+            ticker = utils.input_text('Enter ticker: ')
+
+        if ticker:
+            ticker = ticker[:4].upper()
+            if store.is_symbol_valid(ticker):
+                company = store.get_company(ticker)
                 if company is not None:
-                    utils.print_message(f'{symbol} Company Information')
+                    utils.print_message(f'{ticker} Company Information')
                     print(f'Name:\t\t{company["name"]}')
                     print(f'Exchange:\t{company["exchange"]}')
                     print(f'Indexes:\t{company["indexes"]}')
@@ -114,20 +116,20 @@ class Interface:
                     print(f'URL:\t\t{company["url"]}')
                     print(f'Price Records:\t{company["precords"]}')
                 else:
-                    utils.print_error(f'{symbol} has no company information')
+                    utils.print_error(f'{ticker} has no company information')
 
-                history = store.get_history(symbol, 0)
+                history = store.get_history(ticker, 0)
                 if not history.empty:
                     print(f'Latest Record:\t{history["date"]:%Y-%m-%d}, closed at ${history["close"]:.2f}')
 
-                utils.print_message(f'{symbol} Recent Price History')
-                history = store.get_history(symbol, 10)
+                utils.print_message(f'{ticker} Recent Price History')
+                history = store.get_history(ticker, 10)
                 history.set_index('date', inplace=True)
                 if not history.empty:
                     print(history)
 
             else:
-                utils.print_error(f'{symbol} not found')
+                utils.print_error(f'{ticker} not found')
 
     def populate_exchange(self, progressbar=True):
         menu_items = {}
@@ -187,12 +189,22 @@ class Interface:
         for i, exchange in enumerate(self.exchanges):
             menu_items[f'{i+1}'] = f'{exchange}'
         menu_items[f'{i+2}'] = 'All'
+        menu_items[f'{i+3}'] = 'Ticker'
         menu_items['0'] = 'Cancel'
 
-        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.EXCHANGES)+1)
-        if select > 0:
+        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.EXCHANGES)+2)
+        if select == 5:
+            ticker = input('Please enter symbol, or 0 to cancel: ').upper()
+            if ticker != '0':
+                valid = store.is_symbol_valid(ticker)
+                if not valid:
+                    utils.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
+                else:
+                    self.manager.update_pricing_ticker(ticker)
+                    self.show_symbol_information(ticker=ticker)
+        elif select > 0:
             exc = self.exchanges[select-1] if select <= len(d.EXCHANGES) else ''
-            self.task = threading.Thread(target=self.manager.update_pricing, args=[exc])
+            self.task = threading.Thread(target=self.manager.update_pricing_exchange, args=[exc])
             self.task.start()
 
             if progressbar:
