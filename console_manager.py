@@ -1,5 +1,3 @@
-import os
-import json
 import logging
 import time
 import threading
@@ -124,9 +122,9 @@ class Interface:
 
                 utils.print_message(f'{ticker} Recent Price History')
                 history = store.get_history(ticker, 10)
-                history.set_index('date', inplace=True)
                 if not history.empty:
-                    print(history)
+                    history.set_index('date', inplace=True)
+                    print(history.round(2))
 
             else:
                 utils.print_error(f'{ticker} not found')
@@ -200,7 +198,8 @@ class Interface:
                 if not valid:
                     utils.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
                 else:
-                    self.manager.update_pricing_ticker(ticker)
+                    days = self.manager.update_pricing_ticker(ticker)
+                    utils.print_message(f'Added {days} days pricing for {ticker}')
                     self.show_symbol_information(ticker=ticker)
         elif select > 0:
             exc = self.exchanges[select-1] if select <= len(d.EXCHANGES) else ''
