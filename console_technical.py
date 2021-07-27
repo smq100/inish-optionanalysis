@@ -3,7 +3,7 @@ import logging
 import matplotlib.pyplot as plt
 
 from analysis.technical import Technical
-from analysis.trend import SupportResistance
+from analysis.trend import METHOD, SupportResistance
 from data import store as store
 from utils import utils as utils
 
@@ -11,7 +11,7 @@ from utils import utils as utils
 _logger = utils.get_logger(logging.WARNING)
 
 class Interface:
-    def __init__(self, ticker, days=1000, run=False, exit=False):
+    def __init__(self, ticker, days=365, run=False, exit=False):
         self.ticker = ticker.upper()
         self.days = days
         self.run = run
@@ -25,6 +25,7 @@ class Interface:
                 self.technical = Technical(self.ticker, None, 365)
                 self.main_menu()
         else:
+            utils.print_error(f'Invalid ticker: {self.ticker}')
             self.ticker = ''
             self.run = False
             self.main_menu()
@@ -115,31 +116,36 @@ class Interface:
         if self.technical is not None:
             filename = ''
             show = True
+            method = 'NSQUREDLOGN'
 
             while True:
                 name = filename if filename else 'none'
                 menu_items = {
-                    '1': f'Number of Days ({days})',
-                    '2': f'Plot File Name ({name})',
-                    '3': f'Show Window ({show})',
-                    '4': 'Analyze',
+                    '1': f'Number of Days ({self.days})',
+                    '2': f'Method ({method})',
+                    '3': f'Plot File Name ({name})',
+                    '4': f'Show Window ({show})',
+                    '5': 'Analyze',
                     '0': 'Cancel'
                 }
 
-                selection = utils.menu(menu_items, 'Select option', 0, 4)
+                selection = utils.menu(menu_items, 'Select option', 0, 5)
 
                 if selection == 1:
-                    days = utils.input_integer('Enter number of days (0=max): ', 0, 9999)
+                    self.days = utils.input_integer('Enter number of days: ', 30, 9999)
 
                 if selection == 2:
-                    filename = input('Enter filename: ')
+                    method = self._enter_method()
 
                 if selection == 3:
-                    show = True if utils.input_integer('Show Window? (1=Yes, 0=No): ', 0, 1) == 1 else False
+                    filename = input('Enter filename: ')
 
                 if selection == 4:
+                    show = True if utils.input_integer('Show Window? (1=Yes, 0=No): ', 0, 1) == 1 else False
+
+                if selection == 5:
                     sr = SupportResistance(self.ticker, days=self.days)
-                    sr.calculate()
+                    sr.calculate(method=method)
 
                     sup = sr.get_support()
                     utils.print_message(f'{sr.ticker} Support & Resistance Levels (${sr.price:.2f})')
@@ -160,25 +166,26 @@ class Interface:
 
     def show_trend(self):
         sr = SupportResistance(self.ticker, days=self.days)
-        sr.calculate()
+        sr.calculate('NSQUREDLOGN')
         sr.plot()
 
     def plot_all(self):
         if self.technical is not None:
             df1 = self.technical.calc_ema(21)
-            df2 = self.technical.calc_rsi()
-            df3 = self.technical.calc_vwap()
-            df4 = self.technical.calc_macd()
-            df5 = self.technical.calc_bb()
             df1.plot(label='EMA')
+            df2 = self.technical.calc_rsi()
             df2.plot(label='RSI')
+            df3 = self.technical.calc_vwap()
             df3.plot(label='VWAP')
+            df4 = self.technical.calc_macd()
             df4.plot(label='MACD')
+            df5 = self.technical.calc_bb()
             df5.plot(label='BB')
+
             plt.legend()
             plt.show()
         else:
-            utils.print_error('Please forst select symbol')
+            utils.print_error('Please select symbol')
 
     def plot(self, df, title=''):
         if df is not None:
@@ -190,6 +197,17 @@ class Interface:
                 plt.title(title)
             df.plot()
             plt.show()
+
+    def _enter_method(self):
+        menu_items = {
+            '1': 'NCUBED',
+            '2': 'NSQUREDLOGN',
+            '3': 'HOUGHLINES',
+            '4': 'PROBHOUGH',
+        }
+
+        selection = utils.menu(menu_items, 'Select method', 1, 4)
+        return  menu_items[str(selection)]
 
 
 if __name__ == '__main__':
