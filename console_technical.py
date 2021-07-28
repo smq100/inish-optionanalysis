@@ -165,9 +165,23 @@ class Interface:
             utils.print_error('Please forst select symbol')
 
     def show_trend(self):
-        sr = SupportResistance(self.ticker, days=self.days)
-        sr.calculate('NSQUREDLOGN')
-        sr.plot()
+        sr = SupportResistance(self.ticker, method='NSQUREDLOGN', days=self.days)
+        sr.calculate()
+        sr.plot(show=False)
+
+        sr = SupportResistance(self.ticker, method='NCUBED', days=self.days)
+        sr.calculate()
+        sr.plot(show=False)
+
+        sr = SupportResistance(self.ticker, method='HOUGHLINES', days=self.days)
+        sr.calculate()
+        sr.plot(show=False)
+
+        sr = SupportResistance(self.ticker, method='PROBHOUGH', days=self.days)
+        sr.calculate()
+        sr.plot(show=False)
+
+        plt.show()
 
     def plot_all(self):
         if self.technical is not None:

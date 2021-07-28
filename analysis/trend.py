@@ -71,17 +71,20 @@ class Line:
         return output
 
 class SupportResistance:
-    def __init__(self, ticker, best=3, days=1000):
+    def __init__(self, ticker, method='NSQUREDLOGN', best=3, days=1000):
         if best < 1:
             raise AssertionError("'best' value must be > 0")
 
-        if (store.is_symbol_valid(ticker)):
+        if days <= 30:
+            utils.print_error('Days must be greater than 30')
+
+        elif (store.is_symbol_valid(ticker)):
             self.ticker = ticker.upper()
+            self.method = METHOD[method]
             self.best = best
             self.days = days
             self.history = None
             self.price = 0.0
-            self.method = METHOD['NSQUREDLOGN'] # Trend line detection: METHOD_NCUBED, *METHOD_NSQUREDLOGN, METHOD_HOUGHPOINTS, METHOD_HOUGHLINES, METHOD_PROBHOUGH
             self.extmethod = trendln.METHOD_NUMDIFF # Pivit point detection: METHOD_NAIVE, METHOD_NAIVECONSEC, *METHOD_NUMDIFF
             self.lines = []
             self.slope_sup = 0.0
@@ -95,9 +98,7 @@ class SupportResistance:
     def __str__(self):
         return f'Support and resistance analysis for {self.ticker} (${self.price:.2f})'
 
-    def calculate(self, method='NSQUREDLOGN'):
-        self.method = METHOD[method]
-
+    def calculate(self):
         self.history = store.get_history(self.ticker, self.days)
         if self.history is None:
             raise ValueError('Unable to get history')
@@ -255,11 +256,12 @@ class SupportResistance:
     def plot(self, show=True, filename='', legend=True, srlines=False, trendlines=True):
         fig, ax1 = plt.subplots(figsize=(17,10))
         ax2 = ax1.secondary_yaxis('right')
-        plt.style.use('seaborn')
+        # plt.style.use('seaborn')
         plt.grid()
         plt.margins(x=0.1)
         plt.title(f'{self.ticker} History with Support & Resistance ({self.method[1]})')
         width = 1.0
+        fig.canvas.manager.set_window_title(f'{self.ticker} Using {self.method[1]}')
 
         if self.price < 30.0:
             ax1.yaxis.set_major_formatter('${x:.2f}')
@@ -268,7 +270,7 @@ class SupportResistance:
             ax1.yaxis.set_major_formatter('${x:.0f}')
             ax2.yaxis.set_major_formatter('${x:.0f}')
 
-        # High & Lows
+        # Highs & Lows
         dates = []
         length = len(self.history)
         for index in range(length):
