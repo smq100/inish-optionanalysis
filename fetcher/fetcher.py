@@ -24,7 +24,7 @@ qd.ApiConfig.api_key = config['DEFAULT']['APIKEY']
 
 THROTTLE = 0.050 # Min secs between calls to Yahoo
 
-def validate_ticker(ticker):
+def validate_ticker(ticker:str) -> bool:
     valid = False
 
     # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
@@ -37,7 +37,7 @@ def validate_ticker(ticker):
     return valid
 
 elasped = 0.0
-def get_company_ex(ticker):
+def get_company_ex(ticker:str) -> pd.DataFrame:
     global elasped
     company = None
 
@@ -46,16 +46,16 @@ def get_company_ex(ticker):
     elasped = time.perf_counter()
 
     try:
-        # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
         company = yf.Ticker(ticker)
         if company is not None:
+            # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
             _ = company.info
     except:
         company = None
 
     return company
 
-def get_history(ticker, days=-1):
+def get_history(ticker:str, days:int=-1) -> pd.DataFrame:
     history = None
 
     company = get_company_ex(ticker)
@@ -87,7 +87,7 @@ def get_history(ticker, days=-1):
 
     return history
 
-def get_history_q(ticker, days=-1):
+def get_history_q(ticker:str, days:int=-1) -> pd.DataFrame:
     if days < 0:
         days = 7300 # 20 years
     elif days > 1:
@@ -105,13 +105,13 @@ def get_history_q(ticker, days=-1):
 
     return history
 
-def get_option_expiry(ticker):
+def get_option_expiry(ticker:str) -> dict:
     company = get_company_ex(ticker)
     value = company.options
 
     return value
 
-def get_option_chain(ticker):
+def get_option_chain(ticker:str) -> dict:
     chain = None
 
     company = get_company_ex(ticker)
@@ -120,7 +120,7 @@ def get_option_chain(ticker):
 
     return chain
 
-def get_treasury_rate(ticker):
+def get_treasury_rate(ticker:str) -> float:
     df = pd.DataFrame()
     df = qd.get(f'FRED/{ticker}')
     if df.empty:

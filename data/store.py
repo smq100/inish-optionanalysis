@@ -29,29 +29,31 @@ _engine = create_engine(d.ACTIVE_URI, echo=False)
 _session = sessionmaker(bind=_engine)
 
 
-def is_symbol_valid(symbol):
+def is_symbol_valid(symbol:str) -> bool:
     with _session() as session:
         e = session.query(models.Security).filter(models.Security.ticker==symbol.upper()).one_or_none()
 
     return (e is not None)
 
-def is_exchange(exchange):
+def is_exchange(exchange:str) -> bool:
     ret = False
     for e in d.EXCHANGES:
         if exchange == e['abbreviation']:
             ret = True
             break
+
     return ret
 
-def is_index(index):
+def is_index(index:str) -> bool:
     ret = False
     for i in d.INDEXES:
         if index == i['abbreviation']:
             ret = True
             break
+
     return ret
 
-def is_list(list):
+def is_list(list:str) -> bool:
     ret = False
     if is_exchange(list):
         ret = True
@@ -60,7 +62,7 @@ def is_list(list):
 
     return ret
 
-def get_symbols(list=''):
+def get_symbols(list:str='') -> list[str]:
     tickers = []
 
     if not list:
@@ -74,7 +76,7 @@ def get_symbols(list=''):
 
     return tickers
 
-def get_exchanges():
+def get_exchanges() -> list[str]:
     results = []
 
     with _session() as session:
@@ -83,7 +85,7 @@ def get_exchanges():
 
     return results
 
-def get_indexes():
+def get_indexes() -> list[str]:
     results = []
 
     with _session() as session:
@@ -92,7 +94,7 @@ def get_indexes():
 
     return results
 
-def get_exchange_symbols(exchange):
+def get_exchange_symbols(exchange:str) -> list[str]:
     results = []
 
     with _session() as session:
@@ -105,7 +107,7 @@ def get_exchange_symbols(exchange):
 
     return results
 
-def get_index_symbols(index):
+def get_index_symbols(index:str) -> list[str]:
     results = []
 
     with _session() as session:
@@ -119,7 +121,7 @@ def get_index_symbols(index):
 
     return results
 
-def get_current_price(ticker):
+def get_current_price(ticker:str) -> float:
     price = None
     history = get_history(ticker, 5, live=True)
     if history is not None:
@@ -127,7 +129,7 @@ def get_current_price(ticker):
 
     return price
 
-def get_history(ticker, days, live=False) -> pd.DataFrame:
+def get_history(ticker, days:int, live:bool=False) -> pd.DataFrame:
     results = pd.DataFrame
     if live:
         results = fetcher.get_history(ticker, days)
@@ -165,7 +167,7 @@ def get_history(ticker, days, live=False) -> pd.DataFrame:
 
     return results
 
-def get_company(ticker, live=False):
+def get_company(ticker, live:bool=False) -> dict:
     results = {}
 
     if live:
@@ -227,7 +229,7 @@ def get_company(ticker, live=False):
 
     return results
 
-def get_exchange_symbols_master(exchange, type='google'):
+def get_exchange_symbols_master(exchange, type:str='google') -> list[str]:
     global _master_exchanges
     symbols = []
     table = None
@@ -253,7 +255,7 @@ def get_exchange_symbols_master(exchange, type='google'):
 
     return symbols
 
-def get_index_symbols_master(index, type='google'):
+def get_index_symbols_master(index, type:str='google') -> list[str]:
     global _master_indexes
     table = None
     symbols = []
@@ -279,13 +281,13 @@ def get_index_symbols_master(index, type='google'):
 
     return symbols
 
-def get_option_expiry(ticker):
+def get_option_expiry(ticker:str) -> tuple:
     return fetcher.get_option_expiry(ticker)
 
-def get_option_chain(ticker):
+def get_option_chain(ticker:str) -> tuple:
     return fetcher.get_option_chain(ticker)
 
-def get_treasury_rate(ticker='DTB3'):
+def get_treasury_rate(ticker:str='DTB3') -> float:
     # DTB3: Default to 3-Month Treasury Rate
     return fetcher.get_treasury_rate(ticker)
 

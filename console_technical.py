@@ -115,7 +115,6 @@ class Interface:
     def get_trend_parameters(self):
         if self.technical is not None:
             filename = ''
-            show = True
             method = 'NSQUREDLOGN'
 
             while True:
@@ -124,12 +123,11 @@ class Interface:
                     '1': f'Number of Days ({self.days})',
                     '2': f'Method ({method})',
                     '3': f'Plot File Name ({name})',
-                    '4': f'Show Window ({show})',
-                    '5': 'Analyze',
+                    '4': 'Analyze',
                     '0': 'Cancel'
                 }
 
-                selection = utils.menu(menu_items, 'Select option', 0, 5)
+                selection = utils.menu(menu_items, 'Select option', 0, 4)
 
                 if selection == 1:
                     self.days = utils.input_integer('Enter number of days: ', 30, 9999)
@@ -141,22 +139,7 @@ class Interface:
                     filename = input('Enter filename: ')
 
                 if selection == 4:
-                    show = True if utils.input_integer('Show Window? (1=Yes, 0=No): ', 0, 1) == 1 else False
-
-                if selection == 5:
-                    sr = SupportResistance(self.ticker, days=self.days)
-                    sr.calculate(method=method)
-
-                    sup = sr.get_support()
-                    utils.print_message(f'{sr.ticker} Support & Resistance Levels (${sr.price:.2f})')
-                    for line in sup:
-                        print(f'Support:    ${line.end_point:.2f} ({line.get_score():.2f})')
-
-                    res = sr.get_resistance()
-                    for line in res:
-                        print(f'Resistance: ${line.end_point:.2f} ({line.get_score():.2f})')
-
-                    sr.plot(filename=filename, show=show)
+                    self.show_trend()
                     break
 
                 if selection == 0:

@@ -1,11 +1,13 @@
 
+import pandas as pd
+
 from analysis.technical import Technical
 from data import store as store
 from utils import utils as utils
 
 
 class Company:
-    def __init__(self, ticker, days, lazy=True, live=False):
+    def __init__(self, ticker:str, days:int, lazy:bool=True, live:bool=False):
         self.ticker = ticker.upper()
         self.days = days
         self.live = live
@@ -26,31 +28,31 @@ class Company:
         output = f'{self.ticker}'
         return output
 
-    def get_current_price(self):
+    def get_current_price(self) -> float:
         if self.history is None:
             self._load_history()
 
         return self.history['close'][-1]
 
-    def get_high(self):
+    def get_high(self) -> pd.Series:
         if self.history is None:
             self._load_history()
 
         return self.history['high']
 
-    def get_low(self):
+    def get_low(self) -> pd.Series:
         if self.history is None:
             self._load_history()
 
         return self.history['low']
 
-    def get_close(self):
+    def get_close(self) -> pd.Series:
         if self.history is None:
             self._load_history()
 
         return self.history['close']
 
-    def get_volume(self):
+    def get_volume(self) -> pd.Series:
         if self.history is None:
             self._load_history()
 

@@ -36,7 +36,7 @@ class Manager(Threaded):
     def create_database(self):
         models.Base.metadata.create_all(self.engine)
 
-    def delete_database(self, recreate: bool=True):
+    def delete_database(self, recreate:bool=True):
         if d.ACTIVE_DB == d.OPTIONS_DB[1]:
             if os.path.exists(d.SQLITE_DATABASE_PATH):
                 os.remove(d.SQLITE_DATABASE_PATH)
@@ -59,7 +59,7 @@ class Manager(Threaded):
                     _logger.info(f'{__name__}: Added exchange {exchange["abbreviation"]}')
 
     @Threaded.threaded
-    def populate_exchange(self, exchange: str):
+    def populate_exchange(self, exchange:str):
         exchange = exchange.upper()
         self.invalid_symbols = []
         self.retry = 0
@@ -86,7 +86,7 @@ class Manager(Threaded):
         self.task_error = 'Done'
 
     @Threaded.threaded
-    def refresh_exchange(self, exchange: str, area: str):
+    def refresh_exchange(self, exchange:str, area:str):
         self.invalid_symbols = []
         self.retry = 0
 
@@ -140,7 +140,7 @@ class Manager(Threaded):
             raise ValueError(f'{self.task_error}: {area}')
 
     @Threaded.threaded
-    def delete_exchange(self, exchange: str):
+    def delete_exchange(self, exchange:str):
         self.task_error = 'None'
         with self.session.begin() as session:
             exc = session.query(models.Exchange).filter(models.Exchange.abbreviation==exchange)
@@ -157,7 +157,7 @@ class Manager(Threaded):
                     session.add(ind)
                     _logger.info(f'{__name__}: Added index {index["abbreviation"]}')
 
-    def update_pricing_ticker(self, ticker: str=''):
+    def update_pricing_ticker(self, ticker:str='') -> int:
         days = 0
         if store.is_symbol_valid(ticker):
             with self.session.begin() as session:
@@ -166,7 +166,7 @@ class Manager(Threaded):
         return days
 
     @Threaded.threaded
-    def update_pricing_exchange(self, exchange: str=''):
+    def update_pricing_exchange(self, exchange:str=''):
         tickers = store.get_symbols(exchange)
         self.task_total = len(tickers)
 
@@ -199,7 +199,7 @@ class Manager(Threaded):
         self.task_error = 'Done'
 
     @Threaded.threaded
-    def populate_index(self, index: str):
+    def populate_index(self, index:str):
         valid = []
 
         with self.session.begin() as session:
@@ -231,7 +231,7 @@ class Manager(Threaded):
             self.task_error = 'No symbols'
             _logger.warning(f'{__name__}: No symbols found for {index}')
 
-    def delete_index(self, index: str):
+    def delete_index(self, index:str):
         with self.session.begin() as session:
             ind = session.query(models.Index).filter(models.Index.abbreviation==index)
             if ind is not None:
@@ -257,7 +257,7 @@ class Manager(Threaded):
 
         return info
 
-    def get_exchange_info(self):
+    def get_exchange_info(self) -> list[dict]:
         info = []
         inspector = inspect(self.engine)
         tables = inspector.get_table_names()
@@ -272,7 +272,7 @@ class Manager(Threaded):
 
         return info
 
-    def get_index_info(self, index: str =''):
+    def get_index_info(self, index: str ='') -> list[dict]:
         info = []
         inspector = inspect(self.engine)
         tables = inspector.get_table_names()
@@ -291,7 +291,7 @@ class Manager(Threaded):
 
         return info
 
-    def identify_missing_securities(self, exchange: str):
+    def identify_missing_securities(self, exchange:str) -> list[str]:
         missing = []
         tickers = store.get_exchange_symbols_master(exchange)
         _logger.info(f'{__name__}: {len(tickers)} total symbols in {exchange}')
@@ -303,9 +303,10 @@ class Manager(Threaded):
                     missing += [sec]
 
         _logger.info(f'{__name__}: {len(missing)} missing symbols in {exchange}')
+
         return missing
 
-    def identify_inactive_securities(self, exchange: str) -> list[str]:
+    def identify_inactive_securities(self, exchange:str) -> list[str]:
         missing = []
         tickers = store.get_symbols(exchange)
         if len(tickers) > 0:
@@ -320,7 +321,7 @@ class Manager(Threaded):
         _logger.info(f'{__name__}: {len(missing)} inactive symbols in {exchange}')
         return missing
 
-    def identify_incomplete_securities_companies(self, exchange: str, live: bool =False) -> list[str]:
+    def identify_incomplete_securities_companies(self, exchange:str, live:bool =False) -> list[str]:
         missing = []
         if live:
             with self.session.begin() as session:
@@ -349,7 +350,7 @@ class Manager(Threaded):
         _logger.info(f'{__name__}: {len(missing)} with incomplete company info')
         return missing
 
-    def identify_incomplete_securities_price(self, exchange: str, live: bool=False):
+    def identify_incomplete_securities_price(self, exchange:str, live:bool=False):
         missing = []
         if live:
             with self.session.begin() as session:
@@ -389,7 +390,7 @@ class Manager(Threaded):
 
         return nasdaq_nyse, nasdaq_amex, nyse_amex
 
-    def _refresh_pricing(self, ticker: str, session: Session) -> int:
+    def _refresh_pricing(self, ticker:str, session:Session) -> int:
         ticker = ticker.upper()
         today = date.today()
         days = 0
@@ -445,7 +446,7 @@ class Manager(Threaded):
 
         return days
 
-    def _add_securities_to_exchange(self, tickers: list[str], exchange: str):
+    def _add_securities_to_exchange(self, tickers:list[str], exchange:str):
         with self.session() as session:
             exc = session.query(models.Exchange).filter(models.Exchange.abbreviation==exchange).one()
 
@@ -491,7 +492,7 @@ class Manager(Threaded):
                     _logger.warning(f'{__name__}: Cancelling operation')
                     break
 
-    def _add_company_to_security(self, ticker: str):
+    def _add_company_to_security(self, ticker:str) -> bool:
         added = False
         with self.session.begin() as session:
             sec = session.query(models.Security).filter(models.Security.ticker==ticker).one()
@@ -517,7 +518,7 @@ class Manager(Threaded):
 
         return added
 
-    def _add_pricing_to_security(self, ticker: str, missing: bool):
+    def _add_pricing_to_security(self, ticker:str, missing:bool) -> bool:
         added = False
         with self.session.begin() as session:
             sec = session.query(models.Security).filter(models.Security.ticker==ticker).one()
@@ -556,7 +557,7 @@ class Manager(Threaded):
 
         return added
 
-    def _add_securities_to_index(self, tickers: str, index: str):
+    def _add_securities_to_index(self, tickers:str, index:str):
         with self.session.begin() as session:
             ind = session.query(models.Index.id).filter(models.Index.abbreviation==index).one()
 

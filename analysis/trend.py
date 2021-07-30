@@ -43,7 +43,7 @@ class Line:
 
         self.score = Score()
 
-    def get_score(self):
+    def get_score(self) -> float:
         score = (
             (self.score.fit *       0.20) +
             (self.score.width *     0.20) +
@@ -98,7 +98,7 @@ class SupportResistance:
     def __str__(self):
         return f'Support and resistance analysis for {self.ticker} (${self.price:.2f})'
 
-    def calculate(self):
+    def calculate(self) -> None:
         self.history = store.get_history(self.ticker, self.days)
         if self.history is None:
             raise ValueError('Unable to get history')
@@ -241,27 +241,27 @@ class SupportResistance:
             line = f'{__name__}: Sup:{line}'
             _logger.debug(line)
 
-    def get_resistance(self):
+    def get_resistance(self) -> list[float]:
         res = [line for line in self.lines if not line.support]
         resistance = sorted(res, reverse=True, key=lambda l: l.get_score())
 
         return resistance[:self.best]
 
-    def get_support(self):
+    def get_support(self) -> list[float]:
         sup = [line for line in self.lines if line.support]
         support = sorted(sup, reverse=True, key=lambda l: l.get_score())
 
         return support[:self.best]
 
-    def plot(self, show=True, filename='', legend=True, srlines=False, trendlines=True):
+    def plot(self, show:bool=True, filename:str='', legend:bool=True, srlines:bool=False, trendlines:bool=True) -> plt.Figure:
         fig, ax1 = plt.subplots(figsize=(17,10))
         ax2 = ax1.secondary_yaxis('right')
         # plt.style.use('seaborn')
         plt.grid()
         plt.margins(x=0.1)
         plt.title(f'{self.ticker} History with Support & Resistance ({self.method[1]})')
-        width = 1.0
-        fig.canvas.manager.set_window_title(f'{self.ticker} Using {self.method[1]}')
+        fig.canvas.manager.set_window_title(f'{self.ticker} ({self.method[1]})')
+        line_width = 1.0
 
         if self.price < 30.0:
             ax1.yaxis.set_major_formatter('${x:.2f}')
@@ -271,11 +271,8 @@ class SupportResistance:
             ax2.yaxis.set_major_formatter('${x:.0f}')
 
         # Highs & Lows
-        dates = []
         length = len(self.history)
-        for index in range(length):
-            date = self.history.iloc[index]['date']
-            dates += [date.strftime('%Y-%m-%d')]
+        dates = [self.history.iloc[index]['date'].strftime('%Y-%m-%d') for index in range(length)]
 
         plt.xticks(range(0, length+1, int(length/12)))
         plt.xticks(rotation=45)
@@ -319,7 +316,7 @@ class SupportResistance:
             dates += [date.strftime('%Y-%m-%d')]
             values += [self.history.iloc[index]['high']]
 
-            ax1.plot(dates, values, '-g', linewidth=width)
+            ax1.plot(dates, values, '-g', linewidth=line_width)
 
         dates = []
         values = []
@@ -333,7 +330,7 @@ class SupportResistance:
             dates += [date.strftime('%Y-%m-%d')]
             values += [self.history.iloc[index]['low']]
 
-            ax1.plot(dates, values, '-r', linewidth=width)
+            ax1.plot(dates, values, '-r', linewidth=line_width)
 
         # Trend line extensions
         dates = []
@@ -348,7 +345,7 @@ class SupportResistance:
             dates += [date.strftime('%Y-%m-%d')]
             values += [line.end_point]
 
-            ax1.plot(dates, values, ':g', linewidth=width)
+            ax1.plot(dates, values, ':g', linewidth=line_width)
 
         dates = []
         values = []
@@ -362,7 +359,7 @@ class SupportResistance:
             dates += [date.strftime('%Y-%m-%d')]
             values += [line.end_point]
 
-            ax1.plot(dates, values, ':r', linewidth=width)
+            ax1.plot(dates, values, ':r', linewidth=line_width)
 
         # End points
         text = []
@@ -412,10 +409,10 @@ class SupportResistance:
         # Current support and resistance levels
         if srlines:
             for line in self.get_support():
-                plt.axhline(y=line.end_point, color='r', linestyle='-', linewidth=width)
+                plt.axhline(y=line.end_point, color='r', linestyle='-', linewidth=line_width)
 
             for line in self.get_resistance():
-                plt.axhline(y=line.end_point, color='g', linestyle='-', linewidth=width)
+                plt.axhline(y=line.end_point, color='g', linestyle='-', linewidth=line_width)
 
         if trendlines:
             index = 0

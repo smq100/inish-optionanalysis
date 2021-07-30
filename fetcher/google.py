@@ -14,12 +14,13 @@ _logger = utils.get_logger()
 CREDENTIALS = 'fetcher/google.json'
 
 class Google(Sheet):
-    def __init__(self, sheet_name):
+    def __init__(self, sheet_name:str):
         super().__init__(sheet_name)
-
-    def open(self, tab):
         self.sheet = None
         self.opened = False
+        self.col = []
+
+    def open(self, tab):
         if tab:
             self.tab_name = tab
 
@@ -45,8 +46,7 @@ class Google(Sheet):
 
         return self.opened
 
-    def get_column(self, column):
-        col = []
+    def get_column(self, column) -> list:
         if self.opened and column > 0:
             self.col = self.sheet.col_values(column)
 
