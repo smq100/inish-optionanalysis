@@ -22,7 +22,7 @@ _logger = utils.get_logger()
 
 
 class Strategy(ABC):
-    def __init__(self, ticker, product, direction, quantity):
+    def __init__(self, ticker:str, product:str, direction:str, quantity:int):
         if product not in PRODUCTS:
             raise ValueError('Invalid product')
         if direction not in DIRECTIONS:
@@ -42,22 +42,22 @@ class Strategy(ABC):
     def __str__(self):
         return 'Strategy abstract base class'
 
-    def calculate(self):
+    def calculate(self) -> None:
         for leg in self.legs:
             leg.calculate()
 
     @abc.abstractmethod
-    def analyze(self):
+    def analyze(self) -> None:
         pass
 
-    def reset(self):
+    def reset(self) -> None:
         self.analysis = StrategyAnalysis()
 
-    def update_expiry(self, date):
+    def update_expiry(self, date:str) -> None:
         for leg in self.legs:
             leg.option.expiry = date
 
-    def add_leg(self, quantity, product, direction, strike, expiry):
+    def add_leg(self, quantity:int, product:str, direction:str, strike:float, expiry:datetime) -> int:
         # Add one day to act as expiry value
         expiry += datetime.timedelta(days=1)
 
@@ -66,7 +66,7 @@ class Strategy(ABC):
 
         return len(self.legs)
 
-    def get_current_spot(self, ticker, roundup=False):
+    def get_current_spot(self, ticker:str, roundup=False) -> float:
         expiry = datetime.datetime.today() + datetime.timedelta(days=10)
         pricer = MonteCarlo(ticker, expiry, self.initial_spot)
 
@@ -77,7 +77,7 @@ class Strategy(ABC):
 
         return spot
 
-    def set_pricing_method(self, method):
+    def set_pricing_method(self, method:str):
         if method in METHODS:
             for leg in self.legs:
                 leg.pricing_method = method
@@ -85,21 +85,25 @@ class Strategy(ABC):
             raise ValueError('Invalid pricing method')
 
     @abc.abstractmethod
-    def generate_profit_table(self):
-        pass
+    def analyze(self) -> None:
+        return None
 
     @abc.abstractmethod
-    def calc_max_gain_loss(self):
-        pass
+    def generate_profit_table(self) -> pd.DataFrame:
+        return pd.DataFrame()
 
     @abc.abstractmethod
-    def calc_breakeven(self):
-        pass
+    def calc_max_gain_loss(self) -> tuple[float, float]:
+        return (0.0, 0.0)
 
-    def get_errors(self):
+    @abc.abstractmethod
+    def calc_breakeven(self) -> float:
+        return 0.0
+
+    def get_errors(self) -> str:
         return ''
 
-    def _calc_price_min_max_step(self):
+    def _calc_price_min_max_step(self) -> tuple[int, int, int]:
         min_ = max_ = step_ = 0
 
         if len(self.legs) > 0:
@@ -119,7 +123,7 @@ class Strategy(ABC):
         return len(self.legs) > 0
 
 class Leg:
-    def __init__(self, strategy, ticker, quantity, product, direction, strike, expiry):
+    def __init__(self, strategy:str, ticker:str, quantity:int, product:str, direction:str, strike:float, expiry:datetime) -> None:
         if product not in PRODUCTS:
             raise ValueError('Invalid product')
         if direction not in DIRECTIONS:
@@ -164,7 +168,7 @@ class Leg:
 
         return output
 
-    def calculate(self, table=True, greeks=True):
+    def calculate(self, table:bool=True, greeks:bool=True) -> float:
         price = 0.0
 
         if self._validate():
@@ -239,7 +243,7 @@ class Leg:
 
         return price
 
-    def recalculate(self, spot_price, time_to_maturity):
+    def recalculate(self, spot_price:float, time_to_maturity:int) -> tuple[float, float]:
         if self.pricer is not None:
             if self.option.implied_volatility < IV_CUTOFF:
                 call, put = self.pricer.calculate_price(spot_price, time_to_maturity)
@@ -250,7 +254,7 @@ class Leg:
 
         return call, put
 
-    def modify_symbol(self, ticker):
+    def modify_symbol(self, ticker:str) -> bool:
         self.symbol = Company(ticker)
 
         try:
@@ -263,7 +267,7 @@ class Leg:
             utils.print_error(sys.exc_info()[1])
             return False
 
-    def modify_values(self, quantity, product, direction, strike):
+    def modify_values(self, quantity:int, product:str, direction:str, strike:float) -> bool:
         self.quantity = quantity
         self.product = product
         self.direction = direction
@@ -275,12 +279,12 @@ class Leg:
 
         return True
 
-    def reset(self):
+    def reset(self) -> None:
         self.table = None
         self.pricer = None
         self.calculate()
 
-    def generate_value_table(self):
+    def generate_value_table(self) -> pd.DataFrame:
         df = pd.DataFrame()
 
         if self.option.calc_price > 0.0:
@@ -349,13 +353,13 @@ class Leg:
 
         return df
 
-    def _calc_date_step(self):
+    def _calc_date_step(self) -> tuple[int, int]:
         cols = int(math.ceil(self.option.time_to_maturity * 365))
         step = 1
 
         return cols, step
 
-    def _validate(self):
+    def _validate(self) -> bool:
         valid = False
 
         if self.symbol.ticker:

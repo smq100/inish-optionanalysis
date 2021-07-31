@@ -7,7 +7,7 @@ from urllib.error import HTTPError
 
 from sqlalchemy import create_engine, inspect, and_, or_
 from sqlalchemy.orm import sessionmaker
-from psycopg2.errors import UniqueViolation
+from sqlalchemy.exc import IntegrityError
 import numpy as np
 from sqlalchemy.orm.session import Session
 
@@ -30,10 +30,10 @@ class Manager(Threaded):
         self.invalid_symbols = []
         self.retry = 0
 
-        # No multi-threading for SQLite
+        # No multithreading for SQLite
         self._concurrency = 1 if d.ACTIVE_DB == 'SQLite' else 10
 
-    def create_database(self):
+    def create_database(self) -> None:
         models.Base.metadata.create_all(self.engine)
 
     def delete_database(self, recreate:bool=True):
@@ -49,7 +49,7 @@ class Manager(Threaded):
         if recreate:
             self.create_database()
 
-    def create_exchanges(self):
+    def create_exchanges(self) -> None:
         with self.session.begin() as session:
             for exchange in d.EXCHANGES:
                 e = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange['abbreviation']).one_or_none()
@@ -59,7 +59,7 @@ class Manager(Threaded):
                     _logger.info(f'{__name__}: Added exchange {exchange["abbreviation"]}')
 
     @Threaded.threaded
-    def populate_exchange(self, exchange:str):
+    def populate_exchange(self, exchange:str) -> None:
         exchange = exchange.upper()
         self.invalid_symbols = []
         self.retry = 0
@@ -86,7 +86,7 @@ class Manager(Threaded):
         self.task_error = 'Done'
 
     @Threaded.threaded
-    def refresh_exchange(self, exchange:str, area:str):
+    def refresh_exchange(self, exchange:str, area:str) -> None:
         self.invalid_symbols = []
         self.retry = 0
 
@@ -140,7 +140,7 @@ class Manager(Threaded):
             raise ValueError(f'{self.task_error}: {area}')
 
     @Threaded.threaded
-    def delete_exchange(self, exchange:str):
+    def delete_exchange(self, exchange:str) -> None:
         self.task_error = 'None'
         with self.session.begin() as session:
             exc = session.query(models.Exchange).filter(models.Exchange.abbreviation==exchange)
@@ -148,7 +148,7 @@ class Manager(Threaded):
                 exc.delete(synchronize_session=False)
         self.task_error = 'Done'
 
-    def create_indexes(self):
+    def create_indexes(self) -> None:
         with self.session.begin() as session:
             for index in d.INDEXES:
                 i = session.query(models.Index.id).filter(models.Index.abbreviation==index['abbreviation']).one_or_none()
@@ -166,7 +166,7 @@ class Manager(Threaded):
         return days
 
     @Threaded.threaded
-    def update_pricing_exchange(self, exchange:str=''):
+    def update_pricing_exchange(self, exchange:str='') -> None:
         tickers = store.get_symbols(exchange)
         self.task_total = len(tickers)
 
@@ -177,7 +177,7 @@ class Manager(Threaded):
                     try:
                         days = self._refresh_pricing(sec, session)
                         session.commit()
-                    except UniqueViolation as e:
+                    except IntegrityError as e:
                         _logger.warning(f'{__name__}: UniqueViolation exception occurred for {sec}: {e}')
 
                     if days > 0:
@@ -199,7 +199,7 @@ class Manager(Threaded):
         self.task_error = 'Done'
 
     @Threaded.threaded
-    def populate_index(self, index:str):
+    def populate_index(self, index:str) -> None:
         valid = []
 
         with self.session.begin() as session:
@@ -231,7 +231,7 @@ class Manager(Threaded):
             self.task_error = 'No symbols'
             _logger.warning(f'{__name__}: No symbols found for {index}')
 
-    def delete_index(self, index:str):
+    def delete_index(self, index:str) -> None:
         with self.session.begin() as session:
             ind = session.query(models.Index).filter(models.Index.abbreviation==index)
             if ind is not None:
@@ -240,7 +240,7 @@ class Manager(Threaded):
             else:
                 _logger.error(f'{__name__}: Index {index} does not exist')
 
-    def get_database_info(self):
+    def get_database_info(self) -> list[dict]:
         info = []
         inspector = inspect(self.engine)
         tables = inspector.get_table_names()
@@ -350,7 +350,7 @@ class Manager(Threaded):
         _logger.info(f'{__name__}: {len(missing)} with incomplete company info')
         return missing
 
-    def identify_incomplete_securities_price(self, exchange:str, live:bool=False):
+    def identify_incomplete_securities_price(self, exchange:str, live:bool=False) -> list[str]:
         missing = []
         if live:
             with self.session.begin() as session:
@@ -377,9 +377,10 @@ class Manager(Threaded):
                         missing += [sec.ticker]
 
         _logger.info(f'{__name__}: {len(missing)} incomplete symbol price info')
+
         return missing
 
-    def identify_common_securities(self):
+    def identify_common_securities(self) -> tuple[set, set, set]:
         nasdaq = store.get_exchange_symbols_master('NASDAQ')
         nyse = store.get_exchange_symbols_master('NYSE')
         amex = store.get_exchange_symbols_master('AMEX')
@@ -426,7 +427,8 @@ class Manager(Threaded):
 
                         for _, price in history.iterrows():
                             if price['date']:
-                                pri = session.query(models.Price.date).filter(and_(models.Price.security_id==sec.id, models.Price.date==price['date'])).one_or_none()
+                                pri = session.query(models.Price.date).filter(and_(models.Price.security_id==sec.id,
+                                    models.Price.date==price['date'])).one_or_none()
                                 if pri is None:
                                     p = models.Price()
                                     p.date = price['date']
@@ -446,7 +448,7 @@ class Manager(Threaded):
 
         return days
 
-    def _add_securities_to_exchange(self, tickers:list[str], exchange:str):
+    def _add_securities_to_exchange(self, tickers:list[str], exchange:str) -> None:
         with self.session() as session:
             exc = session.query(models.Exchange).filter(models.Exchange.abbreviation==exchange).one()
 
@@ -550,14 +552,14 @@ class Manager(Threaded):
                                 session.query(models.MissingPrice).filter(models.MissingPrice.security_id==sec.id).delete()
                         else:
                             sec.active = False
-                except UniqueViolation as e:
+                except IntegrityError as e:
                     _logger.info(f'{__name__}: {ticker} UniqueViolation exception occurred: {e}')
 
                 _logger.info(f'{__name__}: Added pricing information for {ticker}')
 
         return added
 
-    def _add_securities_to_index(self, tickers:str, index:str):
+    def _add_securities_to_index(self, tickers:str, index:str) -> None:
         with self.session.begin() as session:
             ind = session.query(models.Index.id).filter(models.Index.abbreviation==index).one()
 

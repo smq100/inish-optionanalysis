@@ -1,5 +1,7 @@
 import datetime as dt
 
+import pandas as pd
+
 from strategy.strategy import Strategy, STRATEGIES
 from utils import utils as utils
 
@@ -36,7 +38,7 @@ class Vertical(Strategy):
     def __str__(self):
         return f'{self.name} {self.product} {self.analysis.credit_debit} spread'
 
-    def analyze(self):
+    def analyze(self) -> None:
         ''' Analyze the strategy (Important: Assumes the long leg is the index-0 leg)'''
 
         if self._validate():
@@ -64,12 +66,12 @@ class Vertical(Strategy):
             # Calculate breakeven
             self.analysis.breakeven = self.calc_breakeven()
 
-    def generate_profit_table(self):
+    def generate_profit_table(self) -> pd.DataFrame:
         profit = ((self.legs[0].table - self.legs[1].table) * self.quantity) + self.analysis.amount
 
         return profit
 
-    def calc_max_gain_loss(self):
+    def calc_max_gain_loss(self) -> tuple[float, float]:
         gain = loss = 0.0
 
         dlong = (self.legs[0].option.calc_price > self.legs[1].option.calc_price)
@@ -92,7 +94,7 @@ class Vertical(Strategy):
 
         return gain, loss
 
-    def calc_breakeven(self):
+    def calc_breakeven(self) -> float:
         if self.analysis.credit_debit == 'debit':
             if self.product == 'call':
                 breakeven = self.legs[1].option.strike + self.analysis.amount
@@ -106,7 +108,7 @@ class Vertical(Strategy):
 
         return breakeven
 
-    def get_errors(self):
+    def get_errors(self) -> str:
         error = ''
         if self.analysis.credit_debit:
             if self.product == 'call':
@@ -124,7 +126,7 @@ class Vertical(Strategy):
 
         return error
 
-    def _validate(self):
+    def _validate(self) -> None:
         return len(self.legs) > 1
 
 if __name__ == '__main__':

@@ -40,6 +40,7 @@ class Line:
             self.width = 0.0
             self.proximity = 0.0
             self.points = 0.0
+            self.age = 0.0
 
         self.score = Score()
 

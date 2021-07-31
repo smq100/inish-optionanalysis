@@ -1,5 +1,7 @@
 import datetime as dt
 
+import pandas as pd
+
 from strategy.strategy import Strategy, STRATEGIES
 from utils import utils as utils
 
@@ -23,7 +25,7 @@ class Call(Strategy):
     def __str__(self):
         return f'{self.legs[0].direction} {self.name}'
 
-    def analyze(self):
+    def analyze(self) -> None:
         if self._validate():
             self.legs[0].calculate()
 
@@ -46,7 +48,7 @@ class Call(Strategy):
             # Calculate breakeven
             self.analysis.breakeven = self.calc_breakeven()
 
-    def generate_profit_table(self):
+    def generate_profit_table(self) -> pd.DataFrame:
         profit = None
         price = self.legs[0].option.calc_price
 
@@ -58,7 +60,7 @@ class Call(Strategy):
 
         return profit
 
-    def calc_max_gain_loss(self):
+    def calc_max_gain_loss(self) -> tuple[float, float]:
         if self.legs[0].direction == 'long':
             self.analysis.sentiment = 'bullish'
             max_gain = -1.0
@@ -70,7 +72,7 @@ class Call(Strategy):
 
         return max_gain, max_loss
 
-    def calc_breakeven(self):
+    def calc_breakeven(self) -> float:
         if self.legs[0].direction == 'long':
             breakeven = self.legs[0].option.strike + self.analysis.amount
         else:

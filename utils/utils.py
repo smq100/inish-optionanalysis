@@ -1,9 +1,10 @@
 import logging
+from logging import Logger
 
 LOG_DIR = './log'
 
 
-def get_logger(level=None):
+def get_logger(level=None) -> Logger:
     logger = logging.getLogger('analysis')
 
     if level is not None:
@@ -27,7 +28,7 @@ def get_logger(level=None):
 
     return logger
 
-def menu(menu_items, header, minvalue, maxvalue):
+def menu(menu_items, header:dict, minvalue:int, maxvalue:int) -> int:
     print(f'\n{header}')
     print('-' * 50)
 
@@ -35,7 +36,7 @@ def menu(menu_items, header, minvalue, maxvalue):
 
     return input_integer('Please select: ', minvalue, maxvalue)
 
-def _delimeter(message, creturn):
+def _delimeter(message, creturn:int) -> str:
     if creturn > 0:
         output = '\n' * creturn
     else:
@@ -48,19 +49,19 @@ def _delimeter(message, creturn):
 
     return output
 
-def print_message(message, creturn=1):
+def print_message(message:str, creturn:int=1) -> None:
     print(_delimeter(f'{message}', creturn))
 
-def print_warning(message, creturn=1):
+def print_warning(message:str, creturn:int=1) -> None:
     print(_delimeter(f'Warning: {message}', creturn))
 
-def print_error(message, creturn=1):
+def print_error(message:str, creturn:int=1) -> None:
     print(_delimeter(f'Error: {message}', creturn))
 
-def print_line(message):
-    print(_delimeter(message, creturn=0), end='\r')
+def print_line(message:str) -> None:
+    print(_delimeter(message, end='\r'))
 
-def input_integer(message, min_, max_):
+def input_integer(message:str, min_:int, max_:int) -> int:
     val = min_ - 1
     while val < min_:
         val = input(message)
@@ -80,7 +81,7 @@ def input_integer(message, min_, max_):
 
     return val
 
-def input_float(message, min_, max_):
+def input_float(message:str, min_:float, max_:float) -> float:
     val = min_ - 1
     while val < min_:
         val = input(message)
@@ -100,7 +101,7 @@ def input_float(message, min_, max_):
 
     return val
 
-def input_text(message):
+def input_text(message:str) -> str:
     val = input(message)
     if any(char.isdigit() for char in val):
         val = ''
@@ -110,7 +111,8 @@ def input_text(message):
 
 position = 0
 forward = True
-def progress_bar(iteration, total, prefix='', suffix='', symbol='', length=100, fill='█', reset=False, success=-1, tasks=0):
+def progress_bar(iteration, total:int, prefix:str='', suffix:str='', symbol:str='',
+    length:int=100, fill:str='█', reset:bool=False, success:int=-1, tasks:int=0) -> None:
     global position
     global forward
 
@@ -149,13 +151,13 @@ def progress_bar(iteration, total, prefix='', suffix='', symbol='', length=100, 
 
         print(f'\rWorking |{bar}| {suffix}', end='\r')
 
-def mround(n, precision):
+def mround(n, precision:int) -> float:
     val = round(n / precision) * precision
     if val < 0.01: val = 0.01
 
     return val
 
-def isnumeric(value):
+def isnumeric(value) -> bool:
     try:
         float(value)
         return True
