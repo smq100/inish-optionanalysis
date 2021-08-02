@@ -36,21 +36,23 @@ class Line:
         self.proximity = 0.0
 
         class Score:
-            self.fit = 0.0
-            self.width = 0.0
-            self.proximity = 0.0
-            self.points = 0.0
-            self.age = 0.0
+            fit = 0.0
+            width = 0.0
+            proximity = 0.0
+            points = 0.0
+            age = 0.0
+            slope = 0.0
 
         self.score = Score()
 
     def get_score(self) -> float:
         score = (
-            (self.score.fit *       0.20) +
-            (self.score.width *     0.20) +
-            (self.score.proximity * 0.20) +
+            (self.score.fit *       0.10) +
+            (self.score.width *     0.15) +
+            (self.score.proximity * 0.15) +
             (self.score.points *    0.30) +
-            (self.score.age *       0.10))
+            (self.score.age *       0.05) +
+            (self.score.slope *     0.25))
 
         return score
 
@@ -67,12 +69,14 @@ class Line:
                  f'pnts={len(dates)} '\
                  f'*pnts={self.score.points:5.2f} '\
                  f'age={self.age:4n} '\
-                 f'*age={self.score.age:5.2f}'
+                 f'*age={self.score.age:5.2f}'\
+                 f'slope={self.slope:4n} '\
+                 f'*slope={self.score.slope:5.2f}'
 
         return output
 
 class SupportResistance:
-    def __init__(self, ticker, method='NSQUREDLOGN', best=3, days=1000):
+    def __init__(self, ticker, method='NSQUREDLOGN', best=5, days=1000):
         if best < 1:
             raise AssertionError("'best' value must be > 0")
 
@@ -88,6 +92,8 @@ class SupportResistance:
             self.price = 0.0
             self.extmethod = trendln.METHOD_NUMDIFF # Pivit point detection: METHOD_NAIVE, METHOD_NAIVECONSEC, *METHOD_NUMDIFF
             self.lines = []
+            self.lines_sup = []
+            self.lines_res = []
             self.slope_sup = 0.0
             self.intercept_sup = 0.0
             self.slope_res = 0.0
@@ -113,9 +119,9 @@ class SupportResistance:
 
         # Calculate support and resistance lines
         maxs = trendln.calc_support_resistance((None, self.history['high']), extmethod=self.extmethod, method=self.method[0], accuracy=self.accuracy)
-        mins = trendln.calc_support_resistance((self.history['low'], None), extmethod=self.extmethod, method=self.method[0], accuracy=self.accuracy)
-
         maximaIdxs, pmax, maxtrend, maxwindows = maxs
+
+        mins = trendln.calc_support_resistance((self.history['low'], None), extmethod=self.extmethod, method=self.method[0], accuracy=self.accuracy)
         minimaIdxs, pmin, mintrend, minwindows = mins
 
         self.slope_res = pmax[0]
@@ -221,11 +227,27 @@ class SupportResistance:
             line.score.age *= 10.0
             line.score.age = 10.0 - line.score.age # Lower is better
 
-        # Sort lines based on total score
+        #    Slope
+        max_ = 0.0
+        for line in self.lines:
+            if line.slope > max_: max_ = abs(line.slope)
+        for line in self.lines:
+            line.score.slope = abs(line.slope) / max_
+            line.score.slope *= 10.0
+            line.score.slope = 10.0 - line.score.slope # Lower is better
+
+        # Sort lines based on final score
         self.lines = sorted(self.lines, reverse=True, key=lambda l: l.get_score())
 
+        res = [line for line in self.lines if not line.support]
+        self.lines_res = sorted(res, reverse=True, key=lambda l: l.get_score())
+
+        sup = [line for line in self.lines if line.support]
+        self.lines_sup = sorted(sup, reverse=True, key=lambda l: l.get_score())
+
         # Log the line details
-        countr = counts = 0
+        countr = 0
+        counts = 0
         for line in self.lines:
             if line.support:
                 counts += 1
@@ -233,26 +255,16 @@ class SupportResistance:
                 countr += 1
 
         _logger.info(f'{__name__}: {countr} resistance lines identified')
-        for line in self.get_resistance():
-            line = f'{__name__}: Res:{line}'
-            _logger.debug(line)
+        [_logger.debug(f'{__name__}: Res:{line}') for line in self.lines_res]
 
         _logger.info(f'{__name__}: {counts} support lines identified')
-        for line in self.get_support():
-            line = f'{__name__}: Sup:{line}'
-            _logger.debug(line)
+        [_logger.debug(f'{__name__}: Sup:{line}') for line in self.lines_sup]
 
     def get_resistance(self) -> list[float]:
-        res = [line for line in self.lines if not line.support]
-        resistance = sorted(res, reverse=True, key=lambda l: l.get_score())
-
-        return resistance[:self.best]
+        return self.lines_res[:self.best]
 
     def get_support(self) -> list[float]:
-        sup = [line for line in self.lines if line.support]
-        support = sorted(sup, reverse=True, key=lambda l: l.get_score())
-
-        return support[:self.best]
+        return self.lines_sup[:self.best]
 
     def plot(self, show:bool=True, filename:str='', legend:bool=True, srlines:bool=False, trendlines:bool=True) -> plt.Figure:
         fig, ax1 = plt.subplots(figsize=(17,10))
@@ -410,10 +422,12 @@ class SupportResistance:
         # Current support and resistance levels
         if srlines:
             for line in self.get_support():
-                plt.axhline(y=line.end_point, color='r', linestyle='-', linewidth=line_width)
+                ax1.hlines(line.end_point, 0, self.points, color='r', linestyle='--', linewidth=line_width)
+                # plt.axhline(y=line.end_point, color='r', linestyle='-', linewidth=line_width)
 
             for line in self.get_resistance():
-                plt.axhline(y=line.end_point, color='g', linestyle='-', linewidth=line_width)
+                ax1.hlines(line.end_point, 0, self.points, color='g', linestyle='--', linewidth=line_width)
+                # plt.axhline(y=line.end_point, color='g', linestyle='-', linewidth=line_width)
 
         if trendlines:
             index = 0
@@ -457,9 +471,9 @@ if __name__ == '__main__':
     # u.get_logger(logging.DEBUG)
 
     if len(sys.argv) > 1:
-        sr = SupportResistance(sys.argv[1], best=5)
+        sr = SupportResistance(sys.argv[1])
     else:
-        sr = SupportResistance('IBM', best=5)
+        sr = SupportResistance('IBM')
 
     try:
         sr.calculate()
