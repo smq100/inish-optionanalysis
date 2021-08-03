@@ -122,7 +122,7 @@ def get_index_symbols(index:str) -> list[str]:
     return results
 
 def get_current_price(ticker:str) -> float:
-    price = None
+    price = 0.0
     history = get_history(ticker, 5, live=True)
     if history is not None:
         price = history.iloc[-1]['close']

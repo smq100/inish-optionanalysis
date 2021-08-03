@@ -47,12 +47,12 @@ class Line:
 
     def get_score(self) -> float:
         score = (
-            (self.score.fit *       0.10) +
-            (self.score.width *     0.15) +
-            (self.score.proximity * 0.15) +
-            (self.score.points *    0.30) +
-            (self.score.age *       0.05) +
-            (self.score.slope *     0.25))
+            (self.score.fit       * 0.05) +
+            (self.score.width     * 0.15) +
+            (self.score.proximity * 0.05) +
+            (self.score.points    * 0.20) +
+            (self.score.age       * 0.20) +
+            (self.score.slope     * 0.35))
 
         return score
 
@@ -76,7 +76,7 @@ class Line:
         return output
 
 class SupportResistance:
-    def __init__(self, ticker, method='NSQUREDLOGN', best=5, days=1000):
+    def __init__(self, ticker, method='NSQUREDLOGN', best=5, days=365):
         if best < 1:
             raise AssertionError("'best' value must be > 0")
 
@@ -90,6 +90,7 @@ class SupportResistance:
             self.days = days
             self.history = None
             self.price = 0.0
+            self.company = {}
             self.extmethod = trendln.METHOD_NUMDIFF # Pivit point detection: METHOD_NAIVE, METHOD_NAIVECONSEC, *METHOD_NUMDIFF
             self.lines = []
             self.lines_sup = []
@@ -111,8 +112,13 @@ class SupportResistance:
             raise ValueError('Unable to get history')
 
         self.price = store.get_current_price(self.ticker)
-        if self.price is None:
+        if self.price <= 0.0:
             raise ValueError('Unable to get price')
+
+        self.company = store.get_company(self.ticker)
+        if not self.company:
+            self.company['name'] = 'Error'
+            _logger.error(f'Unable to get company infomration ({self.ticker})')
 
         self.points = len(self.history)
         _logger.info(f'{__name__}: {self.points} pivot points identified from {self.history.iloc[0]["date"]} to {self.history.iloc[-1]["date"]}')
@@ -266,13 +272,13 @@ class SupportResistance:
     def get_support(self) -> list[float]:
         return self.lines_sup[:self.best]
 
-    def plot(self, show:bool=True, filename:str='', legend:bool=True, srlines:bool=False, trendlines:bool=True) -> plt.Figure:
+    def plot(self, show:bool=True, filename:str='', legend:bool=True, srlines:bool=False, trendlines:bool=False) -> plt.Figure:
         fig, ax1 = plt.subplots(figsize=(17,10))
         ax2 = ax1.secondary_yaxis('right')
         # plt.style.use('seaborn')
         plt.grid()
         plt.margins(x=0.1)
-        plt.title(f'{self.ticker} History with Support & Resistance ({self.method[1]})')
+        plt.title(f'{self.company["name"]} Support & Resistance ({self.method[1]})')
         fig.canvas.manager.set_window_title(f'{self.ticker} ({self.method[1]})')
         line_width = 1.0
 
@@ -423,11 +429,11 @@ class SupportResistance:
         if srlines:
             for line in self.get_support():
                 ax1.hlines(line.end_point, 0, self.points, color='r', linestyle='--', linewidth=line_width)
-                # plt.axhline(y=line.end_point, color='r', linestyle='-', linewidth=line_width)
+                # plt.axhline(y=line.end_point, color='r', linestyle='--', linewidth=line_width)
 
             for line in self.get_resistance():
                 ax1.hlines(line.end_point, 0, self.points, color='g', linestyle='--', linewidth=line_width)
-                # plt.axhline(y=line.end_point, color='g', linestyle='-', linewidth=line_width)
+                # plt.axhline(y=line.end_point, color='g', linestyle='--', linewidth=line_width)
 
         if trendlines:
             index = 0
@@ -453,7 +459,7 @@ class SupportResistance:
             ax1.plot(dates, values, '--', color='darkred', label='Avg Support', linewidth=1.7)
 
         if legend:
-            plt.legend()
+            plt.legend(loc='upper left')
 
         if filename:
             fig.savefig(filename, dpi=150)
