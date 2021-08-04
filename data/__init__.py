@@ -5,7 +5,7 @@ import configparser
 OPTIONS_DB = ('Postgres', 'SQLite')
 ACTIVE_DB = OPTIONS_DB[0]
 
-# Postgres credentials
+# Postgres
 CREDENTIALS = os.path.join(os.path.dirname(__file__), 'postgres.ini')
 config = configparser.ConfigParser()
 config.read(CREDENTIALS)
@@ -13,11 +13,11 @@ dbuser = config['DEFAULT']['USER']
 dbpw = config['DEFAULT']['PW']
 port = config['DEFAULT']['PORT']
 db = config['DEFAULT']['DB']
+POSTGRES_URI = f'postgresql+psycopg2://{dbuser}:{dbpw}@localhost:{port}/{db}'
 
 # SQLite
 SQLITE_DATABASE_PATH = 'data/securities.db'
 SQLITE_URI = f'sqlite:///{SQLITE_DATABASE_PATH}'
-POSTGRES_URI = f'postgresql+psycopg2://{dbuser}:{dbpw}@localhost:{port}/{db}'
 
 if ACTIVE_DB == OPTIONS_DB[0]:
     ACTIVE_URI = POSTGRES_URI

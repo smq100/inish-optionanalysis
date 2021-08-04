@@ -190,7 +190,7 @@ class Interface:
         menu_items[f'{i+3}'] = 'Ticker'
         menu_items['0'] = 'Cancel'
 
-        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.EXCHANGES)+2)
+        select = utils.menu(menu_items, 'Select table, or 0 to cancel: ', 0, len(d.EXCHANGES)+2)
         if select == 5:
             ticker = input('Please enter symbol, or 0 to cancel: ').upper()
             if ticker != '0':

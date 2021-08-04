@@ -27,7 +27,9 @@ class Interface:
         self.task = None
 
         if self.table:
-            if store.is_exchange(self.table):
+            if self.table == 'ALL':
+                self.type = 'all'
+            elif store.is_exchange(self.table):
                 self.type = 'exchange'
             elif store.is_index(self.table):
                 self.type = 'index'
@@ -65,7 +67,10 @@ class Interface:
             }
 
             if self.table:
-                if self.type == 'exchange':
+                if self.type == 'all':
+                    menu_items['2'] = f'Select Exchange (all, {len(self.screener.symbols)} Symbols)'
+                    menu_items['3'] = f'Select Index (all, {len(self.screener.symbols)} Symbols)'
+                elif self.type == 'exchange':
                     menu_items['2'] = f'Select Exchange ({self.table}, {len(self.screener.symbols)} Symbols)'
                 else:
                     menu_items['3'] = f'Select Index ({self.table}, {len(self.screener.symbols)} Symbols)'
@@ -91,6 +96,8 @@ class Interface:
                 self.select_script()
             elif selection == 5:
                 self.run_script()
+                if self.run:
+                    self.print_results()
             elif selection == 6:
                 self.print_results()
             elif selection == 0:

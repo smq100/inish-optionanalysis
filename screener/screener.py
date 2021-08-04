@@ -1,5 +1,6 @@
 import os
 import json
+import random
 from concurrent import futures
 
 import numpy as np
@@ -14,28 +15,26 @@ from .interpreter import Interpreter
 _logger = utils.get_logger()
 
 class Screener(Threaded):
-    def __init__(self, table, script='', days=365, live=False):
+    def __init__(self, table:str, script:str='', days:int=365, live:bool=False):
         super().__init__()
 
-        table = table.upper()
+        self.table = table.upper()
         self.type = ''
 
-        if table:
-            if store.is_exchange(table):
-                self.type = 'exchange'
-            elif store.is_index(table):
-                self.type = 'index'
-            else:
-                raise ValueError(f'Table not found: {table}')
+        if self.table == 'ALL':
+            self.type = 'all'
+        elif store.is_exchange(self.table):
+            self.type = 'exchange'
+        elif store.is_index(self.table):
+            self.type = 'index'
         else:
-            raise ValueError('Must specify a table name')
+            raise ValueError(f'Table not found: {self.table}')
 
         if days < 30:
             raise ValueError('Invalid number of days')
 
         self.days = days
         self.live = live
-        self.table = table
         self.script = []
         self.symbols = []
         self.results = []
@@ -43,7 +42,7 @@ class Screener(Threaded):
 
         if script:
             if not self.load_script(script):
-                raise ValueError(f'Script not found: {script}')
+                raise ValueError(f'Script not found or invalid format: {script}')
 
         self.open()
 
@@ -51,7 +50,7 @@ class Screener(Threaded):
         return self.table
 
     class Result:
-        def __init__(self, symbol, result):
+        def __init__(self, symbol:str, result:bool) -> None:
             self.symbol = symbol
             self.values = result
 
@@ -61,18 +60,18 @@ class Screener(Threaded):
         def __bool__(self):
             return all(self.values)
 
-    def open(self):
+    def open(self) -> bool:
         self.task_total = 0
         self.task_completed = 0
         self.task_error = ''
         symbols = []
 
-        if self.type == 'exchange':
+        if self.type == 'all':
+            symbols = store.get_symbols()
+        elif self.type == 'exchange':
             symbols = store.get_exchange_symbols(self.table)
         elif self.type == 'index':
             symbols = store.get_index_symbols(self.table)
-        else:
-            self.task_error = 'Invalid table name'
 
         if len(symbols) > 0:
             self.task_total = len(symbols)
@@ -91,7 +90,7 @@ class Screener(Threaded):
 
         return self.task_total > 0
 
-    def load_script(self, script):
+    def load_script(self, script:str) -> bool:
         self.script = None
         if os.path.exists(script):
             try:
@@ -101,12 +100,12 @@ class Screener(Threaded):
                 self.script = None
                 _logger.error(f'{__name__}: File format error')
         else:
-            _logger.warning(f'{__name__}: File "{script}" not found')
+            _logger.error(f'{__name__}: File "{script}" not found')
 
         return self.script is not None
 
     @Threaded.threaded
-    def run_script(self):
+    def run_script(self) -> list[Result]:
         self.results = []
         self.task_total = len(self.symbols)
 
@@ -123,7 +122,8 @@ class Screener(Threaded):
         else:
             self.task_error = 'None'
 
-            # Split the list and remove any empty lists
+            # Randomize and split the lists
+            random.shuffle(self.symbols)
             lists = np.array_split(self.symbols, self._concurrency)
             lists = [i for i in lists if i is not None]
 
@@ -134,7 +134,7 @@ class Screener(Threaded):
 
         return self.results
 
-    def _run(self, tickers):
+    def _run(self, tickers:str) -> None:
         for symbol in tickers:
             result = []
             self.task_symbol = symbol
@@ -159,19 +159,20 @@ class Screener(Threaded):
                 self.results = []
                 break
 
-    def valid(self):
+    def valid(self) -> bool:
         return bool(self.table)
 
 
     # Minervini:
-    # Condition 1: The current stock price is above both the 150-day (30-week) and the 200-day (40-week) moving average price lines.
-    # Condition 2: The 150-day moving average is above the 200-day moving average.
-    # Condition 3: The 200-day moving average line is trending up for at least 1 month (preferably 4–5 months minimum in most cases).
-    # Condition 4: The 50-day (10-week) moving average is above both the 150-day and 200-day moving averages.
-    # Condition 5: The current stock price is trading above the 50-day moving average.
-    # Condition 6: The current stock price is at least 25% above its 52-week low (30% as per his book 'Trade Like a Stock Market Wizard').
-    # Condition 7: The current stock price is within at least 25% of its 52-week high (the closer to a new high the better).
-    # Condition 8: The Relative Strength ranking (RS ranking), as reported in Investor’s Business Daily, is no less than 70.
+    # Condition 1: The current stock price is above the 150-day (30-week) moving average price lines
+    # Condition 2: The current stock price is above the 200-day (40-week) moving average price lines
+    # Condition 3: The 150-day moving average is above the 200-day moving average
+    # Condition 4: The 200-day moving average line is trending up for at least 1 month (preferably 4–5 months minimum in most cases)
+    # Condition 5: The 50-day (10-week) moving average is above both the 150-day and 200-day moving averages
+    # Condition 6: The current stock price is trading above the 50-day moving average
+    # Condition 7: The current stock price is at least 25% above its 52-week low (30% as per his book 'Trade Like a Stock Market Wizard')
+    # Condition 8: The current stock price is within at least 25% of its 52-week high (the closer to a new high the better)
+    # Condition 9: The Relative Strength ranking (RS ranking), as reported in Investor’s Business Daily, is no less than 70
 
 
 if __name__ == '__main__':
