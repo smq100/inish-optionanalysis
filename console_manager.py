@@ -101,7 +101,7 @@ class Interface:
             ticker = utils.input_text('Enter ticker: ')
 
         if ticker:
-            ticker = ticker[:5].upper()
+            ticker = ticker.upper()
             if store.is_symbol_valid(ticker):
                 company = store.get_company(ticker)
                 if company is not None:

@@ -11,9 +11,9 @@ VALID_SERIES = ('min', 'max', 'na')
 
 
 class Interpreter:
-    def __init__(self, symbol, filter):
+    def __init__(self, symbol:str, condition:dict):
         self.symbol = symbol
-        self.filter = filter
+        self.filter = condition
         self.note = ''
         self.base = None
         self.base_technical = ''
@@ -92,7 +92,7 @@ class Interpreter:
 
         return self._calc_comparison()
 
-    def _calc_comparison(self):
+    def _calc_comparison(self) -> bool:
         result = False
         if not self.base.empty:
             base = self.base.iloc[-1] * self.base_factor
@@ -148,53 +148,53 @@ class Interpreter:
 
         return result
 
-    def _get_base_close(self):
+    def _get_base_close(self) -> list[float]:
         start = None if self.base_start == 0 else self.base_start
         stop = None if self.base_stop == 0 else self.base_stop
         sl = slice(start, stop)
         return self.symbol.get_close()[sl]
 
-    def _get_base_volume(self):
+    def _get_base_volume(self) -> list[float]:
         start = None if self.base_start == 0 else self.base_start
         stop = None if self.base_stop == 0 else self.base_stop
         sl = slice(start, stop)
         return self.symbol.get_volume()[sl]
 
-    def _get_base_sma(self):
+    def _get_base_sma(self) -> list[float]:
         start = None if self.base_start == 0 else self.base_start
         stop = None if self.base_stop == 0 else self.base_stop
         sl = slice(start, stop)
         return self.symbol.ta.calc_sma(self.criteria_length)[sl]
 
-    def _get_value(self):
+    def _get_value(self) -> list[float]:
         value = self.criteria_value
         return pd.Series([value])
 
-    def _get_value_high(self):
+    def _get_value_high(self) -> list[float]:
         start = None if self.criteria_start == 0 else self.criteria_start
         stop = None if self.criteria_stop == 0 else self.criteria_stop
         sl = slice(start, stop)
         return self.symbol.get_high()[sl]
 
-    def _get_value_low(self):
+    def _get_value_low(self) -> list[float]:
         start = None if self.criteria_start == 0 else self.criteria_start
         stop = None if self.criteria_stop == 0 else self.criteria_stop
         sl = slice(start, stop)
         return self.symbol.get_low()[sl]
 
-    def _get_value_close(self):
+    def _get_value_close(self) -> list[float]:
         start = None if self.criteria_start == 0 else self.criteria_start
         stop = None if self.criteria_stop == 0 else self.criteria_stop
         sl = slice(start, stop)
         return self.symbol.get_close()[sl]
 
-    def _get_value_volume(self):
+    def _get_value_volume(self) -> list[float]:
         start = None if self.criteria_start == 0 else self.criteria_start
         stop = None if self.criteria_stop == 0 else self.criteria_stop
         sl = slice(start, stop)
         return self.symbol.get_volume()[sl]
 
-    def _get_value_sma(self):
+    def _get_value_sma(self) -> list[float]:
         start = None if self.criteria_start == 0 else self.criteria_start
         stop = None if self.criteria_stop == 0 else self.criteria_stop
         sl = slice(start, stop)

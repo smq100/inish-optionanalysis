@@ -27,6 +27,8 @@ class Screener(Threaded):
             self.type = 'exchange'
         elif store.is_index(self.table):
             self.type = 'index'
+        elif store.is_symbol_valid(table):
+            self.type = 'symbol'
         else:
             raise ValueError(f'Table not found: {self.table}')
 
@@ -60,35 +62,6 @@ class Screener(Threaded):
         def __bool__(self):
             return all(self.values)
 
-    def open(self) -> bool:
-        self.task_total = 0
-        self.task_completed = 0
-        self.task_error = ''
-        symbols = []
-
-        if self.type == 'all':
-            symbols = store.get_symbols()
-        elif self.type == 'exchange':
-            symbols = store.get_exchange_symbols(self.table)
-        elif self.type == 'index':
-            symbols = store.get_index_symbols(self.table)
-
-        if len(symbols) > 0:
-            self.task_total = len(symbols)
-            try:
-                self.symbols = [Company(s, self.days, live=self.live) for s in symbols]
-            except ValueError as e:
-                _logger.warning(f'{__name__}: Invalid ticker {s}')
-
-            self.task_completed += 1
-
-            self.task_total = len(self.symbols)
-            _logger.debug(f'{__name__}: Opened {self.task_total} symbols from {self.table} table')
-        else:
-            _logger.debug(f'{__name__}: No symbols available')
-            self.task_error = 'No symbols'
-
-        return self.task_total > 0
 
     def load_script(self, script:str) -> bool:
         self.script = None
@@ -103,6 +76,30 @@ class Screener(Threaded):
             _logger.error(f'{__name__}: File "{script}" not found')
 
         return self.script is not None
+
+    def open(self) -> bool:
+        symbols = []
+
+        if self.type == 'all':
+            symbols = store.get_symbols()
+        elif self.type == 'exchange':
+            symbols = store.get_exchange_symbols(self.table)
+        elif self.type == 'index':
+            symbols = store.get_index_symbols(self.table)
+        else:
+            symbols = [self.table]
+
+        if len(symbols) > 0:
+            try:
+                self.symbols = [Company(s, self.days, live=self.live) for s in symbols]
+            except ValueError as e:
+                _logger.warning(f'{__name__}: Invalid ticker {s}')
+
+            _logger.debug(f'{__name__}: Opened {self.task_total} symbols from {self.table} table')
+        else:
+            _logger.debug(f'{__name__}: No symbols available')
+
+        return len(self.symbols) > 0
 
     @Threaded.threaded
     def run_script(self) -> list[Result]:
@@ -121,6 +118,8 @@ class Screener(Threaded):
             _logger.warning(f'{__name__}: {self.task_error}')
         else:
             self.task_error = 'None'
+
+            self._concurrency = 10 if len(self.symbols) > 20 else 1
 
             # Randomize and split the lists
             random.shuffle(self.symbols)
@@ -164,15 +163,16 @@ class Screener(Threaded):
 
 
     # Minervini:
-    # Condition 1: The current stock price is above the 150-day (30-week) moving average price lines
-    # Condition 2: The current stock price is above the 200-day (40-week) moving average price lines
-    # Condition 3: The 150-day moving average is above the 200-day moving average
-    # Condition 4: The 200-day moving average line is trending up for at least 1 month (preferably 4–5 months minimum in most cases)
-    # Condition 5: The 50-day (10-week) moving average is above both the 150-day and 200-day moving averages
-    # Condition 6: The current stock price is trading above the 50-day moving average
-    # Condition 7: The current stock price is at least 25% above its 52-week low (30% as per his book 'Trade Like a Stock Market Wizard')
-    # Condition 8: The current stock price is within at least 25% of its 52-week high (the closer to a new high the better)
-    # Condition 9: The Relative Strength ranking (RS ranking), as reported in Investor’s Business Daily, is no less than 70
+    # Condition 1:  The current stock price is above the 150-day (30-week) moving average price lines
+    # Condition 2:  The current stock price is above the 200-day (40-week) moving average price lines
+    # Condition 3:  The 150-day moving average is above the 200-day moving average
+    # Condition 4:  The 200-day moving average line is trending up for at least 1 month (preferably 4–5 months minimum in most cases)
+    # Condition 5:  The 50-day (10-week) moving average is above the 150-day moving average
+    # Condition 6:  The 50-day (10-week) moving average is above the 200 day moving average
+    # Condition 7:  The current stock price is trading above the 50-day moving average
+    # Condition 8:  The current stock price is at least 25% above its 52-week low (30% as per his book 'Trade Like a Stock Market Wizard')
+    # Condition 9:  The current stock price is within at least 25% of its 52-week high (the closer to a new high the better)
+    # Condition 10: The Relative Strength ranking (RS ranking), as reported in Investor’s Business Daily, is no less than 70
 
 
 if __name__ == '__main__':

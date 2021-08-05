@@ -16,7 +16,7 @@
          "length":0,
          "start":-1,
          "stop":0,
-         "series":"max",
+         "series":"na",
          "factor":1.0
       }
    }

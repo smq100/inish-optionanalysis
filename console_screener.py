@@ -33,13 +33,18 @@ class Interface:
                 self.type = 'exchange'
             elif store.is_index(self.table):
                 self.type = 'index'
+            elif store.is_symbol_valid(self.table):
+                self.type = 'symbol'
             else:
                 raise ValueError(f'Exchange or index not found: {table}')
 
             self.screener = Screener(table=self.table, live=self.live)
 
         if self.screen:
-            if os.path.exists(BASEPATH+screen+SCREEN_SUFFIX):
+            if self.screener is None:
+                self.screen = ''
+                utils.print_error('Must specify table with screener')
+            elif os.path.exists(BASEPATH+screen+SCREEN_SUFFIX):
                 self.screen = BASEPATH + self.screen + SCREEN_SUFFIX
                 if not self.screener.load_script(self.screen):
                     self.screen = ''
@@ -49,7 +54,7 @@ class Interface:
                 self.screen = ''
 
         if self.run:
-            self.main_menu(selection=5)
+            self.main_menu(selection=6)
         else:
             self.main_menu()
 
@@ -60,9 +65,10 @@ class Interface:
                 '1': f'Select Data Source ({source})',
                 '2': 'Select Exchange',
                 '3': 'Select Index',
-                '4': 'Select Script',
-                '5': 'Run Script',
-                '6': 'Show Results',
+                '4': 'Select Ticker',
+                '5': 'Select Screener',
+                '6': 'Run Screen',
+                '7': 'Show Results',
                 '0': 'Exit'
             }
 
@@ -72,19 +78,21 @@ class Interface:
                     menu_items['3'] = f'Select Index (all, {len(self.screener.symbols)} Symbols)'
                 elif self.type == 'exchange':
                     menu_items['2'] = f'Select Exchange ({self.table}, {len(self.screener.symbols)} Symbols)'
+                elif self.type == 'symbol':
+                    menu_items['4'] = f'Select Ticker ({self.table})'
                 else:
                     menu_items['3'] = f'Select Index ({self.table}, {len(self.screener.symbols)} Symbols)'
 
             if self.screen:
                 filename = os.path.basename(self.screen)
                 head, sep, tail = filename.partition('.')
-                menu_items['4'] = f'Select Script ({head})'
+                menu_items['5'] = f'Select Screener ({head})'
 
             if len(self.results) > 0:
-                menu_items['6'] = f'Show Results ({self.valids})'
+                menu_items['7'] = f'Show Results ({self.valids})'
 
             if selection == 0:
-                selection = utils.menu(menu_items, 'Select Operation', 0, 6)
+                selection = utils.menu(menu_items, 'Select Operation', 0, 7)
 
             if selection == 1:
                 self.select_source()
@@ -92,13 +100,17 @@ class Interface:
                 self.select_exchange()
             if selection == 3:
                 self.select_index()
-            elif selection == 4:
-                self.select_script()
+            if selection == 4:
+                self.select_ticker()
             elif selection == 5:
-                self.run_script()
-                if self.run:
-                    self.print_results()
+                self.select_screen()
             elif selection == 6:
+                if self.run_screen():
+                    if self.run:
+                        self.print_results()
+                    elif len(self.results) < 20:
+                        self.print_results()
+            elif selection == 7:
                 self.print_results()
             elif selection == 0:
                 self.run = True
@@ -162,7 +174,20 @@ class Interface:
                 self.screener = None
                 utils.print_error(f'Index {index} has no symbols')
 
-    def select_script(self):
+    def select_ticker(self):
+        ticker = utils.input_text('Enter ticker: ')
+        ticker = ticker.upper()
+        if store.is_symbol_valid(ticker):
+            self.screener = Screener(ticker, script=self.screen, live=self.live)
+            if self.screener.valid():
+                self.table = ticker
+                self.type = 'symbol'
+        else:
+            self.table = ''
+            self.screener = None
+            utils.print_error(f'{ticker} not valid')
+
+    def select_screen(self):
         self.script = []
         self.results = []
         self.valids = 0
@@ -194,13 +219,14 @@ class Interface:
                         utils.print_error('Error in script file')
 
         else:
-            utils.print_message('No script files found')
+            utils.print_message('No screener files found')
 
-    def run_script(self, progressbar=True):
+    def run_screen(self, progressbar=True) -> bool:
+        success = False
         if not self.table:
             utils.print_error('No table specified')
         elif not self.screen:
-            utils.print_error('No script specified')
+            utils.print_error('No screen specified')
         elif self.screener.load_script(self.screen):
             self.results = []
             self.valids = 0
@@ -223,17 +249,21 @@ class Interface:
 
                 for i, result in enumerate(self.screener.task_results):
                     utils.print_message(f'{i+1:>2}: {result}', creturn=False)
+
+                success = True
             else:
                 self.results = []
                 self.valids = 0
         else:
             utils.print_error('Script error')
 
+        return success
+
     def print_results(self, all=False):
         if not self.table:
             utils.print_error('No table specified')
         elif not self.screen:
-            utils.print_error('No script specified')
+            utils.print_error('No screen specified')
         elif len(self.results) == 0:
             utils.print_message('No symbols were located')
         else:
@@ -283,7 +313,7 @@ if __name__ == '__main__':
     # Create the top-level parser
     parser = argparse.ArgumentParser(description='Screener')
 
-    parser.add_argument('-t', '--table', help='Specify a symbol table', required=False, default='')
+    parser.add_argument('-t', '--table', help='Specify a symbol or table', required=False, default='')
     parser.add_argument('-s', '--screen', help='Specify a screening script', required=False, default='')
     parser.add_argument('-r', '--run', help='Run the script (only valid with -t and -s)', action='store_true')
 
