@@ -1,18 +1,19 @@
 import pandas as pd
 
+from company.company import Company
 from utils import utils as utils
 
 
 _logger = utils.get_logger()
 
-VALID_TECHNICALS = ('high', 'low', 'close', 'volume', 'sma', 'value')
+VALID_TECHNICALS = ('high', 'low', 'close', 'volume', 'sma', 'rsi', 'value') # 'value' always last
 VALID_CONDITIONALS = ('lt', 'eq', 'gt')
 VALID_SERIES = ('min', 'max', 'na')
 
 
 class Interpreter:
-    def __init__(self, symbol:str, condition:dict):
-        self.symbol = symbol
+    def __init__(self, company:str, condition:dict):
+        self.company = company
         self.filter = condition
         self.note = ''
         self.base = None
@@ -71,6 +72,8 @@ class Interpreter:
             self.base = self._get_base_volume()
         elif self.base_technical == VALID_TECHNICALS[4]: # sma
             self.base = self._get_base_sma()
+        elif self.base_technical == VALID_TECHNICALS[5]: # rsi
+            self.base = self._get_base_rsi()
         else:
             raise SyntaxError('Invalid "base technical" specified in script')
 
@@ -139,63 +142,69 @@ class Interpreter:
                             result = True
 
             _logger.info(
-                f'{self.note}: {str(self.symbol)}:{str(result)} ' +
-                f'{self.base_technical}{self.base_length}/{base:.2f}*{self.base_factor:.2f} ' +
+                f'{self.note}: {str(self.company)}:{str(result)} ' +
+                f'{self.base_technical}({self.base_length})/{base:.2f}*{self.base_factor:.2f} ' +
                 f'{self.criteria_conditional} ' +
-                f'{self.criteria_technical}{self.criteria_length}/{self.criteria_start}/{self.criteria_series}/{value:.2f}*{self.criteria_factor:.2f}')
+                f'{self.criteria_technical}({self.criteria_length})/{self.criteria_start}/{self.criteria_series}/{value:.2f}*{self.criteria_factor:.2f}')
         else:
-            _logger.warning(f'{__name__}: No price information for {self.symbol}')
+            _logger.warning(f'{__name__}: No technical information for {self.company}')
 
         return result
 
-    def _get_base_close(self) -> list[float]:
+    def _get_base_close(self) -> pd.Series:
         start = None if self.base_start == 0 else self.base_start
         stop = None if self.base_stop == 0 else self.base_stop
         sl = slice(start, stop)
-        return self.symbol.get_close()[sl]
+        return self.company.get_close()[sl]
 
-    def _get_base_volume(self) -> list[float]:
+    def _get_base_volume(self) -> pd.Series:
         start = None if self.base_start == 0 else self.base_start
         stop = None if self.base_stop == 0 else self.base_stop
         sl = slice(start, stop)
-        return self.symbol.get_volume()[sl]
+        return self.company.get_volume()[sl]
 
-    def _get_base_sma(self) -> list[float]:
+    def _get_base_sma(self) -> pd.Series:
         start = None if self.base_start == 0 else self.base_start
         stop = None if self.base_stop == 0 else self.base_stop
         sl = slice(start, stop)
-        return self.symbol.ta.calc_sma(self.criteria_length)[sl]
+        return self.company.ta.calc_sma(self.criteria_length)[sl]
 
-    def _get_value(self) -> list[float]:
+    def _get_base_rsi(self) -> pd.Series:
+        start = None if self.base_start == 0 else self.base_start
+        stop = None if self.base_stop == 0 else self.base_stop
+        sl = slice(start, stop)
+        return self.company.ta.calc_rsi()[sl]
+
+    def _get_value(self) -> pd.Series:
         value = self.criteria_value
         return pd.Series([value])
 
-    def _get_value_high(self) -> list[float]:
+    def _get_value_high(self) -> pd.Series:
         start = None if self.criteria_start == 0 else self.criteria_start
         stop = None if self.criteria_stop == 0 else self.criteria_stop
         sl = slice(start, stop)
-        return self.symbol.get_high()[sl]
+        return self.company.get_high()[sl]
 
-    def _get_value_low(self) -> list[float]:
+    def _get_value_low(self) -> pd.Series:
         start = None if self.criteria_start == 0 else self.criteria_start
         stop = None if self.criteria_stop == 0 else self.criteria_stop
         sl = slice(start, stop)
-        return self.symbol.get_low()[sl]
+        return self.company.get_low()[sl]
 
-    def _get_value_close(self) -> list[float]:
+    def _get_value_close(self) -> pd.Series:
         start = None if self.criteria_start == 0 else self.criteria_start
         stop = None if self.criteria_stop == 0 else self.criteria_stop
         sl = slice(start, stop)
-        return self.symbol.get_close()[sl]
+        return self.company.get_close()[sl]
 
-    def _get_value_volume(self) -> list[float]:
+    def _get_value_volume(self) -> pd.Series:
         start = None if self.criteria_start == 0 else self.criteria_start
         stop = None if self.criteria_stop == 0 else self.criteria_stop
         sl = slice(start, stop)
-        return self.symbol.get_volume()[sl]
+        return self.company.get_volume()[sl]
 
-    def _get_value_sma(self) -> list[float]:
+    def _get_value_sma(self) -> pd.Series:
         start = None if self.criteria_start == 0 else self.criteria_start
         stop = None if self.criteria_stop == 0 else self.criteria_stop
         sl = slice(start, stop)
-        return self.symbol.ta.calc_sma(self.criteria_length)[sl]
+        return self.company.ta.calc_sma(self.criteria_length)[sl]

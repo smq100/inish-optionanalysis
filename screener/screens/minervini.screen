@@ -1,6 +1,6 @@
 [
    {
-      "note":"1: The current stock price is above the 150-day (30-week) moving average price lines",
+      "note":"Current stock price is above the 150-day moving average price lines",
       "base":{
          "technical":"close",
          "length":0,
@@ -21,7 +21,7 @@
       }
    },
    {
-      "note":"2: The current stock price is above the 200-day (40-week) moving average price lines",
+      "note":"Current stock price is above the 200-day moving average price lines",
       "base":{
          "technical":"close",
          "length":0,
@@ -42,7 +42,7 @@
       }
    },
    {
-      "note":"3: The 150-day moving average is above the 200-day moving average",
+      "note":"150-day moving average is above the 200-day moving average",
       "base":{
          "technical":"sma",
          "length":150,
@@ -63,7 +63,7 @@
       }
    },
    {
-      "note":"4: The 200-day moving average line is trending up for at least 1 month",
+      "note":"200-day moving average line is trending up for at least 1 month",
       "base":{
          "technical":"sma",
          "length":200,
@@ -84,7 +84,7 @@
       }
    },
    {
-      "note":"5: The 50-day (10-week) moving average is above the 150-day moving average",
+      "note":"50-day (10-week) moving average is above the 150-day moving average",
       "base":{
          "technical":"sma",
          "length":50,
@@ -105,7 +105,7 @@
       }
    },
    {
-      "note":"6: The 50-day (10-week) moving average is above the 200-day moving average",
+      "note":"50-day moving average is above the 200-day moving average",
       "base":{
          "technical":"sma",
          "length":50,
@@ -126,7 +126,7 @@
       }
    },
    {
-      "note":"7: The current stock price is trading above the 50-day moving average",
+      "note":"Current stock price is trading above the 50-day moving average",
       "base":{
          "technical":"close",
          "length":0,
@@ -147,7 +147,7 @@
       }
    },
    {
-      "note":"8: The current stock price is at least 25% above its 52-week low",
+      "note":"Current stock price is at least 25% above its 52-week low",
       "base":{
          "technical":"close",
          "length":0,
@@ -168,7 +168,7 @@
       }
    },
    {
-      "note":"9: The current stock price is within at least 25% of its 52-week high",
+      "note":"Current stock price is within at least 25% of its 52-week high",
       "base":{
          "technical":"close",
          "length":0,

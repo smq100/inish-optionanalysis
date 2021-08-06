@@ -74,14 +74,14 @@ class Interface:
 
             if self.table:
                 if self.type == 'all':
-                    menu_items['2'] = f'Select Exchange (all, {len(self.screener.symbols)} Symbols)'
-                    menu_items['3'] = f'Select Index (all, {len(self.screener.symbols)} Symbols)'
+                    menu_items['2'] = f'Select Exchange (all, {len(self.screener.companies)} Symbols)'
+                    menu_items['3'] = f'Select Index (all, {len(self.screener.companies)} Symbols)'
                 elif self.type == 'exchange':
-                    menu_items['2'] = f'Select Exchange ({self.table}, {len(self.screener.symbols)} Symbols)'
+                    menu_items['2'] = f'Select Exchange ({self.table}, {len(self.screener.companies)} Symbols)'
                 elif self.type == 'symbol':
                     menu_items['4'] = f'Select Ticker ({self.table})'
                 else:
-                    menu_items['3'] = f'Select Index ({self.table}, {len(self.screener.symbols)} Symbols)'
+                    menu_items['3'] = f'Select Index ({self.table}, {len(self.screener.companies)} Symbols)'
 
             if self.screen:
                 filename = os.path.basename(self.screen)

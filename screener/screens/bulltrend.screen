@@ -82,5 +82,26 @@
          "series":"na",
          "factor":1.0
       }
+   },
+   {
+      "note":"RSI above 50",
+      "base":{
+         "technical":"rsi",
+         "length":0,
+         "start":-1,
+         "stop":0,
+         "series":"na",
+         "factor":1.0
+      },
+      "criteria":{
+         "conditional":"gt",
+         "technical":"value",
+         "value":50.0,
+         "length":0,
+         "start":-1,
+         "stop":0,
+         "series":"na",
+         "factor":1.0
+      }
    }
 ]

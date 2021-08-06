@@ -68,11 +68,12 @@ def get_history(ticker:str, days:int=-1) -> pd.DataFrame:
             days = 100
 
         start = dt.datetime.today() - dt.timedelta(days=days)
+        end = dt.datetime.today()
 
         # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
         for _ in range(3):
             try:
-                history = company.history(start=f'{start:%Y-%m-%d}')
+                history = company.history(start=f'{start:%Y-%m-%d}', end=f'{end:%Y-%m-%d}')
                 if history is not None:
                     history.reset_index(inplace=True)
 
@@ -120,6 +121,14 @@ def get_option_chain(ticker:str) -> dict:
 
     return chain
 
+def get_recomendations(ticker:str):
+    rec = None
+    company = yf.Ticker(ticker)
+    if company is not None:
+        rec = company.recommendations
+
+    return rec
+
 def get_treasury_rate(ticker:str) -> float:
     df = pd.DataFrame()
     df = qd.get(f'FRED/{ticker}')
@@ -134,13 +143,10 @@ if __name__ == '__main__':
     # from logging import DEBUG
     # _logger = utils.get_logger(DEBUG)
 
-    # c = get_company('AAPL', force=True)
-    c = get_history_q('AAPL', days=-1)
-    print(c)
-    print(c.shape)
-    print(type(c))
-    print(c['close'])
-    print(type(c['close']))
+    print(get_recomendations('AMD').iloc[-1].name)
+
+    # c = get_company_ex('AAPL')
+    # c = get_history_q('AAPL', days=-1)
 
     # start = dt.datetime.today() - dt.timedelta(days=10)
     # df = refresh_history('AAPL', 60)

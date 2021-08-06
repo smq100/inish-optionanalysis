@@ -38,7 +38,7 @@ class Screener(Threaded):
         self.days = days
         self.live = live
         self.script = []
-        self.symbols = []
+        self.companies = []
         self.results = []
         self._concurrency = 10
 
@@ -91,7 +91,7 @@ class Screener(Threaded):
 
         if len(symbols) > 0:
             try:
-                self.symbols = [Company(s, self.days, live=self.live) for s in symbols]
+                self.companies = [Company(s, self.days, live=self.live) for s in symbols]
             except ValueError as e:
                 _logger.warning(f'{__name__}: Invalid ticker {s}')
 
@@ -99,12 +99,12 @@ class Screener(Threaded):
         else:
             _logger.debug(f'{__name__}: No symbols available')
 
-        return len(self.symbols) > 0
+        return len(self.companies) > 0
 
     @Threaded.threaded
     def run_script(self) -> list[Result]:
         self.results = []
-        self.task_total = len(self.symbols)
+        self.task_total = len(self.companies)
 
         if self.task_total == 0:
             self.task_completed = self.task_total
@@ -119,11 +119,11 @@ class Screener(Threaded):
         else:
             self.task_error = 'None'
 
-            self._concurrency = 10 if len(self.symbols) > 20 else 1
+            self._concurrency = 10 if len(self.companies) > 10 else 1
 
-            # Randomize and split the lists
-            random.shuffle(self.symbols)
-            lists = np.array_split(self.symbols, self._concurrency)
+            # Randomize and split up the lists
+            random.shuffle(self.companies)
+            lists = np.array_split(self.companies, self._concurrency)
             lists = [i for i in lists if i is not None]
 
             with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
@@ -133,8 +133,8 @@ class Screener(Threaded):
 
         return self.results
 
-    def _run(self, tickers:str) -> None:
-        for symbol in tickers:
+    def _run(self, companies:str) -> None:
+        for symbol in companies:
             result = []
             self.task_symbol = symbol
             for condition in self.script:

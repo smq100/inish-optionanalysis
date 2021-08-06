@@ -58,12 +58,15 @@ class Company:
 
         return self.history['volume']
 
-    def _load_history(self):
+    def _load_history(self, info=False):
         self.history = store.get_history(self.ticker, self.days, live=self.live)
         if self.history is None:
             raise RuntimeError('history is None')
 
         self.ta = Technical(self.ticker, self.history, self.days, live=self.live)
+
+        if info:
+            self.company = store.get_company(self.ticker, live=True)
 
 
 if __name__ == '__main__':
