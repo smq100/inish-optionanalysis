@@ -101,23 +101,15 @@ class Price(Base):
     def __str__(self):
         return f'{self.date}: {self.security_id}'
 
-class MissingCompany(Base):
-    __tablename__ = 'missing_company'
+class Incomplete(Base):
+    __tablename__ = 'incomplete'
     id = Column(Integer, primary_key=True, autoincrement=True)
     security_id = Column(Integer, ForeignKey('security.id', onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
     security = relationship('Security')
 
     def __repr__(self):
-        return '<MissingCompany Model>'
+        return '<Incomplete Model>'
 
-class MissingPrice(Base):
-    __tablename__ = 'missing_price'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    security_id = Column(Integer, ForeignKey('security.id', onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
-    security = relationship('Security')
-
-    def __repr__(self):
-        return '<MissingPrice Model>'
 
 # class Adjustment(Base):
 #     __tablename__ = 'adjustment'

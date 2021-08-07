@@ -137,8 +137,8 @@ class Screener(Threaded):
         for symbol in companies:
             result = []
             self.task_symbol = symbol
-            for condition in self.script:
-                i = Interpreter(symbol, condition)
+            for filter in self.script:
+                i = Interpreter(symbol, filter)
                 try:
                     result += [i.run()]
                 except SyntaxError as e:

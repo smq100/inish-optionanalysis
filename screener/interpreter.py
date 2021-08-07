@@ -12,9 +12,9 @@ VALID_SERIES = ('min', 'max', 'na')
 
 
 class Interpreter:
-    def __init__(self, company:str, condition:dict):
+    def __init__(self, company:str, filter:dict):
         self.company = company
-        self.filter = condition
+        self.filter = filter
         self.note = ''
         self.base = None
         self.base_technical = ''

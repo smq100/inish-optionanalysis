@@ -86,58 +86,8 @@ class Manager(Threaded):
         self.task_error = 'Done'
 
     @Threaded.threaded
-    def refresh_exchange(self, exchange:str, area:str) -> None:
-        self.invalid_symbols = []
-        self.retry = 0
-
-        with self.session() as session:
-            session.query(models.Exchange.abbreviation).filter(models.Exchange.abbreviation==exchange).one()
-
-        if area == 'companies':
-            self.task_error = 'None'
-            missing = self.identify_incomplete_securities_companies(exchange, live=True)
-            self.task_total = len(missing)
-
-            def _companies(tickers):
-                for ticker in tickers:
-                    self.task_symbol = ticker
-                    if self._add_company_to_security(ticker):
-                        self.task_success += 1
-                    self.task_completed += 1
-
-            with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
-                if self._concurrency > 1:
-                    random.shuffle(missing)
-                    lists = np.array_split(missing, self._concurrency)
-                    self.task_futures = [executor.submit(_companies, list) for list in lists]
-                else:
-                    self.task_futures = [executor.submit(_companies, missing)]
-
-            self.task_error = 'Done'
-        elif area == 'pricing':
-            self.task_error = 'None'
-            missing = self.identify_incomplete_securities_price(exchange, live=True)
-            self.task_total = len(missing)
-
-            def _pricing(tickers):
-                for ticker in tickers:
-                    self.task_symbol = ticker
-                    if self._add_pricing_to_security(ticker, True):
-                        self.task_success += 1
-                    self.task_completed += 1
-
-            with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
-                if self._concurrency > 1:
-                    random.shuffle(missing)
-                    lists = np.array_split(missing, self._concurrency)
-                    self.task_futures = [executor.submit(_pricing, list) for list in lists]
-                else:
-                    self.task_futures = [executor.submit(_pricing, missing)]
-
-            self.task_error = 'Done'
-        else:
-            self.task_error = 'Invalid area'
-            raise ValueError(f'{self.task_error}: {area}')
+    def refresh_exchange(self, exchange:str) -> None:
+        pass
 
     @Threaded.threaded
     def delete_exchange(self, exchange:str) -> None:
@@ -321,65 +271,6 @@ class Manager(Threaded):
         _logger.info(f'{__name__}: {len(missing)} inactive symbols in {exchange}')
         return missing
 
-    def identify_incomplete_securities_companies(self, exchange:str, live:bool =False) -> list[str]:
-        missing = []
-        if live:
-            with self.session.begin() as session:
-                exc = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange).one()
-                sec = session.query(models.Security.ticker, models.Security.id).filter(models.Security.exchange_id==exc.id).all()
-                for t in sec:
-                    c = session.query(models.Company.id).filter(models.Company.security_id==t.id).limit(1)
-                    if c.first() is None:
-                        missing += [t.ticker]
-                        mc = session.query(models.MissingCompany).filter(models.MissingCompany.security_id==t.id).one_or_none()
-                        if mc is None:
-                            mc = models.MissingCompany(security_id=t.id)
-                            session.add(mc)
-                        _logger.info(f'{__name__}: {t.ticker} added missing company entry')
-
-        else:
-            with self.session() as session:
-                exc = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange).one()
-                companies = session.query(models.MissingCompany).all()
-                for company in companies:
-                    sec = session.query(models.Security.ticker, models.Security.id).filter(
-                        and_(models.Security.exchange_id==exc.id, models.Security.id==company.security_id)).one_or_none()
-                    if sec is not None:
-                        missing += [sec.ticker]
-
-        _logger.info(f'{__name__}: {len(missing)} with incomplete company info')
-        return missing
-
-    def identify_incomplete_securities_price(self, exchange:str, live:bool=False) -> list[str]:
-        missing = []
-        if live:
-            with self.session.begin() as session:
-                exc = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange).one()
-                sec = session.query(models.Security.ticker, models.Security.id).filter(models.Security.exchange_id==exc.id).all()
-                for t in sec:
-                    c = session.query(models.Price.id).filter(models.Price.security_id==t.id).limit(1)
-                    if c.first() is None:
-                        missing += [t.ticker]
-                        mc = session.query(models.MissingPrice.id).filter(models.MissingPrice.security_id==t.id).one_or_none()
-                        if mc is None:
-                            mc = models.MissingPrice(security_id=t.id)
-                            session.add(mc)
-                        _logger.info(f'{__name__}: {t.ticker} added missing price entry')
-
-        else:
-            with self.session() as session:
-                exc = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange).one()
-                companies = session.query(models.MissingPrice).all()
-                for company in companies:
-                    sec = session.query(models.Security.ticker, models.Security.id).filter(
-                        and_(models.Security.exchange_id==exc.id, models.Security.id==company.security_id)).one_or_none()
-                    if sec is not None:
-                        missing += [sec.ticker]
-
-        _logger.info(f'{__name__}: {len(missing)} incomplete symbol price info')
-
-        return missing
-
     def identify_common_securities(self) -> tuple[set, set, set]:
         nasdaq = store.get_exchange_symbols_master('NASDAQ')
         nyse = store.get_exchange_symbols_master('NYSE')
@@ -463,7 +354,7 @@ class Manager(Threaded):
                         _logger.info(f'{__name__}: Added {ticker} to exchange {exchange}')
 
                         self._add_company_to_security(ticker)
-                        self._add_pricing_to_security(ticker, False)
+                        self._add_pricing_to_security(ticker)
                     except (ValueError, KeyError, IndexError) as e:
                         self.invalid_symbols += [ticker]
                         _logger.warning(f'{__name__}: Company info invalid: {ticker}, {str(e)}')
@@ -515,12 +406,9 @@ class Manager(Threaded):
                 added = True
                 _logger.info(f'{__name__}: Added company information for {ticker}')
 
-                # Remove from 'missing' table if there
-                session.query(models.MissingCompany).filter(models.MissingCompany.security_id==sec.id).delete()
-
         return added
 
-    def _add_pricing_to_security(self, ticker:str, missing:bool) -> bool:
+    def _add_pricing_to_security(self, ticker:str) -> bool:
         added = False
         with self.session.begin() as session:
             sec = session.query(models.Security).filter(models.Security.ticker==ticker).one()
@@ -546,10 +434,6 @@ class Manager(Threaded):
 
                             sec.pricing += [p]
                             added = True
-
-                            if missing:
-                                # Remove from 'missing' table if there
-                                session.query(models.MissingPrice).filter(models.MissingPrice.security_id==sec.id).delete()
                         else:
                             sec.active = False
                 except IntegrityError as e:

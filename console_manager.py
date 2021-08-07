@@ -41,7 +41,7 @@ class Interface:
             selection = utils.menu(menu_items, 'Select Operation', 0, 7)
 
             if selection == 1:
-                self.show_database_information(all=True)
+                self.show_database_information()
             elif selection == 2:
                 self.show_symbol_information()
             elif selection == 3:
@@ -57,7 +57,7 @@ class Interface:
             elif selection == 0:
                 break
 
-    def show_database_information(self, all=False):
+    def show_database_information(self):
         utils.print_message(f'Database Information ({d.ACTIVE_DB})')
         info = self.manager.get_database_info()
         for i in info:
@@ -73,28 +73,11 @@ class Interface:
         for i in info:
             print(f'{i["index"]:>16}:\t{i["count"]} symbols')
 
-        if all:
-            utils.print_message('Missing Symbols')
-            exchanges = store.get_exchanges()
-            for e in exchanges:
-                count = len(self.manager.identify_missing_securities(e))
-                print(f'{e:>16}:\t{count}')
-
-            utils.print_message('Inactive Symbols')
-            exchanges = store.get_exchanges()
-            for e in exchanges:
-                count = len(self.manager.identify_inactive_securities(e))
-                print(f'{e:>16}:\t{count}')
-
-            utils.print_message('Missing Information')
-            exchanges = store.get_exchanges()
-            for e in exchanges:
-                count = len(self.manager.identify_incomplete_securities_companies(e))
-                print(f'{e:>16}:\t{count} missing company')
-
-            for e in exchanges:
-                count = len(self.manager.identify_incomplete_securities_price(e))
-                print(f'{e:>16}:\t{count} missing price')
+        utils.print_message('Missing Symbols')
+        exchanges = store.get_exchanges()
+        for e in exchanges:
+            count = len(self.manager.identify_missing_securities(e))
+            print(f'{e:>16}:\t{count}')
 
     def show_symbol_information(self, ticker:str =''):
         if not ticker:
@@ -154,33 +137,23 @@ class Interface:
                 utils.print_message(f'{i+1:>2}: {result}', creturn=False)
 
     def refresh_exchange(self, progressbar=True):
-        menu_items = {
-            '1': 'Missing Company Information',
-            '2': 'Missing Price Information',
-            '0': 'Cancel',
-        }
-        area = utils.menu(menu_items, 'Select item to refresh, or 0 to cancel: ', 0, 2)
+        menu_items = {}
+        for i, e in enumerate(self.exchanges):
+            menu_items[f'{i+1}'] = f'{e}'
+        menu_items['0'] = 'Cancel'
 
-        if area > 0:
-            areaname = ['companies', 'pricing']
-            menu_items = {}
-            for i, e in enumerate(self.exchanges):
-                menu_items[f'{i+1}'] = f'{e}'
-            menu_items['0'] = 'Cancel'
+        exchange = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
+        if exchange > 0:
+            exc = self.exchanges[exchange-1]
+            self.task = threading.Thread(target=self.manager.refresh_exchange, args=[exc])
+            self.task.start()
 
-            exchange = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
-            if exchange > 0:
-                exc = self.exchanges[exchange-1]
-                self.task = threading.Thread(target=self.manager.refresh_exchange, args=[exc, areaname[area-1]])
-                self.task.start()
-
-                if progressbar:
-                    print()
-                    self._show_progress('Progress', 'Completed')
-
+            if progressbar:
                 print()
-                utils.print_message(f'Completed {exc} {areaname[area-1]} refresh in {self.manager.task_time:.2f} seconds', creturn=2)
-                utils.print_message(f'Identified {self.manager.task_total} missing items. {self.manager.task_success} items filled', creturn=0)
+                self._show_progress('Progress', 'Completed')
+
+            print()
+            utils.print_message(f'Identified {self.manager.task_total} missing items. {self.manager.task_success} items filled', creturn=0)
 
     def update_pricing(self, progressbar=True):
         menu_items = {}
