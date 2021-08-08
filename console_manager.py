@@ -11,20 +11,39 @@ logger = utils.get_logger(logging.WARNING)
 
 
 class Interface:
-    def __init__(self):
+    def __init__(self, ticker='', update=''):
+        self.ticker = ''
+        self.stop = False
+        if ticker:
+            if store.is_symbol_valid(ticker.upper()):
+                self.ticker = ticker.upper()
+                self.stop = True
+            else:
+                utils.print_error(f'Invalid ticker specifed: {ticker}')
+        elif update:
+            if store.is_symbol_valid(update.upper()):
+                self.ticker = update.upper()
+                self.stop = True
+            else:
+                utils.print_error(f'Invalid ticker specifed: {update}')
+
         self.exchanges = []
         self.indexes = []
         self.task = None
-
-        self.manager = manager.Manager()
-
         self.exchanges = [e['abbreviation'] for e in d.EXCHANGES]
         self.indexes = [i['abbreviation'] for i in d.INDEXES]
+        self.manager = manager.Manager()
 
-        self.main_menu()
+        if ticker:
+            self.main_menu(selection=2)
+        elif update:
+            self.main_menu(selection=5)
+        else:
+            self.main_menu()
 
-    def main_menu(self):
-        self.show_database_information()
+    def main_menu(self, selection=0):
+        if not self.stop:
+            self.show_database_information()
 
         menu_items = {
             '1': 'Database Information',
@@ -38,23 +57,27 @@ class Interface:
         }
 
         while True:
-            selection = utils.menu(menu_items, 'Select Operation', 0, 7)
+            if not self.ticker:
+                selection = utils.menu(menu_items, 'Select Operation', 0, 7)
 
             if selection == 1:
                 self.show_database_information()
             elif selection == 2:
-                self.show_symbol_information()
+                self.show_symbol_information(self.ticker)
             elif selection == 3:
                 self.populate_exchange()
             elif selection == 4:
                 self.refresh_exchange()
             elif selection == 5:
-                self.update_pricing()
+                self.update_pricing(self.ticker)
             elif selection == 6:
                 self.populate_index()
             elif selection == 7:
                 self.reset_database()
             elif selection == 0:
+                break
+
+            if self.stop:
                 break
 
     def show_database_information(self):
@@ -73,11 +96,11 @@ class Interface:
         for i in info:
             print(f'{i["index"]:>16}:\t{i["count"]} symbols')
 
-        utils.print_message('Missing Symbols')
-        exchanges = store.get_exchanges()
-        for e in exchanges:
-            count = len(self.manager.identify_missing_securities(e))
-            print(f'{e:>16}:\t{count}')
+        # utils.print_message('Missing Symbols')
+        # exchanges = store.get_exchanges()
+        # for e in exchanges:
+        #     count = len(self.manager.identify_missing_securities(e))
+        #     print(f'{e:>16}:\t{count}')
 
     def show_symbol_information(self, ticker:str =''):
         if not ticker:
@@ -155,7 +178,7 @@ class Interface:
             print()
             utils.print_message(f'Identified {self.manager.task_total} missing items. {self.manager.task_success} items filled', creturn=0)
 
-    def update_pricing(self, progressbar=True):
+    def update_pricing(self, ticker:str ='', progressbar=True):
         menu_items = {}
         for i, exchange in enumerate(self.exchanges):
             menu_items[f'{i+1}'] = f'{exchange}'
@@ -163,9 +186,15 @@ class Interface:
         menu_items[f'{i+3}'] = 'Ticker'
         menu_items['0'] = 'Cancel'
 
-        select = utils.menu(menu_items, 'Select table, or 0 to cancel: ', 0, len(d.EXCHANGES)+2)
+        if not ticker:
+            select = utils.menu(menu_items, 'Select table, or 0 to cancel: ', 0, len(d.EXCHANGES)+2)
+        else:
+            select = 5
+
         if select == 5:
-            ticker = input('Please enter symbol, or 0 to cancel: ').upper()
+            if not ticker:
+                ticker = input('Please enter symbol, or 0 to cancel: ').upper()
+
             if ticker != '0':
                 valid = store.is_symbol_valid(ticker)
                 if not valid:
@@ -289,4 +318,18 @@ class Interface:
 
 
 if __name__ == '__main__':
-    Interface()
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Database Management')
+    parser.add_argument('-t', '--ticker', help='Get ticker information', required=False)
+    parser.add_argument('-u', '--update', help='Update ticker pricing', required=False)
+
+    command = vars(parser.parse_args())
+
+    if command['ticker']:
+        Interface(ticker=command['ticker'])
+    elif command['update']:
+        Interface(update=command['update'])
+    else:
+        Interface()
+

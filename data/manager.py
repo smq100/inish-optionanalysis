@@ -256,21 +256,6 @@ class Manager(Threaded):
 
         return missing
 
-    def identify_inactive_securities(self, exchange:str) -> list[str]:
-        missing = []
-        tickers = store.get_symbols(exchange)
-        if len(tickers) > 0:
-            with self.session() as session:
-                exc = session.query(models.Exchange.id, models.Exchange.abbreviation).filter(models.Exchange.abbreviation==exchange).one()
-                for sec in tickers:
-                    t = session.query(models.Security.ticker).filter(and_(models.Security.ticker==sec,
-                        models.Security.exchange_id==exc.id, models.Security.active)).one_or_none()
-                    if t is None:
-                        missing += [sec]
-
-        _logger.info(f'{__name__}: {len(missing)} inactive symbols in {exchange}')
-        return missing
-
     def identify_common_securities(self) -> tuple[set, set, set]:
         nasdaq = store.get_exchange_symbols_master('NASDAQ')
         nyse = store.get_exchange_symbols_master('NYSE')
