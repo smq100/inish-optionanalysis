@@ -154,7 +154,7 @@ class Interface:
 
             if self.manager.task_error == 'Done':
                 utils.print_message(f'{self.manager.task_total} {exc} '\
-                    f'Symbols populated in {self.manager.task_time:.2f} seconds with {len(self.manager.invalid_symbols)} invalid symbols')
+                    f'Symbols populated in {self.manager.task_time:.2f} seconds with {len(self.manager.invalid_tickers)} invalid symbols')
 
             for i, result in enumerate(self.manager.task_results):
                 utils.print_message(f'{i+1:>2}: {result}', creturn=False)
@@ -287,7 +287,7 @@ class Interface:
             utils.print_message('Database not reset')
 
     def list_invalid(self):
-        utils.print_message(f'Invalid: {self.manager.invalid_symbols}')
+        utils.print_message(f'Invalid: {self.manager.invalid_tickers}')
 
     def _show_progress(self, prefix, suffix):
         while not self.manager.task_error: pass
@@ -299,11 +299,11 @@ class Interface:
                 total = self.manager.task_total
                 completed = self.manager.task_completed
                 success = self.manager.task_success
-                symbol = self.manager.task_symbol
+                symbol = self.manager.task_ticker
                 tasks = len([True for future in self.manager.task_futures if future.running()])
 
                 if total > 0:
-                    utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, symbol=symbol, length=50, success=success, tasks=tasks)
+                    utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, ticker=symbol, length=50, success=success, tasks=tasks)
                 else:
                     utils.progress_bar(completed, total, prefix=prefix, suffix='Calculating...', length=50)
 

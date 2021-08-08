@@ -70,7 +70,7 @@ def get_tickers(list:str='') -> list[str]:
             sym = session.query(models.Security.ticker).filter(models.Security.active).order_by(models.Security.ticker).all()
         tickers = [x[0] for x in sym]
     elif is_exchange(list):
-        tickers = get_exchange_symbols(list)
+        tickers = get_exchange_tickers(list)
     elif is_index(list):
         tickers = get_index_tickers(list)
 
@@ -94,7 +94,7 @@ def get_indexes() -> list[str]:
 
     return results
 
-def get_exchange_symbols(exchange:str) -> list[str]:
+def get_exchange_tickers(exchange:str) -> list[str]:
     results = []
 
     with _session() as session:

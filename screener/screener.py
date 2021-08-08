@@ -53,9 +53,9 @@ class Screener(Threaded):
         return f'{self.table}/{self.script_name}'
 
     class Result:
-        def __init__(self, company:Company, result:list[bool]) -> None:
+        def __init__(self, company:Company, results:list[bool]) -> None:
             self.company = company
-            self.values = result
+            self.values = results
 
         def __str__(self):
             return self.company.ticker
@@ -79,20 +79,20 @@ class Screener(Threaded):
         return self.script is not None
 
     def open(self) -> bool:
-        symbols = []
+        tickers = []
 
         if self.type == 'all':
-            symbols = store.get_tickers()
+            tickers = store.get_tickers()
         elif self.type == 'exchange':
-            symbols = store.get_exchange_symbols(self.table)
+            tickers = store.get_exchange_tickers(self.table)
         elif self.type == 'index':
-            symbols = store.get_index_tickers(self.table)
+            tickers = store.get_index_tickers(self.table)
         else:
-            symbols = [self.table]
+            tickers = [self.table]
 
-        if len(symbols) > 0:
+        if len(tickers) > 0:
             try:
-                self.companies = [Company(s, self.days, live=self.live) for s in symbols]
+                self.companies = [Company(s, self.days, live=self.live) for s in tickers]
             except ValueError as e:
                 _logger.warning(f'{__name__}: Invalid ticker {s}')
 
@@ -137,7 +137,7 @@ class Screener(Threaded):
     def _run(self, companies:str) -> None:
         for symbol in companies:
             result = []
-            self.task_symbol = symbol
+            self.task_ticker = symbol
             for filter in self.script:
                 i = Interpreter(symbol, filter)
                 try:

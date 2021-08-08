@@ -27,7 +27,7 @@ class Manager(Threaded):
         self.engine = create_engine(d.ACTIVE_URI, echo=False)
         self.session = sessionmaker(bind=self.engine)
         self.exchange = ''
-        self.invalid_symbols = []
+        self.invalid_tickers = []
         self.retry = 0
 
         # No multithreading for SQLite
@@ -61,7 +61,7 @@ class Manager(Threaded):
     @Threaded.threaded
     def populate_exchange(self, exchange:str) -> None:
         exchange = exchange.upper()
-        self.invalid_symbols = []
+        self.invalid_tickers = []
         self.retry = 0
 
         with self.session() as session:
@@ -123,7 +123,7 @@ class Manager(Threaded):
         def _pricing(tickers):
             with self.session() as session:
                 for sec in tickers:
-                    self.task_symbol = sec
+                    self.task_ticker = sec
                     try:
                         days = self._refresh_pricing(sec, session)
                         session.commit()
@@ -167,9 +167,9 @@ class Manager(Threaded):
                 session.add(ind)
                 _logger.info(f'{__name__}: Recreated index {index}')
 
-                symbols = store.get_index_tickers_master(index)
-                for symbol in symbols:
-                    ticker = session.query(models.Security.ticker).filter(models.Security.ticker==symbol).one_or_none()
+                tickers = store.get_index_tickers_master(index)
+                for ticker in tickers:
+                    ticker = session.query(models.Security.ticker).filter(models.Security.ticker==ticker).one_or_none()
                     if ticker is not None:
                         valid += [ticker.ticker]
 
@@ -332,7 +332,7 @@ class Manager(Threaded):
                 s = session.query(models.Security).filter(models.Security.ticker==ticker).one_or_none()
                 if s is None:
                     try:
-                        self.task_symbol = ticker
+                        self.task_ticker = ticker
                         exc.securities += [models.Security(ticker)]
                         session.commit()
 
@@ -341,10 +341,10 @@ class Manager(Threaded):
                         self._add_company_to_security(ticker)
                         self._add_pricing_to_security(ticker)
                     except (ValueError, KeyError, IndexError) as e:
-                        self.invalid_symbols += [ticker]
+                        self.invalid_tickers += [ticker]
                         _logger.warning(f'{__name__}: Company info invalid: {ticker}, {str(e)}')
                     except HTTPError as e:
-                        self.invalid_symbols += [ticker]
+                        self.invalid_tickers += [ticker]
                         self.retry += 1
                         _logger.warning(f'{__name__}: HTTP Error. Retrying... {self.retry}, {str(e)}')
                         if self.retry > 10:
@@ -434,7 +434,7 @@ class Manager(Threaded):
 
             self.task_total = len(tickers)
             for t in tickers:
-                self.task_symbol = t
+                self.task_ticker = t
                 self.task_success += 1
 
                 s = session.query(models.Security).filter(models.Security.ticker==t).one()

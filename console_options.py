@@ -74,7 +74,7 @@ class Interface:
             selection = utils.menu(menu_items, 'Select Operation', 0, 8)
 
             if selection == 1:
-                if self.select_symbol():
+                if self.select_ticker():
                     if self.calculate():
                         self.analyze()
             elif selection == 2:
@@ -110,7 +110,7 @@ class Interface:
                 if val == 0:
                     val = utils.input_integer('(1) Table, (2) Chart, (3) Contour, (4) Surface, or (0) Cancel: ', 0, 4)
                 if val > 0:
-                        title = f'Value: {self.strategy.legs[leg].symbol}'
+                        title = f'Value: {self.strategy.legs[leg].company}'
                         rows, cols = table_.shape
 
                         if rows > MAX_ROWS:
@@ -148,7 +148,7 @@ class Interface:
                 if val == 0:
                     val = utils.input_integer('(1) Summary, (2) Table, (3) Chart, (4) Contour, (5) Surface, or (0) Cancel: ', 0, 5)
                 if val > 0:
-                    title = f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].symbol}) {str(self.strategy).title()}'
+                    title = f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].company}) {str(self.strategy).title()}'
 
                     rows, cols = table_.shape
                     if rows > MAX_ROWS:
@@ -241,7 +241,7 @@ class Interface:
     def reset(self):
         self.strategy.reset()
 
-    def select_symbol(self):
+    def select_ticker(self):
         valid = False
         modified = False
 

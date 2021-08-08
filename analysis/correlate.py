@@ -25,7 +25,7 @@ class Correlate(Threaded):
         self.correlation = None
 
         for ticker in self.tickers:
-            self.task_symbol = ticker
+            self.task_ticker = ticker
             self.task_completed += 1
 
             df = store.get_history(ticker, 365)
@@ -55,7 +55,7 @@ class Correlate(Threaded):
     def get_all_coorelations(self) -> list:
         all = []
         if self.correlation is not None and not self.correlation.empty:
-            coors = (self.get_symbol_coorelation(sym) for sym in self.correlation)
+            coors = (self.get_ticker_coorelation(sym) for sym in self.correlation)
             for sym in coors:
                 for s in sym.iteritems():
                     # Arrange the symbol names so we can more easily remove duplicaates
@@ -69,7 +69,7 @@ class Correlate(Threaded):
 
         return all
 
-    def get_symbol_coorelation(self, ticker:str) -> pd.DataFrame:
+    def get_ticker_coorelation(self, ticker:str) -> pd.DataFrame:
         df = pd.DataFrame()
         ticker = ticker.upper()
 

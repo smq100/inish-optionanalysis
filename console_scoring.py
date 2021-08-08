@@ -20,12 +20,12 @@ class Interface:
             self.calculate(True)
             self.main_menu()
         else:
-            utils.print_error('Invalid ticker symbol specified')
+            utils.print_error('Invalid ticker specified')
 
     def main_menu(self):
         while True:
             menu_items = {
-                '1': f'Change Symbol ({self.scoring.ticker})',
+                '1': f'Change Ticker ({self.scoring.ticker})',
                 '2': 'Calculate',
                 '0': 'Exit'
             }
@@ -33,13 +33,13 @@ class Interface:
             selection = utils.menu(menu_items, 'Select Operation', 0, 2)
 
             if selection == 1:
-                self.select_symbol()
+                self.select_ticker()
             elif selection == 2:
                 self.calculate(True)
             elif selection == 0:
                 break
 
-    def select_symbol(self):
+    def select_ticker(self):
         valid = False
 
         while not valid:

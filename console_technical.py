@@ -16,7 +16,7 @@ class Interface:
         self.days = days
         self.run = run
         self.technical = None
-        self.symbols = []
+        self.tickers = []
 
         if store.is_ticker_valid(ticker.upper()):
             if self.run:
@@ -121,24 +121,20 @@ class Interface:
                 name = filename if filename else 'none'
                 menu_items = {
                     '1': f'Number of Days ({self.days})',
-                    '2': f'Method ({method})',
-                    '3': f'Plot File Name ({name})',
-                    '4': 'Analyze',
+                    '2': f'Plot File Name ({name})',
+                    '3': 'Analyze',
                     '0': 'Cancel'
                 }
 
-                selection = utils.menu(menu_items, 'Select option', 0, 4)
+                selection = utils.menu(menu_items, 'Select option', 0, 3)
 
                 if selection == 1:
                     self.days = utils.input_integer('Enter number of days: ', 30, 9999)
 
                 if selection == 2:
-                    method = self._enter_method()
-
-                if selection == 3:
                     filename = input('Enter filename: ')
 
-                if selection == 4:
+                if selection == 3:
                     self.show_trend()
                     break
 
@@ -194,17 +190,6 @@ class Interface:
                 plt.title(title)
             df.plot()
             plt.show()
-
-    def _enter_method(self):
-        menu_items = {
-            '1': 'NCUBED',
-            '2': 'NSQUREDLOGN',
-            '3': 'HOUGHLINES',
-            '4': 'PROBHOUGH',
-        }
-
-        selection = utils.menu(menu_items, 'Select method', 1, 4)
-        return  menu_items[str(selection)]
 
 
 if __name__ == '__main__':

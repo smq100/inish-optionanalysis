@@ -108,8 +108,8 @@ class Strategy(ABC):
 
         if len(self.legs) > 0:
             percent = 0.20
-            min_ = self.legs[0].symbol.spot * (1 - percent)
-            max_ = self.legs[0].symbol.spot * (1 + percent)
+            min_ = self.legs[0].company.spot * (1 - percent)
+            max_ = self.legs[0].company.spot * (1 + percent)
 
             step_ = (max_ - min_) / 40.0
             step_ = utils.mround(step_, step_ / 10.0)
@@ -131,7 +131,7 @@ class Leg:
         if quantity < 1:
             raise ValueError('Invalid quantity')
 
-        self.symbol = Company(ticker, days=1)
+        self.company = Company(ticker, days=1)
         self.option = Option(ticker, product, strike, expiry)
         self.strategy = strategy
         self.quantity = quantity
@@ -147,14 +147,14 @@ class Leg:
             d2 = 'cv' if self.option.implied_volatility < IV_CUTOFF else 'iv'
             d3 = '*' if self.option.implied_volatility < IV_CUTOFF else ''
             output = f'{self.quantity:2d} '\
-            f'{self.symbol.ticker}@${self.symbol.spot:.2f} '\
+            f'{self.company.ticker}@${self.company.spot:.2f} '\
             f'{self.direction} '\
             f'{self.product} '\
             f'${self.option.strike:.2f} for '\
             f'{str(self.option.expiry)[:10]}'\
             f'=${self.option.last_price:.2f}{d3} each (${self.option.calc_price:.2f}{d1}/{d2})'
 
-            if not self.option.contract_symbol:
+            if not self.option.contract_ticker:
                 output += ' *option not selected'
 
             if self.option.last_price > 0.0:
@@ -174,9 +174,9 @@ class Leg:
         if self._validate():
             # Build the pricer
             if self.pricing_method == 'black-scholes':
-                self.pricer = BlackScholes(self.symbol.ticker, self.option.expiry, self.option.strike)
+                self.pricer = BlackScholes(self.company.ticker, self.option.expiry, self.option.strike)
             elif self.pricing_method == 'monte-carlo':
-                self.pricer = MonteCarlo(self.symbol.ticker, self.option.expiry, self.option.strike)
+                self.pricer = MonteCarlo(self.company.ticker, self.option.expiry, self.option.strike)
             else:
                 raise ValueError('Unknown pricing model')
 
@@ -195,9 +195,9 @@ class Leg:
             else:
                 self.option.calc_price = price = self.pricer.price_put
 
-            self.option.spot = self.symbol.spot = self.pricer.spot_price
+            self.option.spot = self.company.spot = self.pricer.spot_price
             self.option.rate = self.pricer.risk_free_rate
-            self.option.calc_volatility = self.symbol.volatility = self.pricer.volatility
+            self.option.calc_volatility = self.company.volatility = self.pricer.volatility
             self.option.time_to_maturity = self.pricer.time_to_maturity
 
             # Generate the values table
@@ -254,8 +254,8 @@ class Leg:
 
         return call, put
 
-    def modify_symbol(self, ticker:str) -> bool:
-        self.symbol = Company(ticker)
+    def modify_company(self, ticker:str) -> bool:
+        self.company = Company(ticker)
 
         try:
             # Reset strike to spot value
@@ -263,7 +263,7 @@ class Leg:
             self.reset()
             return True
         except Exception as e:
-            self.symbol = ticker
+            self.company = ticker
             utils.print_error(sys.exc_info()[1])
             return False
 
@@ -362,7 +362,7 @@ class Leg:
     def _validate(self) -> bool:
         valid = False
 
-        if self.symbol.ticker:
+        if self.company.ticker:
             valid = True
 
         # Check for valid method

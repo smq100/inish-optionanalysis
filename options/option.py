@@ -31,7 +31,7 @@ class Option:
         self.rho = 0.0
 
         # Fetched online with YFinance
-        self.contract_symbol = ''
+        self.contract_ticker = ''
         self.last_trade_date = ''
         self.last_price = 0.0
         self.bid = 0.0
@@ -46,8 +46,8 @@ class Option:
         self.currency = ''
 
     def __str__(self):
-        symbol = self.contract_symbol if self.contract_symbol else 'No contract selected'
-        return f'Contract:{symbol}\n'\
+        ticker = self.contract_ticker if self.contract_ticker else 'No contract selected'
+        return f'Contract:{ticker}\n'\
             f'Ticker: {self.ticker}\n'\
             f'Product: {self.product.title()}\n'\
             f'Expiry: {self.expiry:%Y-%m-%d} ({self.time_to_maturity*365:.0f}/{self.time_to_maturity:.5f})\n'\
@@ -86,7 +86,7 @@ class Option:
         contract = _get_contract(contract_name)
 
         if contract is not None:
-            self.contract_symbol = contract['contractSymbol']
+            self.contract_ticker = contract['contractSymbol']
             self.last_trade_date = contract['lastTradeDate']
             self.strike = contract['strike']
             self.last_price = contract['lastPrice']
@@ -111,8 +111,8 @@ class Option:
 
         return ret
 
-def _get_contract(contract_symbol):
-    parsed = _parse_contract_name(contract_symbol)
+def _get_contract(contract_ticker):
+    parsed = _parse_contract_name(contract_ticker)
 
     ticker = parsed['ticker']
     product = parsed['product']
@@ -125,7 +125,7 @@ def _get_contract(contract_symbol):
         else:
             chain = store.get_option_chain(ticker)(expiry).puts
 
-        contract = chain.loc[chain['contractSymbol'] == contract_symbol]
+        contract = chain.loc[chain['contractSymbol'] == contract_ticker]
         return contract.iloc[0]
     except Exception as e:
         print(str(e))

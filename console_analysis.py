@@ -16,7 +16,7 @@ class Interface:
         self.coorelate = None
         self.exchanges = [e['abbreviation'] for e in d.EXCHANGES]
         self.indexes = [i['abbreviation'] for i in d.INDEXES]
-        self.symbols = []
+        self.tickers = []
 
         if not coor:
             self.main_menu()
@@ -31,7 +31,7 @@ class Interface:
                 '1': 'Compute Coorelation',
                 '2': 'Best Coorelation',
                 '3': 'Least Coorelation',
-                '4': 'Symbol Coorelation',
+                '4': 'ticker Coorelation',
                 '0': 'Exit'
             }
 
@@ -45,7 +45,7 @@ class Interface:
             elif selection == 3:
                 self.get_least_coorelation()
             elif selection == 4:
-                self.get_symbol_coorelation()
+                self.get_ticker_coorelation()
             elif selection == 0:
                 break
 
@@ -56,8 +56,8 @@ class Interface:
             self.list = self._get_list()
 
         if self.list:
-            self.symbols = store.get_tickers(self.list)
-            self.coorelate = Correlate(self.symbols)
+            self.tickers = store.get_tickers(self.list)
+            self.coorelate = Correlate(self.tickers)
 
             if self.coorelate:
                 self.task = threading.Thread(target=self.coorelate.compute_correlation)
@@ -93,20 +93,20 @@ class Interface:
             best = self.coorelate.get_sorted_coorelations(20, False)
             [print(f'{item[0]}/{item[1]:<5}\t{item[2]:.4f}') for item in best]
 
-    def get_symbol_coorelation(self):
+    def get_ticker_coorelation(self):
         if not self.coorelate:
             utils.print_error('Run coorelation first')
         elif not self.coorelate.compute_correlation:
             utils.print_error('Run coorelation first')
         else:
-            symbol = utils.input_text('Enter symbol: ').upper()
-            if not store.is_ticker_valid(symbol):
+            ticker = utils.input_text('Enter symbol: ').upper()
+            if not store.is_ticker_valid(ticker):
                 utils.print_error('Invalid symbol')
             else:
-                ds = self.coorelate.get_symbol_coorelation(symbol)
-                utils.print_message(f'Highest correlation for {symbol}')
+                ds = self.coorelate.get_ticker_coorelation(ticker)
+                utils.print_message(f'Highest correlation for {ticker}')
                 [print(f'{sym:>5}: {val:.5f}') for sym, val in ds[-1:-11:-1].iteritems()]
-                utils.print_message(f'Lowest correlation for {symbol}')
+                utils.print_message(f'Lowest correlation for {ticker}')
                 [print(f'{sym:>5}: {val:.5f}') for sym, val in ds[:10].iteritems()]
 
     def _get_list(self):
@@ -133,8 +133,8 @@ class Interface:
             while self.task.is_alive and self.coorelate.task_error == 'None':
                 time.sleep(0.20)
                 completed = self.coorelate.task_completed
-                symbol = self.coorelate.task_symbol
-                utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, symbol=symbol, length=50)
+                ticker = self.coorelate.task_ticker
+                utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, ticker=ticker, length=50)
 
 
 if __name__ == '__main__':

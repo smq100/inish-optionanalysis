@@ -5,7 +5,7 @@ class Threaded:
         self.task_total = 0
         self.task_completed = 0
         self.task_success = 0
-        self.task_symbol = ''
+        self.task_ticker = ''
         self.task_error = ''
         self.task_results = []
         self.task_object = None
@@ -17,7 +17,7 @@ class Threaded:
             self.task_total = 0
             self.task_completed = 0
             self.task_success = 0
-            self.task_symbol = ''
+            self.task_ticker = ''
             self.task_error = ''
             self.task_results = []
             self.task_object = None

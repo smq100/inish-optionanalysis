@@ -111,7 +111,7 @@ def input_text(message:str) -> str:
 
 position = 0
 forward = True
-def progress_bar(iteration, total:int, prefix:str='', suffix:str='', symbol:str='',
+def progress_bar(iteration, total:int, prefix:str='', suffix:str='', ticker:str='',
     length:int=100, fill:str='█', reset:bool=False, success:int=-1, tasks:int=0) -> None:
     global position
     global forward
@@ -125,9 +125,9 @@ def progress_bar(iteration, total:int, prefix:str='', suffix:str='', symbol:str=
         bar = fill * filled + '-' * (length - filled)
 
         if success < 0:
-            print(f'\r{prefix} |{bar}| {iteration}/{total} {suffix} {symbol}     ', end='\r')
+            print(f'\r{prefix} |{bar}| {iteration}/{total} {suffix} {ticker}     ', end='\r')
         else:
-            print(f'\r{prefix} |{bar}| {iteration}/{total} ({success}) [{tasks}] {suffix} {symbol}     ', end='\r')
+            print(f'\r{prefix} |{bar}| {iteration}/{total} ({success}) [{tasks}] {suffix} {ticker}     ', end='\r')
 
         if iteration == total:
             print()

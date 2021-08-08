@@ -145,7 +145,7 @@ class Interface:
         selection = utils.menu(menu_items, 'Select Exchange', 0, len(d.EXCHANGES))
         if selection > 0:
             exc = d.EXCHANGES[selection-1]['abbreviation']
-            if len(store.get_exchange_symbols(exc)) > 0:
+            if len(store.get_exchange_tickers(exc)) > 0:
                 self.screener = Screener(exc, script=self.screen, live=self.live)
                 if self.screener.valid():
                     self.table = exc
@@ -295,10 +295,10 @@ class Interface:
                 total = self.screener.task_total
                 completed = self.screener.task_completed
                 success = self.screener.task_success
-                symbol = self.screener.task_symbol
+                ticker = self.screener.task_ticker
                 tasks = len([True for future in self.screener.task_futures if future.running()])
 
-                utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, symbol=symbol, length=50, success=success, tasks=tasks)
+                utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, ticker=ticker, length=50, success=success, tasks=tasks)
 
             utils.print_message('Processed Messages')
             results = [future.result() for future in self.screener.task_futures if future.result() is not None]
