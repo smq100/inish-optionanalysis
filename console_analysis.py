@@ -56,7 +56,7 @@ class Interface:
             self.list = self._get_list()
 
         if self.list:
-            self.symbols = store.get_symbols(self.list)
+            self.symbols = store.get_tickers(self.list)
             self.coorelate = Correlate(self.symbols)
 
             if self.coorelate:
@@ -100,7 +100,7 @@ class Interface:
             utils.print_error('Run coorelation first')
         else:
             symbol = utils.input_text('Enter symbol: ').upper()
-            if not store.is_symbol_valid(symbol):
+            if not store.is_ticker_valid(symbol):
                 utils.print_error('Invalid symbol')
             else:
                 ds = self.coorelate.get_symbol_coorelation(symbol)

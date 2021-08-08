@@ -18,7 +18,7 @@ class Interface:
         self.technical = None
         self.symbols = []
 
-        if store.is_symbol_valid(ticker.upper()):
+        if store.is_ticker_valid(ticker.upper()):
             if self.run:
                 self.show_trend()
             else:
@@ -59,7 +59,7 @@ class Interface:
         while not valid:
             self.ticker = input('Please enter symbol, or 0 to cancel: ').upper()
             if self.ticker != '0':
-                valid = store.is_symbol_valid(self.ticker)
+                valid = store.is_ticker_valid(self.ticker)
                 if valid:
                     self.technical = Technical(self.ticker, None, 365)
                 else:

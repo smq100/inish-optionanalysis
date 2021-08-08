@@ -11,7 +11,7 @@ from utils import utils as utils
 
 class Technical:
     def __init__(self, ticker:str, history, days:int, live:bool=False):
-        if store.is_symbol_valid(ticker):
+        if store.is_ticker_valid(ticker):
             self.ticker = ticker.upper()
             self.days = days
 

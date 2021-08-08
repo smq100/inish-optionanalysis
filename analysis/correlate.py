@@ -86,7 +86,7 @@ class Correlate(Threaded):
 
 
 if __name__ == '__main__':
-    symbols = store.get_symbols('DOW')
+    symbols = store.get_tickers('DOW')
     c = Correlate()
     df = c.compute_correlation(symbols)
     print(df)

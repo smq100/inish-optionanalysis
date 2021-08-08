@@ -29,7 +29,7 @@ _engine = create_engine(d.ACTIVE_URI, echo=False)
 _session = sessionmaker(bind=_engine)
 
 
-def is_symbol_valid(symbol:str) -> bool:
+def is_ticker_valid(symbol:str) -> bool:
     with _session() as session:
         e = session.query(models.Security).filter(models.Security.ticker==symbol.upper()).one_or_none()
 
@@ -62,7 +62,7 @@ def is_list(list:str) -> bool:
 
     return ret
 
-def get_symbols(list:str='') -> list[str]:
+def get_tickers(list:str='') -> list[str]:
     tickers = []
 
     if not list:
@@ -72,7 +72,7 @@ def get_symbols(list:str='') -> list[str]:
     elif is_exchange(list):
         tickers = get_exchange_symbols(list)
     elif is_index(list):
-        tickers = get_index_symbols(list)
+        tickers = get_index_tickers(list)
 
     return tickers
 
@@ -107,7 +107,7 @@ def get_exchange_symbols(exchange:str) -> list[str]:
 
     return results
 
-def get_index_symbols(index:str) -> list[str]:
+def get_index_tickers(index:str) -> list[str]:
     results = []
 
     with _session() as session:
@@ -229,7 +229,7 @@ def get_company(ticker, live:bool=False) -> dict:
 
     return results
 
-def get_exchange_symbols_master(exchange, type:str='google') -> list[str]:
+def get_exchange_tickers_master(exchange, type:str='google') -> list[str]:
     global _master_exchanges
     symbols = []
     table = None
@@ -255,7 +255,7 @@ def get_exchange_symbols_master(exchange, type:str='google') -> list[str]:
 
     return symbols
 
-def get_index_symbols_master(index, type:str='google') -> list[str]:
+def get_index_tickers_master(index, type:str='google') -> list[str]:
     global _master_indexes
     table = None
     symbols = []

@@ -6,7 +6,7 @@ _logger = utils.get_logger()
 
 class ScoringAnalysis:
     def __init__(self, ticker:str):
-        if store.is_symbol_valid(ticker):
+        if store.is_ticker_valid(ticker):
             self.ticker = ticker.upper()
             self.ema = {}
             self.rsa = None

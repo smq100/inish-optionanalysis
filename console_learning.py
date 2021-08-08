@@ -15,7 +15,7 @@ class Interface:
 
         if not ticker:
             self.main_menu()
-        elif store.is_symbol_valid(self.ticker):
+        elif store.is_ticker_valid(self.ticker):
             self.main_menu(selection=2)
         else:
             utils.print_error('Invalid ticker specified')
@@ -64,7 +64,7 @@ class Interface:
         while not valid:
             ticker = input('Please enter ticker, or 0 to cancel: ').upper()
             if ticker != '0':
-                valid = store.is_symbol_valid(ticker)
+                valid = store.is_ticker_valid(ticker)
                 if not valid:
                     utils.print_error('Invalid ticker. Try again or select "0" to cancel')
             else:

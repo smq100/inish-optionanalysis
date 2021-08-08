@@ -18,7 +18,7 @@ class Company:
         if days < 1:
             raise ValueError('Invalid number of days')
 
-        if not store.is_symbol_valid(ticker):
+        if not store.is_ticker_valid(ticker):
             raise ValueError('Invalid ticker')
 
         if not lazy:

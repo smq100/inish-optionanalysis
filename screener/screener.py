@@ -19,6 +19,7 @@ class Screener(Threaded):
         super().__init__()
 
         self.table = table.upper()
+        self.script_name = script
         self.type = ''
 
         if self.table == 'ALL':
@@ -27,7 +28,7 @@ class Screener(Threaded):
             self.type = 'exchange'
         elif store.is_index(self.table):
             self.type = 'index'
-        elif store.is_symbol_valid(table):
+        elif store.is_ticker_valid(table):
             self.type = 'symbol'
         else:
             raise ValueError(f'Table not found: {self.table}')
@@ -49,15 +50,15 @@ class Screener(Threaded):
         self.open()
 
     def __str__(self):
-        return self.table
+        return f'{self.table}/{self.script_name}'
 
     class Result:
-        def __init__(self, symbol:str, result:bool) -> None:
-            self.symbol = symbol
+        def __init__(self, company:Company, result:list[bool]) -> None:
+            self.company = company
             self.values = result
 
         def __str__(self):
-            return self.symbol.ticker
+            return self.company.ticker
 
         def __bool__(self):
             return all(self.values)
@@ -81,11 +82,11 @@ class Screener(Threaded):
         symbols = []
 
         if self.type == 'all':
-            symbols = store.get_symbols()
+            symbols = store.get_tickers()
         elif self.type == 'exchange':
             symbols = store.get_exchange_symbols(self.table)
         elif self.type == 'index':
-            symbols = store.get_index_symbols(self.table)
+            symbols = store.get_index_tickers(self.table)
         else:
             symbols = [self.table]
 

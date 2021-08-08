@@ -15,13 +15,13 @@ class Interface:
         self.ticker = ''
         self.stop = False
         if ticker:
-            if store.is_symbol_valid(ticker.upper()):
+            if store.is_ticker_valid(ticker.upper()):
                 self.ticker = ticker.upper()
                 self.stop = True
             else:
                 utils.print_error(f'Invalid ticker specifed: {ticker}')
         elif update:
-            if store.is_symbol_valid(update.upper()):
+            if store.is_ticker_valid(update.upper()):
                 self.ticker = update.upper()
                 self.stop = True
             else:
@@ -108,7 +108,7 @@ class Interface:
 
         if ticker:
             ticker = ticker.upper()
-            if store.is_symbol_valid(ticker):
+            if store.is_ticker_valid(ticker):
                 company = store.get_company(ticker)
                 if company is not None:
                     utils.print_message(f'{ticker} Company Information')
@@ -196,7 +196,7 @@ class Interface:
                 ticker = input('Please enter symbol, or 0 to cancel: ').upper()
 
             if ticker != '0':
-                valid = store.is_symbol_valid(ticker)
+                valid = store.is_ticker_valid(ticker)
                 if not valid:
                     utils.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
                 else:

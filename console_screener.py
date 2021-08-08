@@ -33,7 +33,7 @@ class Interface:
                 self.type = 'exchange'
             elif store.is_index(self.table):
                 self.type = 'index'
-            elif store.is_symbol_valid(self.table):
+            elif store.is_ticker_valid(self.table):
                 self.type = 'symbol'
             else:
                 raise ValueError(f'Exchange or index not found: {table}')
@@ -164,7 +164,7 @@ class Interface:
         selection = utils.menu(menu_items, 'Select Index', 0, len(d.INDEXES))
         if selection > 0:
             index = d.INDEXES[selection-1]['abbreviation']
-            if len(store.get_index_symbols(index)) > 0:
+            if len(store.get_index_tickers(index)) > 0:
                 self.screener = Screener(index, script=self.screen, live=self.live)
                 if self.screener.valid():
                     self.table = index
@@ -177,7 +177,7 @@ class Interface:
     def select_ticker(self):
         ticker = utils.input_text('Enter ticker: ')
         ticker = ticker.upper()
-        if store.is_symbol_valid(ticker):
+        if store.is_ticker_valid(ticker):
             self.screener = Screener(ticker, script=self.screen, live=self.live)
             if self.screener.valid():
                 self.table = ticker
@@ -269,16 +269,18 @@ class Interface:
         else:
             utils.print_message('Symbols Identified')
             index = 0
+
+            self.results = sorted(self.results, key=str)
             for result in self.results:
                 if all:
                     index += 1
                     print(f'{result} ({sum(result.values)})')
-                    if (index) % 10 == 0:
+                    if (index) % 20 == 0:
                         print()
                 elif result:
                     index += 1
                     print(f'{result} ', end='')
-                    if (index) % 10 == 0:
+                    if (index) % 20 == 0:
                         print()
 
         print()

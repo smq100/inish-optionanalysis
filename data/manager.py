@@ -67,7 +67,7 @@ class Manager(Threaded):
         with self.session() as session:
             session.query(models.Exchange.abbreviation).filter(models.Exchange.abbreviation==exchange).one()
 
-        tickers = list(store.get_exchange_symbols_master(exchange))
+        tickers = list(store.get_exchange_tickers_master(exchange))
 
         if len(tickers) > 10:
             self.task_total = len(tickers)
@@ -109,7 +109,7 @@ class Manager(Threaded):
 
     def update_pricing_ticker(self, ticker:str='') -> int:
         days = 0
-        if store.is_symbol_valid(ticker):
+        if store.is_ticker_valid(ticker):
             with self.session.begin() as session:
                 days = self._refresh_pricing(ticker, session)
 
@@ -117,7 +117,7 @@ class Manager(Threaded):
 
     @Threaded.threaded
     def update_pricing_exchange(self, exchange:str='') -> None:
-        tickers = store.get_symbols(exchange)
+        tickers = store.get_tickers(exchange)
         self.task_total = len(tickers)
 
         def _pricing(tickers):
@@ -167,7 +167,7 @@ class Manager(Threaded):
                 session.add(ind)
                 _logger.info(f'{__name__}: Recreated index {index}')
 
-                symbols = store.get_index_symbols_master(index)
+                symbols = store.get_index_tickers_master(index)
                 for symbol in symbols:
                     ticker = session.query(models.Security.ticker).filter(models.Security.ticker==symbol).one_or_none()
                     if ticker is not None:
@@ -243,7 +243,7 @@ class Manager(Threaded):
 
     def identify_missing_securities(self, exchange:str) -> list[str]:
         missing = []
-        tickers = store.get_exchange_symbols_master(exchange)
+        tickers = store.get_exchange_tickers_master(exchange)
         _logger.info(f'{__name__}: {len(tickers)} total symbols in {exchange}')
         with self.session() as session:
             exc = session.query(models.Exchange.id, models.Exchange.abbreviation).filter(models.Exchange.abbreviation==exchange).one()
@@ -257,9 +257,9 @@ class Manager(Threaded):
         return missing
 
     def identify_common_securities(self) -> tuple[set, set, set]:
-        nasdaq = store.get_exchange_symbols_master('NASDAQ')
-        nyse = store.get_exchange_symbols_master('NYSE')
-        amex = store.get_exchange_symbols_master('AMEX')
+        nasdaq = store.get_exchange_tickers_master('NASDAQ')
+        nyse = store.get_exchange_tickers_master('NYSE')
+        amex = store.get_exchange_tickers_master('AMEX')
 
         nasdaq_nyse = nasdaq.intersection(nyse)
         nasdaq_amex = nasdaq.intersection(amex)
