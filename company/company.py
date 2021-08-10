@@ -11,7 +11,7 @@ class Company:
         self.ticker = ticker.upper()
         self.days = days
         self.live = live
-        self.company = None
+        self.info = None
         self.history = None
         self.ta = None
 
@@ -59,19 +59,22 @@ class Company:
         return self.history['volume']
 
     def get_beta(self) -> float:
-        company = store.get_company(self.ticker, live=True)
+        if self.info is None:
+            self._load_company()
 
-        return company['beta']
+        return self.info['beta']
 
-    def _load_history(self, info=False):
+    def _load_history(self):
         self.history = store.get_history(self.ticker, self.days, live=self.live)
         if self.history is None:
             raise RuntimeError('history is None')
 
+        # self._load_company()
+
         self.ta = Technical(self.ticker, self.history, self.days, live=self.live)
 
-        if info:
-            self.company = store.get_company(self.ticker, live=True)
+    def _load_company(self):
+        self.info = store.get_company(self.ticker, live=True)
 
 
 if __name__ == '__main__':

@@ -169,22 +169,15 @@ def get_history(ticker, days:int, live:bool=False) -> pd.DataFrame:
 
 def get_company(ticker, live:bool=False) -> dict:
     results = {}
+    results['indexes'] = ''
+    results['precords'] = 0
 
     if live:
         company = fetcher.get_company_ex(ticker)
         if company is not None:
-            try:
-                results['name'] = company.info['shortName']
-                results['description'] = company.info['longBusinessSummary']
-                results['url'] = company.info['website']
-                results['sector'] = company.info['sector']
-                results['industry'] = company.info['industry']
-                results['exchange'] = company.info['exchange']
-                results['beta'] = company.info['beta']
-                results['indexes'] = ''
-                results['precords'] = 0
-            except KeyError:
-                results = {}
+            # results['beta'] = company.info['beta']
+            # results['shortName'] = company.info['shortName']
+            results = company.info
     else:
         results['name'] = ''
         results['description'] = ''
@@ -192,8 +185,6 @@ def get_company(ticker, live:bool=False) -> dict:
         results['sector'] = ''
         results['industry'] = ''
         results['exchange'] = ''
-        results['indexes'] = ''
-        results['precords'] = 0
 
         with _session() as session:
             symbol = session.query(models.Security).filter(models.Security.ticker==ticker.upper()).one_or_none()

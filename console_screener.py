@@ -284,11 +284,11 @@ class Interface:
                 elif result:
                     index += 1
                     if verbose:
-                        print(type(result.company))
+                        # utils.print_line(f'{result.company.info["shortName"]}')
                         print(f'{result}:\t{sum(result.values)}')
                     else:
                         print(f'{result} ', end='')
-                        if index % 20 == 0: # Print 20 at a time
+                        if index % 20 == 0: # Print 20 per line
                             print()
         print()
 

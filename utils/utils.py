@@ -58,8 +58,8 @@ def print_warning(message:str, creturn:int=1) -> None:
 def print_error(message:str, creturn:int=1) -> None:
     print(_delimeter(f'Error: {message}', creturn))
 
-def print_line(message:str) -> None:
-    print(_delimeter(message, end='\r'))
+def print_line(message:str, creturn:int=1) -> None:
+    print(_delimeter(message, creturn))
 
 def input_integer(message:str, min_:int, max_:int) -> int:
     val = min_ - 1

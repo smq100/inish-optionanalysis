@@ -1,12 +1,11 @@
 import pandas as pd
 
-from company.company import Company
 from utils import utils as utils
 
 
 _logger = utils.get_logger()
 
-VALID_TECHNICALS = ('high', 'low', 'close', 'volume', 'sma', 'rsi', 'beta', 'nop', 'value') # 'value' always last
+VALID_TECHNICALS = ('high', 'low', 'close', 'volume', 'sma', 'rsi', 'beta', 'value', 'true', 'false')
 VALID_CONDITIONALS = ('lt', 'eq', 'gt')
 VALID_SERIES = ('min', 'max', 'na')
 
@@ -64,8 +63,9 @@ class Interpreter:
 
         return self._calculate()
 
-    def _calculate(self):
+    def _calculate(self) -> bool:
         calculate = True
+        result = False
 
         # Base value
         if self.base_technical == VALID_TECHNICALS[2]: # close
@@ -78,15 +78,19 @@ class Interpreter:
             self.base = self._get_base_rsi()
         elif self.base_technical == VALID_TECHNICALS[6]: # beta
             self.base = self._get_base_beta()
-        elif self.base_technical == VALID_TECHNICALS[7]: # nop
+        elif self.base_technical == VALID_TECHNICALS[8]: # true
             calculate = False
+            result = True
+        elif self.base_technical == VALID_TECHNICALS[9]: # false
+            calculate = False
+            result = False
         else:
             raise SyntaxError('Invalid "base technical" specified in screen file')
 
         # Criteria value
         if not calculate:
             pass
-        elif self.criteria_technical == VALID_TECHNICALS[-1]: # value
+        elif self.criteria_technical == VALID_TECHNICALS[7]: # value
             self.value = self._get_value()
         elif self.criteria_technical == VALID_TECHNICALS[0]: # high
             self.value = self._get_value_high()
@@ -101,7 +105,7 @@ class Interpreter:
         else:
             raise SyntaxError('Invalid "criteria technical" specified in screen file')
 
-        return self._calc_comparison() if calculate else True
+        return self._calc_comparison() if calculate else result
 
     def _calc_comparison(self) -> bool:
         result = False
@@ -110,7 +114,7 @@ class Interpreter:
             value = 0.0
 
             if self.criteria_conditional == VALID_CONDITIONALS[0]: # lt
-                if self.criteria_series == VALID_SERIES[-1]: # na
+                if self.criteria_series == VALID_SERIES[2]: # na
                     if len(self.value) > 0:
                         value = self.value.iloc[-1] * self.criteria_factor
                         if base < value:
@@ -133,7 +137,7 @@ class Interpreter:
                         result = True
 
             elif self.criteria_conditional == VALID_CONDITIONALS[2]: # gt
-                if self.criteria_series == VALID_SERIES[-1]: # na
+                if self.criteria_series == VALID_SERIES[2]: # na
                     if len(self.value) > 0:
                         value = self.value.iloc[-1] * self.criteria_factor
                         if base > value:
