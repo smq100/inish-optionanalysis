@@ -17,7 +17,7 @@ SCREEN_SUFFIX = '.screen'
 class Interface:
     def __init__(self, table='', screen='', run=False, live=False):
         self.table = table.upper()
-        self.screen = screen
+        self.screen_base = screen
         self.run = run
         self.live = live
         self.results = []
@@ -40,25 +40,25 @@ class Interface:
 
             self.screener = Screener(table=self.table, live=self.live)
 
-        if self.screen:
+        if self.screen_base:
             if self.screener is None:
-                self.screen = ''
+                self.screen_base = ''
                 utils.print_error('Must specify table with screener')
             elif os.path.exists(BASEPATH+screen+SCREEN_SUFFIX):
-                self.screen = BASEPATH + self.screen + SCREEN_SUFFIX
-                if not self.screener.load_script(self.screen):
-                    self.screen = ''
+                self.screen_path = BASEPATH + self.screen_base + SCREEN_SUFFIX
+                if not self.screener.load_script(self.screen_path):
+                    self.screen_base = ''
                     utils.print_error('Invalid screen script')
             else:
-                utils.print_error(f'File "{self.screen}" not found')
-                self.screen = ''
+                utils.print_error(f'File "{self.screen_base}" not found')
+                self.screen_base = ''
 
         if self.run:
             self.main_menu(selection=6)
         else:
             self.main_menu()
 
-    def main_menu(self, selection=0):
+    def main_menu(self, selection:int=0) -> None:
         while True:
             source = 'live' if self.live else d.ACTIVE_DB
             menu_items = {
@@ -83,10 +83,8 @@ class Interface:
                 else:
                     menu_items['3'] = f'Select Index ({self.table}, {len(self.screener.companies)} Symbols)'
 
-            if self.screen:
-                filename = os.path.basename(self.screen)
-                head, sep, tail = filename.partition('.')
-                menu_items['5'] = f'Select Screener ({head})'
+            if self.screen_base:
+                menu_items['5'] = f'Select Screener ({self.screen_base})'
 
             if len(self.results) > 0:
                 menu_items['7'] = f'Show Results ({self.valids})'
@@ -120,7 +118,7 @@ class Interface:
 
             selection = 0
 
-    def select_source(self):
+    def select_source(self) -> None:
         menu_items = {
             '1': 'Database',
             '2': 'Live',
@@ -134,9 +132,9 @@ class Interface:
             self.live = True
 
         if self.table:
-            self.screener = Screener(table=self.table, script=self.screen, live=self.live)
+            self.screener = Screener(table=self.table, script=self.screen_path, live=self.live)
 
-    def select_exchange(self):
+    def select_exchange(self) -> None:
         menu_items = {}
         for exchange, item in enumerate(d.EXCHANGES):
             menu_items[f'{exchange+1}'] = f'{item["abbreviation"]}'
@@ -146,7 +144,7 @@ class Interface:
         if selection > 0:
             exc = d.EXCHANGES[selection-1]['abbreviation']
             if len(store.get_exchange_tickers(exc)) > 0:
-                self.screener = Screener(exc, script=self.screen, live=self.live)
+                self.screener = Screener(exc, script=self.screen_path, live=self.live)
                 if self.screener.valid():
                     self.table = exc
                     self.type = 'exchange'
@@ -155,7 +153,7 @@ class Interface:
                 self.screener = None
                 utils.print_error(f'Exchange {exc} has no symbols')
 
-    def select_index(self):
+    def select_index(self) -> None:
         menu_items = {}
         for index, item in enumerate(d.INDEXES):
             menu_items[f'{index+1}'] = f'{item["abbreviation"]}'
@@ -165,7 +163,7 @@ class Interface:
         if selection > 0:
             index = d.INDEXES[selection-1]['abbreviation']
             if len(store.get_index_tickers(index)) > 0:
-                self.screener = Screener(index, script=self.screen, live=self.live)
+                self.screener = Screener(index, script=self.screen_path, live=self.live)
                 if self.screener.valid():
                     self.table = index
                     self.type = 'index'
@@ -174,11 +172,11 @@ class Interface:
                 self.screener = None
                 utils.print_error(f'Index {index} has no symbols')
 
-    def select_ticker(self):
+    def select_ticker(self) -> None:
         ticker = utils.input_text('Enter ticker: ')
         ticker = ticker.upper()
         if store.is_ticker_valid(ticker):
-            self.screener = Screener(ticker, script=self.screen, live=self.live)
+            self.screener = Screener(ticker, script=self.screen_path, live=self.live)
             if self.screener.valid():
                 self.table = ticker
                 self.type = 'symbol'
@@ -187,7 +185,7 @@ class Interface:
             self.screener = None
             utils.print_error(f'{ticker} not valid')
 
-    def select_screen(self):
+    def select_screen(self) -> None:
         self.script = []
         self.results = []
         self.valids = 0
@@ -211,23 +209,24 @@ class Interface:
 
             selection = utils.menu(menu_items, 'Select Screen', 0, index+1)
             if selection > 0:
-                self.screen = self.script[selection-1]
+                self.screen_base = self.script[selection-1]
+                self.screen_path = BASEPATH + self.screen_base + SCREEN_SUFFIX
                 self.results = []
 
                 if self.screener is not None:
-                    if not self.screener.load_script(self.screen):
+                    if not self.screener.load_script(self.screen_path):
                         utils.print_error('Error in script file')
 
         else:
             utils.print_message('No screener files found')
 
-    def run_screen(self, progressbar=True) -> bool:
+    def run_screen(self, progressbar:bool=True) -> bool:
         success = False
         if not self.table:
             utils.print_error('No table specified')
-        elif not self.screen:
+        elif not self.screen_path:
             utils.print_error('No screen specified')
-        elif self.screener.load_script(self.screen):
+        elif self.screener.load_script(self.screen_path):
             self.results = []
             self.valids = 0
             self.task = threading.Thread(target=self.screener.run_script)
@@ -259,33 +258,42 @@ class Interface:
 
         return success
 
-    def print_results(self, all=False):
+    def print_results(self, all:bool=False, verbose:bool=True) -> None:
         if not self.table:
             utils.print_error('No table specified')
-        elif not self.screen:
+        elif not self.screen_base:
             utils.print_error('No screen specified')
         elif len(self.results) == 0:
             utils.print_message('No symbols were located')
         else:
-            utils.print_message('Symbols Identified')
-            index = 0
+            utils.print_message(f'Symbols Identified ({self.screen_base})')
 
-            self.results = sorted(self.results, key=str)
+            if all:
+                self.results = sorted(self.results, reverse=True, key=lambda x: sum(x.values))
+            else:
+                self.results = sorted(self.results, key=str)
+
+            index = 0
             for result in self.results:
                 if all:
                     index += 1
-                    print(f'{result} ({sum(result.values)})')
-                    if (index) % 20 == 0:
-                        print()
+                    if verbose:
+                        print(f'{result}:\t{sum(result.values)}')
+                    else:
+                        print(f'{result}')
                 elif result:
                     index += 1
-                    print(f'{result} ', end='')
-                    if (index) % 20 == 0:
-                        print()
-
+                    if verbose:
+                        print(type(result.company))
+                        print(f'{result}:\t{sum(result.values)}')
+                    else:
+                        print(f'{result} ', end='')
+                        if index % 20 == 0: # Print 20 at a time
+                            print()
         print()
 
-    def _show_progress(self, prefix, suffix):
+    def _show_progress(self, prefix, suffix) -> None:
+        # Wait for thread to initialize
         while not self.screener.task_error: pass
 
         if self.screener.task_error == 'None':
@@ -312,9 +320,7 @@ class Interface:
 if __name__ == '__main__':
     import argparse
 
-    # Create the top-level parser
     parser = argparse.ArgumentParser(description='Screener')
-
     parser.add_argument('-t', '--table', help='Specify a symbol or table', required=False, default='')
     parser.add_argument('-s', '--screen', help='Specify a screening script', required=False, default='')
     parser.add_argument('-r', '--run', help='Run the script (only valid with -t and -s)', action='store_true')

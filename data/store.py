@@ -180,6 +180,7 @@ def get_company(ticker, live:bool=False) -> dict:
                 results['sector'] = company.info['sector']
                 results['industry'] = company.info['industry']
                 results['exchange'] = company.info['exchange']
+                results['beta'] = company.info['beta']
                 results['indexes'] = ''
                 results['precords'] = 0
             except KeyError:

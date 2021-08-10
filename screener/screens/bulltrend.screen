@@ -103,5 +103,26 @@
          "series":"na",
          "factor":1.0
       }
+   },
+   {
+      "note":"Beta above 1.0",
+      "base":{
+         "technical":"nop",
+         "length":0,
+         "start":-1,
+         "stop":0,
+         "series":"na",
+         "factor":1.0
+      },
+      "criteria":{
+         "conditional":"gt",
+         "technical":"value",
+         "value":1.0,
+         "length":0,
+         "start":-1,
+         "stop":0,
+         "series":"na",
+         "factor":1.0
+      }
    }
 ]

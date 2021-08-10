@@ -53,7 +53,7 @@ class Screener(Threaded):
         return f'{self.table}/{self.script_name}'
 
     class Result:
-        def __init__(self, company:Company, results:list[bool]) -> None:
+        def __init__(self, company:Company, results:list[bool]):
             self.company = company
             self.values = results
 
@@ -62,7 +62,6 @@ class Screener(Threaded):
 
         def __bool__(self):
             return all(self.values)
-
 
     def load_script(self, script:str) -> bool:
         self.script = None

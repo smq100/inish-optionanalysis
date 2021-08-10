@@ -58,6 +58,11 @@ class Company:
 
         return self.history['volume']
 
+    def get_beta(self) -> float:
+        company = store.get_company(self.ticker, live=True)
+
+        return company['beta']
+
     def _load_history(self, info=False):
         self.history = store.get_history(self.ticker, self.days, live=self.live)
         if self.history is None:

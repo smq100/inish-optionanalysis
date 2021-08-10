@@ -6,7 +6,7 @@ from utils import utils as utils
 
 _logger = utils.get_logger()
 
-VALID_TECHNICALS = ('high', 'low', 'close', 'volume', 'sma', 'rsi', 'value') # 'value' always last
+VALID_TECHNICALS = ('high', 'low', 'close', 'volume', 'sma', 'rsi', 'beta', 'nop', 'value') # 'value' always last
 VALID_CONDITIONALS = ('lt', 'eq', 'gt')
 VALID_SERIES = ('min', 'max', 'na')
 
@@ -65,7 +65,9 @@ class Interpreter:
         return self._calculate()
 
     def _calculate(self):
-        # base value
+        calculate = True
+
+        # Base value
         if self.base_technical == VALID_TECHNICALS[2]: # close
             self.base = self._get_base_close()
         elif self.base_technical == VALID_TECHNICALS[3]: # volume
@@ -74,11 +76,17 @@ class Interpreter:
             self.base = self._get_base_sma()
         elif self.base_technical == VALID_TECHNICALS[5]: # rsi
             self.base = self._get_base_rsi()
+        elif self.base_technical == VALID_TECHNICALS[6]: # beta
+            self.base = self._get_base_beta()
+        elif self.base_technical == VALID_TECHNICALS[7]: # nop
+            calculate = False
         else:
-            raise SyntaxError('Invalid "base technical" specified in script')
+            raise SyntaxError('Invalid "base technical" specified in screen file')
 
-        # Criteria
-        if self.criteria_technical == VALID_TECHNICALS[-1]: # value
+        # Criteria value
+        if not calculate:
+            pass
+        elif self.criteria_technical == VALID_TECHNICALS[-1]: # value
             self.value = self._get_value()
         elif self.criteria_technical == VALID_TECHNICALS[0]: # high
             self.value = self._get_value_high()
@@ -91,9 +99,9 @@ class Interpreter:
         elif self.criteria_technical == VALID_TECHNICALS[4]: # sma
             self.value = self._get_value_sma()
         else:
-            raise SyntaxError('Invalid "criteria technical" specified in script')
+            raise SyntaxError('Invalid "criteria technical" specified in screen file')
 
-        return self._calc_comparison()
+        return self._calc_comparison() if calculate else True
 
     def _calc_comparison(self) -> bool:
         result = False
@@ -174,6 +182,11 @@ class Interpreter:
         stop = None if self.base_stop == 0 else self.base_stop
         sl = slice(start, stop)
         return self.company.ta.calc_rsi()[sl]
+
+    def _get_base_beta(self) -> pd.Series:
+        value = self.company.get_beta()
+        beta = pd.Series(value)
+        return beta
 
     def _get_value(self) -> pd.Series:
         value = self.criteria_value
