@@ -64,17 +64,16 @@ class Company:
 
         return self.info['beta']
 
+    def get_liveinfo(self) -> dict:
+        return store.get_company(self.ticker, live=True)
+
     def _load_history(self):
         self.history = store.get_history(self.ticker, self.days, live=self.live)
         if self.history is None:
             raise RuntimeError('history is None')
 
-        # self._load_company()
-
         self.ta = Technical(self.ticker, self.history, self.days, live=self.live)
 
-    def _load_company(self):
-        self.info = store.get_company(self.ticker, live=True)
 
 
 if __name__ == '__main__':

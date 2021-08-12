@@ -157,7 +157,7 @@ class Interface:
                     f'Symbols populated in {self.manager.task_time:.2f} seconds with {len(self.manager.invalid_tickers)} invalid symbols')
 
             for i, result in enumerate(self.manager.task_results):
-                utils.print_message(f'{i+1:>2}: {result}', creturn=False)
+                utils.print_message(f'{i+1:>2}: {result}')
 
     def refresh_exchange(self, progressbar=True):
         menu_items = {}
@@ -176,7 +176,7 @@ class Interface:
                 self._show_progress('Progress', 'Completed')
 
             print()
-            utils.print_message(f'Identified {self.manager.task_total} missing items. {self.manager.task_success} items filled', creturn=0)
+            utils.print_message(f'Identified {self.manager.task_total} missing items. {self.manager.task_success} items filled')
 
     def update_pricing(self, ticker:str ='', progressbar=True):
         menu_items = {}
@@ -217,7 +217,7 @@ class Interface:
                     f'Ticker pricing refreshed in {self.manager.task_time:.2f} seconds')
 
             for i, result in enumerate(self.manager.task_results):
-                utils.print_message(f'{i+1:>2}: {result}', creturn=False)
+                utils.print_message(f'{i+1:>2}: {result}')
 
     def delete_exchange(self, progressbar=True):
         menu_items = {}

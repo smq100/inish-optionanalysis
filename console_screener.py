@@ -104,12 +104,13 @@ class Interface:
                 self.select_screen()
             elif selection == 6:
                 if self.run_screen():
-                    if self.run:
-                        self.print_results()
-                    elif len(self.results) < 20:
-                        self.print_results()
+                    if self.valids > 0:
+                        if self.run:
+                            self.print_results()
+                        elif self.valids < 20:
+                            self.print_results()
             elif selection == 7:
-                self.print_results()
+                self.print_results(verbose=True)
             elif selection == 0:
                 self.run = True
 
@@ -247,7 +248,7 @@ class Interface:
                 utils.print_message(f'{self.valids} Symbols Identified in {self.screener.task_time:.2f} seconds')
 
                 for i, result in enumerate(self.screener.task_results):
-                    utils.print_message(f'{i+1:>2}: {result}', creturn=False)
+                    utils.print_message(f'{i+1:>2}: {result}', creturn=0)
 
                 success = True
             else:
@@ -258,7 +259,7 @@ class Interface:
 
         return success
 
-    def print_results(self, all:bool=False, verbose:bool=True) -> None:
+    def print_results(self, all:bool=False, verbose:bool=False) -> None:
         if not self.table:
             utils.print_error('No table specified')
         elif not self.screen_base:
@@ -284,12 +285,13 @@ class Interface:
                 elif result:
                     index += 1
                     if verbose:
-                        # utils.print_line(f'{result.company.info["shortName"]}')
-                        print(f'{result}:\t{sum(result.values)}')
+                        company = result.company.get_liveinfo()
+                        print(f'{result} - {company["shortName"]}')
                     else:
                         print(f'{result} ', end='')
                         if index % 20 == 0: # Print 20 per line
                             print()
+        print()
         print()
 
     def _show_progress(self, prefix, suffix) -> None:

@@ -162,19 +162,6 @@ class Screener(Threaded):
         return bool(self.table)
 
 
-    # Minervini:
-    # Condition 1:  The current stock price is above the 150-day (30-week) moving average price lines
-    # Condition 2:  The current stock price is above the 200-day (40-week) moving average price lines
-    # Condition 3:  The 150-day moving average is above the 200-day moving average
-    # Condition 4:  The 200-day moving average line is trending up for at least 1 month (preferably 4–5 months minimum in most cases)
-    # Condition 5:  The 50-day (10-week) moving average is above the 150-day moving average
-    # Condition 6:  The 50-day (10-week) moving average is above the 200 day moving average
-    # Condition 7:  The current stock price is trading above the 50-day moving average
-    # Condition 8:  The current stock price is at least 25% above its 52-week low (30% as per his book 'Trade Like a Stock Market Wizard')
-    # Condition 9:  The current stock price is within at least 25% of its 52-week high (the closer to a new high the better)
-    # Condition 10: The Relative Strength ranking (RS ranking), as reported in Investor’s Business Daily, is no less than 70
-
-
 if __name__ == '__main__':
     import logging
 
