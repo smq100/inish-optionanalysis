@@ -121,13 +121,51 @@ def get_option_chain(ticker:str) -> dict:
 
     return chain
 
-def get_recomendations(ticker:str):
-    rec = None
-    company = yf.Ticker(ticker)
-    if company is not None:
-        rec = company.recommendations
+def get_rating(ticker:str):
+    ratings = {
+        'sell': 4,
+        'strongsell': 5,
+        'weaksell': 4,
+        'underperform': 4,
+        'hold': 3,
+        'neutral': 3,
+        'overperform': 2,
+        'outperform': 2,
+        'buy': 5,
+        'strongbuy': 5,
+        'weakbuy': 4,
+        'underweight': 4,
+        'overweight': 2,
+        'equalweight': 3,
+        'sectorperform': 2,
+        'marketperform': 2,
+        }
 
-    return rec
+    rating = pd.DataFrame
+    rank = []
+    try:
+        company = yf.Ticker(ticker)
+        if company is not None:
+            rating = company.recommendations
+            end = dt.date.today()
+            start = end - dt.timedelta(days=60)
+            rating = rating.loc[start:end]
+    except Exception as e:
+        _logger.error(f'{__name__}: Unable to get recommendations for {ticker}: {str(e)}')
+
+    # Normalize text
+    rating.reset_index()
+    rating = rating['To Grade'].replace(' ', '', regex=True)
+    rating = rating.replace('-', '', regex=True)
+    rating = rating.str.lower().tolist()
+
+    # Log any unhandled ranking so we can add it to the rankings list
+    [_logger.warning(f'{__name__}: Unhandled ranking: {r} for {ticker}') for r in rating if not r in ratings]
+
+    rating = [r for r in rating if r in ratings]
+    rating = [ratings[r] for r in rating]
+
+    return rating
 
 def get_treasury_rate(ticker:str) -> float:
     df = pd.DataFrame()
@@ -142,8 +180,11 @@ def get_treasury_rate(ticker:str) -> float:
 if __name__ == '__main__':
     # from logging import DEBUG
     # _logger = utils.get_logger(DEBUG)
-
-    print(get_recomendations('AMD').iloc[-1].name)
+    import sys
+    if len(sys.argv) > 1:
+        print(get_rating(sys.argv[1]))
+    else:
+        print(get_rating('aapl'))
 
     # c = get_company_ex('AAPL')
     # c = get_history_q('AAPL', days=-1)

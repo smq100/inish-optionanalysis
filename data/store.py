@@ -273,6 +273,14 @@ def get_index_tickers_master(index, type:str='google') -> list[str]:
 
     return symbols
 
+def get_rating(ticker:str) -> float:
+    average_recomendations = 3.0
+    recommendations = fetcher.get_rating(ticker)
+    if recommendations:
+        average_recomendations = sum(recommendations) / len(recommendations)
+
+    return average_recomendations
+
 def get_option_expiry(ticker:str) -> tuple:
     return fetcher.get_option_expiry(ticker)
 

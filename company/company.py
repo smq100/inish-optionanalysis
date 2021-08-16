@@ -64,6 +64,9 @@ class Company:
 
         return self.info['beta']
 
+    def get_rating(self) -> list[int]:
+        return store.get_rating(self.ticker)
+
     def get_liveinfo(self) -> dict:
         return store.get_company(self.ticker, live=True)
 

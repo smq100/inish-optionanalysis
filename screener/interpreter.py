@@ -5,7 +5,7 @@ from utils import utils as utils
 
 _logger = utils.get_logger()
 
-VALID_TECHNICALS = ('high', 'low', 'close', 'volume', 'sma', 'rsi', 'beta', 'value', 'true', 'false')
+VALID_TECHNICALS = ('high', 'low', 'close', 'volume', 'sma', 'rsi', 'beta', 'rating', 'value', 'true', 'false')
 VALID_CONDITIONALS = ('lt', 'eq', 'gt')
 VALID_SERIES = ('min', 'max', 'na')
 
@@ -78,10 +78,12 @@ class Interpreter:
             self.base = self._get_base_rsi()
         elif self.base_technical == VALID_TECHNICALS[6]: # beta
             self.base = self._get_base_beta()
-        elif self.base_technical == VALID_TECHNICALS[8]: # true
+        elif self.base_technical == VALID_TECHNICALS[7]: # rating
+            self.base = self._get_base_rating()
+        elif self.base_technical == VALID_TECHNICALS[9]: # true
             calculate = False
             result = True
-        elif self.base_technical == VALID_TECHNICALS[9]: # false
+        elif self.base_technical == VALID_TECHNICALS[10]: # false
             calculate = False
             result = False
         else:
@@ -90,7 +92,7 @@ class Interpreter:
         # Criteria value
         if not calculate:
             pass
-        elif self.criteria_technical == VALID_TECHNICALS[7]: # value
+        elif self.criteria_technical == VALID_TECHNICALS[8]: # value
             self.value = self._get_value()
         elif self.criteria_technical == VALID_TECHNICALS[0]: # high
             self.value = self._get_value_high()
@@ -191,6 +193,11 @@ class Interpreter:
         value = self.company.get_beta()
         beta = pd.Series(value)
         return beta
+
+    def _get_base_rating(self) -> pd.Series:
+        value = self.company.get_rating()
+        rating = pd.Series(value)
+        return rating
 
     def _get_value(self) -> pd.Series:
         value = self.criteria_value
