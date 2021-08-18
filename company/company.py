@@ -13,6 +13,7 @@ class Company:
         self.live = live
         self.info = None
         self.history = None
+        self.company = None
         self.ta = None
 
         if days < 1:
@@ -23,6 +24,7 @@ class Company:
 
         if not lazy:
             self._load_history()
+            self._load_company()
 
     def __str__(self):
         output = f'{self.ticker}'
@@ -59,24 +61,39 @@ class Company:
         return self.history['volume']
 
     def get_beta(self) -> float:
-        if self.info is None:
+        if self.company is None:
             self._load_company()
 
-        return self.info['beta']
+        return self.company['beta']
 
-    def get_rating(self) -> list[int]:
-        return store.get_rating(self.ticker)
+    def get_rating(self) -> float:
+        if self.company is None:
+            self._load_company()
+
+        return self.company['rating']
+
+    def get_marketcap(self) -> int:
+        if self.company is None:
+            self._load_company()
+
+        return self.company['marketcap']
 
     def get_liveinfo(self) -> dict:
-        return store.get_company(self.ticker, live=True)
+        self.info = store.get_company(self.ticker, live=True)
+
+        return self.info
 
     def _load_history(self):
         self.history = store.get_history(self.ticker, self.days, live=self.live)
         if self.history is None:
-            raise RuntimeError('history is None')
+            raise RuntimeError('History is None')
 
         self.ta = Technical(self.ticker, self.history, self.days, live=self.live)
 
+    def _load_company(self):
+        self.company = store.get_company(self.ticker, live=self.live)
+        if self.company is None:
+            raise RuntimeError('Company is None')
 
 
 if __name__ == '__main__':

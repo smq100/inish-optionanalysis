@@ -190,14 +190,12 @@ class Interpreter:
         return self.company.ta.calc_rsi()[sl]
 
     def _get_base_beta(self) -> pd.Series:
-        value = self.company.get_beta()
-        beta = pd.Series(value)
-        return beta
+        beta = self.company.get_beta()
+        return pd.Series(beta)
 
     def _get_base_rating(self) -> pd.Series:
-        value = self.company.get_rating()
-        rating = pd.Series(value)
-        return rating
+        rating = self.company.get_rating()
+        return pd.Series(rating)
 
     def _get_value(self) -> pd.Series:
         value = self.criteria_value

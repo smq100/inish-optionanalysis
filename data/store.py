@@ -175,17 +175,16 @@ def get_company(ticker, live:bool=False) -> dict:
     if live:
         company = fetcher.get_company_ex(ticker)
         if company is not None:
-            # results['beta'] = company.info['beta']
-            # results['shortName'] = company.info['shortName']
             results = company.info
-    else:
-        results['name'] = ''
-        results['description'] = ''
-        results['url'] = ''
-        results['sector'] = ''
-        results['industry'] = ''
-        results['exchange'] = ''
 
+            # Remap differing YFinance keys to our key names
+            results['name'] = company.info['shortName']
+            results['description'] = company.info['longBusinessSummary']
+            results['url'] = company.info['website']
+            results['marketcap'] = company.info['marketCap']
+            ratings = fetcher.get_ratings(ticker)
+            results['rating'] = float(sum(ratings)) / float(len(ratings)) if ratings else 3.0
+    else:
         with _session() as session:
             symbol = session.query(models.Security).filter(models.Security.ticker==ticker.upper()).one_or_none()
             if symbol is not None:
@@ -196,6 +195,9 @@ def get_company(ticker, live:bool=False) -> dict:
                     results['url'] = company.url
                     results['sector'] = company.sector
                     results['industry'] = company.industry
+                    results['marketcap'] = company.marketcap
+                    results['beta'] = company.beta
+                    results['rating'] = company.rating
 
                 # Exchange
                 exc = session.query(models.Exchange.abbreviation).filter(models.Exchange.id==symbol.exchange_id).one_or_none()
@@ -216,6 +218,7 @@ def get_company(ticker, live:bool=False) -> dict:
                             index = session.query(models.Index).filter(models.Index.id==symbol.index3_id).one().abbreviation
                             results['indexes'] += f', {index}'
 
+                # Pricing records
                 p = session.query(models.Price).filter(models.Price.security_id==symbol.id).count()
                 results['precords'] = p
 
@@ -272,14 +275,6 @@ def get_index_tickers_master(index, type:str='google') -> list[str]:
         raise ValueError(f'Invalid index name: {index}')
 
     return symbols
-
-def get_rating(ticker:str) -> float:
-    average_recomendations = 3.0
-    recommendations = fetcher.get_rating(ticker)
-    if recommendations:
-        average_recomendations = sum(recommendations) / len(recommendations)
-
-    return average_recomendations
 
 def get_option_expiry(ticker:str) -> tuple:
     return fetcher.get_option_expiry(ticker)

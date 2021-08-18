@@ -121,51 +121,66 @@ def get_option_chain(ticker:str) -> dict:
 
     return chain
 
-def get_rating(ticker:str):
-    ratings = {
-        'sell': 4,
-        'strongsell': 5,
-        'weaksell': 4,
-        'underperform': 4,
-        'hold': 3,
-        'neutral': 3,
-        'overperform': 2,
-        'outperform': 2,
-        'buy': 5,
-        'strongbuy': 5,
-        'weakbuy': 4,
-        'underweight': 4,
-        'overweight': 2,
-        'equalweight': 3,
-        'sectorperform': 2,
-        'marketperform': 2,
-        }
+_RATINGS = {
+    'strongsell': 5,
+    'sell': 5,
+    'weaksell': 4,
+    'underperform': 4,
+    'marketunderperform': 4,
+    'sectorunderperform': 4,
+    'weakbuy': 4,
+    'reduce': 4,
+    'underweight': 4,
+    'hold': 3,
+    'neutral': 3,
+    'perform': 3,
+    'mixed': 3,
+    'peerperform': 3,
+    'equalweight': 3,
+    'overperform': 2,
+    'outperform': 2,
+    'marketoutperform': 2,
+    'sectoroutperform': 2,
+    'positive': 2,
+    'overweight': 2,
+    'sectorperform': 2,
+    'marketperform': 2,
+    'add': 2,
+    'buy': 1,
+    'strongbuy': 1,
+    }
 
-    rating = pd.DataFrame
-    rank = []
+def get_ratings(ticker:str):
+    ratings = pd.DataFrame
     try:
         company = yf.Ticker(ticker)
         if company is not None:
-            rating = company.recommendations
-            end = dt.date.today()
-            start = end - dt.timedelta(days=60)
-            rating = rating.loc[start:end]
+            ratings = company.recommendations
+            if ratings is not None:
+                end = dt.date.today()
+                start = end - dt.timedelta(days=60)
+                ratings = ratings.loc[start:end]
+
+                # Normalize rating text
+                ratings.reset_index()
+                ratings = ratings['To Grade'].replace(' ', '', regex=True)
+                ratings = ratings.replace('-', '', regex=True)
+                ratings = ratings.replace('_', '', regex=True)
+                ratings = ratings.str.lower().tolist()
+
+                # Log any unhandled ranking so we can add it to the ratings list
+                [_logger.error(f'{__name__}: Unhandled rating: {r} for {ticker}') for r in ratings if not r in _RATINGS]
+
+                ratings = [r for r in ratings if r in _RATINGS]
+                ratings = [_RATINGS[r] for r in ratings]
+            else:
+                _logger.info(f'{__name__}: No ratings for {ticker}')
+        else:
+            _logger.warning(f'{__name__}: Unable to get ratings for {ticker}. No company info')
     except Exception as e:
-        _logger.error(f'{__name__}: Unable to get recommendations for {ticker}: {str(e)}')
+        _logger.error(f'{__name__}: Unable to get ratings for {ticker}: {str(e)}')
 
-    # Normalize text
-    rating.reset_index()
-    rating = rating['To Grade'].replace(' ', '', regex=True)
-    rating = rating.replace('-', '', regex=True)
-    rating = rating.str.lower().tolist()
-
-    # Log any unhandled ranking so we can add it to the rankings list
-    [_logger.warning(f'{__name__}: Unhandled ranking: {r} for {ticker}') for r in rating if not r in ratings]
-
-    rating = [r for r in rating if r in ratings]
-    rating = [ratings[r] for r in rating]
-
-    return rating
+    return ratings
 
 def get_treasury_rate(ticker:str) -> float:
     df = pd.DataFrame()
@@ -182,9 +197,9 @@ if __name__ == '__main__':
     # _logger = utils.get_logger(DEBUG)
     import sys
     if len(sys.argv) > 1:
-        print(get_rating(sys.argv[1]))
+        print(get_ratings(sys.argv[1]))
     else:
-        print(get_rating('aapl'))
+        print(get_ratings('aapl'))
 
     # c = get_company_ex('AAPL')
     # c = get_history_q('AAPL', days=-1)

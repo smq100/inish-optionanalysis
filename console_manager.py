@@ -114,6 +114,9 @@ class Interface:
                     utils.print_message(f'{ticker} Company Information')
                     print(f'Name:\t\t{company["name"]}')
                     print(f'Exchange:\t{company["exchange"]}')
+                    print(f'Market Cap:\t{company["marketcap"]}')
+                    print(f'Beta:\t\t{company["beta"]:.2f}')
+                    print(f'Rating:\t\t{company["rating"]:.2f}')
                     print(f'Indexes:\t{company["indexes"]}')
                     print(f'Sector:\t\t{company["sector"]}')
                     print(f'Industry:\t{company["industry"]}')
@@ -280,6 +283,7 @@ class Interface:
         select = utils.input_integer('Are you sure? 1 to reset or 0 to cancel: ', 0, 1)
         if select == 1:
             self.manager.delete_database()
+            self.manager.create_database()
             self.manager.create_exchanges()
             self.manager.create_indexes()
             utils.print_message(f'Reset the database')

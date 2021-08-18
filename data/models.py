@@ -1,4 +1,4 @@
-from sqlalchemy import Column, ForeignKey, Boolean, String, Integer, Float, Date
+from sqlalchemy import Column, ForeignKey, Boolean, String, Integer, BigInteger, Float, Date
 from sqlalchemy import UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -69,10 +69,13 @@ class Company(Base):
     __tablename__ = 'company'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column('name', String(100), nullable=False)
-    description = Column('description', String(5000))
-    url = Column('url', String(250))
-    sector = Column('sector', String(200))
-    industry = Column('industry', String(200))
+    description = Column('description', String(5000), nullable=False, default='')
+    url = Column('url', String(250), nullable=False, default='')
+    sector = Column('sector', String(200), nullable=False, default='')
+    industry = Column('industry', String(200), nullable=False, default='')
+    beta = Column('beta', Float, nullable=False, default=1.0)
+    marketcap = Column('marketcap', BigInteger, nullable=False, default=0)
+    rating = Column('rating', Float, nullable=False, default=3.0)
     security_id = Column(Integer, ForeignKey('security.id', onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
     security = relationship('Security', back_populates='company')
 

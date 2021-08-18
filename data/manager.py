@@ -36,7 +36,7 @@ class Manager(Threaded):
     def create_database(self) -> None:
         models.Base.metadata.create_all(self.engine)
 
-    def delete_database(self, recreate:bool=True):
+    def delete_database(self, recreate:bool=False):
         if d.ACTIVE_DB == d.OPTIONS_DB[1]:
             if os.path.exists(d.SQLITE_DATABASE_PATH):
                 os.remove(d.SQLITE_DATABASE_PATH)
@@ -267,7 +267,7 @@ class Manager(Threaded):
 
         return nasdaq_nyse, nasdaq_amex, nyse_amex
 
-    def _refresh_pricing(self, ticker:str, session:Session) -> int:
+    def _refresh_pricing(self, ticker:str, session:Session, update_company:bool=True) -> int:
         ticker = ticker.upper()
         today = date.today()
         days = 0
@@ -315,6 +315,18 @@ class Manager(Threaded):
                                     p.volume = price['volume']
 
                                     sec.pricing += [p]
+
+                            if update_company:
+                                c = session.query(models.Company).filter(models.Company.security_id==sec.id).one()
+                                company = store.get_company(ticker, live=True)
+                                if company is None:
+                                    _logger.info(f'{__name__}: No company for {ticker}')
+                                elif len(company) == 0:
+                                    _logger.info(f'{__name__}: No company information for {ticker}')
+                                else:
+                                    c.beta = company['beta']
+                                    c.marketcap = company['marketcap']
+                                    c.rating = company['rating']
 
                         _logger.info(f'{__name__}: Updated {days} days pricing for {ticker.upper()} to {date_cloud:%Y-%m-%d}')
                     else:
@@ -386,6 +398,9 @@ class Manager(Threaded):
                 c.url = company['url']
                 c.sector = company['sector']
                 c.industry = company['industry']
+                c.beta = company['beta']
+                c.marketcap = company['marketcap']
+                c.rating = company['rating']
 
                 sec.company = [c]
                 added = True
