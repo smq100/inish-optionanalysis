@@ -7,7 +7,7 @@ _logger = utils.get_logger()
 
 VALID_TECHNICALS = ('high', 'low', 'close', 'volume', 'sma', 'rsi', 'beta', 'rating', 'value', 'true', 'false')
 VALID_CONDITIONALS = ('lt', 'eq', 'gt')
-VALID_SERIES = ('min', 'max', 'na')
+VALID_SERIES = ('min', 'max', 'none')
 
 
 class Interpreter:
@@ -20,7 +20,7 @@ class Interpreter:
         self.base_length = 0.0
         self.base_start = -1
         self.base_stop = 0
-        self.base_series = 'na'
+        self.base_series = 'none'
         self.base_factor = 1.0
         self.criteria = None
         self.criteria_conditional = ''
@@ -29,7 +29,7 @@ class Interpreter:
         self.criteria_length = 0.0
         self.criteria_start = -1
         self.criteria_stop = 0
-        self.criteria_series = 'na'
+        self.criteria_series = 'none'
         self.criteria_factor = 0.0
         self.result = False
 

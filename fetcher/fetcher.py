@@ -121,36 +121,39 @@ def get_option_chain(ticker:str) -> dict:
 
     return chain
 
-_RATINGS = {
-    'strongsell': 5,
-    'sell': 5,
-    'weaksell': 4,
-    'underperform': 4,
-    'marketunderperform': 4,
-    'sectorunderperform': 4,
-    'weakbuy': 4,
-    'reduce': 4,
-    'underweight': 4,
-    'hold': 3,
-    'neutral': 3,
-    'perform': 3,
-    'mixed': 3,
-    'peerperform': 3,
-    'equalweight': 3,
-    'overperform': 2,
-    'outperform': 2,
-    'marketoutperform': 2,
-    'sectoroutperform': 2,
-    'positive': 2,
-    'overweight': 2,
-    'sectorperform': 2,
-    'marketperform': 2,
-    'add': 2,
-    'buy': 1,
-    'strongbuy': 1,
+def get_ratings(ticker:str):
+
+    _RATINGS = {
+        'strongsell': 5,
+        'sell': 5,
+        'weaksell': 4,
+        'underperform': 4,
+        'marketunderperform': 4,
+        'sectorunderperform': 4,
+        'weakbuy': 4,
+        'reduce': 4,
+        'underweight': 4,
+        'hold': 3,
+        'neutral': 3,
+        'perform': 3,
+        'mixed': 3,
+        'inline': 3,
+        'sectorweight': 3,
+        'peerperform': 3,
+        'equalweight': 3,
+        'overperform': 2,
+        'outperform': 2,
+        'marketoutperform': 2,
+        'sectoroutperform': 2,
+        'positive': 2,
+        'overweight': 2,
+        'sectorperform': 2,
+        'marketperform': 2,
+        'add': 2,
+        'buy': 1,
+        'strongbuy': 1,
     }
 
-def get_ratings(ticker:str):
     ratings = pd.DataFrame
     try:
         company = yf.Ticker(ticker)

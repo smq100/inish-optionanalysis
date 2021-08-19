@@ -177,13 +177,17 @@ def get_company(ticker, live:bool=False) -> dict:
         if company is not None:
             results = company.info
 
-            # Remap differing YFinance keys to our key names
-            results['name'] = company.info['shortName']
-            results['description'] = company.info['longBusinessSummary']
-            results['url'] = company.info['website']
-            results['marketcap'] = company.info['marketCap']
+            # Test the keys, assign defaults if missing, and remap keys
+            results['name'] = company.info.get('shortName', 'unavailable')
+            results['description'] = company.info.get('longBusinessSummary', 'unavailable')
+            results['url'] = company.info.get('website', 'unavailable')
+            results['sector'] = company.info.get('sector', 'unavailable')
+            results['industry'] = company.info.get('industry', 'unavailable')
+            results['marketcap'] = company.info.get('marketCap', 0)
+            results['beta'] = company.info.get('beta', 3.0)
+
             ratings = fetcher.get_ratings(ticker)
-            results['rating'] = float(sum(ratings)) / float(len(ratings)) if ratings else 3.0
+            results['rating'] = sum(ratings) / float(len(ratings)) if ratings else 3.0
     else:
         with _session() as session:
             symbol = session.query(models.Security).filter(models.Security.ticker==ticker.upper()).one_or_none()
@@ -219,7 +223,7 @@ def get_company(ticker, live:bool=False) -> dict:
                             results['indexes'] += f', {index}'
 
                 # Pricing records
-                p = session.query(models.Price).filter(models.Price.security_id==symbol.id).count()
+                p = session.query(models.Price.security_id).filter(models.Price.security_id==symbol.id).count()
                 results['precords'] = p
 
     return results

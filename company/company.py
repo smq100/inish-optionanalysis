@@ -86,14 +86,14 @@ class Company:
     def _load_history(self):
         self.history = store.get_history(self.ticker, self.days, live=self.live)
         if self.history is None:
-            raise RuntimeError('History is None')
+            raise RuntimeError(f'No history for {self.ticker}')
 
         self.ta = Technical(self.ticker, self.history, self.days, live=self.live)
 
     def _load_company(self):
         self.company = store.get_company(self.ticker, live=self.live)
         if self.company is None:
-            raise RuntimeError('Company is None')
+            raise RuntimeError(f'No company info for {self.ticker}')
 
 
 if __name__ == '__main__':

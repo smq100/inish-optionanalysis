@@ -21,44 +21,23 @@
       }
    },
    {
-      "note":"Price above SMA20",
+      "note":"Price within 3% of 52 week high",
       "base":{
          "technical":"close",
          "length":0,
          "start":-1,
          "stop":0,
          "series":"none",
-         "factor":1.0
+         "factor":0.97
       },
       "criteria":{
          "conditional":"gt",
-         "technical":"sma",
-         "value":0.0,
-         "length":20,
-         "start":-1,
-         "stop":0,
-         "series":"none",
-         "factor":1.0
-      }
-   },
-   {
-      "note":"Price above SMA50",
-      "base":{
-         "technical":"close",
+         "technical":"high",
+         "value":0,
          "length":0,
-         "start":-1,
+         "start":-365,
          "stop":0,
-         "series":"none",
-         "factor":1.0
-      },
-      "criteria":{
-         "conditional":"gt",
-         "technical":"sma",
-         "value":0.0,
-         "length":50,
-         "start":-1,
-         "stop":0,
-         "series":"none",
+         "series":"max",
          "factor":1.0
       }
    },
@@ -76,27 +55,6 @@
          "conditional":"gt",
          "technical":"value",
          "value":2e6,
-         "length":0,
-         "start":-1,
-         "stop":0,
-         "series":"none",
-         "factor":1.0
-      }
-   },
-   {
-      "note":"RSI below 60",
-      "base":{
-         "technical":"rsi",
-         "length":0,
-         "start":-1,
-         "stop":0,
-         "series":"none",
-         "factor":1.0
-      },
-      "criteria":{
-         "conditional":"lt",
-         "technical":"value",
-         "value":60.0,
          "length":0,
          "start":-1,
          "stop":0,

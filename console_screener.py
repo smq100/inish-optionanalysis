@@ -15,7 +15,7 @@ SCREEN_SUFFIX = '.screen'
 
 
 class Interface:
-    def __init__(self, table='', screen='', run=False, live=False):
+    def __init__(self, table='', screen='', run=True, live=False):
         self.table = table.upper()
         self.screen_base = screen
         self.run = run
@@ -54,9 +54,9 @@ class Interface:
                 self.screen_base = ''
 
         if self.run:
-            self.main_menu(selection=6)
-        else:
             self.main_menu()
+        else:
+            self.main_menu(selection=6)
 
     def main_menu(self, selection:int=0) -> None:
         while True:
@@ -105,16 +105,16 @@ class Interface:
             elif selection == 6:
                 if self.run_screen():
                     if self.valids > 0:
-                        if self.run:
+                        if not self.run:
                             self.print_results()
                         elif self.valids < 20:
                             self.print_results()
             elif selection == 7:
                 self.print_results(verbose=True)
             elif selection == 0:
-                self.run = True
+                self.run = False
 
-            if self.run:
+            if not self.run:
                 break
 
             selection = 0
@@ -339,6 +339,6 @@ if __name__ == '__main__':
         screen = command['screen']
 
     if screen and table and command['run']:
-        Interface(table, screen, run=True)
+        Interface(table, screen, run=False)
     else:
         Interface(table, screen)
