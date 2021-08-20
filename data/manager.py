@@ -379,7 +379,7 @@ class Manager(Threaded):
                 self.task_completed += 1
 
                 if self.task_error != 'None':
-                    _logger.warning(f'{__name__}: Cancelling operation')
+                    _logger.error(f'{__name__}: Cancelling operation')
                     break
 
     def _add_company_to_security(self, ticker:str) -> bool:
@@ -387,11 +387,7 @@ class Manager(Threaded):
         with self.session.begin() as session:
             sec = session.query(models.Security).filter(models.Security.ticker==ticker).one()
             company = store.get_company(ticker, live=True)
-            if company is None:
-                _logger.info(f'{__name__}: No company for {ticker}')
-            elif len(company) == 0:
-                _logger.info(f'{__name__}: No company information for {ticker}')
-            else:
+            if company:
                 c = models.Company()
                 c.name = company['name'] if company['name'] else '<error>'
                 c.description = company['description'][:4995]
@@ -405,6 +401,8 @@ class Manager(Threaded):
                 sec.company = [c]
                 added = True
                 _logger.info(f'{__name__}: Added company information for {ticker}')
+            else:
+                _logger.warning(f'{__name__}: No company info for {ticker}')
 
         return added
 
@@ -415,10 +413,10 @@ class Manager(Threaded):
             history = store.get_history(ticker, -1, live=True)
             if history is None:
                 sec.active = False
-                _logger.info(f'{__name__}: No pricing information for {ticker}')
+                _logger.warning(f'{__name__}: No pricing information for {ticker}')
             elif history.empty:
                 sec.active = False
-                _logger.info(f'{__name__}: No pricing information for {ticker}')
+                _logger.warning(f'{__name__}: No pricing information for {ticker}')
             else:
                 history.reset_index(inplace=True)
                 try:

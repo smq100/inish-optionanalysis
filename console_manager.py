@@ -110,7 +110,7 @@ class Interface:
             ticker = ticker.upper()
             if store.is_ticker_valid(ticker):
                 company = store.get_company(ticker)
-                if company is not None:
+                if company:
                     utils.print_message(f'{ticker} Company Information')
                     print(f'Name:\t\t{company["name"]}')
                     print(f'Exchange:\t{company["exchange"]}')
@@ -126,15 +126,15 @@ class Interface:
                     utils.print_error(f'{ticker} has no company information')
 
                 history = store.get_history(ticker, 0)
-                if not history.empty:
+                if history.empty:
+                    utils.print_error(f'{ticker} has no price history')
+                else:
                     print(f'Latest Record:\t{history["date"]:%Y-%m-%d}, closed at ${history["close"]:.2f}')
-
-                utils.print_message(f'{ticker} Recent Price History')
-                history = store.get_history(ticker, 10)
-                if not history.empty:
-                    history.set_index('date', inplace=True)
-                    print(history.round(2))
-
+                    utils.print_message(f'{ticker} Recent Price History')
+                    history = store.get_history(ticker, 10)
+                    if not history.empty:
+                        history.set_index('date', inplace=True)
+                        print(history.round(2))
             else:
                 utils.print_error(f'{ticker} not found')
 

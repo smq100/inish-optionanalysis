@@ -37,9 +37,9 @@ def validate_ticker(ticker:str) -> bool:
     return valid
 
 elasped = 0.0
-def get_company_ex(ticker:str) -> pd.DataFrame:
-    global elasped
+def get_company_live(ticker:str) -> pd.DataFrame:
     company = None
+    global elasped
 
     # Throttle requests to help avoid being cut off by Yahoo
     while time.perf_counter() - elasped < THROTTLE: time.sleep(THROTTLE)
@@ -50,15 +50,16 @@ def get_company_ex(ticker:str) -> pd.DataFrame:
         if company is not None:
             # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
             _ = company.info
-    except:
+    except Exception as e:
+        _logger.warning(f'{__name__}: No company found for {ticker}: {str(e)}')
         company = None
 
     return company
 
-def get_history(ticker:str, days:int=-1) -> pd.DataFrame:
+def get_history_live(ticker:str, days:int=-1) -> pd.DataFrame:
     history = None
 
-    company = get_company_ex(ticker)
+    company = get_company_live(ticker)
     if company is not None:
         if days < 0:
             days = 7300 # 20 years
@@ -82,7 +83,7 @@ def get_history(ticker:str, days:int=-1) -> pd.DataFrame:
                     _logger.info(f'{__name__}: Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
                     break
             except Exception as e:
-                _logger.error(f'{__name__}: Unable to fetch live history of {ticker} starting {start:%Y-%m-%d}: {e}')
+                _logger.error(f'{__name__}: Retrying to fetch history of {ticker} starting {start:%Y-%m-%d}: {e}')
                 time.sleep(1)
                 history = None
 
@@ -107,7 +108,7 @@ def get_history_q(ticker:str, days:int=-1) -> pd.DataFrame:
     return history
 
 def get_option_expiry(ticker:str) -> dict:
-    company = get_company_ex(ticker)
+    company = get_company_live(ticker)
     value = company.options
 
     return value
@@ -115,14 +116,13 @@ def get_option_expiry(ticker:str) -> dict:
 def get_option_chain(ticker:str) -> dict:
     chain = None
 
-    company = get_company_ex(ticker)
+    company = get_company_live(ticker)
     if company is not None:
         chain = company.option_chain
 
     return chain
 
 def get_ratings(ticker:str):
-
     _RATINGS = {
         'strongsell': 5,
         'sell': 5,
@@ -154,7 +154,7 @@ def get_ratings(ticker:str):
         'strongbuy': 1,
     }
 
-    ratings = pd.DataFrame
+    ratings = []
     try:
         company = yf.Ticker(ticker)
         if company is not None:
@@ -198,13 +198,14 @@ def get_treasury_rate(ticker:str) -> float:
 if __name__ == '__main__':
     # from logging import DEBUG
     # _logger = utils.get_logger(DEBUG)
-    import sys
-    if len(sys.argv) > 1:
-        print(get_ratings(sys.argv[1]))
-    else:
-        print(get_ratings('aapl'))
+    # import sys
+    # if len(sys.argv) > 1:
+    #     print(get_ratings(sys.argv[1]))
+    # else:
+    #     print(get_ratings('aapl'))
 
-    # c = get_company_ex('AAPL')
+    c = get_company_live('AAPL')
+    print(c)
     # c = get_history_q('AAPL', days=-1)
 
     # start = dt.datetime.today() - dt.timedelta(days=10)

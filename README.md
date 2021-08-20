@@ -1,4 +1,4 @@
-# Securities and Markets Analysis Framework
+# Securities and Market Analysis Framework
 
 This is my personal securities and markets analysis framework.
 

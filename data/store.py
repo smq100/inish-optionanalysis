@@ -132,7 +132,7 @@ def get_current_price(ticker:str) -> float:
 def get_history(ticker, days:int, live:bool=False) -> pd.DataFrame:
     results = pd.DataFrame
     if live:
-        results = fetcher.get_history(ticker, days)
+        results = fetcher.get_history_live(ticker, days)
     else:
         with _session() as session:
             symbols = session.query(models.Security.id).filter(and_(models.Security.ticker==ticker.upper(), models.Security.active)).one_or_none()
@@ -169,11 +169,9 @@ def get_history(ticker, days:int, live:bool=False) -> pd.DataFrame:
 
 def get_company(ticker, live:bool=False) -> dict:
     results = {}
-    results['indexes'] = ''
-    results['precords'] = 0
 
     if live:
-        company = fetcher.get_company_ex(ticker)
+        company = fetcher.get_company_live(ticker)
         if company is not None:
             results = company.info
 
@@ -188,6 +186,9 @@ def get_company(ticker, live:bool=False) -> dict:
 
             ratings = fetcher.get_ratings(ticker)
             results['rating'] = sum(ratings) / float(len(ratings)) if ratings else 3.0
+
+            results['indexes'] = ''
+            results['precords'] = 0
     else:
         with _session() as session:
             symbol = session.query(models.Security).filter(models.Security.ticker==ticker.upper()).one_or_none()
@@ -203,28 +204,31 @@ def get_company(ticker, live:bool=False) -> dict:
                     results['beta'] = company.beta
                     results['rating'] = company.rating
 
-                # Exchange
-                exc = session.query(models.Exchange.abbreviation).filter(models.Exchange.id==symbol.exchange_id).one_or_none()
-                if exc is not None:
-                    results['exchange'] = exc.abbreviation
+                    # Exchange
+                    exc = session.query(models.Exchange.abbreviation).filter(models.Exchange.id==symbol.exchange_id).one_or_none()
+                    if exc is not None:
+                        results['exchange'] = exc.abbreviation
 
-                # Indexes
-                results['indexes'] = 'None'
-                if symbol.index1_id is not None:
-                    index = session.query(models.Index).filter(models.Index.id==symbol.index1_id).one().abbreviation
-                    results['indexes'] = index
+                    # Indexes
+                    results['indexes'] = 'None'
+                    if symbol.index1_id is not None:
+                        index = session.query(models.Index).filter(models.Index.id==symbol.index1_id).one().abbreviation
+                        results['indexes'] = index
 
-                    if symbol.index2_id is not None:
-                        index = session.query(models.Index).filter(models.Index.id==symbol.index2_id).one().abbreviation
-                        results['indexes'] += f', {index}'
-
-                        if symbol.index3_id is not None:
-                            index = session.query(models.Index).filter(models.Index.id==symbol.index3_id).one().abbreviation
+                        if symbol.index2_id is not None:
+                            index = session.query(models.Index).filter(models.Index.id==symbol.index2_id).one().abbreviation
                             results['indexes'] += f', {index}'
 
-                # Pricing records
-                p = session.query(models.Price.security_id).filter(models.Price.security_id==symbol.id).count()
-                results['precords'] = p
+                            if symbol.index3_id is not None:
+                                index = session.query(models.Index).filter(models.Index.id==symbol.index3_id).one().abbreviation
+                                results['indexes'] += f', {index}'
+
+                    # Pricing records
+                    results['precords'] = session.query(models.Price.security_id).filter(models.Price.security_id==symbol.id).count()
+                else:
+                    _logger.warning(f'{__name__}: No company information for {ticker}')
+            else:
+                _logger.warning(f'{__name__}: No ticker located for {ticker}')
 
     return results
 

@@ -8,7 +8,7 @@ import data as d
 from data import store as store
 from utils import utils as utils
 
-logger = utils.get_logger(logging.ERROR)
+logger = utils.get_logger(logging.WARNING)
 
 BASEPATH = os.getcwd()+'/screener/screens/'
 SCREEN_SUFFIX = '.screen'
