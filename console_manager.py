@@ -49,16 +49,15 @@ class Interface:
             '1': 'Database Information',
             '2': 'Symbol Information',
             '3': 'Populate Exchange',
-            '4': 'Refresh Exchange',
-            '5': 'Update Pricing',
-            '6': 'Populate Index',
-            '7': 'Reset Database',
+            '4': 'Update History',
+            '5': 'Populate Index',
+            '6': 'Reset Database',
             '0': 'Exit'
         }
 
         while True:
             if not self.ticker:
-                selection = utils.menu(menu_items, 'Select Operation', 0, 7)
+                selection = utils.menu(menu_items, 'Select Operation', 0, 6)
 
             if selection == 1:
                 self.show_database_information()
@@ -67,12 +66,10 @@ class Interface:
             elif selection == 3:
                 self.populate_exchange()
             elif selection == 4:
-                self.refresh_exchange()
+                self.update_history(self.ticker)
             elif selection == 5:
-                self.update_pricing(self.ticker)
-            elif selection == 6:
                 self.populate_index()
-            elif selection == 7:
+            elif selection == 6:
                 self.reset_database()
             elif selection == 0:
                 break
@@ -181,7 +178,7 @@ class Interface:
             print()
             utils.print_message(f'Identified {self.manager.task_total} missing items. {self.manager.task_success} items filled')
 
-    def update_pricing(self, ticker:str ='', progressbar=True):
+    def update_history(self, ticker:str ='', progressbar=True):
         menu_items = {}
         for i, exchange in enumerate(self.exchanges):
             menu_items[f'{i+1}'] = f'{exchange}'
@@ -203,12 +200,12 @@ class Interface:
                 if not valid:
                     utils.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
                 else:
-                    days = self.manager.update_pricing_ticker(ticker)
+                    days = self.manager.update_history_ticker(ticker)
                     utils.print_message(f'Added {days} days pricing for {ticker}')
                     self.show_symbol_information(ticker=ticker)
         elif select > 0:
             exc = self.exchanges[select-1] if select <= len(d.EXCHANGES) else ''
-            self.task = threading.Thread(target=self.manager.update_pricing_exchange, args=[exc])
+            self.task = threading.Thread(target=self.manager.update_history_exchange, args=[exc])
             self.task.start()
 
             if progressbar:
@@ -326,7 +323,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Database Management')
     parser.add_argument('-t', '--ticker', help='Get ticker information', required=False)
-    parser.add_argument('-u', '--update', help='Update ticker pricing', required=False)
+    parser.add_argument('-u', '--update', help='Update ticker', required=False)
 
     command = vars(parser.parse_args())
 

@@ -177,7 +177,7 @@ def get_company(ticker, live:bool=False) -> dict:
 
             # Test the keys, assign defaults if missing, and remap keys
             results['name'] = company.info.get('shortName', 'unavailable')
-            results['description'] = company.info.get('longBusinessSummary', 'unavailable')
+            results['description'] = company.info.get('longBusinessSummary', 'unavailable')[:4995]
             results['url'] = company.info.get('website', 'unavailable')
             results['sector'] = company.info.get('sector', 'unavailable')
             results['industry'] = company.info.get('industry', 'unavailable')

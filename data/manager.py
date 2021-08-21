@@ -86,10 +86,6 @@ class Manager(Threaded):
         self.task_error = 'Done'
 
     @Threaded.threaded
-    def refresh_exchange(self, exchange:str) -> None:
-        pass
-
-    @Threaded.threaded
     def delete_exchange(self, exchange:str) -> None:
         self.task_error = 'None'
         with self.session.begin() as session:
@@ -107,33 +103,30 @@ class Manager(Threaded):
                     session.add(ind)
                     _logger.info(f'{__name__}: Added index {index["abbreviation"]}')
 
-    def update_pricing_ticker(self, ticker:str='') -> int:
+    def update_history_ticker(self, ticker:str='') -> int:
         days = 0
         if store.is_ticker_valid(ticker):
-            with self.session.begin() as session:
-                days = self._refresh_pricing(ticker, session)
+            days = self._refresh_history(ticker)
 
         return days
 
     @Threaded.threaded
-    def update_pricing_exchange(self, exchange:str='') -> None:
+    def update_history_exchange(self, exchange:str='') -> None:
         tickers = store.get_tickers(exchange)
         self.task_total = len(tickers)
 
-        def _pricing(tickers):
-            with self.session() as session:
-                for sec in tickers:
-                    self.task_ticker = sec
-                    try:
-                        days = self._refresh_pricing(sec, session)
-                        session.commit()
-                    except IntegrityError as e:
-                        _logger.warning(f'{__name__}: UniqueViolation exception occurred for {sec}: {e}')
+        def _history(tickers):
+            for sec in tickers:
+                self.task_ticker = sec
+                try:
+                    days = self._refresh_history(sec)
+                except IntegrityError as e:
+                    _logger.warning(f'{__name__}: UniqueViolation exception occurred for {sec}: {e}')
 
-                    if days > 0:
-                        self.task_success += 1
+                if days > 0:
+                    self.task_success += 1
 
-                    self.task_completed += 1
+                self.task_completed += 1
 
         if self.task_total > 0:
             self.task_error = 'None'
@@ -142,9 +135,9 @@ class Manager(Threaded):
                 if self._concurrency > 1:
                     random.shuffle(tickers)
                     lists = np.array_split(tickers, self._concurrency)
-                    self.task_futures = [executor.submit(_pricing, list) for list in lists]
+                    self.task_futures = [executor.submit(_history, list) for list in lists]
                 else:
-                    self.task_futures = [executor.submit(_pricing, tickers)]
+                    self.task_futures = [executor.submit(_history, tickers)]
 
         self.task_error = 'Done'
 
@@ -267,14 +260,19 @@ class Manager(Threaded):
 
         return nasdaq_nyse, nasdaq_amex, nyse_amex
 
-    def _refresh_pricing(self, ticker:str, session:Session, update_company:bool=True) -> int:
+    def _refresh_history(self, ticker:str, update_company:bool=True) -> int:
         ticker = ticker.upper()
         today = date.today()
         days = 0
 
         history = store.get_history(ticker, 365)
         if history.empty:
-            _logger.info(f'{__name__}: No price history for {ticker}')
+            if self._add_history_to_security(ticker):
+                _logger.info(f'{__name__}: Added full price history for {ticker}')
+                if self._add_company_to_security(ticker):
+                    _logger.info(f'{__name__}: Added company information for {ticker}')
+            else:
+                _logger.warning(f'{__name__}: No price history for {ticker}')
         else:
             date_db = history.iloc[-1]['date']
             if date_db is not None:
@@ -299,34 +297,38 @@ class Manager(Threaded):
                         days = delta
                         history = history[-delta:]
                         history.reset_index(inplace=True)
-                        sec = session.query(models.Security).filter(models.Security.ticker==ticker).one()
 
-                        for _, price in history.iterrows():
-                            if price['date']:
-                                pri = session.query(models.Price.date).filter(and_(models.Price.security_id==sec.id,
-                                    models.Price.date==price['date'])).one_or_none()
-                                if pri is None:
-                                    p = models.Price()
-                                    p.date = price['date']
-                                    p.open = price['open']
-                                    p.high = price['high']
-                                    p.low = price['low']
-                                    p.close = price['close']
-                                    p.volume = price['volume']
+                        with self.session.begin() as session:
+                            sec = session.query(models.Security).filter(models.Security.ticker==ticker).one()
 
-                                    sec.pricing += [p]
+                            for _, price in history.iterrows():
+                                if price['date']:
+                                    pri = session.query(models.Price.date).filter(and_(models.Price.security_id==sec.id,
+                                        models.Price.date==price['date'])).one_or_none()
+                                    if pri is None:
+                                        p = models.Price()
+                                        p.date = price['date']
+                                        p.open = price['open']
+                                        p.high = price['high']
+                                        p.low = price['low']
+                                        p.close = price['close']
+                                        p.volume = price['volume']
 
-                            if update_company:
-                                c = session.query(models.Company).filter(models.Company.security_id==sec.id).one()
-                                company = store.get_company(ticker, live=True)
-                                if company is None:
-                                    _logger.info(f'{__name__}: No company for {ticker}')
-                                elif len(company) == 0:
-                                    _logger.info(f'{__name__}: No company information for {ticker}')
-                                else:
-                                    c.beta = company['beta']
-                                    c.marketcap = company['marketcap']
-                                    c.rating = company['rating']
+                                        sec.pricing += [p]
+
+                                if update_company:
+                                    cmp = session.query(models.Company).filter(models.Company.security_id==sec.id).one()
+                                    company = store.get_company(ticker, live=True)
+                                    if company:
+                                        cmp = models.Company()
+                                        cmp.name = company['name']
+                                        cmp.description = company['description']
+                                        cmp.url = company['url']
+                                        cmp.sector = company['sector']
+                                        cmp.industry = company['industry']
+                                        cmp.beta = company['beta']
+                                        cmp.marketcap = company['marketcap']
+                                        cmp.rating = company['rating']
 
                         _logger.info(f'{__name__}: Updated {days} days pricing for {ticker.upper()} to {date_cloud:%Y-%m-%d}')
                     else:
@@ -351,7 +353,7 @@ class Manager(Threaded):
                         _logger.info(f'{__name__}: Added {ticker} to exchange {exchange}')
 
                         self._add_company_to_security(ticker)
-                        self._add_pricing_to_security(ticker)
+                        self._add_history_to_security(ticker)
                     except (ValueError, KeyError, IndexError) as e:
                         self.invalid_tickers += [ticker]
                         _logger.warning(f'{__name__}: Company info invalid: {ticker}, {str(e)}')
@@ -388,17 +390,17 @@ class Manager(Threaded):
             sec = session.query(models.Security).filter(models.Security.ticker==ticker).one()
             company = store.get_company(ticker, live=True)
             if company:
-                c = models.Company()
-                c.name = company['name'] if company['name'] else '<error>'
-                c.description = company['description'][:4995]
-                c.url = company['url']
-                c.sector = company['sector']
-                c.industry = company['industry']
-                c.beta = company['beta']
-                c.marketcap = company['marketcap']
-                c.rating = company['rating']
+                cmp = models.Company()
+                cmp.name = company['name']
+                cmp.description = company['description']
+                cmp.url = company['url']
+                cmp.sector = company['sector']
+                cmp.industry = company['industry']
+                cmp.beta = company['beta']
+                cmp.marketcap = company['marketcap']
+                cmp.rating = company['rating']
 
-                sec.company = [c]
+                sec.company = [cmp]
                 added = True
                 _logger.info(f'{__name__}: Added company information for {ticker}')
             else:
@@ -406,7 +408,7 @@ class Manager(Threaded):
 
         return added
 
-    def _add_pricing_to_security(self, ticker:str) -> bool:
+    def _add_history_to_security(self, ticker:str) -> bool:
         added = False
         with self.session.begin() as session:
             sec = session.query(models.Security).filter(models.Security.ticker==ticker).one()
@@ -467,7 +469,3 @@ if __name__ == '__main__':
     # import sys
     from logging import DEBUG
     _logger = utils.get_logger(DEBUG)
-
-    manager = Manager()
-    with manager.session() as session:
-        manager._refresh_pricing('CAT', None)
