@@ -239,15 +239,51 @@ class Manager(Threaded):
         tickers = store.get_exchange_tickers_master(exchange)
         _logger.info(f'{__name__}: {len(tickers)} total symbols in {exchange}')
         with self.session() as session:
-            exc = session.query(models.Exchange.id, models.Exchange.abbreviation).filter(models.Exchange.abbreviation==exchange).one()
+            e = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange).one()
             for sec in tickers:
-                t = session.query(models.Security.ticker).filter(and_(models.Security.ticker==sec, models.Security.exchange_id==exc.id)).one_or_none()
+                t = session.query(models.Security.ticker).filter(and_(models.Security.ticker==sec, models.Security.exchange_id==e.id)).one_or_none()
                 if t is None:
                     missing += [sec]
 
         _logger.info(f'{__name__}: {len(missing)} missing symbols in {exchange}')
 
         return missing
+
+    def identify_incomplete_pricing(self, exchange:str) -> list[str]:
+        incomplete = []
+        tickers = store.get_exchange_tickers_master(exchange)
+        _logger.info(f'{__name__}: {len(tickers)} total symbols in {exchange}')
+        with self.session() as session:
+            e = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange).one()
+            for sec in tickers:
+                t = session.query(models.Security.id).filter(and_(models.Security.ticker==sec, models.Security.exchange_id==e.id)).one_or_none()
+                if t is not None:
+                    p = session.query(models.Price.id).filter(models.Price.security_id==t.id).first()
+                    if p is None:
+                        incomplete += [sec]
+
+        _logger.info(f'{__name__}: {len(incomplete)} incomplete pricing in {exchange}')
+
+        return incomplete
+
+    def identify_incomplete_companies(self, exchange:str) -> list[str]:
+        incomplete = []
+        tickers = store.get_exchange_tickers_master(exchange)
+        _logger.info(f'{__name__}: {len(tickers)} total symbols in {exchange}')
+        with self.session() as session:
+            e = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange).one()
+            for sec in tickers:
+                t = session.query(models.Security.id).filter(and_(models.Security.ticker==sec, models.Security.exchange_id==e.id)).one_or_none()
+                if t is not None:
+                    c = session.query(models.Company.name).filter(models.Company.security_id==t.id).one_or_none()
+                    if c is None:
+                        incomplete += [sec]
+                    elif c.name == 'incomplete':
+                        incomplete += [sec]
+
+        _logger.info(f'{__name__}: {len(incomplete)} incomplete pricing in {exchange}')
+
+        return incomplete
 
     def identify_common_securities(self) -> tuple[set, set, set]:
         nasdaq = store.get_exchange_tickers_master('NASDAQ')

@@ -51,13 +51,14 @@ class Interface:
             '3': 'Populate Exchange',
             '4': 'Update History',
             '5': 'Populate Index',
-            '6': 'Reset Database',
+            '6': 'Check Integrity',
+            '7': 'Reset Database',
             '0': 'Exit'
         }
 
         while True:
             if not self.ticker:
-                selection = utils.menu(menu_items, 'Select Operation', 0, 6)
+                selection = utils.menu(menu_items, 'Select Operation', 0, 7)
 
             if selection == 1:
                 self.show_database_information()
@@ -70,6 +71,8 @@ class Interface:
             elif selection == 5:
                 self.populate_index()
             elif selection == 6:
+                self.check_integrity()
+            elif selection == 7:
                 self.reset_database()
             elif selection == 0:
                 break
@@ -92,12 +95,6 @@ class Interface:
         info = self.manager.get_index_info()
         for i in info:
             print(f'{i["index"]:>16}:\t{i["count"]} symbols')
-
-        # utils.print_message('Missing Symbols')
-        # exchanges = store.get_exchanges()
-        # for e in exchanges:
-        #     count = len(self.manager.identify_missing_securities(e))
-        #     print(f'{e:>16}:\t{count}')
 
     def show_symbol_information(self, ticker:str =''):
         if not ticker:
@@ -261,6 +258,34 @@ class Interface:
             else:
                 utils.print_error(self.manager.task_error)
 
+    def check_integrity(self):
+        exchanges = store.get_exchanges()
+        utils.print_message('Missing Tickers')
+        for e in exchanges:
+            count = len(self.manager.identify_missing_securities(e))
+            print(f'{e:>16}:\t{count}')
+
+        utils.print_message('Incomplete Pricing')
+        for e in exchanges:
+            count = len(self.manager.identify_incomplete_pricing('AMEX'))
+            print(f'{e:>16}:\t{count}')
+
+        utils.print_message('Incomplete Companies')
+        for e in exchanges:
+            missing = self.manager.identify_incomplete_companies(e)
+            print(f'{e:>16}:\t{missing}')
+
+    def reset_database(self):
+        select = utils.input_integer('Are you sure? 1 to reset or 0 to cancel: ', 0, 1)
+        if select == 1:
+            self.manager.delete_database()
+            self.manager.create_database()
+            self.manager.create_exchanges()
+            self.manager.create_indexes()
+            utils.print_message(f'Database is reset')
+        else:
+            utils.print_message('Database not reset')
+
     def delete_index(self):
         menu_items = {}
         for i, index in enumerate(self.indexes):
@@ -275,17 +300,6 @@ class Interface:
     def create_missing_tables(self):
         self.manager.create_exchanges()
         self.manager.create_indexes()
-
-    def reset_database(self):
-        select = utils.input_integer('Are you sure? 1 to reset or 0 to cancel: ', 0, 1)
-        if select == 1:
-            self.manager.delete_database()
-            self.manager.create_database()
-            self.manager.create_exchanges()
-            self.manager.create_indexes()
-            utils.print_message(f'Reset the database')
-        else:
-            utils.print_message('Database not reset')
 
     def list_invalid(self):
         utils.print_message(f'Invalid: {self.manager.invalid_tickers}')
