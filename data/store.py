@@ -167,20 +167,17 @@ def get_history(ticker, days:int, live:bool=False) -> pd.DataFrame:
 
     return results
 
-def get_company(ticker, live:bool=False) -> dict:
+def get_company(ticker, live:bool=False, extra:bool=False) -> dict:
     results = {}
 
     if live:
         company = fetcher.get_company_live(ticker)
         if company is not None:
-            results = company.info
-
-            # Test the keys, assign defaults if missing, and remap keys
-            results['name'] = company.info.get('shortName', 'unavailable')
+            results['name'] = company.info.get('shortName', 'unavailable')[:95]
             results['description'] = company.info.get('longBusinessSummary', 'unavailable')[:4995]
-            results['url'] = company.info.get('website', 'unavailable')
-            results['sector'] = company.info.get('sector', 'unavailable')
-            results['industry'] = company.info.get('industry', 'unavailable')
+            results['url'] = company.info.get('website', 'unavailable')[:195]
+            results['sector'] = company.info.get('sector', 'unavailable')[:195]
+            results['industry'] = company.info.get('industry', 'unavailable')[:195]
             results['marketcap'] = company.info.get('marketCap', 0)
             results['beta'] = company.info.get('beta', 3.0)
 
@@ -223,8 +220,10 @@ def get_company(ticker, live:bool=False) -> dict:
                                 index = session.query(models.Index).filter(models.Index.id==symbol.index3_id).one().abbreviation
                                 results['indexes'] += f', {index}'
 
-                    # Pricing records
-                    results['precords'] = session.query(models.Price.security_id).filter(models.Price.security_id==symbol.id).count()
+                    if extra:
+                        results['precords'] = session.query(models.Price.security_id).filter(models.Price.security_id==symbol.id).count()
+                    else:
+                        results['precords'] = 0
                 else:
                     _logger.warning(f'{__name__}: No company information for {ticker}')
             else:

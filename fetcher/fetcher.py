@@ -128,6 +128,7 @@ def get_ratings(ticker:str):
         'sell': 5,
         'weaksell': 4,
         'underperform': 4,
+        'belowaverage': 4,
         'marketunderperform': 4,
         'sectorunderperform': 4,
         'weakbuy': 4,
@@ -172,8 +173,9 @@ def get_ratings(ticker:str):
                 ratings = ratings.str.lower().tolist()
 
                 # Log any unhandled ranking so we can add it to the ratings list
-                [_logger.error(f'{__name__}: Unhandled rating: {r} for {ticker}') for r in ratings if not r in _RATINGS]
+                [_logger.warning(f'{__name__}: Unhandled rating: {r} for {ticker}') for r in ratings if not r in _RATINGS]
 
+                # Use the known ratings and convert to their numeric values
                 ratings = [r for r in ratings if r in _RATINGS]
                 ratings = [_RATINGS[r] for r in ratings]
             else:

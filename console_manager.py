@@ -37,7 +37,7 @@ class Interface:
         if ticker:
             self.main_menu(selection=2)
         elif update:
-            self.main_menu(selection=5)
+            self.main_menu(selection=4)
         else:
             self.main_menu()
 
@@ -103,12 +103,12 @@ class Interface:
         if ticker:
             ticker = ticker.upper()
             if store.is_ticker_valid(ticker):
-                company = store.get_company(ticker)
+                company = store.get_company(ticker, extra=True)
                 if company:
                     utils.print_message(f'{ticker} Company Information')
                     print(f'Name:\t\t{company["name"]}')
                     print(f'Exchange:\t{company["exchange"]}')
-                    print(f'Market Cap:\t{company["marketcap"]}')
+                    print(f'Market Cap:\t{company["marketcap"]:,}')
                     print(f'Beta:\t\t{company["beta"]:.2f}')
                     print(f'Rating:\t\t{company["rating"]:.2f}')
                     print(f'Indexes:\t{company["indexes"]}')
@@ -265,15 +265,15 @@ class Interface:
             count = len(self.manager.identify_missing_securities(e))
             print(f'{e:>16}:\t{count}')
 
-        utils.print_message('Incomplete Pricing')
-        for e in exchanges:
-            count = len(self.manager.identify_incomplete_pricing('AMEX'))
-            print(f'{e:>16}:\t{count}')
-
         utils.print_message('Incomplete Companies')
         for e in exchanges:
             missing = self.manager.identify_incomplete_companies(e)
             print(f'{e:>16}:\t{missing}')
+
+        utils.print_message('Incomplete Pricing')
+        for e in exchanges:
+            count = len(self.manager.identify_incomplete_pricing('AMEX'))
+            print(f'{e:>16}:\t{count}')
 
     def reset_database(self):
         select = utils.input_integer('Are you sure? 1 to reset or 0 to cancel: ', 0, 1)

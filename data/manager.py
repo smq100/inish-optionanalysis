@@ -353,20 +353,21 @@ class Manager(Threaded):
                                         sec.pricing += [p]
 
                                 if update_company:
-                                    cmp = session.query(models.Company).filter(models.Company.security_id==sec.id).one()
                                     company = store.get_company(ticker, live=True)
                                     if company:
-                                        cmp = models.Company()
-                                        cmp.name = company['name']
-                                        cmp.description = company['description']
-                                        cmp.url = company['url']
-                                        cmp.sector = company['sector']
-                                        cmp.industry = company['industry']
+                                        cmp = session.query(models.Company).filter(models.Company.security_id==sec.id).one()
+                                        # cmp.name = company['name']
+                                        # cmp.description = company['description']
+                                        # cmp.url = company['url']
+                                        # cmp.sector = company['sector']
+                                        # cmp.industry = company['industry']
                                         cmp.beta = company['beta']
                                         cmp.marketcap = company['marketcap']
                                         cmp.rating = company['rating']
+                                    else:
+                                        _logger.error(f'{__name__}: No compant information for {ticker}')
 
-                        _logger.info(f'{__name__}: Updated {days} days pricing for {ticker.upper()} to {date_cloud:%Y-%m-%d}')
+                        _logger.info(f'{__name__}: Updated {days} days pricing for {ticker} to {date_cloud:%Y-%m-%d}')
                     else:
                         _logger.info(f'{__name__}: {ticker} already up to date with cloud data')
             else:
@@ -375,6 +376,8 @@ class Manager(Threaded):
         return days
 
     def _add_securities_to_exchange(self, tickers:list[str], exchange:str) -> None:
+        exit = False
+        retries = 5
         with self.session() as session:
             exc = session.query(models.Exchange).filter(models.Exchange.abbreviation==exchange).one()
 
@@ -392,22 +395,30 @@ class Manager(Threaded):
                         self._add_history_to_security(ticker)
                     except (ValueError, KeyError, IndexError) as e:
                         self.invalid_tickers += [ticker]
-                        _logger.warning(f'{__name__}: Company info invalid: {ticker}, {str(e)}')
+                        _logger.warning(f'{__name__}: Company info invalid for {ticker}: {str(e)}')
                     except HTTPError as e:
-                        self.invalid_tickers += [ticker]
                         self.retry += 1
-                        _logger.warning(f'{__name__}: HTTP Error. Retrying... {self.retry}, {str(e)}')
-                        if self.retry > 10:
-                            self.task_error = 'HTTP Error'
-                            _logger.error(f'{__name__}: HTTP Error. Too many retries, {str(e)}')
+                        _logger.warning(f'{__name__}: HTTP Error for {ticker}. Retrying... {self.retry}: {str(e)}')
+                        if self.retry > retries:
+                            self.invalid_tickers += [ticker]
+                            exit = True
+                            _logger.error(f'{__name__}: HTTP Error for {ticker}. Too many retries: {str(e)}')
                         else:
                             time.sleep(5.0)
                     except RuntimeError as e:
-                        self.task_error = 'Runtime Error'
-                        _logger.error(f'{__name__}: Runtime Error for {ticker}, {str(e)}')
+                        self.retry += 1
+                        _logger.warning(f'{__name__}: Runtime Error for {ticker}. Retrying... {self.retry}: {str(e)}')
+                        if self.retry > retries:
+                            self.invalid_tickers += [ticker]
+                            exit = True
+                            _logger.error(f'{__name__}: Runtime Error for {ticker}. Too many retries: {str(e)}')
                     except Exception as e:
-                        self.task_error = 'Unknown Error'
-                        _logger.error(f'{__name__}: Unknown Error for {ticker}, {str(e)}')
+                        self.retry += 1
+                        _logger.warning(f'{__name__}: Error for {ticker}. Retrying... {self.retry}: {str(e)}')
+                        if self.retry > retries:
+                            self.invalid_tickers += [ticker]
+                            exit = True
+                            _logger.error(f'{__name__}: Error for {ticker}. Too many retries: {str(e)}')
                     else:
                         self.retry = 0
                         self.task_success += 1
@@ -416,12 +427,12 @@ class Manager(Threaded):
 
                 self.task_completed += 1
 
-                if self.task_error != 'None':
-                    _logger.error(f'{__name__}: Cancelling operation')
+                if exit:
+                    _logger.error(f'{__name__}: Error adding ticker {ticker} to exchange')
                     break
 
     def _add_company_to_security(self, ticker:str) -> bool:
-        added = False
+        cmp = None
         with self.session.begin() as session:
             sec = session.query(models.Security).filter(models.Security.ticker==ticker).one()
             company = store.get_company(ticker, live=True)
@@ -437,12 +448,11 @@ class Manager(Threaded):
                 cmp.rating = company['rating']
 
                 sec.company = [cmp]
-                added = True
                 _logger.info(f'{__name__}: Added company information for {ticker}')
             else:
                 _logger.warning(f'{__name__}: No company info for {ticker}')
 
-        return added
+        return cmp is not None
 
     def _add_history_to_security(self, ticker:str) -> bool:
         added = False
