@@ -4,7 +4,7 @@ from logging import Logger
 LOG_DIR = './log'
 
 
-def get_logger(level=None) -> Logger:
+def get_logger(level=None, logfile=True) -> Logger:
     logger = logging.getLogger('analysis')
 
     if level is not None:
@@ -20,11 +20,12 @@ def get_logger(level=None) -> Logger:
         logger.addHandler(ch)
 
         # File handler
-        fformat = logging.Formatter('%(asctime)s: %(levelname)s: %(message)s', datefmt='%H:%M:%S')
-        fh = logging.FileHandler(f'{LOG_DIR}/output.log', 'w+')
-        fh.setFormatter(fformat)
-        fh.setLevel(logging.INFO)
-        logger.addHandler(fh)
+        if logfile:
+            fformat = logging.Formatter('%(asctime)s: %(levelname)s: %(message)s', datefmt='%H:%M:%S')
+            fh = logging.FileHandler(f'{LOG_DIR}/output.log', 'w+')
+            fh.setFormatter(fformat)
+            fh.setLevel(logging.INFO)
+            logger.addHandler(fh)
 
     return logger
 

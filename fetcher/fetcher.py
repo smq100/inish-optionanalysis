@@ -36,14 +36,14 @@ def validate_ticker(ticker:str) -> bool:
 
     return valid
 
-elasped = 0.0
+elapsed = 0.0
 def get_company_live(ticker:str) -> pd.DataFrame:
     company = None
-    global elasped
+    global elapsed
 
     # Throttle requests to help avoid being cut off by Yahoo
-    while time.perf_counter() - elasped < THROTTLE: time.sleep(THROTTLE)
-    elasped = time.perf_counter()
+    while time.perf_counter() - elapsed < THROTTLE: time.sleep(THROTTLE)
+    elapsed = time.perf_counter()
 
     try:
         company = yf.Ticker(ticker)
@@ -72,10 +72,18 @@ def get_history_live(ticker:str, days:int=-1) -> pd.DataFrame:
         end = dt.datetime.today()
 
         # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
-        for _ in range(3):
+        for retry in range(3):
             try:
                 history = company.history(start=f'{start:%Y-%m-%d}', end=f'{end:%Y-%m-%d}')
-                if history is not None:
+                days = history.shape[0]
+                if history is None:
+                    _logger.warning(f'{__name__}: History information for {ticker} is None')
+                    break
+                elif history.empty:
+                    history = None
+                    _logger.warning(f'{__name__}: History information for {ticker} is empty')
+                    break
+                else:
                     history.reset_index(inplace=True)
 
                     # Lower case columns to make consistent with Postgress column names
@@ -83,9 +91,9 @@ def get_history_live(ticker:str, days:int=-1) -> pd.DataFrame:
                     _logger.info(f'{__name__}: Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
                     break
             except Exception as e:
-                _logger.error(f'{__name__}: Retrying to fetch history of {ticker} starting {start:%Y-%m-%d}: {e}')
-                time.sleep(1)
+                _logger.error(f'{__name__}: Retry {retry} to fetch history of {ticker}: {e}')
                 history = None
+                time.sleep(1)
 
     return history
 
@@ -206,7 +214,7 @@ if __name__ == '__main__':
     # else:
     #     print(get_ratings('aapl'))
 
-    c = get_company_live('AAPL')
+    c = get_history_live('ALACR')
     print(c)
     # c = get_history_q('AAPL', days=-1)
 

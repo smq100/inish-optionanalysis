@@ -119,13 +119,14 @@ class Interface:
                 else:
                     utils.print_error(f'{ticker} has no company information')
 
-                history = store.get_history(ticker, 0)
+                history = store.get_history(ticker, 100).round(2)
                 if history.empty:
                     utils.print_error(f'{ticker} has no price history')
                 else:
-                    print(f'Latest Record:\t{history["date"]:%Y-%m-%d}, closed at ${history["close"]:.2f}')
+                    latest = history.iloc[-1]
+                    print(f'Latest Record:\t{latest["date"]:%Y-%m-%d}, closed at ${latest["close"]:.2f}')
                     utils.print_message(f'{ticker} Recent Price History')
-                    history = store.get_history(ticker, 10)
+                    history = history.tail(10)
                     if not history.empty:
                         history.set_index('date', inplace=True)
                         print(history.round(2))
@@ -268,12 +269,12 @@ class Interface:
         utils.print_message('Incomplete Companies')
         for e in exchanges:
             missing = self.manager.identify_incomplete_companies(e)
-            print(f'{e:>16}:\t{missing}')
+            print(f'{e:>16}:\t{len(missing)}')
 
-        utils.print_message('Incomplete Pricing')
-        for e in exchanges:
-            count = len(self.manager.identify_incomplete_pricing('AMEX'))
-            print(f'{e:>16}:\t{count}')
+        # utils.print_message('Incomplete Pricing')
+        # for e in exchanges:
+        #     count = len(self.manager.identify_incomplete_pricing('AMEX'))
+        #     print(f'{e:>16}:\t{count}')
 
     def reset_database(self):
         select = utils.input_integer('Are you sure? 1 to reset or 0 to cancel: ', 0, 1)

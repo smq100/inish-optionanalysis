@@ -1,8 +1,8 @@
 import datetime as dt
 
+import pandas as pd
 from sqlalchemy import create_engine, and_, or_
 from sqlalchemy.orm import sessionmaker
-import pandas as pd
 
 import data as d
 from fetcher import fetcher as fetcher
@@ -28,6 +28,7 @@ _master_indexes = {
 _engine = create_engine(d.ACTIVE_URI, echo=False)
 _session = sessionmaker(bind=_engine)
 
+UNAVAILABLE = 'unavailable'
 
 def is_ticker_valid(symbol:str) -> bool:
     with _session() as session:
@@ -123,6 +124,7 @@ def get_index_tickers(index:str) -> list[str]:
 
 def get_current_price(ticker:str) -> float:
     price = 0.0
+
     history = get_history(ticker, 5, live=True)
     if history is not None:
         price = history.iloc[-1]['close']
@@ -130,7 +132,8 @@ def get_current_price(ticker:str) -> float:
     return price
 
 def get_history(ticker, days:int, live:bool=False) -> pd.DataFrame:
-    results = pd.DataFrame
+    results = pd.DataFrame()
+
     if live:
         results = fetcher.get_history_live(ticker, days)
     else:
@@ -143,7 +146,6 @@ def get_history(ticker, days:int, live:bool=False) -> pd.DataFrame:
                     if not results.empty:
                         results.drop(['id', 'security_id'], 1, inplace=True)
                         _logger.info(f'{__name__}: Fetched max price history for {ticker}')
-
                 elif days > 1:
                     start = dt.datetime.today() - dt.timedelta(days=days)
                     p = session.query(models.Price).filter(and_(models.Price.security_id==symbols.id, models.Price.date >= start)).order_by(models.Price.date)
@@ -151,17 +153,8 @@ def get_history(ticker, days:int, live:bool=False) -> pd.DataFrame:
                     if not results.empty:
                         results.drop(['id', 'security_id'], 1, inplace=True)
                         _logger.info(f'{__name__}: Fetched {days} days of price history for {ticker}')
-
                 else:
-                    days = 50
-                    start = dt.datetime.today() - dt.timedelta(days=days)
-                    p = session.query(models.Price).filter(and_(models.Price.security_id==symbols.id, models.Price.date >= start)).order_by(models.Price.date)
-                    results = pd.read_sql(p.statement, _engine)
-                    if not results.empty:
-                        results = results.iloc[-1]
-                        _logger.info(f'{__name__}: Fetched current price history for {ticker}')
-                    else:
-                        _logger.warning(f'{__name__}: No price history for {ticker}')
+                    _logger.warning(f'{__name__}: Must specify history days > 1')
             else:
                 _logger.warning(f'{__name__}: No history found for {ticker}')
 
@@ -173,19 +166,20 @@ def get_company(ticker, live:bool=False, extra:bool=False) -> dict:
     if live:
         company = fetcher.get_company_live(ticker)
         if company is not None:
-            results['name'] = company.info.get('shortName', 'unavailable')[:95]
-            results['description'] = company.info.get('longBusinessSummary', 'unavailable')[:4995]
-            results['url'] = company.info.get('website', 'unavailable')[:195]
-            results['sector'] = company.info.get('sector', 'unavailable')[:195]
-            results['industry'] = company.info.get('industry', 'unavailable')[:195]
-            results['marketcap'] = company.info.get('marketCap', 0)
-            results['beta'] = company.info.get('beta', 3.0)
+            if company.info is not None:
+                results['name'] = company.info.get('shortName', UNAVAILABLE)[:95]
+                results['description'] = company.info.get('longBusinessSummary', UNAVAILABLE)[:4995]
+                results['url'] = company.info.get('website', UNAVAILABLE)[:195]
+                results['sector'] = company.info.get('sector', UNAVAILABLE)[:195]
+                results['industry'] = company.info.get('industry', UNAVAILABLE)[:195]
+                results['marketcap'] = company.info.get('marketCap', 0)
+                results['beta'] = company.info.get('beta', 3.0)
+                results['indexes'] = ''
+                results['precords'] = 0
 
-            ratings = fetcher.get_ratings(ticker)
-            results['rating'] = sum(ratings) / float(len(ratings)) if ratings else 3.0
+                ratings = fetcher.get_ratings(ticker)
+                results['rating'] = sum(ratings) / float(len(ratings)) if ratings else 3.0
 
-            results['indexes'] = ''
-            results['precords'] = 0
     else:
         with _session() as session:
             symbol = session.query(models.Security).filter(models.Security.ticker==ticker.upper()).one_or_none()
@@ -200,6 +194,8 @@ def get_company(ticker, live:bool=False, extra:bool=False) -> dict:
                     results['marketcap'] = company.marketcap
                     results['beta'] = company.beta
                     results['rating'] = company.rating
+                    results['indexes'] = 'None'
+                    results['precords'] = 0
 
                     # Exchange
                     exc = session.query(models.Exchange.abbreviation).filter(models.Exchange.id==symbol.exchange_id).one_or_none()
@@ -207,7 +203,6 @@ def get_company(ticker, live:bool=False, extra:bool=False) -> dict:
                         results['exchange'] = exc.abbreviation
 
                     # Indexes
-                    results['indexes'] = 'None'
                     if symbol.index1_id is not None:
                         index = session.query(models.Index).filter(models.Index.id==symbol.index1_id).one().abbreviation
                         results['indexes'] = index
@@ -220,10 +215,9 @@ def get_company(ticker, live:bool=False, extra:bool=False) -> dict:
                                 index = session.query(models.Index).filter(models.Index.id==symbol.index3_id).one().abbreviation
                                 results['indexes'] += f', {index}'
 
+                    # Number of price records
                     if extra:
                         results['precords'] = session.query(models.Price.security_id).filter(models.Price.security_id==symbol.id).count()
-                    else:
-                        results['precords'] = 0
                 else:
                     _logger.warning(f'{__name__}: No company information for {ticker}')
             else:
@@ -300,7 +294,7 @@ if __name__ == '__main__':
     # logger = u.get_logger(DEBUG)
 
     if len(sys.argv) > 1:
-        t = get_history(sys.argv[1], 20)
+        t = get_history(sys.argv[1], -1)
     else:
         t = get_history('AAPL', 20)
     print(t)

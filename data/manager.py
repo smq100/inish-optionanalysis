@@ -1,6 +1,7 @@
 import os
 import time
 import random
+import threading
 from datetime import date
 from concurrent import futures
 from urllib.error import HTTPError
@@ -9,7 +10,6 @@ from sqlalchemy import create_engine, inspect, and_, or_
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError
 import numpy as np
-from sqlalchemy.orm.session import Session
 
 from base import Threaded
 import data as d
@@ -278,7 +278,7 @@ class Manager(Threaded):
                     c = session.query(models.Company.name).filter(models.Company.security_id==t.id).one_or_none()
                     if c is None:
                         incomplete += [sec]
-                    elif c.name == 'incomplete':
+                    elif c.name == store.UNAVAILABLE:
                         incomplete += [sec]
 
         _logger.info(f'{__name__}: {len(incomplete)} incomplete pricing in {exchange}')
@@ -301,7 +301,7 @@ class Manager(Threaded):
         today = date.today()
         days = 0
 
-        history = store.get_history(ticker, 365)
+        history = store.get_history(ticker, -1)
         if history.empty:
             if self._add_history_to_security(ticker):
                 _logger.info(f'{__name__}: Added full price history for {ticker}')
@@ -356,11 +356,11 @@ class Manager(Threaded):
                                     company = store.get_company(ticker, live=True)
                                     if company:
                                         cmp = session.query(models.Company).filter(models.Company.security_id==sec.id).one()
-                                        # cmp.name = company['name']
-                                        # cmp.description = company['description']
-                                        # cmp.url = company['url']
-                                        # cmp.sector = company['sector']
-                                        # cmp.industry = company['industry']
+                                        cmp.name = company['name']
+                                        cmp.description = company['description']
+                                        cmp.url = company['url']
+                                        cmp.sector = company['sector']
+                                        cmp.industry = company['industry']
                                         cmp.beta = company['beta']
                                         cmp.marketcap = company['marketcap']
                                         cmp.rating = company['rating']
@@ -377,51 +377,65 @@ class Manager(Threaded):
 
     def _add_securities_to_exchange(self, tickers:list[str], exchange:str) -> None:
         exit = False
+        process = False
         retries = 5
+
         with self.session() as session:
             exc = session.query(models.Exchange).filter(models.Exchange.abbreviation==exchange).one()
 
             for ticker in tickers:
-                s = session.query(models.Security).filter(models.Security.ticker==ticker).one_or_none()
-                if s is None:
-                    try:
-                        self.task_ticker = ticker
-                        exc.securities += [models.Security(ticker)]
-                        session.commit()
-
-                        _logger.info(f'{__name__}: Added {ticker} to exchange {exchange}')
-
-                        self._add_company_to_security(ticker)
-                        self._add_history_to_security(ticker)
-                    except (ValueError, KeyError, IndexError) as e:
-                        self.invalid_tickers += [ticker]
-                        _logger.warning(f'{__name__}: Company info invalid for {ticker}: {str(e)}')
-                    except HTTPError as e:
-                        self.retry += 1
-                        _logger.warning(f'{__name__}: HTTP Error for {ticker}. Retrying... {self.retry}: {str(e)}')
-                        if self.retry > retries:
-                            self.invalid_tickers += [ticker]
-                            exit = True
-                            _logger.error(f'{__name__}: HTTP Error for {ticker}. Too many retries: {str(e)}')
+                sec = session.query(models.Security).filter(models.Security.ticker==ticker).one_or_none()
+                if sec is None:
+                    process = False
+                    company = store.get_company(ticker, live=True)
+                    if company:
+                        history = store.get_history(ticker, -1, live=True)
+                        if history is None:
+                            _logger.warning(f'{__name__}: History information for {ticker} not available. Not added to database')
                         else:
-                            time.sleep(5.0)
-                    except RuntimeError as e:
-                        self.retry += 1
-                        _logger.warning(f'{__name__}: Runtime Error for {ticker}. Retrying... {self.retry}: {str(e)}')
-                        if self.retry > retries:
-                            self.invalid_tickers += [ticker]
-                            exit = True
-                            _logger.error(f'{__name__}: Runtime Error for {ticker}. Too many retries: {str(e)}')
-                    except Exception as e:
-                        self.retry += 1
-                        _logger.warning(f'{__name__}: Error for {ticker}. Retrying... {self.retry}: {str(e)}')
-                        if self.retry > retries:
-                            self.invalid_tickers += [ticker]
-                            exit = True
-                            _logger.error(f'{__name__}: Error for {ticker}. Too many retries: {str(e)}')
+                            process = True
                     else:
-                        self.retry = 0
-                        self.task_success += 1
+                        _logger.warning(f'{__name__}: Company information for {ticker} not available. Not added to database')
+
+                    if process:
+                        try:
+                            self.task_ticker = ticker
+                            exc.securities += [models.Security(ticker)]
+                            session.commit()
+
+                            _logger.info(f'{__name__}: Added {ticker} to exchange {exchange}')
+
+                            self._add_history_to_security(ticker, history=history)
+                            self._add_company_to_security(ticker, company=company)
+                        except (ValueError, KeyError, IndexError) as e:
+                            self.invalid_tickers += [ticker]
+                            _logger.warning(f'{__name__}: Company info invalid for {ticker}: {str(e)}')
+                        except HTTPError as e:
+                            self.retry += 1
+                            _logger.warning(f'{__name__}: HTTP Error for {ticker}. Retrying... {self.retry}: {str(e)}')
+                            if self.retry > retries:
+                                self.invalid_tickers += [ticker]
+                                exit = True
+                                _logger.error(f'{__name__}: HTTP Error for {ticker}. Too many retries: {str(e)}')
+                            else:
+                                time.sleep(5.0)
+                        except RuntimeError as e:
+                            self.retry += 1
+                            _logger.warning(f'{__name__}: Runtime Error for {ticker}. Retrying... {self.retry}: {str(e)}')
+                            if self.retry > retries:
+                                self.invalid_tickers += [ticker]
+                                exit = True
+                                _logger.error(f'{__name__}: Runtime Error for {ticker}. Too many retries: {str(e)}')
+                        except Exception as e:
+                            self.retry += 1
+                            _logger.warning(f'{__name__}: Error for {ticker}. Retrying... {self.retry}: {str(e)}')
+                            if self.retry > retries:
+                                self.invalid_tickers += [ticker]
+                                exit = True
+                                _logger.error(f'{__name__}: Error for {ticker}. Too many retries: {str(e)}')
+                        else:
+                            self.retry = 0
+                            self.task_success += 1
                 else:
                     _logger.info(f'{__name__}: {ticker} already exists')
 
@@ -431,11 +445,14 @@ class Manager(Threaded):
                     _logger.error(f'{__name__}: Error adding ticker {ticker} to exchange')
                     break
 
-    def _add_company_to_security(self, ticker:str) -> bool:
+    def _add_company_to_security(self, ticker:str, company:dict=None) -> bool:
         cmp = None
+
         with self.session.begin() as session:
             sec = session.query(models.Security).filter(models.Security.ticker==ticker).one()
-            company = store.get_company(ticker, live=True)
+            if company is None:
+                company = store.get_company(ticker, live=True)
+
             if company:
                 cmp = models.Company()
                 cmp.name = company['name']
@@ -454,15 +471,16 @@ class Manager(Threaded):
 
         return cmp is not None
 
-    def _add_history_to_security(self, ticker:str) -> bool:
+    def _add_history_to_security(self, ticker:str, history=None) -> bool:
         added = False
+
         with self.session.begin() as session:
             sec = session.query(models.Security).filter(models.Security.ticker==ticker).one()
-            history = store.get_history(ticker, -1, live=True)
+
             if history is None:
-                sec.active = False
-                _logger.warning(f'{__name__}: No pricing information for {ticker}')
-            elif history.empty:
+                history = store.get_history(ticker, -1, live=True)
+
+            if history is None:
                 sec.active = False
                 _logger.warning(f'{__name__}: No pricing information for {ticker}')
             else:
