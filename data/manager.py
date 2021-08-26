@@ -116,7 +116,7 @@ class Manager(Threaded):
 
     def update_history_ticker(self, ticker:str='') -> int:
         days = 0
-        if store.is_ticker_valid(ticker):
+        if store.is_ticker(ticker):
             days = self._refresh_history(ticker)
 
         return days
@@ -167,33 +167,51 @@ class Manager(Threaded):
 
     @Threaded.threaded
     def delete_exchange(self, exchange:str) -> None:
+        exchange = exchange.upper()
         self.task_error = 'None'
+
         if store.is_exchange(exchange):
             with self.session.begin() as session:
-                exc = session.query(models.Exchange).filter(models.Exchange.abbreviation==exchange.upper()).one()
+                exc = session.query(models.Exchange).filter(models.Exchange.abbreviation==exchange.upper()).one_or_none()
                 if exc is not None:
                     session.delete(exc)
+                    _logger.info(f'{__name__}: Deleted exchange {exchange}')
+                else:
+                    _logger.warning(f'{__name__}: Exchange {exchange} does not exist')
         else:
-            _logger.warning(f'{__name__}: Exchange does not exist: {exchange.upper()}')
+            _logger.warning(f'{__name__}: Exchange {exchange} does not exist')
         self.task_error = 'Done'
 
     def delete_index(self, index:str) -> None:
-        with self.session.begin() as session:
-            ind = session.query(models.Index).filter(models.Index.abbreviation==index)
-            if ind is not None:
-                ind.delete(synchronize_session=False)
-                _logger.info(f'{__name__}: Deleted index {index}')
-            else:
-                _logger.error(f'{__name__}: Index {index} does not exist')
+        index = index.upper()
+
+        if store.is_index(index):
+            with self.session.begin() as session:
+                ind = session.query(models.Index).filter(models.Index.abbreviation==index).one_or_none()
+
+                if ind is not None:
+                    session.delete(ind)
+                    _logger.info(f'{__name__}: Deleted index {index}')
+                else:
+                    _logger.warning(f'{__name__}: Index {index} does not exist')
+        else:
+            _logger.warning(f'{__name__}: Index {index} does not exist')
 
     def delete_ticker(self, ticker:str):
-        with self.session.begin() as session:
-            sec = session.query(models.Security).filter(models.Security.ticker==ticker.upper()).one_or_none()
+        ticker = ticker.upper()
 
-            if sec is not None:
-                session.delete(sec)
-            else:
-                _logger.warning(f'{__name__}: Unable to delete ticker. Does not exist: {ticker.upper()}')
+        if store.is_ticker(ticker):
+            with self.session.begin() as session:
+                sec = session.query(models.Security).filter(models.Security.ticker==ticker.upper()).one_or_none()
+
+                if sec is not None:
+                    session.delete(sec)
+                    _logger.info(f'{__name__}: Deleted ticker {ticker}')
+                else:
+                    _logger.warning(f'{__name__}: Ticker {ticker} not in database')
+        else:
+            _logger.warning(f'{__name__}: Ticker {ticker} does not exist')
+
 
     def get_database_info(self) -> list[dict]:
         info = []
@@ -246,54 +264,89 @@ class Manager(Threaded):
 
         return info
 
-    def identify_missing_securities(self, exchange:str) -> list[str]:
-        missing = []
-        tickers = store.get_exchange_tickers_master(exchange)
-        _logger.info(f'{__name__}: {len(tickers)} total symbols in {exchange}')
-        with self.session() as session:
-            e = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange).one()
-            for sec in tickers:
-                t = session.query(models.Security.ticker).filter(and_(models.Security.ticker==sec, models.Security.exchange_id==e.id)).one_or_none()
-                if t is None:
-                    missing += [sec]
+    def list_exchange(self, exchange:str) -> list[str]:
+        exchange = exchange.upper()
+        found = []
 
-        _logger.info(f'{__name__}: {len(missing)} missing symbols in {exchange}')
+        if store.is_exchange(exchange):
+            with self.session() as session:
+                e = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange).one()
+                t = session.query(models.Security.ticker).filter(models.Security.exchange_id==e.id).all()
+
+                found = [ticker[0] for ticker in t]
+
+            _logger.info(f'{__name__}: {len(found)} tickers in {exchange}')
+        else:
+            _logger.warning(f'{__name__}: {exchange} not valid')
+
+        return found
+
+    def identify_missing_securities(self, exchange:str) -> list[str]:
+        exchange = exchange.upper()
+        missing = []
+
+        if store.is_exchange(exchange):
+            tickers = store.get_exchange_tickers_master(exchange)
+            _logger.info(f'{__name__}: {len(tickers)} total tickers in {exchange}')
+
+            with self.session() as session:
+                e = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange).one()
+                for sec in tickers:
+                    t = session.query(models.Security.ticker).filter(and_(models.Security.ticker==sec, models.Security.exchange_id==e.id)).one_or_none()
+                    if t is None:
+                        missing += [sec]
+
+            _logger.info(f'{__name__}: {len(missing)} missing tickers in {exchange}')
+        else:
+            _logger.warning(f'{__name__}: {exchange} not valid')
 
         return missing
 
     def identify_incomplete_pricing(self, exchange:str) -> list[str]:
+        exchange = exchange.upper()
         incomplete = []
-        tickers = store.get_exchange_tickers_master(exchange)
-        _logger.info(f'{__name__}: {len(tickers)} total symbols in {exchange}')
-        with self.session() as session:
-            e = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange).one()
-            for sec in tickers:
-                t = session.query(models.Security.id).filter(and_(models.Security.ticker==sec, models.Security.exchange_id==e.id)).one_or_none()
-                if t is not None:
-                    p = session.query(models.Price.id).filter(models.Price.security_id==t.id).first()
-                    if p is None:
-                        incomplete += [sec]
 
-        _logger.info(f'{__name__}: {len(incomplete)} incomplete pricing in {exchange}')
+        if store.is_exchange(exchange):
+            tickers = store.get_exchange_tickers_master(exchange)
+            _logger.info(f'{__name__}: {len(tickers)} total tickers in {exchange}')
+
+            with self.session() as session:
+                e = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange).one()
+                for sec in tickers:
+                    t = session.query(models.Security.id).filter(and_(models.Security.ticker==sec, models.Security.exchange_id==e.id)).one_or_none()
+                    if t is not None:
+                        p = session.query(models.Price.id).filter(models.Price.security_id==t.id).first()
+                        if p is None:
+                            incomplete += [sec]
+
+            _logger.info(f'{__name__}: {len(incomplete)} incomplete pricing in {exchange}')
+        else:
+            _logger.warning(f'{__name__}: {exchange} not valid')
 
         return incomplete
 
     def identify_incomplete_companies(self, exchange:str) -> list[str]:
+        exchange = exchange.upper()
         incomplete = []
-        tickers = store.get_exchange_tickers_master(exchange)
-        _logger.info(f'{__name__}: {len(tickers)} total symbols in {exchange}')
-        with self.session() as session:
-            e = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange).one()
-            for sec in tickers:
-                t = session.query(models.Security.id).filter(and_(models.Security.ticker==sec, models.Security.exchange_id==e.id)).one_or_none()
-                if t is not None:
-                    c = session.query(models.Company.name).filter(models.Company.security_id==t.id).one_or_none()
-                    if c is None:
-                        incomplete += [sec]
-                    elif c.name == store.UNAVAILABLE:
-                        incomplete += [sec]
 
-        _logger.info(f'{__name__}: {len(incomplete)} incomplete pricing in {exchange}')
+        if store.is_exchange(exchange):
+            tickers = store.get_exchange_tickers_master(exchange)
+            _logger.info(f'{__name__}: {len(tickers)} total tickers in {exchange}')
+
+            with self.session() as session:
+                e = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange).one()
+                for sec in tickers:
+                    t = session.query(models.Security.id).filter(and_(models.Security.ticker==sec, models.Security.exchange_id==e.id)).one_or_none()
+                    if t is not None:
+                        c = session.query(models.Company.name).filter(models.Company.security_id==t.id).one_or_none()
+                        if c is None:
+                            incomplete += [sec]
+                        elif c.name == store.UNAVAILABLE:
+                            incomplete += [sec]
+
+            _logger.info(f'{__name__}: {len(incomplete)} incomplete pricing in {exchange}')
+        else:
+            _logger.warning(f'{__name__}: {exchange} not valid')
 
         return incomplete
 

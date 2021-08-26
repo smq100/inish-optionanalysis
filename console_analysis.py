@@ -100,7 +100,7 @@ class Interface:
             utils.print_error('Run coorelation first')
         else:
             ticker = utils.input_text('Enter symbol: ').upper()
-            if not store.is_ticker_valid(ticker):
+            if not store.is_ticker(ticker):
                 utils.print_error('Invalid symbol')
             else:
                 ds = self.coorelate.get_ticker_coorelation(ticker)

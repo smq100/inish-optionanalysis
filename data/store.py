@@ -30,7 +30,7 @@ _session = sessionmaker(bind=_engine)
 
 UNAVAILABLE = 'unavailable'
 
-def is_ticker_valid(ticker:str) -> bool:
+def is_ticker(ticker:str) -> bool:
     with _session() as session:
         e = session.query(models.Security).filter(models.Security.ticker==ticker.upper()).one_or_none()
 

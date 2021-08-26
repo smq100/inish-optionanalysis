@@ -30,7 +30,7 @@ class Interface:
 
         pd.options.display.float_format = '{:,.2f}'.format
 
-        if store.is_ticker_valid(ticker):
+        if store.is_ticker(ticker):
             self.chain = Chain(ticker)
 
             if autoload:
@@ -248,7 +248,7 @@ class Interface:
         while not valid:
             ticker = input('Please enter symbol, or 0 to cancel: ').upper()
             if ticker != '0':
-                valid = store.is_ticker_valid(ticker)
+                valid = store.is_ticker(ticker)
                 if not valid:
                     utils.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
             else:

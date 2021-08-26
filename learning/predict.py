@@ -18,7 +18,7 @@ _logger = utils.get_logger()
 
 class Prediction(Threaded):
     def __init__(self, ticker:str, future:int=0):
-        if store.is_ticker_valid(ticker):
+        if store.is_ticker(ticker):
             self.ticker = ticker.upper()
             self.actual_prices = []
             self.prediction_prices = []

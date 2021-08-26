@@ -33,7 +33,7 @@ class Interface:
                 self.type = 'exchange'
             elif store.is_index(self.table):
                 self.type = 'index'
-            elif store.is_ticker_valid(self.table):
+            elif store.is_ticker(self.table):
                 self.type = 'symbol'
             else:
                 raise ValueError(f'Exchange or index not found: {table}')
@@ -176,7 +176,7 @@ class Interface:
     def select_ticker(self) -> None:
         ticker = utils.input_text('Enter ticker: ')
         ticker = ticker.upper()
-        if store.is_ticker_valid(ticker):
+        if store.is_ticker(ticker):
             self.screener = Screener(ticker, script=self.screen_path, live=self.live)
             if self.screener.valid():
                 self.table = ticker

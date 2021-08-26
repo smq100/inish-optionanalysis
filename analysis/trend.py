@@ -83,7 +83,7 @@ class SupportResistance:
         if days <= 30:
             utils.print_error('Days must be greater than 30')
 
-        elif (store.is_ticker_valid(ticker)):
+        elif (store.is_ticker(ticker)):
             self.ticker = ticker.upper()
             self.method = METHOD[method]
             self.best = best

@@ -28,7 +28,7 @@ class Screener(Threaded):
             self.type = 'exchange'
         elif store.is_index(self.table):
             self.type = 'index'
-        elif store.is_ticker_valid(table):
+        elif store.is_ticker(table):
             self.type = 'symbol'
         else:
             raise ValueError(f'Table not found: {self.table}')

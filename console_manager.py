@@ -15,13 +15,13 @@ class Interface:
         self.ticker = ''
         self.stop = False
         if ticker:
-            if store.is_ticker_valid(ticker.upper()):
+            if store.is_ticker(ticker.upper()):
                 self.ticker = ticker.upper()
                 self.stop = True
             else:
                 utils.print_error(f'Invalid ticker specifed: {ticker}')
         elif update:
-            if store.is_ticker_valid(update.upper()):
+            if store.is_ticker(update.upper()):
                 self.ticker = update.upper()
                 self.stop = True
             else:
@@ -48,37 +48,46 @@ class Interface:
         menu_items = {
             '1': 'Database Information',
             '2': 'Symbol Information',
-            '3': 'Populate Exchange',
-            '4': 'Update History',
-            '5': 'Populate Index',
-            '6': 'Check Integrity',
-            '7': 'Delete Exchange',
-            '8': 'Delete Ticker',
-            '9': 'Reset Database',
+            '3': 'List Exchange',
+            '4': 'List Index',
+            '5': 'Populate Exchange',
+            '6': 'Populate Index',
+            '7': 'Update History',
+            '8': 'Check Integrity',
+            '9': 'Delete Exchange',
+            '10': 'Delete Index',
+            '11': 'Delete Ticker',
+            '12': 'Reset Database',
             '0': 'Exit'
         }
 
         while True:
             if not self.ticker:
-                selection = utils.menu(menu_items, 'Select Operation', 0, 9)
+                selection = utils.menu(menu_items, 'Select Operation', 0, 12)
 
             if selection == 1:
                 self.show_database_information()
             elif selection == 2:
                 self.show_symbol_information(self.ticker)
             elif selection == 3:
-                self.populate_exchange()
+                self.list_exchange()
             elif selection == 4:
-                self.update_history(self.ticker)
+                self.list_index()
             elif selection == 5:
-                self.populate_index()
+                self.populate_exchange()
             elif selection == 6:
-                self.check_integrity()
+                self.populate_index()
             elif selection == 7:
-                self.delete_exchange()
+                self.update_history(self.ticker)
             elif selection == 8:
-                self.delete_ticker()
+                self.check_integrity()
             elif selection == 9:
+                self.delete_exchange()
+            elif selection == 10:
+                self.delete_index()
+            elif selection == 11:
+                self.delete_ticker()
+            elif selection == 12:
                 self.reset_database()
             elif selection == 0:
                 break
@@ -107,7 +116,7 @@ class Interface:
             ticker = utils.input_text('Enter ticker: ').upper()
 
         if ticker:
-            if store.is_ticker_valid(ticker):
+            if store.is_ticker(ticker):
                 company = store.get_company(ticker, extra=True)
                 if company:
                     utils.print_message(f'{ticker} Company Information')
@@ -137,6 +146,29 @@ class Interface:
                         print(history.round(2))
             else:
                 utils.print_error(f'{ticker} not found')
+
+    def list_exchange(self):
+        menu_items = {}
+        for i, exchange in enumerate(self.exchanges):
+            menu_items[f'{i+1}'] = f'{exchange}'
+        menu_items['0'] = 'Cancel'
+
+        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
+        if select > 0:
+            exc = self.exchanges[select-1]
+            found = self.manager.list_exchange(exc)
+
+            print()
+            index = 0
+            for ticker in found:
+                print(f'{ticker} ', end='')
+                index += 1
+                if index % 20 == 0: # Print 20 per line
+                    print()
+        print()
+
+    def list_index(self):
+        pass
 
     def populate_exchange(self, progressbar=True):
         menu_items = {}
@@ -178,7 +210,7 @@ class Interface:
                 self._show_progress('Progress', 'Completed')
 
             if self.manager.task_error == 'Done':
-                utils.print_message(f'{self.manager.task_total} {index} Symbols populated in {self.manager.task_time:.2f} seconds')
+                utils.print_message(f'{self.manager.task_total} {self.indexes[select-1]} Symbols populated in {self.manager.task_time:.2f} seconds')
             else:
                 utils.print_error(self.manager.task_error)
 
@@ -219,7 +251,7 @@ class Interface:
                 ticker = input('Please enter symbol, or 0 to cancel: ').upper()
 
             if ticker != '0':
-                valid = store.is_ticker_valid(ticker)
+                valid = store.is_ticker(ticker)
                 if not valid:
                     utils.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
                 else:
@@ -275,12 +307,14 @@ class Interface:
             ind = self.indexes[select-1]
             self.manager.delete_index(ind)
 
+            self.create_missing_tables()
+
     def delete_ticker(self, ticker:str=''):
         if not ticker:
             ticker = utils.input_text('Enter ticker: ').upper()
 
         if ticker:
-            if store.is_ticker_valid(ticker):
+            if store.is_ticker(ticker):
                 self.manager.delete_ticker(ticker)
 
     def reset_database(self):
