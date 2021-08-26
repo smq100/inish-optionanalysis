@@ -52,13 +52,15 @@ class Interface:
             '4': 'Update History',
             '5': 'Populate Index',
             '6': 'Check Integrity',
-            '7': 'Reset Database',
+            '7': 'Delete Exchange',
+            '8': 'Delete Ticker',
+            '9': 'Reset Database',
             '0': 'Exit'
         }
 
         while True:
             if not self.ticker:
-                selection = utils.menu(menu_items, 'Select Operation', 0, 7)
+                selection = utils.menu(menu_items, 'Select Operation', 0, 9)
 
             if selection == 1:
                 self.show_database_information()
@@ -73,6 +75,10 @@ class Interface:
             elif selection == 6:
                 self.check_integrity()
             elif selection == 7:
+                self.delete_exchange()
+            elif selection == 8:
+                self.delete_ticker()
+            elif selection == 9:
                 self.reset_database()
             elif selection == 0:
                 break
@@ -98,10 +104,9 @@ class Interface:
 
     def show_symbol_information(self, ticker:str =''):
         if not ticker:
-            ticker = utils.input_text('Enter ticker: ')
+            ticker = utils.input_text('Enter ticker: ').upper()
 
         if ticker:
-            ticker = ticker.upper()
             if store.is_ticker_valid(ticker):
                 company = store.get_company(ticker, extra=True)
                 if company:
@@ -156,6 +161,26 @@ class Interface:
 
             for i, result in enumerate(self.manager.task_results):
                 utils.print_message(f'{i+1:>2}: {result}')
+
+    def populate_index(self, progressbar=True):
+        menu_items = {}
+        for i, index in enumerate(self.indexes):
+            menu_items[f'{i+1}'] = f'{index}'
+        menu_items['0'] = 'Cancel'
+
+        select = utils.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(d.INDEXES))
+        if select > 0:
+            self.task = threading.Thread(target=self.manager.populate_index, args=[self.indexes[select-1]])
+            self.task.start()
+
+            if progressbar:
+                print()
+                self._show_progress('Progress', 'Completed')
+
+            if self.manager.task_error == 'Done':
+                utils.print_message(f'{self.manager.task_total} {index} Symbols populated in {self.manager.task_time:.2f} seconds')
+            else:
+                utils.print_error(self.manager.task_error)
 
     def refresh_exchange(self, progressbar=True):
         menu_items = {}
@@ -232,14 +257,14 @@ class Interface:
 
             if progressbar:
                 print()
-                self._show_progress('', '', infinite=True)
+                self._show_progress('', '')
 
             self.create_missing_tables()
 
             if self.manager.task_error == 'Done':
                 utils.print_message(f'Deleted exchange {exc} in {self.manager.task_time:.2f} seconds')
 
-    def populate_index(self, progressbar=True):
+    def delete_index(self):
         menu_items = {}
         for i, index in enumerate(self.indexes):
             menu_items[f'{i+1}'] = f'{index}'
@@ -247,17 +272,27 @@ class Interface:
 
         select = utils.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(d.INDEXES))
         if select > 0:
-            self.task = threading.Thread(target=self.manager.populate_index, args=[self.indexes[select-1]])
-            self.task.start()
+            ind = self.indexes[select-1]
+            self.manager.delete_index(ind)
 
-            if progressbar:
-                print()
-                self._show_progress('Progress', 'Completed')
+    def delete_ticker(self, ticker:str=''):
+        if not ticker:
+            ticker = utils.input_text('Enter ticker: ').upper()
 
-            if self.manager.task_error == 'Done':
-                utils.print_message(f'{self.manager.task_total} {index} Symbols populated in {self.manager.task_time:.2f} seconds')
-            else:
-                utils.print_error(self.manager.task_error)
+        if ticker:
+            if store.is_ticker_valid(ticker):
+                self.manager.delete_ticker(ticker)
+
+    def reset_database(self):
+        select = utils.input_integer('Are you sure? 1 to reset or 0 to cancel: ', 0, 1)
+        if select == 1:
+            self.manager.delete_database()
+            self.manager.create_database()
+            self.manager.create_exchanges()
+            self.manager.create_indexes()
+            utils.print_message(f'Database is reset')
+        else:
+            utils.print_message('Database not reset')
 
     def check_integrity(self):
         exchanges = store.get_exchanges()
@@ -275,28 +310,6 @@ class Interface:
         # for e in exchanges:
         #     count = len(self.manager.identify_incomplete_pricing('AMEX'))
         #     print(f'{e:>16}:\t{count}')
-
-    def reset_database(self):
-        select = utils.input_integer('Are you sure? 1 to reset or 0 to cancel: ', 0, 1)
-        if select == 1:
-            self.manager.delete_database()
-            self.manager.create_database()
-            self.manager.create_exchanges()
-            self.manager.create_indexes()
-            utils.print_message(f'Database is reset')
-        else:
-            utils.print_message('Database not reset')
-
-    def delete_index(self):
-        menu_items = {}
-        for i, index in enumerate(self.indexes):
-            menu_items[f'{i+1}'] = f'{index}'
-        menu_items['0'] = 'Cancel'
-
-        select = utils.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(d.INDEXES))
-        if select > 0:
-            ind = self.indexes[select-1]
-            self.manager.delete_index(ind)
 
     def create_missing_tables(self):
         self.manager.create_exchanges()
@@ -321,7 +334,7 @@ class Interface:
                 if total > 0:
                     utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, ticker=symbol, length=50, success=success, tasks=tasks)
                 else:
-                    utils.progress_bar(completed, total, prefix=prefix, suffix='Calculating...', length=50)
+                    utils.progress_bar(completed, total, prefix=prefix, suffix='', length=50)
 
             utils.print_message('Processed Messages')
             results = [future.result() for future in self.manager.task_futures if future.result() is not None]

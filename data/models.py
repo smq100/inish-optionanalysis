@@ -12,7 +12,8 @@ class Exchange(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     abbreviation = Column('abbreviation', String(20), unique=True)
     name = Column('name', String(200), unique=True, nullable=False)
-    securities = relationship('Security', back_populates='exchange')
+
+    securities = relationship('Security', backref='exchange', passive_deletes=True)
 
     def __init__(self, abbreviation, name):
         self.abbreviation = abbreviation.upper()
@@ -33,12 +34,14 @@ class Security(Base):
     index1_id = Column(Integer, ForeignKey('index.id', onupdate='CASCADE', ondelete='SET NULL'))
     index2_id = Column(Integer, ForeignKey('index.id', onupdate='CASCADE', ondelete='SET NULL'))
     index3_id = Column(Integer, ForeignKey('index.id', onupdate='CASCADE', ondelete='SET NULL'))
-    exchange = relationship('Exchange')
-    company = relationship('Company', back_populates='security')
-    pricing = relationship('Price', back_populates='security')
-    index1 = relationship('Index', foreign_keys=[index1_id])
-    index2 = relationship('Index', foreign_keys=[index2_id])
-    index3 = relationship('Index', foreign_keys=[index3_id])
+
+    pricing = relationship('Price', backref='security', passive_deletes=True)
+    company = relationship('Company', backref='security', passive_deletes=True)
+    incomplete = relationship('Incomplete', backref='security', passive_deletes=True)
+
+    index1 = relationship('Index', foreign_keys=index1_id, backref='index1', passive_deletes=True)
+    index2 = relationship('Index', foreign_keys=index2_id, backref='index2', passive_deletes=True)
+    index3 = relationship('Index', foreign_keys=index3_id, backref='index3', passive_deletes=True)
 
     def __init__(self, ticker):
         self.ticker = ticker.upper()
@@ -54,6 +57,8 @@ class Index(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     abbreviation = Column('abbreviation', String(20), unique=True)
     name = Column('name', String(200), nullable=False)
+
+    # index1 = relationship('Security', foreign_keys=[Security.index1_id], backref='index')
 
     def __init__(self, abbreviation, name):
         self.abbreviation = abbreviation.upper()
@@ -77,7 +82,6 @@ class Company(Base):
     marketcap = Column('marketcap', BigInteger, nullable=False, default=0)
     rating = Column('rating', Float, nullable=False, default=3.0)
     security_id = Column(Integer, ForeignKey('security.id', onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
-    security = relationship('Security', back_populates='company')
 
     def __repr__(self):
         return f'<Company Model ({self.name})>'
@@ -96,7 +100,6 @@ class Price(Base):
     close = Column('close', Float)
     volume = Column('volume', Float)
     security_id = Column(Integer, ForeignKey('security.id', onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
-    security = relationship('Security')
 
     def __repr__(self):
         return f'<Price Model ({self.security_id})>'
@@ -108,7 +111,6 @@ class Incomplete(Base):
     __tablename__ = 'incomplete'
     id = Column(Integer, primary_key=True, autoincrement=True)
     security_id = Column(Integer, ForeignKey('security.id', onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
-    security = relationship('Security')
 
     def __repr__(self):
         return '<Incomplete Model>'

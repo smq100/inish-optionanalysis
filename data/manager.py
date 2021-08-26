@@ -36,19 +36,6 @@ class Manager(Threaded):
     def create_database(self) -> None:
         models.Base.metadata.create_all(self.engine)
 
-    def delete_database(self, recreate:bool=False):
-        if d.ACTIVE_DB == d.OPTIONS_DB[1]:
-            if os.path.exists(d.SQLITE_DATABASE_PATH):
-                os.remove(d.SQLITE_DATABASE_PATH)
-                _logger.info(f'{__name__}: Deleted {d.SQLITE_DATABASE_PATH}')
-            else:
-                _logger.warning(f'{__name__}: File does not exist: {d.SQLITE_DATABASE_PATH}')
-        else:
-            models.Base.metadata.drop_all(self.engine)
-
-        if recreate:
-            self.create_database()
-
     def create_exchanges(self) -> None:
         with self.session.begin() as session:
             for exchange in d.EXCHANGES:
@@ -57,6 +44,15 @@ class Manager(Threaded):
                     exc = models.Exchange(abbreviation=exchange['abbreviation'], name=exchange['name'])
                     session.add(exc)
                     _logger.info(f'{__name__}: Added exchange {exchange["abbreviation"]}')
+
+    def create_indexes(self) -> None:
+        with self.session.begin() as session:
+            for index in d.INDEXES:
+                i = session.query(models.Index.id).filter(models.Index.abbreviation==index['abbreviation']).one_or_none()
+                if i is None:
+                    ind = models.Index(abbreviation=index['abbreviation'], name=index['name'])
+                    session.add(ind)
+                    _logger.info(f'{__name__}: Added index {index["abbreviation"]}')
 
     @Threaded.threaded
     def populate_exchange(self, exchange:str) -> None:
@@ -86,22 +82,37 @@ class Manager(Threaded):
         self.task_error = 'Done'
 
     @Threaded.threaded
-    def delete_exchange(self, exchange:str) -> None:
-        self.task_error = 'None'
-        with self.session.begin() as session:
-            exc = session.query(models.Exchange).filter(models.Exchange.abbreviation==exchange)
-            if exc is not None:
-                exc.delete(synchronize_session=False)
-        self.task_error = 'Done'
+    def populate_index(self, index:str) -> None:
+        valid = []
 
-    def create_indexes(self) -> None:
         with self.session.begin() as session:
-            for index in d.INDEXES:
-                i = session.query(models.Index.id).filter(models.Index.abbreviation==index['abbreviation']).one_or_none()
-                if i is None:
-                    ind = models.Index(abbreviation=index['abbreviation'], name=index['name'])
-                    session.add(ind)
-                    _logger.info(f'{__name__}: Added index {index["abbreviation"]}')
+            self.task_error = 'None'
+            try:
+                i = session.query(models.Index.abbreviation).filter(models.Index.abbreviation==index).one()
+            except Exception:
+                self.task_error = f'No index {index}'
+            else:
+                self.delete_index(index)
+
+            index_index = next((ii for (ii, d) in enumerate(d.INDEXES) if d["abbreviation"] == index), -1)
+            if index_index >= 0:
+                ind = models.Index(abbreviation=index, name=d.INDEXES[index_index]['name'])
+                session.add(ind)
+                _logger.info(f'{__name__}: Recreated index {index}')
+
+                tickers = store.get_index_tickers_master(index)
+                for ticker in tickers:
+                    ticker = session.query(models.Security.ticker).filter(models.Security.ticker==ticker).one_or_none()
+                    if ticker is not None:
+                        valid += [ticker.ticker]
+
+        if len(valid) > 0:
+            self._add_securities_to_index(valid, index)
+            _logger.info(f'{__name__}: Populated index {index}')
+            self.task_error = 'Done'
+        elif not self.task_error:
+            self.task_error = 'No symbols'
+            _logger.warning(f'{__name__}: No symbols found for {index}')
 
     def update_history_ticker(self, ticker:str='') -> int:
         days = 0
@@ -141,38 +152,30 @@ class Manager(Threaded):
 
         self.task_error = 'Done'
 
-    @Threaded.threaded
-    def populate_index(self, index:str) -> None:
-        valid = []
-
-        with self.session.begin() as session:
-            self.task_error = 'None'
-            try:
-                i = session.query(models.Index.abbreviation).filter(models.Index.abbreviation==index).one()
-            except Exception:
-                self.task_error = f'No index {index}'
+    def delete_database(self, recreate:bool=False):
+        if d.ACTIVE_DB == d.OPTIONS_DB[1]:
+            if os.path.exists(d.SQLITE_DATABASE_PATH):
+                os.remove(d.SQLITE_DATABASE_PATH)
+                _logger.info(f'{__name__}: Deleted {d.SQLITE_DATABASE_PATH}')
             else:
-                self.delete_index(index)
+                _logger.warning(f'{__name__}: File does not exist: {d.SQLITE_DATABASE_PATH}')
+        else:
+            models.Base.metadata.drop_all(self.engine)
 
-            index_index = next((ii for (ii, d) in enumerate(d.INDEXES) if d["abbreviation"] == index), -1)
-            if index_index >= 0:
-                ind = models.Index(abbreviation=index, name=d.INDEXES[index_index]['name'])
-                session.add(ind)
-                _logger.info(f'{__name__}: Recreated index {index}')
+        if recreate:
+            self.create_database()
 
-                tickers = store.get_index_tickers_master(index)
-                for ticker in tickers:
-                    ticker = session.query(models.Security.ticker).filter(models.Security.ticker==ticker).one_or_none()
-                    if ticker is not None:
-                        valid += [ticker.ticker]
-
-        if len(valid) > 0:
-            self._add_securities_to_index(valid, index)
-            _logger.info(f'{__name__}: Populated index {index}')
-            self.task_error = 'Done'
-        elif not self.task_error:
-            self.task_error = 'No symbols'
-            _logger.warning(f'{__name__}: No symbols found for {index}')
+    @Threaded.threaded
+    def delete_exchange(self, exchange:str) -> None:
+        self.task_error = 'None'
+        if store.is_exchange(exchange):
+            with self.session.begin() as session:
+                exc = session.query(models.Exchange).filter(models.Exchange.abbreviation==exchange.upper()).one()
+                if exc is not None:
+                    session.delete(exc)
+        else:
+            _logger.warning(f'{__name__}: Exchange does not exist: {exchange.upper()}')
+        self.task_error = 'Done'
 
     def delete_index(self, index:str) -> None:
         with self.session.begin() as session:
@@ -182,6 +185,15 @@ class Manager(Threaded):
                 _logger.info(f'{__name__}: Deleted index {index}')
             else:
                 _logger.error(f'{__name__}: Index {index} does not exist')
+
+    def delete_ticker(self, ticker:str):
+        with self.session.begin() as session:
+            sec = session.query(models.Security).filter(models.Security.ticker==ticker.upper()).one_or_none()
+
+            if sec is not None:
+                session.delete(sec)
+            else:
+                _logger.warning(f'{__name__}: Unable to delete ticker. Does not exist: {ticker.upper()}')
 
     def get_database_info(self) -> list[dict]:
         info = []
@@ -390,10 +402,10 @@ class Manager(Threaded):
                     company = store.get_company(ticker, live=True)
                     if company:
                         history = store.get_history(ticker, -1, live=True)
-                        if history is None:
-                            _logger.warning(f'{__name__}: History information for {ticker} not available. Not added to database')
-                        else:
+                        if history is not None:
                             process = True
+                        else:
+                            _logger.warning(f'{__name__}: History information for {ticker} not available. Not added to database')
                     else:
                         _logger.warning(f'{__name__}: Company information for {ticker} not available. Not added to database')
 
@@ -412,7 +424,7 @@ class Manager(Threaded):
                             _logger.warning(f'{__name__}: Company info invalid for {ticker}: {str(e)}')
                         except HTTPError as e:
                             self.retry += 1
-                            _logger.warning(f'{__name__}: HTTP Error for {ticker}. Retrying... {self.retry}: {str(e)}')
+                            _logger.warning(f'{__name__}: HTTP Error for {ticker}. Retry: {self.retry}: {str(e)}')
                             if self.retry > retries:
                                 self.invalid_tickers += [ticker]
                                 exit = True

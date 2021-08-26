@@ -30,16 +30,16 @@ _session = sessionmaker(bind=_engine)
 
 UNAVAILABLE = 'unavailable'
 
-def is_ticker_valid(symbol:str) -> bool:
+def is_ticker_valid(ticker:str) -> bool:
     with _session() as session:
-        e = session.query(models.Security).filter(models.Security.ticker==symbol.upper()).one_or_none()
+        e = session.query(models.Security).filter(models.Security.ticker==ticker.upper()).one_or_none()
 
     return (e is not None)
 
 def is_exchange(exchange:str) -> bool:
     ret = False
     for e in d.EXCHANGES:
-        if exchange == e['abbreviation']:
+        if exchange.upper() == e['abbreviation']:
             ret = True
             break
 
@@ -48,7 +48,7 @@ def is_exchange(exchange:str) -> bool:
 def is_index(index:str) -> bool:
     ret = False
     for i in d.INDEXES:
-        if index == i['abbreviation']:
+        if index.upper() == i['abbreviation']:
             ret = True
             break
 
