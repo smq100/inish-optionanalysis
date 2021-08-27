@@ -47,7 +47,7 @@ class Interface:
 
         menu_items = {
             '1': 'Database Information',
-            '2': 'Symbol Information',
+            '2': 'Ticker Information',
             '3': 'List Exchange',
             '4': 'List Index',
             '5': 'Populate Exchange',
@@ -212,7 +212,7 @@ class Interface:
 
             if self.manager.task_error == 'Done':
                 utils.print_message(f'{self.manager.task_success} {exc} '\
-                    f'Symbols populated in {self.manager.task_time:.0f} seconds with {len(self.manager.invalid_tickers)} invalid symbols')
+                    f'Symbols populated in {self.manager.task_time/60.0:.1f} minutes with {len(self.manager.invalid_tickers)} invalid symbols')
 
     def populate_index(self, progressbar=True):
         menu_items = {}
@@ -289,7 +289,7 @@ class Interface:
 
             if self.manager.task_error == 'Done':
                 utils.print_message(f'{self.manager.task_total} {exc} '\
-                    f'Ticker pricing refreshed in {self.manager.task_time:.2f} seconds')
+                    f'Ticker pricing refreshed in {self.manager.task_time:.0f} seconds')
 
     def delete_exchange(self, progressbar=True):
         menu_items = {}
@@ -311,7 +311,7 @@ class Interface:
             self.create_missing_tables()
 
             if self.manager.task_error == 'Done':
-                utils.print_message(f'Deleted exchange {exc} in {self.manager.task_time:.2f} seconds')
+                utils.print_message(f'Deleted exchange {exc} in {self.manager.task_time:.0f} seconds')
 
     def delete_index(self):
         menu_items = {}
@@ -390,12 +390,10 @@ class Interface:
                 else:
                     utils.progress_bar(completed, total, prefix=prefix, suffix='', length=50)
 
-            utils.print_message('Processed Messages')
             results = [future.result() for future in self.manager.task_futures if future.result() is not None]
             if len(results) > 0:
+                utils.print_message('Processed Messages')
                 [print(result) for result in results]
-            else:
-                print('None')
         else:
             utils.print_message(f'{self.manager.task_error}')
 

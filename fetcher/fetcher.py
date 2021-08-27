@@ -38,8 +38,8 @@ def validate_ticker(ticker:str) -> bool:
 
 elapsed = 0.0
 def get_company_live(ticker:str) -> pd.DataFrame:
-    company = None
     global elapsed
+    company = None
 
     # Throttle requests to help avoid being cut off by Yahoo
     while time.perf_counter() - elapsed < THROTTLE: time.sleep(THROTTLE)
@@ -63,37 +63,34 @@ def get_history_live(ticker:str, days:int=-1) -> pd.DataFrame:
     if company is not None:
         if days < 0:
             days = 7300 # 20 years
-        elif days > 1:
-            pass
-        else:
-            days = 100
 
-        start = dt.datetime.today() - dt.timedelta(days=days)
-        end = dt.datetime.today()
+        if days > 0:
+            start = dt.datetime.today() - dt.timedelta(days=days)
+            end = dt.datetime.today()
 
-        # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
-        for retry in range(3):
-            try:
-                history = company.history(start=f'{start:%Y-%m-%d}', end=f'{end:%Y-%m-%d}')
-                days = history.shape[0]
-                if history is None:
-                    _logger.warning(f'{__name__}: History information for {ticker} is None')
-                    break
-                elif history.empty:
+            # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
+            for retry in range(3):
+                try:
+                    history = company.history(start=f'{start:%Y-%m-%d}', end=f'{end:%Y-%m-%d}')
+                    days = history.shape[0]
+                    if history is None:
+                        _logger.warning(f'{__name__}: History information for {ticker} is None')
+                        break
+                    elif history.empty:
+                        history = None
+                        _logger.warning(f'{__name__}: History information for {ticker} is empty')
+                        break
+                    else:
+                        history.reset_index(inplace=True)
+
+                        # Lower case columns to make consistent with Postgress column names
+                        history.columns = history.columns.str.lower()
+                        _logger.info(f'{__name__}: Fetched {history.shape[0]} days of live history of {ticker} starting {start:%Y-%m-%d}')
+                        break
+                except Exception as e:
+                    _logger.error(f'{__name__}: Retry {retry} to fetch history of {ticker}: {e}')
                     history = None
-                    _logger.warning(f'{__name__}: History information for {ticker} is empty')
-                    break
-                else:
-                    history.reset_index(inplace=True)
-
-                    # Lower case columns to make consistent with Postgress column names
-                    history.columns = history.columns.str.lower()
-                    _logger.info(f'{__name__}: Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
-                    break
-            except Exception as e:
-                _logger.error(f'{__name__}: Retry {retry} to fetch history of {ticker}: {e}')
-                history = None
-                time.sleep(1)
+                    time.sleep(1)
 
     return history
 
@@ -214,7 +211,7 @@ if __name__ == '__main__':
     # else:
     #     print(get_ratings('aapl'))
 
-    c = get_history_live('ALACR')
+    c = get_history_live('KERNW')
     print(c)
     # c = get_history_q('AAPL', days=-1)
 

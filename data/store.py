@@ -128,7 +128,7 @@ def get_current_price(ticker:str) -> float:
 
     return price
 
-def get_history(ticker, days:int, live:bool=False) -> pd.DataFrame:
+def get_history(ticker, days:int=-1, live:bool=False) -> pd.DataFrame:
     results = pd.DataFrame()
 
     if live:
@@ -164,19 +164,22 @@ def get_company(ticker, live:bool=False, extra:bool=False) -> dict:
         company = fetcher.get_company_live(ticker)
         if company is not None:
             if company.info is not None:
-                results['name'] = company.info.get('shortName', UNAVAILABLE)[:95]
-                results['description'] = company.info.get('longBusinessSummary', UNAVAILABLE)[:4995]
-                results['url'] = company.info.get('website', UNAVAILABLE)[:195]
-                results['sector'] = company.info.get('sector', UNAVAILABLE)[:195]
-                results['industry'] = company.info.get('industry', UNAVAILABLE)[:195]
-                results['marketcap'] = company.info.get('marketCap', 0)
-                results['beta'] = company.info.get('beta', 3.0)
-                results['indexes'] = ''
-                results['precords'] = 0
+                try:
+                    results['name'] = company.info.get('shortName')[:95] if company.info.get('shortName') is not None else UNAVAILABLE
+                    results['description'] = company.info.get('longBusinessSummary')[:4995] if company.info.get('longBusinessSummary') is not None else UNAVAILABLE
+                    results['url'] = company.info.get('website')[:195] if company.info.get('website') is not None else UNAVAILABLE
+                    results['sector'] = company.info.get('sector')[:195] if company.info.get('sector') is not None else UNAVAILABLE
+                    results['industry'] = company.info.get('industry')[:195] if company.info.get('industry') is not None else UNAVAILABLE
+                    results['marketcap'] = company.info.get('marketCap') if company.info.get('marketCap') is not None else 0
+                    results['beta'] = company.info.get('beta') if company.info.get('beta') is not None else 3.0
+                    results['indexes'] = ''
+                    results['precords'] = 0
 
-                ratings = fetcher.get_ratings(ticker)
-                results['rating'] = sum(ratings) / float(len(ratings)) if ratings else 3.0
-
+                    ratings = fetcher.get_ratings(ticker)
+                    results['rating'] = sum(ratings) / float(len(ratings)) if ratings else 3.0
+                except Exception as e:
+                    results = {}
+                    _logger.error(f'{__name__}: Exception for ticker {ticker}: {str(e)}')
     else:
         with _session() as session:
             symbol = session.query(models.Security).filter(models.Security.ticker==ticker.upper()).one_or_none()

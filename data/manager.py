@@ -1,7 +1,6 @@
 import os
 import time
 import random
-import threading
 from datetime import date
 from concurrent import futures
 from urllib.error import HTTPError
@@ -387,7 +386,7 @@ class Manager(Threaded):
         today = date.today()
         days = 0
 
-        history = store.get_history(ticker, -1)
+        history = store.get_history(ticker)
         if history.empty:
             if self._add_history_to_security(ticker):
                 _logger.info(f'{__name__}: Added full price history for {ticker}')
@@ -475,7 +474,7 @@ class Manager(Threaded):
                     process = False
                     company = store.get_company(ticker, live=True)
                     if company:
-                        history = store.get_history(ticker, -1, live=True)
+                        history = store.get_history(ticker, live=True)
                         if history is not None:
                             process = True
                         else:
@@ -566,7 +565,7 @@ class Manager(Threaded):
             sec = session.query(models.Security).filter(models.Security.ticker==ticker).one()
 
             if history is None:
-                history = store.get_history(ticker, -1, live=True)
+                history = store.get_history(ticker, live=True)
 
             if history is None:
                 sec.active = False
