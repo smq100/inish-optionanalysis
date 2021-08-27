@@ -34,7 +34,7 @@ def is_ticker(ticker:str) -> bool:
     with _session() as session:
         e = session.query(models.Security).filter(models.Security.ticker==ticker.upper()).one_or_none()
 
-    return (e is not None)
+    return e is not None
 
 def is_exchange(exchange:str) -> bool:
     ret = False
@@ -46,13 +46,10 @@ def is_exchange(exchange:str) -> bool:
     return ret
 
 def is_index(index:str) -> bool:
-    ret = False
-    for i in d.INDEXES:
-        if index.upper() == i['abbreviation']:
-            ret = True
-            break
+    with _session() as session:
+        e = session.query(models.Index).filter(models.Index.abbreviation==index.upper()).one_or_none()
 
-    return ret
+    return e is not None
 
 def is_list(list:str) -> bool:
     ret = False

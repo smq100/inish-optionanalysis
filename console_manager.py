@@ -153,22 +153,45 @@ class Interface:
             menu_items[f'{i+1}'] = f'{exchange}'
         menu_items['0'] = 'Cancel'
 
-        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
+        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.EXCHANGES))
         if select > 0:
             exc = self.exchanges[select-1]
             found = self.manager.list_exchange(exc)
 
-            print()
-            index = 0
-            for ticker in found:
-                print(f'{ticker} ', end='')
-                index += 1
-                if index % 20 == 0: # Print 20 per line
-                    print()
-        print()
+            if len(found) > 0:
+                print()
+                index = 0
+                for ticker in found:
+                    print(f'{ticker} ', end='')
+                    index += 1
+                    if index % 20 == 0: # Print 20 per line
+                        print()
+                print()
+            else:
+                utils.print_message(f'No tickers in exchange {exc}')
 
     def list_index(self):
-        pass
+        menu_items = {}
+        for i, index in enumerate(self.indexes):
+            menu_items[f'{i+1}'] = f'{index}'
+        menu_items['0'] = 'Cancel'
+
+        select = utils.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(d.INDEXES))
+        if select > 0:
+            ind = self.indexes[select-1]
+            found = self.manager.list_index(ind)
+
+            if len(found) > 0:
+                print()
+                index = 0
+                for ticker in found:
+                    print(f'{ticker} ', end='')
+                    index += 1
+                    if index % 20 == 0: # Print 20 per line
+                        print()
+                print()
+            else:
+                utils.print_message(f'No tickers in index {ind}')
 
     def populate_exchange(self, progressbar=True):
         menu_items = {}
@@ -188,11 +211,8 @@ class Interface:
                 self._show_progress('Progress', 'Completed')
 
             if self.manager.task_error == 'Done':
-                utils.print_message(f'{self.manager.task_total} {exc} '\
-                    f'Symbols populated in {self.manager.task_time:.2f} seconds with {len(self.manager.invalid_tickers)} invalid symbols')
-
-            for i, result in enumerate(self.manager.task_results):
-                utils.print_message(f'{i+1:>2}: {result}')
+                utils.print_message(f'{self.manager.task_success} {exc} '\
+                    f'Symbols populated in {self.manager.task_time:.0f} seconds with {len(self.manager.invalid_tickers)} invalid symbols')
 
     def populate_index(self, progressbar=True):
         menu_items = {}
@@ -210,7 +230,7 @@ class Interface:
                 self._show_progress('Progress', 'Completed')
 
             if self.manager.task_error == 'Done':
-                utils.print_message(f'{self.manager.task_total} {self.indexes[select-1]} Symbols populated in {self.manager.task_time:.2f} seconds')
+                utils.print_message(f'{self.manager.task_success} {self.indexes[select-1]} Symbols populated in {self.manager.task_time:.0f} seconds')
             else:
                 utils.print_error(self.manager.task_error)
 
@@ -271,9 +291,6 @@ class Interface:
                 utils.print_message(f'{self.manager.task_total} {exc} '\
                     f'Ticker pricing refreshed in {self.manager.task_time:.2f} seconds')
 
-            for i, result in enumerate(self.manager.task_results):
-                utils.print_message(f'{i+1:>2}: {result}')
-
     def delete_exchange(self, progressbar=True):
         menu_items = {}
         for i, exchange in enumerate(self.exchanges):
@@ -306,8 +323,9 @@ class Interface:
         if select > 0:
             ind = self.indexes[select-1]
             self.manager.delete_index(ind)
-
             self.create_missing_tables()
+
+            utils.print_message(f'Deleted exchange {ind}')
 
     def delete_ticker(self, ticker:str=''):
         if not ticker:
@@ -316,6 +334,8 @@ class Interface:
         if ticker:
             if store.is_ticker(ticker):
                 self.manager.delete_ticker(ticker)
+
+                utils.print_message(f'Deleted exchange {ticker}')
 
     def reset_database(self):
         select = utils.input_integer('Are you sure? 1 to reset or 0 to cancel: ', 0, 1)

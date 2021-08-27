@@ -83,36 +83,38 @@ class Manager(Threaded):
 
     @Threaded.threaded
     def populate_index(self, index:str) -> None:
-        valid = []
+        index = index.upper()
 
-        with self.session.begin() as session:
+        if store.is_index(index):
             self.task_error = 'None'
-            try:
-                i = session.query(models.Index.abbreviation).filter(models.Index.abbreviation==index).one()
-            except Exception:
-                self.task_error = f'No index {index}'
-            else:
+
+            # Delete and recreate the index
+            with self.session.begin() as session:
                 self.delete_index(index)
 
-            index_index = next((ii for (ii, d) in enumerate(d.INDEXES) if d["abbreviation"] == index), -1)
-            if index_index >= 0:
-                ind = models.Index(abbreviation=index, name=d.INDEXES[index_index]['name'])
-                session.add(ind)
-                _logger.info(f'{__name__}: Recreated index {index}')
+                index_index = next((ii for (ii, d) in enumerate(d.INDEXES) if d["abbreviation"] == index), -1)
+                if index_index >= 0:
+                    ind = models.Index(abbreviation=index, name=d.INDEXES[index_index]['name'])
+                    session.add(ind)
+                    _logger.info(f'{__name__}: Recreated index {index}')
 
-                tickers = store.get_index_tickers_master(index)
-                for ticker in tickers:
-                    ticker = session.query(models.Security.ticker).filter(models.Security.ticker==ticker).one_or_none()
-                    if ticker is not None:
-                        valid += [ticker.ticker]
+            valid = []
+            tickers = store.get_index_tickers_master(index)
+            for ticker in tickers:
+                ticker = session.query(models.Security.ticker).filter(models.Security.ticker==ticker).one_or_none()
+                if ticker is not None:
+                    valid += [ticker.ticker]
 
-        if len(valid) > 0:
-            self._add_securities_to_index(valid, index)
-            _logger.info(f'{__name__}: Populated index {index}')
-            self.task_error = 'Done'
-        elif not self.task_error:
-            self.task_error = 'No symbols'
-            _logger.warning(f'{__name__}: No symbols found for {index}')
+            if len(valid) > 0:
+                self._add_securities_to_index(valid, index)
+                _logger.info(f'{__name__}: Populated index {index}')
+                self.task_error = 'Done'
+            elif not self.task_error:
+                self.task_error = 'No symbols'
+                _logger.warning(f'{__name__}: No symbols found for {index}')
+        else:
+            self.task_error = f'No index {index}'
+            _logger.warning(f'{__name__}: No valid index {index}')
 
     def update_history_ticker(self, ticker:str='') -> int:
         days = 0
@@ -212,7 +214,6 @@ class Manager(Threaded):
         else:
             _logger.warning(f'{__name__}: Ticker {ticker} does not exist')
 
-
     def get_database_info(self) -> list[dict]:
         info = []
         inspector = inspect(self.engine)
@@ -255,11 +256,13 @@ class Manager(Threaded):
                 if not index:
                     indexes = session.query(models.Index)
                     for i in indexes:
-                        s = session.query(models.Security).filter(or_(models.Security.index1_id == i.id, models.Security.index2_id == i.id))
+                        s = session.query(models.Security).filter(or_(models.Security.index1_id == i.id,
+                            models.Security.index2_id == i.id, models.Security.index3_id == i.id))
                         info += [{'index':i.abbreviation, 'count':s.count()}]
                 else:
                     i = session.query(models.Index).filter(models.Index.abbreviation == index).first()
-                    s = session.query(models.Security).filter(or_(models.Security.index1_id == i.id, models.Security.index2_id == i.id))
+                    s = session.query(models.Security).filter(or_(models.Security.index1_id == i.id,
+                        models.Security.index2_id == i.id, models.Security.index3_id == i.id))
                     info = [{'index':i.abbreviation, 'count':s.count()}]
 
         return info
@@ -278,6 +281,24 @@ class Manager(Threaded):
             _logger.info(f'{__name__}: {len(found)} tickers in {exchange}')
         else:
             _logger.warning(f'{__name__}: {exchange} not valid')
+
+        return found
+
+    def list_index(self, index:str) -> list[str]:
+        index = index.upper()
+        found = []
+
+        if store.is_index(index):
+            with self.session() as session:
+                i = session.query(models.Index.id).filter(models.Index.abbreviation==index).one()
+                t = session.query(models.Security.ticker).filter(or_(models.Security.index1_id == i.id,
+                    models.Security.index2_id == i.id, models.Security.index3_id == i.id)).all()
+
+                found = [ticker[0] for ticker in t]
+
+            _logger.info(f'{__name__}: {len(found)} tickers in {index}')
+        else:
+            _logger.warning(f'{__name__}: {index} not valid')
 
         return found
 
@@ -458,8 +479,10 @@ class Manager(Threaded):
                         if history is not None:
                             process = True
                         else:
+                            self.invalid_tickers += [ticker]
                             _logger.warning(f'{__name__}: History information for {ticker} not available. Not added to database')
                     else:
+                        self.invalid_tickers += [ticker]
                         _logger.warning(f'{__name__}: Company information for {ticker} not available. Not added to database')
 
                     if process:
