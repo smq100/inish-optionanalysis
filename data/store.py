@@ -32,33 +32,30 @@ UNAVAILABLE = 'unavailable'
 
 def is_ticker(ticker:str) -> bool:
     with _session() as session:
-        e = session.query(models.Security).filter(models.Security.ticker==ticker.upper()).one_or_none()
+        t = session.query(models.Security).filter(models.Security.ticker==ticker.upper()).one_or_none()
 
-    return e is not None
+    return t is not None
 
 def is_exchange(exchange:str) -> bool:
-    ret = False
-    for e in d.EXCHANGES:
-        if exchange.upper() == e['abbreviation']:
-            ret = True
-            break
+    with _session() as session:
+        e = session.query(models.Exchange).filter(models.Exchange.abbreviation==exchange.upper()).one_or_none()
 
-    return ret
+    return e is not None
 
 def is_index(index:str) -> bool:
     with _session() as session:
-        e = session.query(models.Index).filter(models.Index.abbreviation==index.upper()).one_or_none()
+        i = session.query(models.Index).filter(models.Index.abbreviation==index.upper()).one_or_none()
 
-    return e is not None
+    return i is not None
 
 def is_list(list:str) -> bool:
-    ret = False
+    exist = False
     if is_exchange(list):
-        ret = True
+        exist = True
     elif is_index(list):
-        ret = True
+        exist = True
 
-    return ret
+    return exist
 
 def get_tickers(list:str='') -> list[str]:
     tickers = []
@@ -118,6 +115,18 @@ def get_index_tickers(index:str) -> list[str]:
             raise ValueError(f'Invalid index: {index}')
 
     return results
+
+def get_ticker_exchange(ticker:str) -> str:
+    exchange = ''
+
+    if ticker.upper() in get_exchange_tickers_master('NASDAQ'):
+        exchange = 'NASDAQ'
+    elif ticker.upper() in get_exchange_tickers_master('NYSE'):
+        exchange = 'NYSE'
+    elif ticker.upper() in get_exchange_tickers_master('AMEX'):
+        exchange = 'AMEX'
+
+    return exchange
 
 def get_current_price(ticker:str) -> float:
     price = 0.0
@@ -294,7 +303,7 @@ if __name__ == '__main__':
     # logger = u.get_logger(DEBUG)
 
     if len(sys.argv) > 1:
-        t = get_history(sys.argv[1], -1)
+        t = get_ticker_exchange(sys.argv[1])
     else:
-        t = get_history('AAPL', 20)
+        t = get_ticker_exchange('AAPL')
     print(t)

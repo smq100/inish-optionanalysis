@@ -52,7 +52,7 @@ class Interface:
             '4': 'List Index',
             '5': 'Populate Exchange',
             '6': 'Populate Index',
-            '7': 'Update History',
+            '7': 'Update Ticker(s)',
             '8': 'Check Integrity',
             '9': 'Delete Exchange',
             '10': 'Delete Index',
@@ -78,7 +78,7 @@ class Interface:
             elif selection == 6:
                 self.populate_index()
             elif selection == 7:
-                self.update_history(self.ticker)
+                self.update_ticker(self.ticker)
             elif selection == 8:
                 self.check_integrity()
             elif selection == 9:
@@ -253,7 +253,7 @@ class Interface:
             print()
             utils.print_message(f'Identified {self.manager.task_total} missing items. {self.manager.task_success} items filled')
 
-    def update_history(self, ticker:str ='', progressbar=True):
+    def update_ticker(self, ticker:str ='', progressbar=True):
         menu_items = {}
         for i, exchange in enumerate(self.exchanges):
             menu_items[f'{i+1}'] = f'{exchange}'
@@ -271,13 +271,20 @@ class Interface:
                 ticker = input('Please enter symbol, or 0 to cancel: ').upper()
 
             if ticker != '0':
-                valid = store.is_ticker(ticker)
-                if not valid:
-                    utils.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
-                else:
+                if store.is_ticker(ticker):
                     days = self.manager.update_history_ticker(ticker)
                     utils.print_message(f'Added {days} days pricing for {ticker}')
                     self.show_symbol_information(ticker=ticker)
+                elif store.get_ticker_exchange(ticker):
+                    exchange = store.get_ticker_exchange(ticker)
+                    if self.manager.add_securities_to_exchange([ticker], exchange):
+                        utils.print_message(f'Added {ticker} to {exchange}')
+                        self.show_symbol_information(ticker=ticker)
+                    else:
+                        utils.print_error(f'Error adding {ticker} to {exchange}')
+
+                else:
+                    utils.print_error('Invalid ticker. Try another ticker or select "0" to cancel')
         elif select > 0:
             exc = self.exchanges[select-1] if select <= len(d.EXCHANGES) else ''
             self.task = threading.Thread(target=self.manager.update_history_exchange, args=[exc])

@@ -205,15 +205,11 @@ def get_treasury_rate(ticker:str) -> float:
 if __name__ == '__main__':
     # from logging import DEBUG
     # _logger = utils.get_logger(DEBUG)
-    # import sys
-    # if len(sys.argv) > 1:
-    #     print(get_ratings(sys.argv[1]))
-    # else:
-    #     print(get_ratings('aapl'))
-
-    c = get_history_live('KERNW')
-    print(c)
-    # c = get_history_q('AAPL', days=-1)
+    import sys
+    if len(sys.argv) > 1:
+        print(get_history_live(sys.argv[1]))
+    else:
+        print(get_history_live('CIB'))
 
     # start = dt.datetime.today() - dt.timedelta(days=10)
     # df = refresh_history('AAPL', 60)

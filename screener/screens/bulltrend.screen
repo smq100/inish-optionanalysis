@@ -126,7 +126,7 @@
       }
    },
    {
-      "note":"Rating above 2.0",
+      "note":"Rating below 3.0",
       "base":{
          "technical":"rating",
          "length":0,
@@ -136,9 +136,9 @@
          "factor":1.0
       },
       "criteria":{
-         "conditional":"gt",
+         "conditional":"lt",
          "technical":"value",
-         "value":2.0,
+         "value":3.1,
          "length":0,
          "start":-1,
          "stop":0,
