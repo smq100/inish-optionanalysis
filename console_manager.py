@@ -342,7 +342,7 @@ class Interface:
             if store.is_ticker(ticker):
                 self.manager.delete_ticker(ticker)
 
-                utils.print_message(f'Deleted exchange {ticker}')
+                utils.print_message(f'Deleted ticker {ticker}')
 
     def reset_database(self):
         select = utils.input_integer('Are you sure? 1 to reset or 0 to cancel: ', 0, 1)
@@ -367,10 +367,10 @@ class Interface:
             missing = self.manager.identify_incomplete_companies(e)
             print(f'{e:>16}:\t{len(missing)}')
 
-        # utils.print_message('Incomplete Pricing')
-        # for e in exchanges:
-        #     count = len(self.manager.identify_incomplete_pricing('AMEX'))
-        #     print(f'{e:>16}:\t{count}')
+        utils.print_message('Incomplete Pricing')
+        for e in exchanges:
+            count = len(self.manager.identify_incomplete_pricing(e))
+            print(f'{e:>16}:\t{count}')
 
     def create_missing_tables(self):
         self.manager.create_exchanges()
