@@ -48,46 +48,49 @@ class Interface:
         menu_items = {
             '1': 'Database Information',
             '2': 'Ticker Information',
-            '3': 'List Exchange',
-            '4': 'List Index',
-            '5': 'Populate Exchange',
-            '6': 'Populate Index',
-            '7': 'Update Ticker(s)',
-            '8': 'Check Integrity',
-            '9': 'Delete Exchange',
-            '10': 'Delete Index',
-            '11': 'Delete Ticker',
-            '12': 'Reset Database',
+            '3': 'Ticker Information (live)',
+            '4': 'List Exchange',
+            '5': 'List Index',
+            '6': 'Populate Exchange',
+            '7': 'Populate Index',
+            '8': 'Update Ticker(s)',
+            '9': 'Check Integrity',
+            '10': 'Delete Exchange',
+            '11': 'Delete Index',
+            '12': 'Delete Ticker',
+            '13': 'Reset Database',
             '0': 'Exit'
         }
 
         while True:
             if not self.ticker:
-                selection = utils.menu(menu_items, 'Select Operation', 0, 12)
+                selection = utils.menu(menu_items, 'Select Operation', 0, 13)
 
             if selection == 1:
                 self.show_database_information()
             elif selection == 2:
                 self.show_symbol_information(self.ticker)
             elif selection == 3:
-                self.list_exchange()
+                self.show_symbol_information(self.ticker, live=True)
             elif selection == 4:
-                self.list_index()
+                self.list_exchange()
             elif selection == 5:
-                self.populate_exchange()
+                self.list_index()
             elif selection == 6:
-                self.populate_index()
+                self.populate_exchange()
             elif selection == 7:
-                self.update_ticker(self.ticker)
+                self.populate_index()
             elif selection == 8:
-                self.check_integrity()
+                self.update_ticker(self.ticker)
             elif selection == 9:
-                self.delete_exchange()
+                self.check_integrity()
             elif selection == 10:
-                self.delete_index()
+                self.delete_exchange()
             elif selection == 11:
-                self.delete_ticker()
+                self.delete_index()
             elif selection == 12:
+                self.delete_ticker()
+            elif selection == 13:
                 self.reset_database()
             elif selection == 0:
                 break
@@ -111,39 +114,59 @@ class Interface:
         for i in info:
             print(f'{i["index"]:>16}:\t{i["count"]} symbols')
 
-    def show_symbol_information(self, ticker:str =''):
+    def show_symbol_information(self, ticker:str ='', live=False):
         if not ticker:
             ticker = utils.input_text('Enter ticker: ').upper()
 
         if ticker:
             if store.is_ticker(ticker):
-                company = store.get_company(ticker, extra=True)
+                company = store.get_company(ticker, live=live, extra=True)
                 if company:
-                    utils.print_message(f'{ticker} Company Information')
+                    if live:
+                        utils.print_message(f'{ticker} Company Information (live)')
+                    else:
+                        utils.print_message(f'{ticker} Company Information')
+
                     print(f'Name:\t\t{company["name"]}')
-                    print(f'Exchange:\t{company["exchange"]}')
+
+                    if not live:
+                        print(f'Exchange:\t{company["exchange"]}')
+                    else:
+                        print(f'Exchange:\t{store.get_ticker_exchange(ticker)}')
+
                     print(f'Market Cap:\t{company["marketcap"]:,}')
                     print(f'Beta:\t\t{company["beta"]:.2f}')
                     print(f'Rating:\t\t{company["rating"]:.2f}')
-                    print(f'Indexes:\t{company["indexes"]}')
+
+                    if not live:
+                        print(f'Indexes:\t{company["indexes"]}')
+                    else:
+                        print(f'Indexes:\t{store.get_ticker_index(ticker)}')
+
                     print(f'Sector:\t\t{company["sector"]}')
                     print(f'Industry:\t{company["industry"]}')
                     print(f'URL:\t\t{company["url"]}')
-                    print(f'Price Records:\t{company["precords"]}')
+
+                    if not live:
+                        print(f'Price Records:\t{company["precords"]}')
+                        print(f'Active:\t\t{company["active"]}')
                 else:
                     utils.print_error(f'{ticker} has no company information')
 
-                history = store.get_history(ticker, 100).round(2)
+                history = store.get_history(ticker, 100, live=live).round(2)
                 if history.empty:
                     utils.print_error(f'{ticker} has no price history')
                 else:
-                    latest = history.iloc[-1]
-                    print(f'Latest Record:\t{latest["date"]:%Y-%m-%d}, closed at ${latest["close"]:.2f}')
+                    if not live:
+                        latest = history.iloc[-1]
+                        print(f'Latest Record:\t{latest["date"]:%Y-%m-%d}, closed at ${latest["close"]:.2f}')
+
                     utils.print_message(f'{ticker} Recent Price History')
                     history = history.tail(10)
                     if not history.empty:
                         history.set_index('date', inplace=True)
                         print(history.round(2))
+
             else:
                 utils.print_error(f'{ticker} not found')
 

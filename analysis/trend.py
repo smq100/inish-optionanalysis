@@ -10,6 +10,7 @@ from data import store as store
 from utils import utils as utils
 
 _logger = utils.get_logger()
+_rounding = 0.075
 
 METHOD = {
     'NCUBED': (trendln.METHOD_NCUBED, 'NCUBED'),
@@ -78,12 +79,12 @@ class Line:
 class SupportResistance:
     def __init__(self, ticker, method='NSQUREDLOGN', best=5, days=365):
         if best < 1:
-            raise AssertionError("'best' value must be > 0")
+            raise ValueError("'best' value must be > 0")
 
         if days <= 30:
-            utils.print_error('Days must be greater than 30')
+            raise ValueError('Days must be greater than 30')
 
-        elif (store.is_ticker(ticker)):
+        if (store.is_ticker(ticker)):
             self.ticker = ticker.upper()
             self.method = METHOD[method]
             self.best = best
@@ -95,18 +96,20 @@ class SupportResistance:
             self.lines = []
             self.lines_sup = []
             self.lines_res = []
+            self.values_sup = []
+            self.values_res = []
             self.slope_sup = 0.0
             self.intercept_sup = 0.0
             self.slope_res = 0.0
             self.intercept_res = 0.0
             self.accuracy = 8
         else:
-            _logger.error('{__name__}: Error initializing {__class__}')
+            raise ValueError('{__name__}: Error initializing {__class__} with ticker {ticker}')
 
     def __str__(self):
         return f'Support and resistance analysis for {self.ticker} (${self.price:.2f})'
 
-    def calculate(self) -> None:
+    def calculate(self) -> tuple[list[float], list[float]]:
         self.history = store.get_history(self.ticker, self.days)
         if self.history is None:
             raise ValueError('Unable to get history')
@@ -118,7 +121,7 @@ class SupportResistance:
         self.company = store.get_company(self.ticker)
         if not self.company:
             self.company['name'] = 'Error'
-            _logger.error(f'Unable to get company infomration ({self.ticker})')
+            _logger.error(f'Unable to get company information ({self.ticker})')
 
         self.points = len(self.history)
         _logger.info(f'{__name__}: {self.points} pivot points identified from {self.history.iloc[0]["date"]} to {self.history.iloc[-1]["date"]}')
@@ -251,6 +254,17 @@ class SupportResistance:
         sup = [line for line in self.lines if line.support]
         self.lines_sup = sorted(sup, reverse=True, key=lambda l: l.get_score())
 
+        # Calculate final support & resistance values
+        all = self.get_resistance() + self.get_support()
+        lines = []
+        for line in all:
+            value = utils.mround(line.end_point, _rounding)
+            if value not in lines:
+                lines += [value]
+
+        self.values_res = sorted([l for l in lines if l >= self.price])
+        self.values_sup = sorted([l for l in lines if l < self.price], reverse=True)
+
         # Log the line details
         countr = 0
         counts = 0
@@ -266,10 +280,12 @@ class SupportResistance:
         _logger.info(f'{__name__}: {counts} support lines identified')
         [_logger.debug(f'{__name__}: Sup:{line}') for line in self.lines_sup]
 
-    def get_resistance(self) -> list[float]:
+        return self.values_res, self.values_sup
+
+    def get_resistance(self) -> list[Line]:
         return self.lines_res[:self.best]
 
-    def get_support(self) -> list[float]:
+    def get_support(self) -> list[Line]:
         return self.lines_sup[:self.best]
 
     def plot(self, show:bool=True, filename:str='', legend:bool=True, srlines:bool=False, trendlines:bool=False) -> plt.Figure:
@@ -385,7 +401,7 @@ class SupportResistance:
         dates = []
         values = []
         for index, line in enumerate(self.get_resistance()):
-            ep = utils.mround(line.end_point, 0.1)
+            ep = utils.mround(line.end_point, _rounding)
             if ep not in values:
                 date = self.history['date'].iloc[-1]
                 dates += [date.strftime('%Y-%m-%d')]
@@ -396,7 +412,7 @@ class SupportResistance:
         dates = []
         values = []
         for index, line in enumerate(self.get_support()):
-            ep = utils.mround(line.end_point, 0.1)
+            ep = utils.mround(line.end_point, _rounding)
             if ep not in values:
                 date = self.history['date'].iloc[-1]
                 dates += [date.strftime('%Y-%m-%d')]
@@ -481,9 +497,7 @@ if __name__ == '__main__':
     else:
         sr = SupportResistance('IBM')
 
-    try:
-        sr.calculate()
-    except:
-        raise ValueError('Unable to calculate')
-    else:
-        sr.plot()
+    res, sup = sr.calculate()
+    print(f'Res: {res}')
+    print(f'Sup: {sup}')
+    sr.plot()

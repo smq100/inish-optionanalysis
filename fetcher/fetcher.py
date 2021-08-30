@@ -155,6 +155,8 @@ def get_ratings(ticker:str):
         'overweight': 2,
         'sectorperform': 2,
         'marketperform': 2,
+        'speculativebuy': 2,
+        'accumulate': 2,
         'add': 2,
         'buy': 1,
         'strongbuy': 1,

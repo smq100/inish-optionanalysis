@@ -148,6 +148,23 @@ def get_ticker_exchange(ticker:str) -> str:
 
     return exchange
 
+def get_ticker_index(ticker:str) -> str:
+    if ticker.upper() in get_index_tickers_master('SP500'):
+        index = 'NASDAQ'
+
+    if ticker.upper() in get_index_tickers_master('DOW'):
+        if index: index += ', '
+        index += 'DOW'
+
+    if ticker.upper() in get_index_tickers_master('CUSTOM'):
+        if index: index += ', '
+        index += 'CUSTOM'
+
+    if not index:
+        index = 'None'
+
+    return index
+
 def get_current_price(ticker:str) -> float:
     price = 0.0
 
@@ -204,10 +221,12 @@ def get_company(ticker, live:bool=False, extra:bool=False) -> dict:
                     results['marketcap'] = company.info.get('marketCap') if company.info.get('marketCap') is not None else 0
                     results['beta'] = company.info.get('beta') if company.info.get('beta') is not None else 3.0
                     results['indexes'] = ''
+                    results['active'] = '?'
                     results['precords'] = 0
 
                     ratings = fetcher.get_ratings(ticker)
                     results['rating'] = sum(ratings) / float(len(ratings)) if ratings else 3.0
+                    results['exchange'] = '?'
                 except Exception as e:
                     results = {}
                     _logger.error(f'{__name__}: Exception for ticker {ticker}: {str(e)}')
@@ -226,6 +245,7 @@ def get_company(ticker, live:bool=False, extra:bool=False) -> dict:
                     results['beta'] = company.beta
                     results['rating'] = company.rating
                     results['indexes'] = 'None'
+                    results['active'] = str(symbol.active)
                     results['precords'] = 0
 
                     # Exchange
