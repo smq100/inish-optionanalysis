@@ -240,7 +240,7 @@ class Interface:
             while self.task.is_alive(): pass
 
             if self.screener.task_error == 'Done':
-                self.results = self.screener.results
+                self.results = self.screener.success
                 for result in self.results:
                     if result:
                         self.valids += 1
@@ -270,7 +270,7 @@ class Interface:
             utils.print_message(f'Symbols Identified ({self.screen_base})')
 
             if all:
-                self.results = sorted(self.results, reverse=True, key=lambda x: sum(x.values))
+                self.results = sorted(self.results, reverse=True, key=lambda x: sum(x.success))
             else:
                 self.results = sorted(self.results, key=str)
 
@@ -285,8 +285,7 @@ class Interface:
                 elif result:
                     index += 1
                     if verbose:
-                        company = result.company.get_liveinfo()
-                        print(f'{result} - {company["shortName"]}')
+                        print(f'{result.results}')
                     else:
                         print(f'{result} ', end='')
                         if index % 20 == 0: # Print 20 per line

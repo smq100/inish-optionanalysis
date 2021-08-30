@@ -94,7 +94,7 @@
          "factor":1.0
       },
       "criteria":{
-         "conditional":"gt",
+         "conditional":"lt",
          "technical":"value",
          "value":2.0,
          "length":0,

@@ -31,9 +31,10 @@ class Interpreter:
         self.criteria_stop = 0
         self.criteria_series = 'none'
         self.criteria_factor = 0.0
-        self.result = False
+        self.success = False
+        self.result = ''
 
-    def run(self):
+    def run(self) -> bool:
         if self.filter['base']['technical'] not in VALID_TECHNICALS:
             raise SyntaxError('Invalid "base technical" specified in script')
         if self.filter['base']['series'] not in VALID_SERIES:
@@ -61,7 +62,9 @@ class Interpreter:
         self.criteria_series = self.filter['criteria']['series']
         self.criteria_factor = self.filter['criteria']['factor']
 
-        return self._calculate()
+        self.success = self._calculate()
+
+        return self.success
 
     def _calculate(self) -> bool:
         calculate = True
@@ -107,10 +110,10 @@ class Interpreter:
         else:
             raise SyntaxError('Invalid "criteria technical" specified in screen file')
 
-        return self._calc_comparison() if calculate else result
+        return self._compare() if calculate else result
 
-    def _calc_comparison(self) -> bool:
-        result = False
+    def _compare(self) -> bool:
+        success = False
         if not self.base.empty:
             base = self.base.iloc[-1] * self.base_factor
             value = 0.0
@@ -120,50 +123,51 @@ class Interpreter:
                     if len(self.value) > 0:
                         value = self.value.iloc[-1] * self.criteria_factor
                         if base < value:
-                            result = True
+                            success = True
                 elif self.criteria_series == VALID_SERIES[0]: # min
                     if len(self.value) > 0:
                         value = self.value.min() * self.criteria_factor
                         if base < value.min():
-                            result = True
+                            success = True
                 elif self.criteria_series == VALID_SERIES[1]: # max
                     if len(self.value) > 0:
                         value = self.value.max() * self.criteria_factor
                         if base < value:
-                            result = True
+                            success = True
 
             elif self.criteria_conditional == VALID_CONDITIONALS[1]: # eq
                 if len(self.value) > 0:
                     value = self.value.min() * self.criteria_factor
                     if base == value:
-                        result = True
+                        success = True
 
             elif self.criteria_conditional == VALID_CONDITIONALS[2]: # gt
                 if self.criteria_series == VALID_SERIES[2]: # na
                     if len(self.value) > 0:
                         value = self.value.iloc[-1] * self.criteria_factor
                         if base > value:
-                            result = True
+                            success = True
                 elif self.criteria_series == VALID_SERIES[0]: # min
                     if len(self.value) > 0:
                         value = self.value.min() * self.criteria_factor
                         if base > value:
-                            result = True
+                            success = True
                 elif self.criteria_series == VALID_SERIES[1]: # max
                     if len(self.value) > 0:
                         value = self.value.max() * self.criteria_factor
                         if base > value:
-                            result = True
+                            success = True
 
-            _logger.info(
-                f'{self.note}: {str(self.company)}:{str(result)} ' +
-                f'{self.base_technical}({self.base_length})/{base:.2f}*{self.base_factor:.2f} ' +
-                f'{self.criteria_conditional} ' +
+            self.result = str(f'{self.company.ticker:6s}: {self.note}: {success} ' + \
+                f'{self.base_technical}({self.base_length})/{base:.2f}*{self.base_factor:.2f} ' + \
+                f'{self.criteria_conditional} ' + \
                 f'{self.criteria_technical}({self.criteria_length})/{self.criteria_start}/{self.criteria_series}/{value:.2f}*{self.criteria_factor:.2f}')
+
+            _logger.info(self.result)
         else:
             _logger.warning(f'{__name__}: No technical information for {self.company}')
 
-        return result
+        return success
 
     def _get_base_close(self) -> pd.Series:
         start = None if self.base_start == 0 else self.base_start

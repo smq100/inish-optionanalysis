@@ -40,7 +40,7 @@ class Screener(Threaded):
         self.live = live
         self.script = []
         self.companies = []
-        self.results = []
+        self.success = []
         self._concurrency = 10
 
         if script:
@@ -53,15 +53,16 @@ class Screener(Threaded):
         return f'{self.table}/{self.script_name}'
 
     class Result:
-        def __init__(self, company:Company, results:list[bool]):
+        def __init__(self, company:Company, success:list[bool], results:list[str]):
             self.company = company
-            self.values = results
+            self.success = success
+            self.results = results
 
         def __str__(self):
             return self.company.ticker
 
         def __bool__(self):
-            return all(self.values)
+            return all(self.success)
 
     def load_script(self, script:str) -> bool:
         self.script = None
@@ -103,17 +104,17 @@ class Screener(Threaded):
 
     @Threaded.threaded
     def run_script(self) -> list[Result]:
-        self.results = []
+        self.success = []
         self.task_total = len(self.companies)
 
         if self.task_total == 0:
             self.task_completed = self.task_total
-            self.results = []
+            self.success = []
             self.task_error = 'No symbols'
             _logger.warning(f'{__name__}: {self.task_error}')
         elif len(self.script) == 0:
             self.task_completed = self.task_total
-            self.results = []
+            self.success = []
             self.task_error = 'Illegal script'
             _logger.warning(f'{__name__}: {self.task_error}')
         else:
@@ -131,16 +132,18 @@ class Screener(Threaded):
 
             self.task_error = 'Done'
 
-        return self.results
+        return self.success
 
     def _run(self, companies:str) -> None:
         for symbol in companies:
-            result = []
+            success = []
+            results = []
             self.task_ticker = symbol
             for filter in self.script:
-                i = Interpreter(symbol, filter)
+                interpreter = Interpreter(symbol, filter)
                 try:
-                    result += [i.run()]
+                    success += [interpreter.run()]
+                    results += [interpreter.result]
                 except SyntaxError as e:
                     self.task_error = str(e)
                     break
@@ -150,12 +153,12 @@ class Screener(Threaded):
 
             if self.task_error == 'None':
                 self.task_completed += 1
-                self.results += [self.Result(symbol, result)]
-                if (bool(self.results[-1])):
+                self.success += [self.Result(symbol, success, results)]
+                if (bool(self.success[-1])):
                     self.task_success += 1
             else:
                 self.task_completed = self.task_total
-                self.results = []
+                self.success = []
                 break
 
     def valid(self) -> bool:
