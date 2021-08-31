@@ -2,7 +2,6 @@ import os
 import json
 import random
 from concurrent import futures
-
 import numpy as np
 
 from base import Threaded
@@ -15,9 +14,10 @@ from .interpreter import Interpreter
 _logger = utils.get_logger()
 
 class Result:
-    def __init__(self, company:Company, success:list[bool], results:list[str]):
+    def __init__(self, company:Company, success:list[bool], score:list[float], results:list[str]):
         self.company = company
         self.success = success
+        self.score = score
         self.results = results
 
     def __str__(self):
@@ -25,6 +25,9 @@ class Result:
 
     def __bool__(self):
         return all(self.success)
+
+    def __float__(self):
+        return sum(self.score) / len(self.score) if len(self.score) > 0 else 0.0
 
 class Screener(Threaded):
     def __init__(self, table:str, script:str='', days:int=365, live:bool=False):
@@ -138,12 +141,14 @@ class Screener(Threaded):
     def _run(self, companies:str) -> None:
         for symbol in companies:
             success = []
+            score = []
             result = []
             self.task_ticker = symbol
             for filter in self.script:
                 interpreter = Interpreter(symbol, filter)
                 try:
                     success += [interpreter.run()]
+                    score += [interpreter.score]
                     result += [interpreter.result]
                 except SyntaxError as e:
                     self.task_error = str(e)
@@ -154,7 +159,7 @@ class Screener(Threaded):
 
             if self.task_error == 'None':
                 self.task_completed += 1
-                self.results += [Result(symbol, success, result)]
+                self.results += [Result(symbol, success, score, result)]
                 if (bool(self.results[-1])):
                     self.task_success += 1
             else:

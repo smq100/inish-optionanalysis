@@ -1,6 +1,6 @@
 [
    {
-      "note":"Price above 20",
+      "note":"Price > 20",
       "base":{
          "technical":"close",
          "length":0,
@@ -21,7 +21,7 @@
       }
    },
    {
-      "note":"Price above SMA20",
+      "note":"Price > SMA20",
       "base":{
          "technical":"close",
          "length":0,
@@ -42,7 +42,7 @@
       }
    },
    {
-      "note":"Price above SMA50",
+      "note":"Price > SMA50",
       "base":{
          "technical":"close",
          "length":0,
@@ -63,7 +63,7 @@
       }
    },
    {
-      "note":"Volume above 2M",
+      "note":"Volume > 2M",
       "base":{
          "technical":"volume",
          "length":0,
@@ -84,7 +84,7 @@
       }
    },
    {
-      "note":"RSI below 60",
+      "note":"RSI < 60",
       "base":{
          "technical":"rsi",
          "length":0,
@@ -105,7 +105,7 @@
       }
    },
    {
-      "note":"Beta above 1.0",
+      "note":"Beta > 1.0",
       "base":{
          "technical":"beta",
          "length":0,
@@ -126,7 +126,7 @@
       }
    },
    {
-      "note":"Rating below 3.0",
+      "note":"Rating < 3.0",
       "base":{
          "technical":"rating",
          "length":0,

@@ -15,10 +15,11 @@ SCREEN_SUFFIX = '.screen'
 
 
 class Interface:
-    def __init__(self, table='', screen='', run=True, live=False):
+    def __init__(self, table='', screen='', verbose=False, exit=False, live=False):
         self.table = table.upper()
         self.screen_base = screen
-        self.run = run
+        self.verbose = verbose
+        self.exit = exit
         self.live = live
         self.results = []
         self.valids = 0
@@ -53,10 +54,12 @@ class Interface:
                 utils.print_error(f'File "{self.screen_base}" not found')
                 self.screen_base = ''
 
-        if self.run:
-            self.main_menu()
-        else:
+        if self.exit:
             self.main_menu(selection=6)
+        elif table and screen:
+            self.main_menu(selection=6)
+        else:
+            self.main_menu()
 
     def main_menu(self, selection:int=0) -> None:
         while True:
@@ -109,13 +112,7 @@ class Interface:
             elif selection == 6:
                 if self.run_screen():
                     if self.valids > 0:
-                        v = True if self.valids < 15 else False
-                        if not self.run:
-                            self.print_results(verbose=v)
-                        elif self.valids < 10:
-                            self.print_results(verbose=v)
-                        else:
-                            self.print_results()
+                        self.print_results()
             elif selection == 7:
                 self.print_results()
             elif selection == 8:
@@ -123,12 +120,13 @@ class Interface:
             elif selection == 9:
                 self.print_results(all=True)
             elif selection == 0:
-                self.run = False
-
-            if not self.run:
-                break
+                self.exit = True
 
             selection = 0
+
+            if self.exit:
+                break
+
 
     def select_source(self) -> None:
         menu_items = {
@@ -285,13 +283,14 @@ class Interface:
             for result in self.results:
                 if all:
                     [print(r) for r in result.results]
-                elif verbose:
+                elif self.verbose or verbose:
                     [print(r) for r in result.results if result]
                 elif result:
                     index += 1
                     print(f'{result} ', end='')
                     if index % 20 == 0: # Print 20 per line
                         print()
+        print()
         print()
 
     def _show_progress(self, prefix, suffix) -> None:
@@ -327,6 +326,7 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--table', help='Specify a symbol or table', required=False, default='')
     parser.add_argument('-s', '--screen', help='Specify a screening script', required=False, default='')
     parser.add_argument('-r', '--run', help='Run the script (only valid with -t and -s)', action='store_true')
+    parser.add_argument('-v', '--verbose', help='Show verbose output', action='store_true')
 
     command = vars(parser.parse_args())
 
@@ -340,6 +340,6 @@ if __name__ == '__main__':
         screen = command['screen']
 
     if screen and table and command['run']:
-        Interface(table, screen, run=False)
+        Interface(table, screen, verbose=command['verbose'], exit=True)
     else:
-        Interface(table, screen)
+        Interface(table, screen, verbose=command['verbose'])

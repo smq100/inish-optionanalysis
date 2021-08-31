@@ -168,7 +168,7 @@
       }
    },
    {
-      "note":"Price > 125% of 52-week high",
+      "note":"Price > 75% of 52-week high",
       "base":{
          "technical":"close",
          "length":0,
