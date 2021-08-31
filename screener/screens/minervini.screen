@@ -1,6 +1,6 @@
 [
    {
-      "note":"Current stock price is above the 150-day moving average price lines",
+      "note":"price > sma150",
       "base":{
          "technical":"close",
          "length":0,
@@ -10,7 +10,7 @@
          "factor":1.0
       },
       "criteria":{
-         "conditional":"gt",
+         "conditional":"ge",
          "technical":"sma",
          "value":0.0,
          "length":150,
@@ -21,7 +21,7 @@
       }
    },
    {
-      "note":"Current stock price is above the 200-day moving average price lines",
+      "note":"price > sma200",
       "base":{
          "technical":"close",
          "length":0,
@@ -31,7 +31,7 @@
          "factor":1.0
       },
       "criteria":{
-         "conditional":"gt",
+         "conditional":"ge",
          "technical":"sma",
          "value":0.0,
          "length":200,
@@ -42,7 +42,7 @@
       }
    },
    {
-      "note":"150-day moving average is above the 200-day moving average",
+      "note":"sma150 > sma200",
       "base":{
          "technical":"sma",
          "length":150,
@@ -52,7 +52,7 @@
          "factor":1.0
       },
       "criteria":{
-         "conditional":"gt",
+         "conditional":"ge",
          "technical":"sma",
          "value":0.0,
          "length":200,
@@ -63,7 +63,7 @@
       }
    },
    {
-      "note":"200-day moving average line is trending up for at least 1 month",
+      "note":"sma200 trending > 1 month",
       "base":{
          "technical":"sma",
          "length":200,
@@ -73,7 +73,7 @@
          "factor":1.0
       },
       "criteria":{
-         "conditional":"gt",
+         "conditional":"ge",
          "technical":"sma",
          "value":0.0,
          "length":200,
@@ -84,7 +84,7 @@
       }
    },
    {
-      "note":"50-day (10-week) moving average is above the 150-day moving average",
+      "note":"sma50 > sma150",
       "base":{
          "technical":"sma",
          "length":50,
@@ -94,7 +94,7 @@
          "factor":1.0
       },
       "criteria":{
-         "conditional":"gt",
+         "conditional":"ge",
          "technical":"sma",
          "value":0.0,
          "length":150,
@@ -105,7 +105,7 @@
       }
    },
    {
-      "note":"50-day moving average is above the 200-day moving average",
+      "note":"sma50 > sma200",
       "base":{
          "technical":"sma",
          "length":50,
@@ -115,7 +115,7 @@
          "factor":1.0
       },
       "criteria":{
-         "conditional":"gt",
+         "conditional":"ge",
          "technical":"sma",
          "value":0.0,
          "length":200,
@@ -126,7 +126,7 @@
       }
    },
    {
-      "note":"Current stock price is trading above the 50-day moving average",
+      "note":"price > sma50",
       "base":{
          "technical":"close",
          "length":0,
@@ -136,7 +136,7 @@
          "factor":1.0
       },
       "criteria":{
-         "conditional":"gt",
+         "conditional":"ge",
          "technical":"sma",
          "value":0.0,
          "length":50,
@@ -147,7 +147,7 @@
       }
    },
    {
-      "note":"Current stock price is at least 25% above its 52-week low",
+      "note":"price > 125% of 52-week low",
       "base":{
          "technical":"close",
          "length":0,
@@ -157,7 +157,7 @@
          "factor":1.0
       },
       "criteria":{
-         "conditional":"gt",
+         "conditional":"ge",
          "technical":"low",
          "value":0.0,
          "length":0,
@@ -168,7 +168,7 @@
       }
    },
    {
-      "note":"Current stock price is within at least 25% of its 52-week high",
+      "note":"Price > 125% of 52-week high",
       "base":{
          "technical":"close",
          "length":0,
@@ -178,7 +178,7 @@
          "factor":1.0
       },
       "criteria":{
-         "conditional":"gt",
+         "conditional":"ge",
          "technical":"high",
          "value":0.0,
          "length":0,

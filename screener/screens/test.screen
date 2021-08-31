@@ -10,7 +10,7 @@
          "factor":1.0
       },
       "criteria":{
-         "conditional":"gt",
+         "conditional":"ge",
          "technical":"value",
          "value":100,
          "length":0,
@@ -31,9 +31,9 @@
          "factor":1.0
       },
       "criteria":{
-         "conditional":"gt",
+         "conditional":"ge",
          "technical":"value",
-         "value":1e6,
+         "value":5e6,
          "length":0,
          "start":-1,
          "stop":0,

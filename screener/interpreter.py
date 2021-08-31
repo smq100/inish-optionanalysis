@@ -6,7 +6,7 @@ from utils import utils as utils
 _logger = utils.get_logger()
 
 VALID_TECHNICALS = ('high', 'low', 'close', 'volume', 'sma', 'rsi', 'beta', 'rating', 'value', 'true', 'false')
-VALID_CONDITIONALS = ('lt', 'eq', 'gt')
+VALID_CONDITIONALS = ('le', 'eq', 'ge')
 VALID_SERIES = ('min', 'max', 'none')
 
 
@@ -118,21 +118,21 @@ class Interpreter:
             base = self.base.iloc[-1] * self.base_factor
             value = 0.0
 
-            if self.criteria_conditional == VALID_CONDITIONALS[0]: # lt
+            if self.criteria_conditional == VALID_CONDITIONALS[0]: # le
                 if self.criteria_series == VALID_SERIES[2]: # na
                     if len(self.value) > 0:
                         value = self.value.iloc[-1] * self.criteria_factor
-                        if base < value:
+                        if base <= value:
                             success = True
                 elif self.criteria_series == VALID_SERIES[0]: # min
                     if len(self.value) > 0:
                         value = self.value.min() * self.criteria_factor
-                        if base < value.min():
+                        if base <= value.min():
                             success = True
                 elif self.criteria_series == VALID_SERIES[1]: # max
                     if len(self.value) > 0:
                         value = self.value.max() * self.criteria_factor
-                        if base < value:
+                        if base <= value:
                             success = True
 
             elif self.criteria_conditional == VALID_CONDITIONALS[1]: # eq
@@ -141,27 +141,27 @@ class Interpreter:
                     if base == value:
                         success = True
 
-            elif self.criteria_conditional == VALID_CONDITIONALS[2]: # gt
+            elif self.criteria_conditional == VALID_CONDITIONALS[2]: # ge
                 if self.criteria_series == VALID_SERIES[2]: # na
                     if len(self.value) > 0:
                         value = self.value.iloc[-1] * self.criteria_factor
-                        if base > value:
+                        if base >= value:
                             success = True
                 elif self.criteria_series == VALID_SERIES[0]: # min
                     if len(self.value) > 0:
                         value = self.value.min() * self.criteria_factor
-                        if base > value:
+                        if base >= value:
                             success = True
                 elif self.criteria_series == VALID_SERIES[1]: # max
                     if len(self.value) > 0:
                         value = self.value.max() * self.criteria_factor
-                        if base > value:
+                        if base >= value:
                             success = True
 
-            self.result = str(f'{self.company.ticker:6s}: {self.note}: {success} ' + \
+            self.result = f'{self.company.ticker:6s}{str(success)[:1]}: {self.note} ' + \
                 f'{self.base_technical}({self.base_length})/{base:.2f}*{self.base_factor:.2f} ' + \
                 f'{self.criteria_conditional} ' + \
-                f'{self.criteria_technical}({self.criteria_length})/{self.criteria_start}/{self.criteria_series}/{value:.2f}*{self.criteria_factor:.2f}')
+                f'{self.criteria_technical}({self.criteria_length})/{self.criteria_start}/{self.criteria_series}/{value:.2f}*{self.criteria_factor:.2f}'
 
             _logger.info(self.result)
         else:
@@ -185,7 +185,7 @@ class Interpreter:
         start = None if self.base_start == 0 else self.base_start
         stop = None if self.base_stop == 0 else self.base_stop
         sl = slice(start, stop)
-        return self.company.ta.calc_sma(self.criteria_length)[sl]
+        return self.company.ta.calc_sma(self.base_length)[sl]
 
     def _get_base_rsi(self) -> pd.Series:
         start = None if self.base_start == 0 else self.base_start

@@ -68,7 +68,9 @@ class Interface:
                 '4': 'Select Ticker',
                 '5': 'Select Screener',
                 '6': 'Run Screen',
-                '7': 'Show Results',
+                '7': 'Show Tickers',
+                '8': 'Show Results',
+                '9': 'Show All',
                 '0': 'Exit'
             }
 
@@ -87,10 +89,12 @@ class Interface:
                 menu_items['5'] = f'Select Screener ({self.screen_base})'
 
             if len(self.results) > 0:
-                menu_items['7'] = f'Show Results ({self.valids})'
+                menu_items['7'] = f'Show Tickers ({self.valids})'
+                menu_items['8'] = f'Show Results ({self.valids})'
+                menu_items['9'] = f'Show All ({len(self.results)})'
 
             if selection == 0:
-                selection = utils.menu(menu_items, 'Select Operation', 0, 7)
+                selection = utils.menu(menu_items, 'Select Operation', 0, 9)
 
             if selection == 1:
                 self.select_source()
@@ -105,12 +109,19 @@ class Interface:
             elif selection == 6:
                 if self.run_screen():
                     if self.valids > 0:
+                        v = True if self.valids < 15 else False
                         if not self.run:
-                            self.print_results()
-                        elif self.valids < 20:
+                            self.print_results(verbose=v)
+                        elif self.valids < 10:
+                            self.print_results(verbose=v)
+                        else:
                             self.print_results()
             elif selection == 7:
+                self.print_results()
+            elif selection == 8:
                 self.print_results(verbose=True)
+            elif selection == 9:
+                self.print_results(all=True)
             elif selection == 0:
                 self.run = False
 
@@ -240,7 +251,7 @@ class Interface:
             while self.task.is_alive(): pass
 
             if self.screener.task_error == 'Done':
-                self.results = self.screener.success
+                self.results = self.screener.results
                 for result in self.results:
                     if result:
                         self.valids += 1
@@ -259,38 +270,28 @@ class Interface:
 
         return success
 
-    def print_results(self, all:bool=False, verbose:bool=False) -> None:
+    def print_results(self, verbose:bool=False, all:bool=False) -> None:
         if not self.table:
             utils.print_error('No table specified')
         elif not self.screen_base:
             utils.print_error('No screen specified')
         elif len(self.results) == 0:
-            utils.print_message('No symbols were located')
+            utils.print_message('No results were located')
         else:
-            utils.print_message(f'Symbols Identified ({self.screen_base})')
-
-            if all:
-                self.results = sorted(self.results, reverse=True, key=lambda x: sum(x.success))
-            else:
-                self.results = sorted(self.results, key=str)
+            utils.print_message(f'Tickers Identified ({self.screen_base})')
 
             index = 0
+            self.results = sorted(self.results, key=lambda r: r.results)
             for result in self.results:
                 if all:
-                    index += 1
-                    if verbose:
-                        print(f'{result}:\t{sum(result.values)}')
-                    else:
-                        print(f'{result}')
+                    [print(r) for r in result.results]
+                elif verbose:
+                    [print(r) for r in result.results if result]
                 elif result:
                     index += 1
-                    if verbose:
-                        print(f'{result.results}')
-                    else:
-                        print(f'{result} ', end='')
-                        if index % 20 == 0: # Print 20 per line
-                            print()
-        print()
+                    print(f'{result} ', end='')
+                    if index % 20 == 0: # Print 20 per line
+                        print()
         print()
 
     def _show_progress(self, prefix, suffix) -> None:
@@ -310,6 +311,7 @@ class Interface:
                 utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, ticker=ticker, length=50, success=success, tasks=tasks)
 
             utils.print_message('Processed Messages')
+            # print(self.task.join())
             results = [future.result() for future in self.screener.task_futures if future.result() is not None]
             if len(results) > 0:
                 [print(result) for result in results]

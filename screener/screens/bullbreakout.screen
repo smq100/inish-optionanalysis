@@ -10,7 +10,7 @@
          "factor":1.0
       },
       "criteria":{
-         "conditional":"gt",
+         "conditional":"ge",
          "technical":"value",
          "value":20,
          "length":0,
@@ -31,7 +31,7 @@
          "factor":0.97
       },
       "criteria":{
-         "conditional":"gt",
+         "conditional":"ge",
          "technical":"high",
          "value":0,
          "length":0,
@@ -52,7 +52,7 @@
          "factor":1.0
       },
       "criteria":{
-         "conditional":"gt",
+         "conditional":"ge",
          "technical":"value",
          "value":2e6,
          "length":0,
@@ -73,7 +73,7 @@
          "factor":1.0
       },
       "criteria":{
-         "conditional":"gt",
+         "conditional":"ge",
          "technical":"value",
          "value":1.0,
          "length":0,
@@ -94,7 +94,7 @@
          "factor":1.0
       },
       "criteria":{
-         "conditional":"lt",
+         "conditional":"le",
          "technical":"value",
          "value":2.0,
          "length":0,

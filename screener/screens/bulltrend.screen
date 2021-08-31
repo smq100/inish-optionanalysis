@@ -10,7 +10,7 @@
          "factor":1.0
       },
       "criteria":{
-         "conditional":"gt",
+         "conditional":"ge",
          "technical":"value",
          "value":20,
          "length":0,
@@ -31,7 +31,7 @@
          "factor":1.0
       },
       "criteria":{
-         "conditional":"gt",
+         "conditional":"ge",
          "technical":"sma",
          "value":0.0,
          "length":20,
@@ -52,7 +52,7 @@
          "factor":1.0
       },
       "criteria":{
-         "conditional":"gt",
+         "conditional":"ge",
          "technical":"sma",
          "value":0.0,
          "length":50,
@@ -73,7 +73,7 @@
          "factor":1.0
       },
       "criteria":{
-         "conditional":"gt",
+         "conditional":"ge",
          "technical":"value",
          "value":2e6,
          "length":0,
@@ -94,7 +94,7 @@
          "factor":1.0
       },
       "criteria":{
-         "conditional":"lt",
+         "conditional":"le",
          "technical":"value",
          "value":60.0,
          "length":0,
@@ -115,7 +115,7 @@
          "factor":1.0
       },
       "criteria":{
-         "conditional":"gt",
+         "conditional":"ge",
          "technical":"value",
          "value":1.0,
          "length":0,
@@ -136,7 +136,7 @@
          "factor":1.0
       },
       "criteria":{
-         "conditional":"lt",
+         "conditional":"le",
          "technical":"value",
          "value":3.1,
          "length":0,
