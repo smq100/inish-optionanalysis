@@ -9,8 +9,8 @@
          "series":"none",
          "factor":1.0
       },
+      "conditional":"ge",
       "criteria":{
-         "conditional":"ge",
          "technical":"sma",
          "value":0.0,
          "length":150,
@@ -30,8 +30,8 @@
          "series":"none",
          "factor":1.0
       },
+      "conditional":"ge",
       "criteria":{
-         "conditional":"ge",
          "technical":"sma",
          "value":0.0,
          "length":200,
@@ -51,8 +51,8 @@
          "series":"none",
          "factor":1.0
       },
+      "conditional":"ge",
       "criteria":{
-         "conditional":"ge",
          "technical":"sma",
          "value":0.0,
          "length":200,
@@ -72,8 +72,8 @@
          "series":"none",
          "factor":1.0
       },
+      "conditional":"ge",
       "criteria":{
-         "conditional":"ge",
          "technical":"sma",
          "value":0.0,
          "length":200,
@@ -93,8 +93,8 @@
          "series":"none",
          "factor":1.0
       },
+      "conditional":"ge",
       "criteria":{
-         "conditional":"ge",
          "technical":"sma",
          "value":0.0,
          "length":150,
@@ -114,8 +114,8 @@
          "series":"none",
          "factor":1.0
       },
+      "conditional":"ge",
       "criteria":{
-         "conditional":"ge",
          "technical":"sma",
          "value":0.0,
          "length":200,
@@ -135,8 +135,8 @@
          "series":"none",
          "factor":1.0
       },
+      "conditional":"ge",
       "criteria":{
-         "conditional":"ge",
          "technical":"sma",
          "value":0.0,
          "length":50,
@@ -156,8 +156,8 @@
          "series":"none",
          "factor":1.0
       },
+      "conditional":"ge",
       "criteria":{
-         "conditional":"ge",
          "technical":"low",
          "value":0.0,
          "length":0,
@@ -177,8 +177,8 @@
          "series":"none",
          "factor":1.0
       },
+      "conditional":"ge",
       "criteria":{
-         "conditional":"ge",
          "technical":"high",
          "value":0.0,
          "length":0,
@@ -198,8 +198,8 @@
          "series":"none",
          "factor":1.0
       },
+      "conditional":"ge",
       "criteria":{
-         "conditional":"ge",
          "technical":"value",
          "value":2e6,
          "length":0,

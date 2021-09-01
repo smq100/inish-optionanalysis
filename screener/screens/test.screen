@@ -9,8 +9,8 @@
          "series":"none",
          "factor":1.0
       },
+      "conditional":"ge",
       "criteria":{
-         "conditional":"ge",
          "technical":"value",
          "value":100,
          "length":0,
@@ -30,8 +30,8 @@
          "series":"none",
          "factor":1.0
       },
+      "conditional":"ge",
       "criteria":{
-         "conditional":"ge",
          "technical":"value",
          "value":5e6,
          "length":0,

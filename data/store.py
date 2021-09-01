@@ -149,6 +149,8 @@ def get_ticker_exchange(ticker:str) -> str:
     return exchange
 
 def get_ticker_index(ticker:str) -> str:
+    index = ''
+
     if ticker.upper() in get_index_tickers_master('SP500'):
         index = 'NASDAQ'
 

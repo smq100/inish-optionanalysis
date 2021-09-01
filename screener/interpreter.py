@@ -5,7 +5,7 @@ from utils import utils as utils
 
 _logger = utils.get_logger()
 
-VALID_TECHNICALS = ('high', 'low', 'close', 'volume', 'sma', 'rsi', 'beta', 'rating', 'value', 'true', 'false')
+VALID_TECHNICALS = ('high', 'low', 'close', 'volume', 'sma', 'rsi', 'beta', 'rating', 'value', 'true')
 VALID_CONDITIONALS = ('le', 'eq', 'ge')
 VALID_SERIES = ('min', 'max', 'none')
 
@@ -22,8 +22,8 @@ class Interpreter:
         self.base_stop = 0
         self.base_series = 'none'
         self.base_factor = 1.0
+        self.conditional = ''
         self.criteria = None
-        self.criteria_conditional = ''
         self.criteria_value = 0.0
         self.criteria_technical = ''
         self.criteria_length = 0.0
@@ -32,6 +32,7 @@ class Interpreter:
         self.criteria_series = 'none'
         self.criteria_factor = 0.0
         self.success = False
+        self.enable_score = True
         self.score = 1.0
         self.result = ''
 
@@ -40,10 +41,10 @@ class Interpreter:
             raise SyntaxError('Invalid "base technical" specified in script')
         if self.filter['base']['series'] not in VALID_SERIES:
             raise SyntaxError('Invalid "base series" specified in script')
+        if self.filter['conditional'] not in VALID_CONDITIONALS:
+            raise SyntaxError('Invalid "conditional" specified in script')
         if self.filter['criteria']['technical'] not in VALID_TECHNICALS:
             raise SyntaxError('Invalid "criteria technical" specified in script')
-        if self.filter['criteria']['conditional'] not in VALID_CONDITIONALS:
-            raise SyntaxError('Invalid "criteria test" specified in script')
         if self.filter['criteria']['series'] not in VALID_SERIES:
             raise SyntaxError('Invalid "criteria series" specified in script')
 
@@ -54,7 +55,7 @@ class Interpreter:
         self.base_stop = self.filter['base']['stop']
         self.base_series = self.filter['base']['series']
         self.base_factor = self.filter['base']['factor']
-        self.criteria_conditional = self.filter['criteria']['conditional']
+        self.conditional = self.filter['conditional']
         self.criteria_value = self.filter['criteria']['value']
         self.criteria_technical = self.filter['criteria']['technical']
         self.criteria_length = self.filter['criteria']['length']
@@ -69,13 +70,13 @@ class Interpreter:
 
     def _calculate(self) -> bool:
         calculate = True
-        success = False
 
         # Base value
-        if self.base_technical == VALID_TECHNICALS[2]: # close
+        if self.base_technical == VALID_TECHNICALS[2]:   # close
             self.base = self._get_base_close()
         elif self.base_technical == VALID_TECHNICALS[3]: # volume
             self.base = self._get_base_volume()
+            self.enable_score = False
         elif self.base_technical == VALID_TECHNICALS[4]: # sma
             self.base = self._get_base_sma()
         elif self.base_technical == VALID_TECHNICALS[5]: # rsi
@@ -86,10 +87,6 @@ class Interpreter:
             self.base = self._get_base_rating()
         elif self.base_technical == VALID_TECHNICALS[9]: # true
             calculate = False
-            success = True
-        elif self.base_technical == VALID_TECHNICALS[10]: # false
-            calculate = False
-            success = False
         else:
             raise SyntaxError('Invalid "base technical" specified in screen file')
 
@@ -111,7 +108,7 @@ class Interpreter:
         else:
             raise SyntaxError('Invalid "criteria technical" specified in screen file')
 
-        return self._compare() if calculate else (success, 1.0)
+        return self._compare() if calculate else (True, 1.0)
 
     def _compare(self) -> bool:
         self.success = False
@@ -121,7 +118,7 @@ class Interpreter:
             base = self.base.iloc[-1] * self.base_factor
             value = 0.0
 
-            if self.criteria_conditional == VALID_CONDITIONALS[0]: # le
+            if self.conditional == VALID_CONDITIONALS[0]: # le
                 if self.criteria_series == VALID_SERIES[2]: # na
                     if len(self.criteria) > 0:
                         value = self.criteria.iloc[-1] * self.criteria_factor
@@ -141,13 +138,13 @@ class Interpreter:
                         if base <= value:
                             self.success = True
 
-            elif self.criteria_conditional == VALID_CONDITIONALS[1]: # eq
+            elif self.conditional == VALID_CONDITIONALS[1]: # eq
                 if len(self.criteria) > 0:
                     value = self.criteria.min() * self.criteria_factor
                     if base == value:
                         self.success = True
 
-            elif self.criteria_conditional == VALID_CONDITIONALS[2]: # ge
+            elif self.conditional == VALID_CONDITIONALS[2]: # ge
                 if self.criteria_series == VALID_SERIES[2]: # na
                     if len(self.criteria) > 0:
                         value = self.criteria.iloc[-1] * self.criteria_factor
@@ -167,10 +164,12 @@ class Interpreter:
                         if base >= value:
                             self.success = True
 
+            self.score = self.score if self.enable_score else 1.0
+
             self.result = f'{self.company.ticker:6s}{str(self.success)[:1]}: {self.score:.2f}: {self.note} ' + \
-                f'{self.base_technical}({self.base_length})/{base:.2f}*{self.base_factor:.2f} ' + \
-                f'{self.criteria_conditional} ' + \
-                f'{self.criteria_technical}({self.criteria_length})/{self.criteria_start}/{self.criteria_series}/{value:.2f}*{self.criteria_factor:.2f}'
+                f'{self.base_technical}({self.base_length})/{base:.2f}@{self.base_factor:.2f} ' + \
+                f'{self.conditional} ' + \
+                f'{self.criteria_technical}({self.criteria_length})/{self.criteria_start}/{self.criteria_series}/{value:.2f}@{self.criteria_factor:.2f}'
 
             _logger.info(self.result)
         else:

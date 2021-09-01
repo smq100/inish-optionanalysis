@@ -287,8 +287,8 @@ class Interface:
                     [print(r) for r in result.results if result]
                 elif result:
                     index += 1
-                    print(f'{result} ', end='')
-                    if index % 20 == 0: # Print 20 per line
+                    print(f'{result}({float(result):.3f}) ', end='')
+                    if index % 10 == 0: # Print 10 per line
                         print()
         print()
         print()

@@ -9,8 +9,8 @@
          "series":"none",
          "factor":1.0
       },
+      "conditional":"ge",
       "criteria":{
-         "conditional":"ge",
          "technical":"value",
          "value":20,
          "length":0,
@@ -30,8 +30,8 @@
          "series":"none",
          "factor":1.0
       },
+      "conditional":"ge",
       "criteria":{
-         "conditional":"ge",
          "technical":"sma",
          "value":0.0,
          "length":20,
@@ -51,8 +51,8 @@
          "series":"none",
          "factor":1.0
       },
+      "conditional":"ge",
       "criteria":{
-         "conditional":"ge",
          "technical":"sma",
          "value":0.0,
          "length":50,
@@ -72,8 +72,8 @@
          "series":"none",
          "factor":1.0
       },
+      "conditional":"ge",
       "criteria":{
-         "conditional":"ge",
          "technical":"value",
          "value":2e6,
          "length":0,
@@ -93,8 +93,8 @@
          "series":"none",
          "factor":1.0
       },
+      "conditional":"le",
       "criteria":{
-         "conditional":"le",
          "technical":"value",
          "value":60.0,
          "length":0,
@@ -114,8 +114,8 @@
          "series":"none",
          "factor":1.0
       },
+      "conditional":"ge",
       "criteria":{
-         "conditional":"ge",
          "technical":"value",
          "value":1.0,
          "length":0,
@@ -135,8 +135,8 @@
          "series":"none",
          "factor":1.0
       },
+      "conditional":"le",
       "criteria":{
-         "conditional":"le",
          "technical":"value",
          "value":3.1,
          "length":0,
