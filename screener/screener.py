@@ -27,7 +27,7 @@ class Result:
         return all(self.success)
 
     def __float__(self):
-        return sum(self.score) / len(self.score) if len(self.score) > 0 else 0.0
+        return float(sum(self.score)) / len(self.score) if len(self.score) > 0 else 0.0
 
 class Screener(Threaded):
     def __init__(self, table:str, script:str='', days:int=365, live:bool=False):

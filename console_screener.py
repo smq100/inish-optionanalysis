@@ -279,7 +279,7 @@ class Interface:
             utils.print_message(f'Tickers Identified ({self.screen_base})')
 
             index = 0
-            self.results = sorted(self.results, key=lambda r: r.results)
+            self.results = sorted(self.results, reverse=True, key=lambda r: float(r))
             for result in self.results:
                 if all:
                     [print(r) for r in result.results]

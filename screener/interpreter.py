@@ -97,17 +97,17 @@ class Interpreter:
         if not calculate:
             pass
         elif self.criteria_technical == VALID_TECHNICALS[8]: # value
-            self.value = self._get_value()
+            self.criteria = self._get_criteria()
         elif self.criteria_technical == VALID_TECHNICALS[0]: # high
-            self.value = self._get_value_high()
+            self.criteria = self._get_criteria_high()
         elif self.criteria_technical == VALID_TECHNICALS[1]: # low
-            self.value = self._get_value_low()
+            self.criteria = self._get_criteria_low()
         elif self.criteria_technical == VALID_TECHNICALS[2]: # close
-            self.value = self._get_value_close()
+            self.criteria = self._get_criteria_close()
         elif self.criteria_technical == VALID_TECHNICALS[3]: # volume
-            self.value = self._get_value_volume()
+            self.criteria = self._get_criteria_volume()
         elif self.criteria_technical == VALID_TECHNICALS[4]: # sma
-            self.value = self._get_value_sma()
+            self.criteria = self._get_criteria_sma()
         else:
             raise SyntaxError('Invalid "criteria technical" specified in screen file')
 
@@ -123,47 +123,47 @@ class Interpreter:
 
             if self.criteria_conditional == VALID_CONDITIONALS[0]: # le
                 if self.criteria_series == VALID_SERIES[2]: # na
-                    if len(self.value) > 0:
-                        value = self.value.iloc[-1] * self.criteria_factor
-                        self.score = value / base
+                    if len(self.criteria) > 0:
+                        value = self.criteria.iloc[-1] * self.criteria_factor
+                        self.score = value / base if base > 0 else 1.0
                         if base <= value:
                             self.success = True
                 elif self.criteria_series == VALID_SERIES[0]: # min
-                    if len(self.value) > 0:
-                        value = self.value.min() * self.criteria_factor
-                        self.score = value / base
+                    if len(self.criteria) > 0:
+                        value = self.criteria.min() * self.criteria_factor
+                        self.score = value / base if base > 0 else 1.0
                         if base <= value:
                             self.success = True
                 elif self.criteria_series == VALID_SERIES[1]: # max
-                    if len(self.value) > 0:
-                        value = self.value.max() * self.criteria_factor
-                        self.score = value / base
+                    if len(self.criteria) > 0:
+                        value = self.criteria.max() * self.criteria_factor
+                        self.score = value / base if base > 0 else 1.0
                         if base <= value:
                             self.success = True
 
             elif self.criteria_conditional == VALID_CONDITIONALS[1]: # eq
-                if len(self.value) > 0:
-                    value = self.value.min() * self.criteria_factor
+                if len(self.criteria) > 0:
+                    value = self.criteria.min() * self.criteria_factor
                     if base == value:
                         self.success = True
 
             elif self.criteria_conditional == VALID_CONDITIONALS[2]: # ge
                 if self.criteria_series == VALID_SERIES[2]: # na
-                    if len(self.value) > 0:
-                        value = self.value.iloc[-1] * self.criteria_factor
-                        self.score = base / value
+                    if len(self.criteria) > 0:
+                        value = self.criteria.iloc[-1] * self.criteria_factor
+                        self.score = base / value if value > 0 else 1.0
                         if base >= value:
                             self.success = True
                 elif self.criteria_series == VALID_SERIES[0]: # min
-                    if len(self.value) > 0:
-                        value = self.value.min() * self.criteria_factor
-                        self.score = base / value
+                    if len(self.criteria) > 0:
+                        value = self.criteria.min() * self.criteria_factor
+                        self.score = base / value if value > 0 else 1.0
                         if base >= value:
                             self.success = True
                 elif self.criteria_series == VALID_SERIES[1]: # max
-                    if len(self.value) > 0:
-                        value = self.value.max() * self.criteria_factor
-                        self.score = base / value
+                    if len(self.criteria) > 0:
+                        value = self.criteria.max() * self.criteria_factor
+                        self.score = base / value if value > 0 else 1.0
                         if base >= value:
                             self.success = True
 
@@ -210,35 +210,35 @@ class Interpreter:
         rating = self.company.get_rating()
         return pd.Series(rating)
 
-    def _get_value(self) -> pd.Series:
+    def _get_criteria(self) -> pd.Series:
         value = self.criteria_value
         return pd.Series([value])
 
-    def _get_value_high(self) -> pd.Series:
+    def _get_criteria_high(self) -> pd.Series:
         start = None if self.criteria_start == 0 else self.criteria_start
         stop = None if self.criteria_stop == 0 else self.criteria_stop
         sl = slice(start, stop)
         return self.company.get_high()[sl]
 
-    def _get_value_low(self) -> pd.Series:
+    def _get_criteria_low(self) -> pd.Series:
         start = None if self.criteria_start == 0 else self.criteria_start
         stop = None if self.criteria_stop == 0 else self.criteria_stop
         sl = slice(start, stop)
         return self.company.get_low()[sl]
 
-    def _get_value_close(self) -> pd.Series:
+    def _get_criteria_close(self) -> pd.Series:
         start = None if self.criteria_start == 0 else self.criteria_start
         stop = None if self.criteria_stop == 0 else self.criteria_stop
         sl = slice(start, stop)
         return self.company.get_close()[sl]
 
-    def _get_value_volume(self) -> pd.Series:
+    def _get_criteria_volume(self) -> pd.Series:
         start = None if self.criteria_start == 0 else self.criteria_start
         stop = None if self.criteria_stop == 0 else self.criteria_stop
         sl = slice(start, stop)
         return self.company.get_volume()[sl]
 
-    def _get_value_sma(self) -> pd.Series:
+    def _get_criteria_sma(self) -> pd.Series:
         start = None if self.criteria_start == 0 else self.criteria_start
         stop = None if self.criteria_stop == 0 else self.criteria_stop
         sl = slice(start, stop)
