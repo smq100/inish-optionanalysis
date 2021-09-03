@@ -25,7 +25,7 @@ _master_indexes = {
     d.INDEXES[2]['abbreviation']: set()
     }
 
-_engine = create_engine(d.ACTIVE_URI, echo=False)
+_engine = create_engine(d.ACTIVE_URI, echo=False, pool_size=10, max_overflow=20)
 _session = sessionmaker(bind=_engine)
 
 UNAVAILABLE = 'unavailable'

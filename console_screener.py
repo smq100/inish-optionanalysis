@@ -73,7 +73,8 @@ class Interface:
                 '6': 'Run Screen',
                 '7': 'Show Tickers',
                 '8': 'Show Results',
-                '9': 'Show All',
+                '9': 'Show Ticker Results',
+                '10': 'Show All',
                 '0': 'Exit'
             }
 
@@ -94,10 +95,10 @@ class Interface:
             if len(self.results) > 0:
                 menu_items['7'] = f'Show Tickers ({self.valids})'
                 menu_items['8'] = f'Show Results ({self.valids})'
-                menu_items['9'] = f'Show All ({len(self.results)})'
+                menu_items['10'] = f'Show All ({len(self.results)})'
 
             if selection == 0:
-                selection = utils.menu(menu_items, 'Select Operation', 0, 9)
+                selection = utils.menu(menu_items, 'Select Operation', 0, 10)
 
             if selection == 1:
                 self.select_source()
@@ -118,6 +119,8 @@ class Interface:
             elif selection == 8:
                 self.print_results(verbose=True)
             elif selection == 9:
+                self.print_ticker_results()
+            elif selection == 10:
                 self.print_results(all=True)
             elif selection == 0:
                 self.exit = True
@@ -206,7 +209,7 @@ class Interface:
                     if '.screen' in entry.name:
                         self.script += [entry.path]
                         head, sep, tail = entry.name.partition('.')
-                        paths += [head.title()]
+                        paths += [head]
 
         if len(self.script) > 0:
             self.script.sort()
@@ -219,7 +222,7 @@ class Interface:
 
             selection = utils.menu(menu_items, 'Select Screen', 0, index+1)
             if selection > 0:
-                self.screen_base = self.script[selection-1]
+                self.screen_base = paths[selection-1]
                 self.screen_path = BASEPATH + self.screen_base + SCREEN_SUFFIX
                 self.results = []
 
@@ -268,7 +271,7 @@ class Interface:
 
         return success
 
-    def print_results(self, verbose:bool=False, all:bool=False) -> None:
+    def print_results(self, verbose:bool=False, all:bool=False, ticker:str='') -> None:
         if not self.table:
             utils.print_error('No table specified')
         elif not self.screen_base:
@@ -281,17 +284,26 @@ class Interface:
             index = 0
             self.results = sorted(self.results, reverse=True, key=lambda r: float(r))
             for result in self.results:
-                if all:
+                if ticker:
+                    [print(r) for r in result.results if ticker.upper().ljust(6, ' ') == r[:6]]
+                elif all:
                     [print(r) for r in result.results]
                 elif self.verbose or verbose:
                     [print(r) for r in result.results if result]
                 elif result:
                     index += 1
-                    print(f'{result}({float(result):.3f}) ', end='')
-                    if index % 10 == 0: # Print 10 per line
+                    print(f'{result}({float(result):.2f}) ', end='')
+                    if index % 9 == 0: # Print 9 per line
                         print()
         print()
         print()
+
+    def print_ticker_results(self):
+        ticker = utils.input_text('Enter ticker: ')
+        if ticker:
+            ticker = ticker.upper()
+            if store.is_ticker(ticker):
+                self.print_results(ticker=ticker)
 
     def _show_progress(self, prefix, suffix) -> None:
         # Wait for thread to initialize

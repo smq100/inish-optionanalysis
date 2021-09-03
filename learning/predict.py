@@ -12,7 +12,6 @@ from utils import utils as utils
 _models_dir = './learning/models'
 _days_train = 5000
 _days_test = 1000
-_value = 'close'
 
 _logger = utils.get_logger()
 
@@ -26,7 +25,7 @@ class Prediction(Threaded):
             self.future_days = future
             self.loss = 0.0
             self.accuracy = 0.0
-            self._data = pd.DataFrame
+            self._data = pd.DataFrame()
             self._x_train = []
             self._y_train = []
             self._model = None
@@ -44,7 +43,7 @@ class Prediction(Threaded):
         # _logger.debug(f'\r{self._data.tail(15)}')
 
         self._scaler = MinMaxScaler(feature_range=(0,1))
-        scaled_data = self._scaler.fit_transform(self._data[_value].values.reshape(-1,1))
+        scaled_data = self._scaler.fit_transform(self._data['close'].values.reshape(-1,1))
 
         self._x_train = [scaled_data[x-self.prediction_days:x, 0] for x in range(self.prediction_days, len(scaled_data)-self.future_days)]
         self._x_train = np.array(self._x_train)
@@ -79,9 +78,9 @@ class Prediction(Threaded):
 
     def test(self):
         test_data = self._data[-_days_test:]
-        self.actual_prices = test_data[_value].values
+        self.actual_prices = test_data['close'].values
 
-        total_dataset = pd.concat((self._data[_value], test_data[_value]), axis=0)
+        total_dataset = pd.concat((self._data['close'], test_data['close']), axis=0)
 
         model_inputs = total_dataset[len(total_dataset) - len(test_data) - self.prediction_days:].values
         model_inputs = model_inputs.reshape(-1, 1)
