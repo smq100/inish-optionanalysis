@@ -176,7 +176,7 @@ class Interface:
             menu_items[f'{i+1}'] = f'{exchange}'
         menu_items['0'] = 'Cancel'
 
-        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.EXCHANGES))
+        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(self.exchanges))
         if select > 0:
             exc = self.exchanges[select-1]
             found = self.manager.list_exchange(exc)
@@ -199,7 +199,7 @@ class Interface:
             menu_items[f'{i+1}'] = f'{index}'
         menu_items['0'] = 'Cancel'
 
-        select = utils.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(d.INDEXES))
+        select = utils.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(self.indexes))
         if select > 0:
             ind = self.indexes[select-1]
             found = self.manager.list_index(ind)
@@ -222,7 +222,7 @@ class Interface:
             menu_items[f'{i+1}'] = f'{exchange}'
         menu_items['0'] = 'Cancel'
 
-        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.EXCHANGES))
+        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(self.exchanges))
         if select > 0:
             exc = self.exchanges[select-1]
 
@@ -243,7 +243,7 @@ class Interface:
             menu_items[f'{i+1}'] = f'{index}'
         menu_items['0'] = 'Cancel'
 
-        select = utils.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(d.INDEXES))
+        select = utils.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(self.indexes))
         if select > 0:
             self.task = threading.Thread(target=self.manager.populate_index, args=[self.indexes[select-1]])
             self.task.start()
@@ -259,11 +259,11 @@ class Interface:
 
     def refresh_exchange(self, progressbar=True):
         menu_items = {}
-        for i, e in enumerate(self.exchanges):
-            menu_items[f'{i+1}'] = f'{e}'
+        for i, exchange in enumerate(self.exchanges):
+            menu_items[f'{i+1}'] = f'{exchange}'
         menu_items['0'] = 'Cancel'
 
-        exchange = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
+        exchange = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(self.indexes))
         if exchange > 0:
             exc = self.exchanges[exchange-1]
             self.task = threading.Thread(target=self.manager.refresh_exchange, args=[exc])
@@ -285,7 +285,7 @@ class Interface:
         menu_items['0'] = 'Cancel'
 
         if not ticker:
-            select = utils.menu(menu_items, 'Select table, or 0 to cancel: ', 0, len(d.EXCHANGES)+2)
+            select = utils.menu(menu_items, 'Select table, or 0 to cancel: ', 0, len(self.exchanges)+2)
         else:
             select = 5
 
@@ -309,7 +309,7 @@ class Interface:
                 else:
                     utils.print_error('Invalid ticker. Try another ticker or select "0" to cancel')
         elif select > 0:
-            exc = self.exchanges[select-1] if select <= len(d.EXCHANGES) else ''
+            exc = self.exchanges[select-1] if select <= len(self.exchanges) else ''
             self.task = threading.Thread(target=self.manager.update_history_exchange, args=[exc])
             self.task.start()
 
@@ -327,7 +327,7 @@ class Interface:
             menu_items[f'{i+1}'] = f'{exchange}'
         menu_items['0'] = 'Cancel'
 
-        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(d.INDEXES))
+        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(self.indexes))
         if select > 0:
             exc = self.exchanges[select-1]
 
@@ -349,7 +349,7 @@ class Interface:
             menu_items[f'{i+1}'] = f'{index}'
         menu_items['0'] = 'Cancel'
 
-        select = utils.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(d.INDEXES))
+        select = utils.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(self.indexes))
         if select > 0:
             ind = self.indexes[select-1]
             self.manager.delete_index(ind)

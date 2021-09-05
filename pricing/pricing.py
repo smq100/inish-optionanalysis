@@ -38,7 +38,7 @@ class Pricing(ABC):
         self.volatility = None  # We will calculate this based on historical asset prices
         self.time_to_maturity = None  # Calculated from expiry date of the option
         self.risk_free_rate = None  # We will fetch current 3-month Treasury rate from the web
-        self.spot_price = None
+        self.spot_price = 0.0
         self.dividend = dividend or 0.0
         self.price_call = 0.0
         self.price_put = 0.0
@@ -66,7 +66,7 @@ class Pricing(ABC):
             raise IOError('Problem fetching ticker information')
 
     @abc.abstractmethod
-    def calculate_price(self, spot_price=-1.0, time_to_maturity=-1.0):
+    def calculate_price(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
         pass
 
     def calculate_greeks(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):

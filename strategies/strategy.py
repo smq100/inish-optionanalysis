@@ -8,10 +8,11 @@ import pandas as pd
 
 from company.company import Company
 from options.option import PRODUCTS, DIRECTIONS, Option
+from analysis.strategy import StrategyAnalysis
 from pricing.pricing import METHODS
+from pricing.pricing import Pricing
 from pricing.blackscholes import BlackScholes
 from pricing.montecarlo import MonteCarlo
-from analysis.strategy import StrategyAnalysis
 from utils import utils as utils
 
 
@@ -35,7 +36,7 @@ class Strategy(ABC):
         self.quantity = quantity
         self.width = 1
         self.analysis = StrategyAnalysis()
-        self.legs = []
+        self.legs:list[Leg] = []
         self.initial_spot = 0.0
         self.initial_spot = self.get_current_spot(ticker, True)
 
@@ -57,7 +58,7 @@ class Strategy(ABC):
         for leg in self.legs:
             leg.option.expiry = date
 
-    def add_leg(self, quantity:int, product:str, direction:str, strike:float, expiry:datetime) -> int:
+    def add_leg(self, quantity:int, product:str, direction:str, strike:float, expiry:datetime.datetime) -> int:
         # Add one day to act as expiry value
         expiry += datetime.timedelta(days=1)
 
@@ -85,10 +86,6 @@ class Strategy(ABC):
             raise ValueError('Invalid pricing method')
 
     @abc.abstractmethod
-    def analyze(self) -> None:
-        return None
-
-    @abc.abstractmethod
     def generate_profit_table(self) -> pd.DataFrame:
         return pd.DataFrame()
 
@@ -103,8 +100,10 @@ class Strategy(ABC):
     def get_errors(self) -> str:
         return ''
 
-    def _calc_price_min_max_step(self) -> tuple[int, int, int]:
-        min_ = max_ = step_ = 0
+    def _calc_price_min_max_step(self) -> tuple[float, float, float]:
+        min_ = 0.0
+        max_ = 0.0
+        step_ = 0.0
 
         if len(self.legs) > 0:
             percent = 0.20
@@ -123,7 +122,7 @@ class Strategy(ABC):
         return len(self.legs) > 0
 
 class Leg:
-    def __init__(self, strategy:str, ticker:str, quantity:int, product:str, direction:str, strike:float, expiry:datetime) -> None:
+    def __init__(self, strategy:Strategy, ticker:str, quantity:int, product:str, direction:str, strike:float, expiry:datetime.datetime):
         if product not in PRODUCTS:
             raise ValueError('Invalid product')
         if direction not in DIRECTIONS:
@@ -138,7 +137,7 @@ class Leg:
         self.product = product
         self.direction = direction
         self.pricing_method = 'black-scholes'
-        self.pricer = None
+        self.pricer:Pricing = None
         self.table = None
 
     def __str__(self):
@@ -195,9 +194,11 @@ class Leg:
             else:
                 self.option.calc_price = price = self.pricer.price_put
 
-            self.option.spot = self.company.spot = self.pricer.spot_price
+            self.option.spot = self.pricer.spot_price
+            self.company.spot = self.pricer.spot_price
             self.option.rate = self.pricer.risk_free_rate
-            self.option.calc_volatility = self.company.volatility = self.pricer.volatility
+            self.option.calc_volatility = self.pricer.volatility
+            self.company.volatility = self.pricer.volatility
             self.option.time_to_maturity = self.pricer.time_to_maturity
 
             # Generate the values table
@@ -255,7 +256,7 @@ class Leg:
         return call, put
 
     def modify_company(self, ticker:str) -> bool:
-        self.company = Company(ticker)
+        self.company = Company(ticker, days=1)
 
         try:
             # Reset strike to spot value
@@ -263,8 +264,7 @@ class Leg:
             self.reset()
             return True
         except Exception as e:
-            self.company = ticker
-            utils.print_error(sys.exc_info()[1])
+            utils.print_error(str(sys.exc_info()[1]))
             return False
 
     def modify_values(self, quantity:int, product:str, direction:str, strike:float) -> bool:

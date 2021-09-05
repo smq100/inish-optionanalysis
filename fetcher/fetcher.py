@@ -119,7 +119,7 @@ def get_option_expiry(ticker:str) -> dict:
     return value
 
 def get_option_chain(ticker:str) -> dict:
-    chain = None
+    chain = {}
 
     company = get_company_live(ticker)
     if company is not None:
@@ -163,11 +163,12 @@ def get_ratings(ticker:str):
         'strongbuy': 1,
     }
 
-    ratings = []
+    ratings = pd.DataFrame()
     try:
         company = yf.Ticker(ticker)
         if company is not None:
             ratings = company.recommendations
+            print(type(ratings))
             if ratings is not None:
                 end = dt.date.today()
                 start = end - dt.timedelta(days=60)
@@ -210,9 +211,9 @@ if __name__ == '__main__':
     # _logger = utils.get_logger(DEBUG)
     import sys
     if len(sys.argv) > 1:
-        print(get_history_live(sys.argv[1]))
+        print(get_ratings(sys.argv[1]))
     else:
-        print(get_history_live('CIB'))
+        print(get_ratings('IBM'))
 
     # start = dt.datetime.today() - dt.timedelta(days=10)
     # df = refresh_history('AAPL', 60)

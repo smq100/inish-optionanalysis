@@ -2,7 +2,7 @@ import datetime as dt
 
 import pandas as pd
 
-from strategy.strategy import Strategy, STRATEGIES
+from strategies.strategy import Strategy, STRATEGIES
 from utils import utils as utils
 
 _logger = utils.get_logger()
@@ -19,7 +19,7 @@ class Vertical(Strategy):
             d += dt.timedelta(1)
         expiry = d + dt.timedelta(days=6)
 
-        # Add legs (long leg is always first)
+        # Add legs (Important: long leg is always first)
         if product == 'call':
             if direction == 'long':
                 self.add_leg(self.quantity, product, 'long', self.initial_spot, expiry)
@@ -126,14 +126,14 @@ class Vertical(Strategy):
 
         return error
 
-    def _validate(self) -> None:
+    def _validate(self) -> bool:
         return len(self.legs) > 1
 
 if __name__ == '__main__':
     import logging
     utils.get_logger(logging.INFO)
 
-    call = Vertical('MSFT', 'call', 'long')
+    call = Vertical('MSFT', 'call', 'long', 1)
     call.legs[0].calculate(table=False, greeks=False)
     output = f'${call.legs[0].option.calc_price:.2f}, ({call.legs[0].option.strike:.2f})'
     print(output)

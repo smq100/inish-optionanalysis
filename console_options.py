@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as clrs
 import matplotlib.ticker as mticker
 
-from strategy.call import Call
-from strategy.put import Put
-from strategy.vertical import Vertical
+from strategies.call import Call
+from strategies.put import Put
+from strategies.vertical import Vertical
 from options.chain import Chain
 from data import store as store
 from utils import utils as utils

@@ -114,4 +114,4 @@ if __name__ == '__main__':
     import datetime as dt
 
     pricer_ = MonteCarlo('TSLA', dt.datetime(2021, 8, 31), 1000)
-    call_price, put_price = pricer_.calculate_prices()
+    call_price, put_price = pricer_.calculate_price()

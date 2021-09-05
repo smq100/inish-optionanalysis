@@ -74,7 +74,7 @@ class Screener(Threaded):
                 with open(script) as f:
                     self.script = json.load(f)
             except:
-                self.script = None
+                self.script = []
                 _logger.error(f'{__name__}: File format error')
             else:
                 if init:
@@ -141,7 +141,7 @@ class Screener(Threaded):
         # Return a list of successful tickers
         return [r.company.ticker for r in self.results if r]
 
-    def _run(self, companies:str) -> None:
+    def _run(self, companies:list[Company]) -> None:
         for symbol in companies:
             success = []
             score = []
@@ -177,12 +177,12 @@ class Screener(Threaded):
                     script = json.load(f)
                     self.script += script
             except:
-                script = None
+                self.script = []
                 _logger.error(f'{__name__}: File format error')
         else:
             _logger.error(f'{__name__}: File "{script}" not found')
 
-        return self.script is not None
+        return bool(self.script)
 
     def valid(self) -> bool:
         return bool(self.table)

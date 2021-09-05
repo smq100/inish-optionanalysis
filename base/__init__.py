@@ -1,4 +1,5 @@
 import time
+from collections.abc import Callable
 
 class Threaded:
     def __init__(self):
@@ -12,7 +13,7 @@ class Threaded:
         self.task_time = 0
         self.task_futures = []
 
-    def threaded(func):
+    def threaded(func:Callable):
         def wrapper(self, *args, **kwargs):
             self.task_total = 0
             self.task_completed = 0

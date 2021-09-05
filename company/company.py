@@ -11,9 +11,11 @@ class Company:
         self.ticker = ticker.upper()
         self.days = days
         self.live = live
-        self.info = None
-        self.history = None
-        self.company = None
+        self.info = {}
+        self.history = pd.DataFrame()
+        self.company = {}
+        self.spot = 0.0
+        self.volatility = 0.0
         self.ta = None
 
         if days < 1:
@@ -31,49 +33,49 @@ class Company:
         return output
 
     def get_current_price(self) -> float:
-        if self.history is None:
+        if self.history.empty:
             self._load_history()
 
         return self.history['close'][-1]
 
     def get_high(self) -> pd.Series:
-        if self.history is None:
+        if self.history.empty:
             self._load_history()
 
         return self.history['high']
 
     def get_low(self) -> pd.Series:
-        if self.history is None:
+        if self.history.empty:
             self._load_history()
 
         return self.history['low']
 
     def get_close(self) -> pd.Series:
-        if self.history is None:
+        if self.history.empty:
             self._load_history()
 
         return self.history['close']
 
     def get_volume(self) -> pd.Series:
-        if self.history is None:
+        if self.history.empty:
             self._load_history()
 
         return self.history['volume']
 
     def get_beta(self) -> float:
-        if self.company is None:
+        if not self.company:
             self._load_company()
 
         return self.company['beta']
 
     def get_rating(self) -> float:
-        if self.company is None:
+        if not self.company:
             self._load_company()
 
         return self.company['rating']
 
     def get_marketcap(self) -> int:
-        if self.company is None:
+        if not self.company:
             self._load_company()
 
         return self.company['marketcap']
@@ -83,16 +85,16 @@ class Company:
 
         return self.info
 
-    def _load_history(self):
+    def _load_history(self) -> None:
         self.history = store.get_history(self.ticker, self.days, live=self.live)
         if self.history is None:
             raise RuntimeError(f'No history for {self.ticker}')
 
         self.ta = Technical(self.ticker, self.history, self.days, live=self.live)
 
-    def _load_company(self):
+    def _load_company(self) -> None:
         self.company = store.get_company(self.ticker, live=self.live)
-        if self.company is None:
+        if not self.company:
             raise RuntimeError(f'No company info for {self.ticker}')
 
 

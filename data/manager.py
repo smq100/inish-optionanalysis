@@ -181,9 +181,9 @@ class Manager(Threaded):
             valid = []
             tickers = store.get_index_tickers_master(index)
             for ticker in tickers:
-                ticker = session.query(models.Security.ticker).filter(models.Security.ticker==ticker).one_or_none()
+                t = session.query(models.Security.ticker).filter(models.Security.ticker==ticker).one_or_none()
                 if ticker is not None:
-                    valid += [ticker.ticker]
+                    valid += [t.ticker]
 
             if len(valid) > 0:
                 self._add_securities_to_index(valid, index)
@@ -584,7 +584,7 @@ class Manager(Threaded):
 
         return added
 
-    def _add_securities_to_index(self, tickers:str, index:str) -> None:
+    def _add_securities_to_index(self, tickers:list[str], index:str) -> None:
         with self.session.begin() as session:
             ind = session.query(models.Index.id).filter(models.Index.abbreviation==index).one()
 

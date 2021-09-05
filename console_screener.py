@@ -171,8 +171,8 @@ class Interface:
 
     def select_index(self) -> None:
         menu_items = {}
-        for index, item in enumerate(d.INDEXES):
-            menu_items[f'{index+1}'] = f'{item["abbreviation"]}'
+        for i, item in enumerate(d.INDEXES):
+            menu_items[f'{i+1}'] = f'{item["abbreviation"]}'
         menu_items['0'] = 'Cancel'
 
         selection = utils.menu(menu_items, 'Select Index', 0, len(d.INDEXES))
@@ -231,9 +231,7 @@ class Interface:
                 self.results = []
 
                 if self.screener is not None:
-                    if self.screener.load_script(self.screen_path, init=self.screen_init):
-                        self.screener.load_base()
-                    else:
+                    if not self.screener.load_script(self.screen_path, init=self.screen_init):
                         utils.print_error('Error in script file')
 
         else:

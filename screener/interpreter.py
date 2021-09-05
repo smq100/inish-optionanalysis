@@ -1,7 +1,7 @@
 import pandas as pd
 
 from utils import utils as utils
-
+from company.company import Company
 
 _logger = utils.get_logger()
 
@@ -11,11 +11,11 @@ VALID_SERIES = ('min', 'max', 'none')
 
 
 class Interpreter:
-    def __init__(self, company:str, filter:dict):
+    def __init__(self, company:Company, filter:dict):
         self.company = company
         self.filter = filter
         self.note = ''
-        self.base = None
+        self.base = pd.Series()
         self.base_technical = ''
         self.base_length = 0.0
         self.base_start = -1
@@ -23,7 +23,7 @@ class Interpreter:
         self.base_series = 'none'
         self.base_factor = 1.0
         self.conditional = ''
-        self.criteria = None
+        self.criteria = pd.Series()
         self.criteria_value = 0.0
         self.criteria_technical = ''
         self.criteria_length = 0.0
@@ -68,7 +68,7 @@ class Interpreter:
 
         return self.success
 
-    def _calculate(self) -> bool:
+    def _calculate(self) -> tuple:
         calculate = True
 
         # Base value
@@ -110,7 +110,7 @@ class Interpreter:
 
         return self._compare() if calculate else (True, 1.0)
 
-    def _compare(self) -> bool:
+    def _compare(self) -> tuple:
         self.success = False
         self.score = 1.0
 
@@ -120,45 +120,45 @@ class Interpreter:
 
             if self.conditional == VALID_CONDITIONALS[0]: # le
                 if self.criteria_series == VALID_SERIES[2]: # na
-                    if len(self.criteria) > 0:
+                    if self.criteria.size > 0:
                         value = self.criteria.iloc[-1] * self.criteria_factor
                         self.score = value / base if base > 0 else 1.0
                         if base <= value:
                             self.success = True
                 elif self.criteria_series == VALID_SERIES[0]: # min
-                    if len(self.criteria) > 0:
+                    if self.criteria.size > 0:
                         value = self.criteria.min() * self.criteria_factor
                         self.score = value / base if base > 0 else 1.0
                         if base <= value:
                             self.success = True
                 elif self.criteria_series == VALID_SERIES[1]: # max
-                    if len(self.criteria) > 0:
+                    if self.criteria.size > 0:
                         value = self.criteria.max() * self.criteria_factor
                         self.score = value / base if base > 0 else 1.0
                         if base <= value:
                             self.success = True
 
             elif self.conditional == VALID_CONDITIONALS[1]: # eq
-                if len(self.criteria) > 0:
+                if self.criteria.size > 0:
                     value = self.criteria.min() * self.criteria_factor
                     if base == value:
                         self.success = True
 
             elif self.conditional == VALID_CONDITIONALS[2]: # ge
                 if self.criteria_series == VALID_SERIES[2]: # na
-                    if len(self.criteria) > 0:
+                    if self.criteria.size > 0:
                         value = self.criteria.iloc[-1] * self.criteria_factor
                         self.score = base / value if value > 0 else 1.0
                         if base >= value:
                             self.success = True
                 elif self.criteria_series == VALID_SERIES[0]: # min
-                    if len(self.criteria) > 0:
+                    if self.criteria.size > 0:
                         value = self.criteria.min() * self.criteria_factor
                         self.score = base / value if value > 0 else 1.0
                         if base >= value:
                             self.success = True
                 elif self.criteria_series == VALID_SERIES[1]: # max
-                    if len(self.criteria) > 0:
+                    if self.criteria.size > 0:
                         value = self.criteria.max() * self.criteria_factor
                         self.score = base / value if value > 0 else 1.0
                         if base >= value:

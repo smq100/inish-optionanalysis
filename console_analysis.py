@@ -76,7 +76,7 @@ class Interface:
     def get_best_coorelation(self):
         if not self.coorelate:
             utils.print_error('Run coorelation first')
-        elif not self.coorelate.compute_correlation:
+        elif not self.coorelate:
             utils.print_error('Run coorelation first')
         else:
             utils.print_message(f'Best Coorelations in {self.list}')
@@ -86,7 +86,7 @@ class Interface:
     def get_least_coorelation(self):
         if not self.coorelate:
             utils.print_error('Run coorelation first')
-        elif not self.coorelate.compute_correlation:
+        elif not self.coorelate:
             utils.print_error('Run coorelation first')
         else:
             utils.print_message(f'Least Coorelations in {self.list}')
@@ -96,7 +96,7 @@ class Interface:
     def get_ticker_coorelation(self):
         if not self.coorelate:
             utils.print_error('Run coorelation first')
-        elif not self.coorelate.compute_correlation:
+        elif not self.coorelate:
             utils.print_error('Run coorelation first')
         else:
             ticker = utils.input_text('Enter symbol: ').upper()

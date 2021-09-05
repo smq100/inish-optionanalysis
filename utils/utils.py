@@ -10,7 +10,7 @@ def get_logger(level=None, logfile=True) -> Logger:
     if level is not None:
         logger.handlers = []
         logger.setLevel(logging.DEBUG)
-        logger.propagate = 0 # Prevent logging from propagating to the root logger
+        logger.propagate = False # Prevent logging from propagating to the root logger
 
         # Console handler
         cformat = logging.Formatter('%(levelname)s: %(message)s')
@@ -29,7 +29,7 @@ def get_logger(level=None, logfile=True) -> Logger:
 
     return logger
 
-def menu(menu_items, header:dict, minvalue:int, maxvalue:int) -> int:
+def menu(menu_items:dict, header:str, minvalue:int, maxvalue:int) -> int:
     print(f'\n{header}')
     print('-' * 50)
 
@@ -65,40 +65,40 @@ def print_line(message:str, creturn:int=1) -> None:
 def input_integer(message:str, min_:int, max_:int) -> int:
     val = min_ - 1
     while val < min_:
-        val = input(message)
-        if val == '':
-            val = min_ - 1
-        elif not isnumeric(val):
-            print_error(f'Invalid value. Enter an integer between {min_} and {max_}')
-            val = min_ - 1
-        elif int(val) < min_:
-            print_error(f'Invalid value. Enter an integer between {min_} and {max_}')
-            val = min_ - 1
-        elif int(val) > max_:
+        text = input(message)
+        if not isnumeric(text):
             print_error(f'Invalid value. Enter an integer between {min_} and {max_}')
             val = min_ - 1
         else:
-            val = int(val)
+            val = int(text)
+            if val < min_:
+                print_error(f'Invalid value. Enter an integer between {min_} and {max_}')
+                val = min_ - 1
+            elif val > max_:
+                print_error(f'Invalid value. Enter an integer between {min_} and {max_}')
+                val = min_ - 1
+            else:
+                val = val
 
     return val
 
 def input_float(message:str, min_:float, max_:float) -> float:
     val = min_ - 1
     while val < min_:
-        val = input(message)
-        if val == '':
-            val = min_ - 1
-        elif not isnumeric(val):
-            print_error(f'Invalid value. Enter an integer between {min_} and {max_}')
-            val = min_ - 1
-        elif float(val) < min_:
-            print_error(f'Invalid value. Enter an integer between {min_} and {max_}')
-            val = min_ - 1
-        elif float(val) > max_:
+        text = input(message)
+        if not isnumeric(text):
             print_error(f'Invalid value. Enter an integer between {min_} and {max_}')
             val = min_ - 1
         else:
-            val = float(val)
+            val = int(text)
+            if float(val) < min_:
+                print_error(f'Invalid value. Enter an integer between {min_} and {max_}')
+                val = min_ - 1
+            elif float(val) > max_:
+                print_error(f'Invalid value. Enter an integer between {min_} and {max_}')
+                val = min_ - 1
+            else:
+                val = float(val)
 
     return val
 
@@ -159,8 +159,8 @@ def progress_bar(iteration, total:int, prefix:str='', suffix:str='', ticker:str=
 
         print(f'\rWorking |{bar}| {suffix}', end='\r')
 
-def mround(n, precision:int) -> float:
-    val = round(n / precision) * precision
+def mround(n, precision:float) -> float:
+    val = float(round(n / precision) * precision)
     if val < 0.01: val = 0.01
 
     return val

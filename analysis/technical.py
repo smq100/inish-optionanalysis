@@ -10,7 +10,7 @@ from utils import utils as utils
 
 
 class Technical:
-    def __init__(self, ticker:str, history, days:int, live:bool=False):
+    def __init__(self, ticker:str, history:pd.DataFrame, days:int, live:bool=False):
         if store.is_ticker(ticker):
             self.ticker = ticker.upper()
             self.days = days
@@ -80,6 +80,6 @@ class Technical:
         return df
 
 if __name__ == '__main__':
-    ta = Technical('AAPL', 365)
+    ta = Technical('AAPL', None, 365)
     value = ta.calc_sma(21).iloc[-1]
     print(value)

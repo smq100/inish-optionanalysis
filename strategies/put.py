@@ -1,18 +1,18 @@
 import datetime as dt
 
-import pandas as pd
-
-from strategy.strategy import Strategy, STRATEGIES
+from strategies.strategy import Strategy, STRATEGIES
 from utils import utils as utils
+
+import pandas as pd
 
 _logger = utils.get_logger()
 
-class Call(Strategy):
+class Put(Strategy):
     def __init__(self, ticker, product, direction, quantity):
-        product = 'call'
+        product = 'put'
         super().__init__(ticker, product, direction, quantity)
 
-        self.name = STRATEGIES[0]
+        self.name = STRATEGIES[1]
 
         # Default to a week from Friday as expiry
         d = dt.datetime.today()
@@ -49,43 +49,43 @@ class Call(Strategy):
             self.analysis.breakeven = self.calc_breakeven()
 
     def generate_profit_table(self) -> pd.DataFrame:
-        profit = None
+        dframe = None
         price = self.legs[0].option.calc_price
 
         if self.legs[0].direction == 'long':
-            profit = self.legs[0].table - price
+            dframe = self.legs[0].table - price
+            dframe = dframe.applymap(lambda x: x if x > -price else -price)
         else:
-            profit = self.legs[0].table
-            profit = profit.applymap(lambda x: (price - x) if x < price else -(x - price))
+            dframe = self.legs[0].table
+            dframe = dframe.applymap(lambda x: (price - x) if x < price else -(x - price))
 
-        return profit
+        return dframe
 
     def calc_max_gain_loss(self) -> tuple[float, float]:
         if self.legs[0].direction == 'long':
-            self.analysis.sentiment = 'bullish'
-            max_gain = -1.0
+            self.analysis.sentiment = 'bearish'
+            max_gain = (self.legs[0].option.strike - self.legs[0].option.calc_price) * self.quantity
             max_loss = self.legs[0].option.calc_price * self.quantity
         else:
-            self.analysis.sentiment = 'bearish'
+            self.analysis.sentiment = 'bullish'
             max_gain = self.legs[0].option.calc_price * self.quantity
-            max_loss = -1.0
+            max_loss = (self.legs[0].option.strike - self.legs[0].option.calc_price) * self.quantity
 
         return max_gain, max_loss
 
     def calc_breakeven(self) -> float:
         if self.legs[0].direction == 'long':
-            breakeven = self.legs[0].option.strike + self.analysis.amount
-        else:
             breakeven = self.legs[0].option.strike - self.analysis.amount
+        else:
+            breakeven = self.legs[0].option.strike + self.analysis.amount
 
         return breakeven
-
 
 if __name__ == '__main__':
     import logging
     utils.get_logger(logging.INFO)
 
-    call = Call('MSFT', 'call', 'long')
+    call = Put('MSFT', 'call', 'long', 1)
     call.legs[0].calculate(table=False, greeks=False)
     output = f'${call.legs[0].option.calc_price:.2f}, ({call.legs[0].option.strike:.2f})'
     print(output)

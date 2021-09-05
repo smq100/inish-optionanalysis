@@ -13,13 +13,13 @@ from data import models as models
 
 _logger = utils.get_logger()
 
-_master_exchanges = {
+_master_exchanges:dict = {
     d.EXCHANGES[0]['abbreviation']: set(),
     d.EXCHANGES[1]['abbreviation']: set(),
     d.EXCHANGES[2]['abbreviation']: set()
     }
 
-_master_indexes = {
+_master_indexes:dict = {
     d.INDEXES[0]['abbreviation']: set(),
     d.INDEXES[1]['abbreviation']: set()
     # d.INDEXES[2]['abbreviation']: set()
@@ -161,9 +161,9 @@ def get_ticker_index(ticker:str) -> str:
         if index: index += ', '
         index += 'DOW'
 
-    if ticker.upper() in get_index_tickers_master('CUSTOM'):
-        if index: index += ', '
-        index += 'CUSTOM'
+    # if ticker.upper() in get_index_tickers_master('CUSTOM'):
+    #     if index: index += ', '
+    #     index += 'CUSTOM'
 
     if not index:
         index = 'None'
@@ -284,7 +284,6 @@ def get_company(ticker, live:bool=False, extra:bool=False) -> dict:
 def get_exchange_tickers_master(exchange, type:str='google') -> list[str]:
     global _master_exchanges
     symbols = []
-    table = None
 
     if is_exchange(exchange):
         if len(_master_exchanges[exchange]) > 0:
@@ -309,7 +308,6 @@ def get_exchange_tickers_master(exchange, type:str='google') -> list[str]:
 
 def get_index_tickers_master(index, type:str='google') -> list[str]:
     global _master_indexes
-    table = None
     symbols = []
 
     if is_index(index):
@@ -333,10 +331,10 @@ def get_index_tickers_master(index, type:str='google') -> list[str]:
 
     return symbols
 
-def get_option_expiry(ticker:str) -> tuple:
+def get_option_expiry(ticker:str) -> dict:
     return fetcher.get_option_expiry(ticker)
 
-def get_option_chain(ticker:str) -> tuple:
+def get_option_chain(ticker:str) -> dict:
     return fetcher.get_option_chain(ticker)
 
 def get_treasury_rate(ticker:str='DTB3') -> float:

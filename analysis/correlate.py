@@ -8,7 +8,7 @@ _logger = utils.get_logger()
 
 
 class Correlate(Threaded):
-    def __init__(self, tickers:str):
+    def __init__(self, tickers:list[str]):
         if tickers is None:
             raise ValueError('Invalid list of tickers')
         if not tickers:
@@ -45,10 +45,10 @@ class Correlate(Threaded):
 
         self.task_error = 'Done'
 
-    def get_sorted_coorelations(self, count:int, best:int) -> list[float]:
+    def get_sorted_coorelations(self, count:int, best:bool) -> list[float]:
         all = self.get_all_coorelations()
         if all is not None:
-            all.sort(key=lambda x: x[2], reverse=best)
+            all.sort(key=lambda sym: sym[2], reverse=best)
 
         return all[:count]
 
@@ -87,6 +87,6 @@ class Correlate(Threaded):
 
 if __name__ == '__main__':
     symbols = store.get_tickers('DOW')
-    c = Correlate()
-    df = c.compute_correlation(symbols)
+    c = Correlate(symbols)
+    df = c.compute_correlation()
     print(df)
