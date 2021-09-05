@@ -12,12 +12,15 @@ logger = utils.get_logger(logging.WARNING)
 
 BASEPATH = os.getcwd()+'/screener/screens/'
 SCREEN_SUFFIX = '.screen'
+INIT_NAME = 'init'
 
 
 class Interface:
     def __init__(self, table='', screen='', verbose=False, exit=False, live=False):
         self.table = table.upper()
         self.screen_base = screen
+        self.screen_path = ''
+        self.screen_init = BASEPATH + INIT_NAME + SCREEN_SUFFIX
         self.verbose = verbose
         self.exit = exit
         self.live = live
@@ -47,7 +50,7 @@ class Interface:
                 utils.print_error('Must specify table with screener')
             elif os.path.exists(BASEPATH+screen+SCREEN_SUFFIX):
                 self.screen_path = BASEPATH + self.screen_base + SCREEN_SUFFIX
-                if not self.screener.load_script(self.screen_path):
+                if not self.screener.load_script(self.screen_path, init=self.screen_init):
                     self.screen_base = ''
                     utils.print_error('Invalid screen script')
             else:
@@ -206,10 +209,11 @@ class Interface:
         with os.scandir(BASEPATH) as entries:
             for entry in entries:
                 if entry.is_file():
-                    if '.screen' in entry.name:
+                    if SCREEN_SUFFIX in entry.name:
                         self.script += [entry.path]
                         head, sep, tail = entry.name.partition('.')
-                        paths += [head]
+                        if head != INIT_NAME:
+                            paths += [head]
 
         if len(self.script) > 0:
             self.script.sort()
@@ -217,7 +221,7 @@ class Interface:
 
             menu_items = {}
             for index, item in enumerate(paths):
-                menu_items[f'{index+1}'] = f'{item}'
+                menu_items[f'{index+1}'] = f'{item.title()}'
             menu_items['0'] = 'Cancel'
 
             selection = utils.menu(menu_items, 'Select Screen', 0, index+1)
@@ -227,7 +231,9 @@ class Interface:
                 self.results = []
 
                 if self.screener is not None:
-                    if not self.screener.load_script(self.screen_path):
+                    if self.screener.load_script(self.screen_path, init=self.screen_init):
+                        self.screener.load_base()
+                    else:
                         utils.print_error('Error in script file')
 
         else:
@@ -239,7 +245,7 @@ class Interface:
             utils.print_error('No table specified')
         elif not self.screen_path:
             utils.print_error('No screen specified')
-        elif self.screener.load_script(self.screen_path):
+        elif self.screener.load_script(self.screen_path, init=self.screen_init):
             self.results = []
             self.valids = 0
             self.task = threading.Thread(target=self.screener.run_script)

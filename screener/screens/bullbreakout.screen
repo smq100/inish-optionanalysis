@@ -1,26 +1,5 @@
 [
    {
-      "note":"Price > 20",
-      "base":{
-         "technical":"close",
-         "length":0,
-         "start":-1,
-         "stop":0,
-         "series":"none",
-         "factor":1.0
-      },
-      "conditional":"ge",
-      "criteria":{
-         "technical":"value",
-         "value":20,
-         "length":0,
-         "start":-1,
-         "stop":0,
-         "series":"none",
-         "factor":1.0
-      }
-   },
-   {
       "note":"Price within 3% of 52 week high",
       "base":{
          "technical":"close",
@@ -42,27 +21,6 @@
       }
    },
    {
-      "note":"Volume > 2M",
-      "base":{
-         "technical":"volume",
-         "length":0,
-         "start":-1,
-         "stop":0,
-         "series":"none",
-         "factor":1.0
-      },
-      "conditional":"ge",
-      "criteria":{
-         "technical":"value",
-         "value":2e6,
-         "length":0,
-         "start":-1,
-         "stop":0,
-         "series":"none",
-         "factor":1.0
-      }
-   },
-   {
       "note":"Beta > 1.0",
       "base":{
          "technical":"beta",
@@ -76,27 +34,6 @@
       "criteria":{
          "technical":"value",
          "value":1.0,
-         "length":0,
-         "start":-1,
-         "stop":0,
-         "series":"none",
-         "factor":1.0
-      }
-   },
-   {
-      "note":"Rating < 3.0",
-      "base":{
-         "technical":"rating",
-         "length":0,
-         "start":-1,
-         "stop":0,
-         "series":"none",
-         "factor":1.0
-      },
-      "conditional":"le",
-      "criteria":{
-         "technical":"value",
-         "value":3.0,
          "length":0,
          "start":-1,
          "stop":0,

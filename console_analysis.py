@@ -67,7 +67,7 @@ class Interface:
                     print()
                     self._show_progress('Progress', 'Completed')
 
-                utils.print_message(f'Coorelation Among {list} Symbols')
+                utils.print_message(f'Coorelation Among {self.list} Symbols')
                 print(self.coorelate.task_object)
             else:
                 utils.print_error('Invaid symbol list')

@@ -67,8 +67,8 @@ class Screener(Threaded):
     def __str__(self):
         return f'{self.table}/{self.script_name}'
 
-    def load_script(self, script:str) -> bool:
-        self.script = None
+    def load_script(self, script:str, init:str='') -> bool:
+        self.script = []
         if os.path.exists(script):
             try:
                 with open(script) as f:
@@ -76,10 +76,13 @@ class Screener(Threaded):
             except:
                 self.script = None
                 _logger.error(f'{__name__}: File format error')
+            else:
+                if init:
+                    self._add_init_script(init)
         else:
             _logger.error(f'{__name__}: File "{script}" not found')
 
-        return self.script is not None
+        return bool(self.script)
 
     def open(self) -> bool:
         tickers = []
@@ -166,6 +169,20 @@ class Screener(Threaded):
                 self.task_completed = self.task_total
                 self.results = []
                 break
+
+    def _add_init_script(self, script:str) -> bool:
+        if os.path.exists(script):
+            try:
+                with open(script) as f:
+                    script = json.load(f)
+                    self.script += script
+            except:
+                script = None
+                _logger.error(f'{__name__}: File format error')
+        else:
+            _logger.error(f'{__name__}: File "{script}" not found')
+
+        return self.script is not None
 
     def valid(self) -> bool:
         return bool(self.table)

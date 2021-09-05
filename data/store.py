@@ -21,11 +21,14 @@ _master_exchanges = {
 
 _master_indexes = {
     d.INDEXES[0]['abbreviation']: set(),
-    d.INDEXES[1]['abbreviation']: set(),
-    d.INDEXES[2]['abbreviation']: set()
+    d.INDEXES[1]['abbreviation']: set()
+    # d.INDEXES[2]['abbreviation']: set()
     }
 
-_engine = create_engine(d.ACTIVE_URI, echo=False, pool_size=10, max_overflow=20)
+if d.ACTIVE_DB == 'Postgres':
+    _engine = create_engine(d.ACTIVE_URI, echo=False, pool_size=10, max_overflow=20)
+else:
+    _engine = create_engine(d.ACTIVE_URI)
 _session = sessionmaker(bind=_engine)
 
 UNAVAILABLE = 'unavailable'

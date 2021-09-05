@@ -110,14 +110,17 @@ def input_text(message:str) -> str:
 
     return val
 
+completed = 0
 position = 0
 forward = True
 def progress_bar(iteration, total:int, prefix:str='', suffix:str='', ticker:str='',
     length:int=100, fill:str='█', reset:bool=False, success:int=-1, tasks:int=0) -> None:
+    global completed
     global position
     global forward
 
     if reset:
+        completed = 0
         position = 0
         forward = True
 
@@ -125,10 +128,14 @@ def progress_bar(iteration, total:int, prefix:str='', suffix:str='', ticker:str=
         filled = int(length * iteration // total)
         bar = fill * filled + '-' * (length - filled)
 
-        if success < 0:
+        if iteration == completed:
+            pass
+        elif success < 0:
             print(f'\r{prefix} |{bar}| {iteration}/{total} {suffix} {ticker}     ', end='\r')
         else:
             print(f'\r{prefix} |{bar}| {iteration}/{total} ({success}) [{tasks}] {suffix} {ticker}     ', end='\r')
+
+        completed = iteration
 
         if iteration == total:
             print()
