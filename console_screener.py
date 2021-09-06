@@ -3,7 +3,7 @@ import time
 import threading
 import logging
 
-from screener.screener import Screener
+from screener.screener import Screener, Result
 import data as d
 from data import store as store
 from utils import utils as utils
@@ -16,7 +16,7 @@ INIT_NAME = 'init'
 
 
 class Interface:
-    def __init__(self, table='', screen='', verbose=False, exit=False, live=False):
+    def __init__(self, table:str='', screen:str='', verbose:bool=False, exit:bool=False, live:bool=False):
         self.table = table.upper()
         self.screen_base = screen
         self.screen_path = ''
@@ -24,11 +24,11 @@ class Interface:
         self.verbose = verbose
         self.exit = exit
         self.live = live
-        self.results = []
+        self.results:list[Result] = []
         self.valids = 0
-        self.screener = None
+        self.screener:Screener = None
         self.type = ''
-        self.task = None
+        self.task:threading.Thread = None
 
         if self.table:
             if self.table == 'ALL':

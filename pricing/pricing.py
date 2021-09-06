@@ -66,10 +66,10 @@ class Pricing(ABC):
             raise IOError('Problem fetching ticker information')
 
     @abc.abstractmethod
-    def calculate_price(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
+    def calculate_price(self, spot_price:float=-1.0, time_to_maturity:float=-1.0, volatility:float=-1.0) -> tuple[float, float]:
         pass
 
-    def calculate_greeks(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
+    def calculate_greeks(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0) -> None:
         self.calculate_delta(spot_price=spot_price, time_to_maturity=time_to_maturity, volatility=volatility)
         self.calculate_gamma(spot_price=spot_price, time_to_maturity=time_to_maturity, volatility=volatility)
         self.calculate_theta(spot_price=spot_price, time_to_maturity=time_to_maturity, volatility=volatility)
@@ -77,28 +77,28 @@ class Pricing(ABC):
         self.calculate_rho(spot_price=spot_price, time_to_maturity=time_to_maturity, volatility=volatility)
 
     @abc.abstractmethod
-    def calculate_delta(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
+    def calculate_delta(self, spot_price:float=-1.0, time_to_maturity:float=-1.0, volatility:float=-1.0) -> tuple[float, float]:
         return 0.0, 0.0
 
     @abc.abstractmethod
-    def calculate_gamma(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
+    def calculate_gamma(self, spot_price:float=-1.0, time_to_maturity:float=-1.0, volatility:float=-1.0) -> tuple[float, float]:
         return 0.0, 0.0
 
     @abc.abstractmethod
-    def calculate_theta(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
+    def calculate_theta(self, spot_price:float=-1.0, time_to_maturity:float=-1.0, volatility:float=-1.0) -> tuple[float, float]:
         return 0.0, 0.0
 
     @abc.abstractmethod
-    def calculate_vega(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0):
+    def calculate_vega(self, spot_price:float=-1.0, time_to_maturity:float=-1.0, volatility:float=-1.0) -> tuple[float, float]:
         return 0.0, 0.0
 
-    def initialize_variables(self):
+    def initialize_variables(self) -> None:
         self._calc_risk_free_rate()
         self._calc_time_to_maturity()
         self._calc_volatility()
         self._calc_spot_price()
 
-    def is_call_put_parity_maintained(self, call_price, put_price):
+    def is_call_put_parity_maintained(self, call_price:float, put_price:float) -> bool:
         ''' Verify is the Put-Call Pairty is maintained by the two option prices calculated by us.
 
         :param call_price: <float>
@@ -113,7 +113,7 @@ class Pricing(ABC):
 
         return bool(round(lhs) == round(rhs))
 
-    def _calc_underlying_asset_data(self):
+    def _calc_underlying_asset_data(self) -> None:
         '''
         Scan through the web to get historical prices of the underlying asset.
         Please check module stock_analyzer.data_fetcher for details
@@ -127,7 +127,7 @@ class Pricing(ABC):
                 _logger.error(f'{__name__}: Unable to get historical stock data')
                 raise IOError(f'Unable to get historical stock data for {self.ticker}!')
 
-    def _calc_risk_free_rate(self):
+    def _calc_risk_free_rate(self) -> None:
         '''
         Fetch 3-month Treasury Bill Rate from the web. Please check module stock_analyzer.data_fetcher for details
 
@@ -136,7 +136,7 @@ class Pricing(ABC):
         self.risk_free_rate = store.get_treasury_rate()
         _logger.info(f'{__name__}: Risk-free rate = {self.risk_free_rate:.4f}')
 
-    def _calc_time_to_maturity(self):
+    def _calc_time_to_maturity(self) -> None:
         '''
         Calculate TimeToMaturity in Years. It is calculated in terms of years using below formula,
 
@@ -150,7 +150,7 @@ class Pricing(ABC):
         self.time_to_maturity = (self.expiry - dt.datetime.today()).days / 365.0
         _logger.info(f'{__name__}: Time to maturity = {self.time_to_maturity:.5f}')
 
-    def _calc_volatility(self):
+    def _calc_volatility(self) -> None:
         '''
         Using historical prices of the underlying asset, calculate volatility.
         :return:
@@ -166,7 +166,7 @@ class Pricing(ABC):
         self.volatility = std
         _logger.info(f'{__name__}: Calculated volatility = {self.volatility:.4f}')
 
-    def _calc_spot_price(self):
+    def _calc_spot_price(self) -> None:
         '''
         Get latest price of the underlying asset.
         :return:

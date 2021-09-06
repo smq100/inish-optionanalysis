@@ -13,9 +13,9 @@ class Sheet(ABC):
         return self.sheet_name
 
     @abc.abstractmethod
-    def open(self, tab):
-        pass
+    def open(self, tab:str) -> bool:
+        return False
 
     @abc.abstractmethod
-    def get_column(self, column):
-        pass
+    def get_column(self, column:str) -> list[str]:
+        return []

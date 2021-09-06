@@ -16,7 +16,7 @@ class Excel(Sheet):
     def __init__(self, sheet_name):
         super().__init__(sheet_name)
 
-    def open(self, tab):
+    def open(self, tab:str) -> bool:
         self.sheet = None
         self.opened = False
         if tab:
@@ -33,7 +33,7 @@ class Excel(Sheet):
 
         return self.opened
 
-    def get_column(self, column):
+    def get_column(self, column:str) -> list[str]:
         self.col = []
         if self.opened and column > 0:
             col = self.sheet[COLUMNS[column]]

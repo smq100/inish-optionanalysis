@@ -11,30 +11,34 @@ logger = utils.get_logger(logging.WARNING)
 
 
 class Interface:
-    def __init__(self, ticker='', update=''):
+    def __init__(self, ticker:str='', update:str=''):
+        exit = False
         self.ticker = ''
         self.stop = False
+
         if ticker:
             if store.is_ticker(ticker.upper()):
                 self.ticker = ticker.upper()
                 self.stop = True
             else:
+                exit = True
                 utils.print_error(f'Invalid ticker specifed: {ticker}')
         elif update:
             if store.is_ticker(update.upper()):
                 self.ticker = update.upper()
                 self.stop = True
             else:
+                exit = True
                 utils.print_error(f'Invalid ticker specifed: {update}')
 
-        self.exchanges = []
-        self.indexes = []
-        self.task = None
-        self.exchanges = [e['abbreviation'] for e in d.EXCHANGES]
-        self.indexes = [i['abbreviation'] for i in d.INDEXES]
-        self.manager = manager.Manager()
+        self.exchanges:list[str] = [e['abbreviation'] for e in d.EXCHANGES]
+        self.indexes:list[str] = [i['abbreviation'] for i in d.INDEXES]
+        self.manager:manager.Manager = manager.Manager()
+        self.task:threading.Thread = None
 
-        if ticker:
+        if exit:
+            pass
+        elif ticker:
             self.main_menu(selection=2)
         elif update:
             self.main_menu(selection=4)

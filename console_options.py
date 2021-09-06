@@ -7,9 +7,10 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as clrs
 import matplotlib.ticker as mticker
 
+from strategies.strategy import Strategy
+from strategies.vertical import Vertical
 from strategies.call import Call
 from strategies.put import Put
-from strategies.vertical import Vertical
 from options.chain import Chain
 from data import store as store
 from utils import utils as utils
@@ -21,9 +22,9 @@ _logger = utils.get_logger()
 
 
 class Interface:
-    def __init__(self, ticker, strategy, direction, quantity=1, autoload=''):
+    def __init__(self, ticker:str, strategy:str, direction:str, quantity:int=1, autoload:str=''):
         self.ticker = ticker.upper()
-        self.strategy = None
+        self.strategy:Strategy = None
         self.quantity = quantity
         self.dirty_calculate = True
         self.dirty_analyze = True
@@ -43,7 +44,7 @@ class Interface:
         else:
             utils.print_error('Invalid ticker symbol specified')
 
-    def main_menu(self):
+    def main_menu(self) -> None:
         while True:
             menu_items = {
                 '1': f'Change Symbol ({self.strategy.ticker})',
@@ -98,7 +99,7 @@ class Interface:
             elif selection == 0:
                 break
 
-    def show_value(self, val=0):
+    def show_value(self, val:int=0) -> None:
         if not self.dirty_calculate:
             if len(self.strategy.legs) > 1:
                 leg = utils.input_integer('Enter Leg: ', 1, 2) - 1
@@ -141,7 +142,7 @@ class Interface:
         else:
             utils.print_error('Please first perform calculation')
 
-    def show_analysis(self, val=0):
+    def show_analysis(self, val:int=0) -> None:
         if not self.dirty_analyze:
             table_ = self.strategy.analysis.table
             if table_ is not None:
@@ -181,7 +182,7 @@ class Interface:
         else:
             utils.print_error('Please first perform analysis')
 
-    def show_options(self):
+    def show_options(self) -> None:
         if len(self.strategy.legs) > 0:
             if len(self.strategy.legs) > 1:
                 leg = utils.input_integer('Enter Leg (0=all): ', 0, 2) - 1
@@ -202,7 +203,7 @@ class Interface:
         else:
             print('No option legs configured')
 
-    def show_legs(self, leg=-1, delimeter=True):
+    def show_legs(self, leg:int=-1, delimeter:bool=True) -> None:
         if delimeter:
             utils.print_message('Option Leg Values')
 
@@ -218,7 +219,7 @@ class Interface:
         else:
             utils.print_error('Invalid leg')
 
-    def calculate(self):
+    def calculate(self) -> bool:
         try:
             self.strategy.calculate()
             self.dirty_calculate = False
@@ -226,7 +227,7 @@ class Interface:
         except Exception as e:
             return False
 
-    def analyze(self):
+    def analyze(self) -> None:
         errors = self.strategy.get_errors()
         if not errors:
             self.strategy.analyze()
@@ -238,10 +239,10 @@ class Interface:
         else:
             utils.print_error(errors)
 
-    def reset(self):
+    def reset(self) -> None:
         self.strategy.reset()
 
-    def select_ticker(self):
+    def select_ticker(self) -> bool:
         valid = False
         modified = False
 
@@ -266,7 +267,7 @@ class Interface:
 
         return modified
 
-    def select_strategy(self):
+    def select_strategy(self) -> bool:
         menu_items = {
             '1': 'Call',
             '2': 'Put',
@@ -278,8 +279,8 @@ class Interface:
         selection = utils.menu(menu_items, 'Select Strategy', 0, 3)
 
         if selection == 1:
-            direction = utils.input_integer('Long (1), or short (2): ', 1, 2)
-            direction = 'long' if direction == 1 else 'short'
+            d = utils.input_integer('(1) Long, or (2) short: ', 1, 2)
+            direction = 'long' if d == 1 else 'short'
             self.strategy = Call(self.strategy.ticker, 'call', direction, self.quantity)
 
             self.dirty_calculate = True
@@ -287,8 +288,8 @@ class Interface:
             modified = True
 
         elif selection == 2:
-            direction = utils.input_integer('Long (1), or short (2): ', 1, 2)
-            direction = 'long' if direction == 1 else 'short'
+            d = utils.input_integer('(1) Long, or (2) short: ', 1, 2)
+            direction = 'long' if d == 1 else 'short'
             self.strategy = Put(self.strategy.ticker, 'put', direction, self.quantity)
 
             self.dirty_calculate = True
@@ -296,10 +297,10 @@ class Interface:
             modified = True
 
         elif selection == 3:
-            product = utils.input_integer('Call (1), or Put (2): ', 1, 2)
-            product = 'call' if product == 1 else 'put'
-            direction = utils.input_integer('Debit (1), or credit (2): ', 1, 2)
-            direction = 'long' if direction == 1 else 'short'
+            p = utils.input_integer('(1) Call, or (2) Put: ', 1, 2)
+            product = 'call' if p == 1 else 'put'
+            d = utils.input_integer('(1) Debit, or (2) credit: ', 1, 2)
+            direction = 'long' if d == 1 else 'short'
 
             self.strategy = Vertical(self.strategy.ticker, product, direction, self.quantity)
 
@@ -309,23 +310,22 @@ class Interface:
 
         return modified
 
-    def select_chain(self):
+    def select_chain(self) -> str:
         contract = ''
 
         # Go directly to get expire date if not already entered
         if self.chain.expire is None:
-            ret = self.select_chain_expiry()
-            if ret:
-                self.strategy.update_expiry(ret)
-                if self.strategy.name != 'vertical':
-                    # Go directly to choose option if only one leg in strategy
-                    if self.strategy.legs[0].option.product == 'call':
-                        contract = self.select_chain_option('call')
-                    else:
-                        contract = self.select_chain_option('put')
+            exp = self.select_chain_expiry()
+            self.strategy.update_expiry(exp)
+            if self.strategy.name != 'vertical':
+                # Go directly to choose option if only one leg in strategy
+                if self.strategy.legs[0].option.product == 'call':
+                    contract = self.select_chain_option('call')
+                else:
+                    contract = self.select_chain_option('put')
 
-                    if contract:
-                        self.strategy.legs[0].option.load_contract(contract)
+                if contract:
+                    self.strategy.legs[0].option.load_contract(contract)
 
         if not contract:
             while True:
@@ -360,13 +360,13 @@ class Interface:
 
                 ret = True
                 if selection == 1:
-                    if self.select_chain_expiry():
-                        self.strategy.update_expiry(ret)
+                    exp = self.select_chain_expiry()
+                    self.strategy.update_expiry(exp)
 
                 elif selection == 2:
                     if self.chain.expire is not None:
                         if self.strategy.name == 'vertical':
-                            leg = utils.input_integer('Long leg (1), or short (2): ', 1, 2) - 1
+                            leg = utils.input_integer('(1) Long leg, or (2) short leg: ', 1, 2) - 1
                         else:
                             leg = 0
 
@@ -396,7 +396,7 @@ class Interface:
 
         return contract
 
-    def select_chain_expiry(self):
+    def select_chain_expiry(self) -> str:
         expiry = self.chain.get_expiry()
 
         menu_items = {}
@@ -415,7 +415,7 @@ class Interface:
 
         return expiry
 
-    def select_chain_option(self, product):
+    def select_chain_option(self, product:str) -> str:
         options = None
         contract = ''
         if self.chain.expire is None:
@@ -446,7 +446,7 @@ class Interface:
 
         return contract
 
-    def select_settings(self):
+    def select_settings(self) -> None:
         while True:
             menu_items = {
                 '1': f'Pricing Method ({self.strategy.legs[0].pricing_method.title()})',
@@ -460,7 +460,7 @@ class Interface:
             elif selection == 0:
                 break
 
-    def select_method(self):
+    def select_method(self) -> None:
         menu_items = {
             '1': 'Black-Scholes',
             '2': 'Monte Carlo',
@@ -488,7 +488,7 @@ class Interface:
 
             utils.print_error('Unknown method selected')
 
-    def load_strategy(self, ticker, name, direction, analyze=True):
+    def load_strategy(self, ticker:str, name:str, direction:str, analyze=True) -> bool:
         modified = False
 
         try:
@@ -516,12 +516,12 @@ class Interface:
                 utils.print_error('Unknown argument')
 
         except Exception as e:
-            utils.print_error(sys.exc_info()[1])
+            utils.print_error(str(sys.exc_info()[1]))
             return False
 
         return modified
 
-    def _show_chart(self, table, title, charttype):
+    def _show_chart(self, table:str, title:str, charttype:str) -> None:
         if not isinstance(table, pd.DataFrame):
             raise ValueError("'table' must be a Pandas DataFrame")
 
@@ -595,7 +595,7 @@ class Interface:
         plt.show()
 
     @staticmethod
-    def _compress_table(table, rows, cols):
+    def _compress_table(table:pd.DataFrame, rows:int, cols:int) -> pd.DataFrame:
         if not isinstance(table, pd.DataFrame):
             raise ValueError("'table' must be a Pandas DataFrame")
         else:
@@ -616,34 +616,34 @@ class Interface:
         return table
 
     @staticmethod
-    def _calc_major_minor_ticks(width):
+    def _calc_major_minor_ticks(width:int) -> tuple[float, float]:
         if width <= 0.0:
-            major = 0
-            minor = 0
+            major = 0.0
+            minor = 0.0
         elif width > 1000:
-            major = 100
-            minor = 20
+            major = 100.0
+            minor = 20.0
         elif width > 500:
-            major = 50
-            minor = 10
+            major = 50.0
+            minor = 10.0
         elif width > 100:
-            major = 10
-            minor = 2
+            major = 10.0
+            minor = 2.0
         elif width > 40:
-            major = 5
-            minor = 1
+            major = 5.0
+            minor = 1.0
         elif width > 20:
-            major = 2
-            minor = 0
+            major = 2.0
+            minor = 0.0
         elif width > 10:
-            major = 1
-            minor = 0
+            major = 1.0
+            minor = 0.0
         elif width > 1:
             major = 0.5
-            minor = 0
+            minor = 0.0
         else:
-            major = .1
-            minor = 0
+            major = 0.1
+            minor = 0.0
 
         return major, minor
 

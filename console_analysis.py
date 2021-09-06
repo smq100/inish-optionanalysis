@@ -11,12 +11,12 @@ from utils import utils as utils
 _logger = utils.get_logger(logging.WARNING)
 
 class Interface:
-    def __init__(self, coor=''):
+    def __init__(self, coor:str=''):
         self.list = coor.upper()
-        self.coorelate = None
+        self.coorelate:Correlate = None
         self.exchanges = [e['abbreviation'] for e in d.EXCHANGES]
         self.indexes = [i['abbreviation'] for i in d.INDEXES]
-        self.tickers = []
+        self.tickers:list[str] = []
 
         if not coor:
             self.main_menu()

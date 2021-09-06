@@ -10,7 +10,7 @@ logger = utils.get_logger(logging.WARNING)
 
 
 class Interface:
-    def __init__(self, ticker):
+    def __init__(self, ticker:str):
         ticker = ticker.upper()
 
         if store.is_ticker(ticker):

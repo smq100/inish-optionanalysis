@@ -53,9 +53,9 @@ class Screener(Threaded):
 
         self.days = days
         self.live = live
-        self.script = []
-        self.companies = []
-        self.results = []
+        self.script:list[dict] = []
+        self.companies:list[Company] = []
+        self.results:list[Result] = []
         self._concurrency = 10
 
         if script:
@@ -174,8 +174,7 @@ class Screener(Threaded):
         if os.path.exists(script):
             try:
                 with open(script) as f:
-                    script = json.load(f)
-                    self.script += script
+                    self.script += json.load(f)
             except:
                 self.script = []
                 _logger.error(f'{__name__}: File format error')

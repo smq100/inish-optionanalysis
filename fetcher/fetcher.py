@@ -29,6 +29,7 @@ def validate_ticker(ticker:str) -> bool:
 
     # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
     try:
+        _logger.info(f'{__name__}: Fetching Yahoo ticker information for {ticker}...')
         if yf.Ticker(ticker) is not None:
             valid = True
     except:
@@ -46,6 +47,7 @@ def get_company_live(ticker:str) -> pd.DataFrame:
     elapsed = time.perf_counter()
 
     try:
+        _logger.info(f'{__name__}: Fetching Yahoo live ticker information for {ticker}...')
         company = yf.Ticker(ticker)
         if company is not None:
             # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
@@ -105,6 +107,8 @@ def get_history_q(ticker:str, days:int=-1) -> pd.DataFrame:
     start = dt.datetime.today() - dt.timedelta(days=days)
 
     history = pd.DataFrame()
+
+    _logger.info(f'{__name__}: Fetching quandl ticker information for {ticker}...')
     history = qd.get(f'EOD/{ticker}')#, start_date=f'{start:%Y-%m-%d}')
     if history is not None:
         history.reset_index(inplace=True)
@@ -165,10 +169,10 @@ def get_ratings(ticker:str):
 
     ratings = pd.DataFrame()
     try:
+        _logger.info(f'{__name__}: Fetching Yahoo rating information for {ticker}...')
         company = yf.Ticker(ticker)
         if company is not None:
             ratings = company.recommendations
-            print(type(ratings))
             if ratings is not None:
                 end = dt.date.today()
                 start = end - dt.timedelta(days=60)

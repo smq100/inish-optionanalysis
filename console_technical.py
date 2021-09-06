@@ -11,12 +11,12 @@ from utils import utils as utils
 _logger = utils.get_logger(logging.WARNING)
 
 class Interface:
-    def __init__(self, ticker, days=365, run=False, exit=False):
+    def __init__(self, ticker:str, days:int=365, run:bool=False, exit:bool=False):
         self.ticker = ticker.upper()
         self.days = days
         self.run = run
-        self.technical = None
-        self.tickers = []
+        self.technical:Technical = None
+        self.tickers:list[str] = []
 
         if store.is_ticker(ticker.upper()):
             if self.run:

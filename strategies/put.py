@@ -49,7 +49,7 @@ class Put(Strategy):
             self.analysis.breakeven = self.calc_breakeven()
 
     def generate_profit_table(self) -> pd.DataFrame:
-        dframe = None
+        dframe = pd.DataFrame()
         price = self.legs[0].option.calc_price
 
         if self.legs[0].direction == 'long':

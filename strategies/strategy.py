@@ -130,8 +130,8 @@ class Leg:
         if quantity < 1:
             raise ValueError('Invalid quantity')
 
-        self.company = Company(ticker, days=1)
-        self.option = Option(ticker, product, strike, expiry)
+        self.company:Company = Company(ticker, days=1)
+        self.option:Option = Option(ticker, product, strike, expiry)
         self.strategy = strategy
         self.quantity = quantity
         self.product = product
@@ -306,8 +306,8 @@ class Leg:
 
                 # Calculate cost of option every day till expiry
                 min_, max_, step_ = self.strategy._calc_price_min_max_step()
-                for spot in range(int(math.ceil(min_*40)), int(math.ceil(max_*40)), int(math.ceil(step_*40))):
-                    spot /= 40.0
+                for s in range(int(math.ceil(min_*40)), int(math.ceil(max_*40)), int(math.ceil(step_*40))):
+                    spot = s / 40.0
                     row = []
                     for item in col_index:
                         maturity_date = datetime.datetime.strptime(item, '%Y-%m-%d %H:%M:%S')

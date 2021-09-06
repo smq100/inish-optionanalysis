@@ -20,7 +20,7 @@ class Google(Sheet):
         self.opened = False
         self.col = []
 
-    def open(self, tab):
+    def open(self, tab:str) -> bool:
         if tab:
             self.tab_name = tab
 
@@ -46,7 +46,7 @@ class Google(Sheet):
 
         return self.opened
 
-    def get_column(self, column) -> list:
+    def get_column(self, column:str) -> list[str]:
         if self.opened and column > 0:
             self.col = self.sheet.col_values(column)
 
