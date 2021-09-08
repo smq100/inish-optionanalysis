@@ -179,37 +179,43 @@ def get_current_price(ticker:str) -> float:
 
     return price
 
-def get_history(ticker, days:int=-1, live:bool=False) -> pd.DataFrame:
+def get_history(ticker:str, days:int=-1, end:int=0, live:bool=False) -> pd.DataFrame:
     ticker = ticker.upper()
     results = pd.DataFrame()
 
-    if live:
+    if end < 0:
+        ValueError('Invalid value for "end"')
+    elif live:
         results = fetcher.get_history_live(ticker, days)
+        _logger.info(f'{__name__}: Fetched {len(results)} days of live price history for {ticker}')
+        if end > 0:
+            _logger.warning('"end" value ignored for live queries')
     else:
         with _session() as session:
             symbols = session.query(models.Security.id).filter(and_(models.Security.ticker==ticker, models.Security.active)).one_or_none()
             if symbols is not None:
+                p = None
                 if days < 0:
                     p = session.query(models.Price).filter(models.Price.security_id==symbols.id).order_by(models.Price.date)
-                    results = pd.read_sql(p.statement, _engine)
-                    if not results.empty:
-                        results.drop(['id', 'security_id'], 1, inplace=True)
-                        _logger.info(f'{__name__}: Fetched max price history for {ticker}')
-                elif days > 1:
-                    start = dt.datetime.today() - dt.timedelta(days=days)
-                    p = session.query(models.Price).filter(and_(models.Price.security_id==symbols.id, models.Price.date >= start)).order_by(models.Price.date)
-                    results = pd.read_sql(p.statement, _engine)
-                    if not results.empty:
-                        results.drop(['id', 'security_id'], 1, inplace=True)
-                        _logger.info(f'{__name__}: Fetched {days} days of price history for {ticker}')
-                else:
+                elif days == 0:
+                    p = None
                     _logger.warning(f'{__name__}: Must specify history days > 1')
+                elif days > 1:
+                    start = dt.datetime.today() - dt.timedelta(days=days) - dt.timedelta(days=end)
+                    p = session.query(models.Price).filter(and_(models.Price.security_id==symbols.id, models.Price.date >= start)).order_by(models.Price.date)
+
+                if p is not None:
+                    results = pd.read_sql(p.statement, _engine)
+                    if not results.empty:
+                        results = results[:-end] if end > 0 else results
+                        results.drop(['id', 'security_id'], 1, inplace=True)
+                        _logger.info(f'{__name__}: Fetched {len(results)} days of price history for {ticker} ({end})')
             else:
                 _logger.warning(f'{__name__}: No history found for {ticker}')
 
     return results
 
-def get_company(ticker, live:bool=False, extra:bool=False) -> dict:
+def get_company(ticker:str, live:bool=False, extra:bool=False) -> dict:
     ticker = ticker.upper()
     results = {}
 
@@ -281,7 +287,7 @@ def get_company(ticker, live:bool=False, extra:bool=False) -> dict:
 
     return results
 
-def get_exchange_tickers_master(exchange, type:str='google') -> list[str]:
+def get_exchange_tickers_master(exchange:str, type:str='google') -> list[str]:
     global _master_exchanges
     symbols = []
 
@@ -306,7 +312,7 @@ def get_exchange_tickers_master(exchange, type:str='google') -> list[str]:
 
     return symbols
 
-def get_index_tickers_master(index, type:str='google') -> list[str]:
+def get_index_tickers_master(index:str, type:str='google') -> list[str]:
     global _master_indexes
     symbols = []
 
@@ -348,7 +354,8 @@ if __name__ == '__main__':
     # logger = u.get_logger(DEBUG)
 
     if len(sys.argv) > 1:
-        t = get_ticker_exchange(sys.argv[1])
+        t = get_history(sys.argv[1], end=30)
     else:
-        t = get_ticker_exchange('AAPL')
+        t = get_history('AAPL')
+
     print(t)

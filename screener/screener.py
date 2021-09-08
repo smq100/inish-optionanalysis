@@ -30,11 +30,11 @@ class Result:
         return float(sum(self.score)) / len(self.score) if len(self.score) > 0 else 0.0
 
 class Screener(Threaded):
-    def __init__(self, table:str, script:str='', days:int=365, live:bool=False):
+    def __init__(self, table:str, screen:str='', days:int=365, end:int=0, live:bool=False):
         super().__init__()
 
         self.table = table.upper()
-        self.script_name = script
+        self.screen = screen
         self.type = ''
 
         if self.table == 'ALL':
@@ -50,31 +50,34 @@ class Screener(Threaded):
 
         if days < 30:
             raise ValueError('Invalid number of days')
+        if end < 0:
+            raise ValueError('Invalid "end" days')
 
         self.days = days
+        self.end = end
         self.live = live
-        self.script:list[dict] = []
+        self.scripts:list[dict] = []
         self.companies:list[Company] = []
         self.results:list[Result] = []
         self._concurrency = 10
 
-        if script:
-            if not self.load_script(script):
-                raise ValueError(f'Script not found or invalid format: {script}')
+        if screen:
+            if not self.load_script(screen):
+                raise ValueError(f'Script not found or invalid format: {screen}')
 
         self.open()
 
     def __str__(self):
-        return f'{self.table}/{self.script_name}'
+        return f'{self.table}/{self.screen}'
 
     def load_script(self, script:str, init:str='') -> bool:
-        self.script = []
+        self.scripts = []
         if os.path.exists(script):
             try:
                 with open(script) as f:
-                    self.script = json.load(f)
+                    self.scripts = json.load(f)
             except:
-                self.script = []
+                self.scripts = []
                 _logger.error(f'{__name__}: File format error')
             else:
                 if init:
@@ -82,7 +85,7 @@ class Screener(Threaded):
         else:
             _logger.error(f'{__name__}: File "{script}" not found')
 
-        return bool(self.script)
+        return bool(self.scripts)
 
     def open(self) -> bool:
         tickers = []
@@ -98,7 +101,7 @@ class Screener(Threaded):
 
         if len(tickers) > 0:
             try:
-                self.companies = [Company(s, self.days, live=self.live) for s in tickers]
+                self.companies = [Company(s, self.days, end=self.end, live=self.live) for s in tickers]
             except ValueError as e:
                 _logger.warning(f'{__name__}: Invalid ticker {s}')
 
@@ -118,7 +121,7 @@ class Screener(Threaded):
             self.results = []
             self.task_error = 'No symbols'
             _logger.warning(f'{__name__}: {self.task_error}')
-        elif len(self.script) == 0:
+        elif len(self.scripts) == 0:
             self.task_completed = self.task_total
             self.results = []
             self.task_error = 'Illegal script'
@@ -147,7 +150,7 @@ class Screener(Threaded):
             score = []
             result = []
             self.task_ticker = symbol
-            for filter in self.script:
+            for filter in self.scripts:
                 interpreter = Interpreter(symbol, filter)
                 try:
                     success += [interpreter.run()]
@@ -174,17 +177,14 @@ class Screener(Threaded):
         if os.path.exists(script):
             try:
                 with open(script) as f:
-                    self.script += json.load(f)
+                    self.scripts += json.load(f)
             except:
-                self.script = []
+                self.scripts = []
                 _logger.error(f'{__name__}: File format error')
         else:
             _logger.error(f'{__name__}: File "{script}" not found')
 
-        return bool(self.script)
-
-    def valid(self) -> bool:
-        return bool(self.table)
+        return bool(self.scripts)
 
 
 if __name__ == '__main__':

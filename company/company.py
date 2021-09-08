@@ -7,22 +7,24 @@ from utils import utils as utils
 
 
 class Company:
-    def __init__(self, ticker:str, days:int, lazy:bool=True, live:bool=False):
+    def __init__(self, ticker:str, days:int, end:int=0, lazy:bool=True, live:bool=False):
         self.ticker = ticker.upper()
         self.days = days
+        self.end = end
         self.live = live
         self.info = {}
-        self.history = pd.DataFrame()
+        self.history:pd.DataFrame = pd.DataFrame()
         self.company = {}
         self.spot = 0.0
         self.volatility = 0.0
         self.ta = None
 
+        if not store.is_ticker(ticker):
+            raise ValueError(f'Invalid ticker {ticker}')
         if days < 1:
             raise ValueError('Invalid number of days')
-
-        if not store.is_ticker(ticker):
-            raise ValueError('Invalid ticker')
+        if end < 0:
+            raise ValueError('Invalid "end" days')
 
         if not lazy:
             self._load_history()
@@ -32,11 +34,11 @@ class Company:
         output = f'{self.ticker}'
         return output
 
-    def get_current_price(self) -> float:
+    def get_last_price(self) -> float:
         if self.history.empty:
             self._load_history()
 
-        return self.history['close'][-1]
+        return self.history.iloc[-1]['close']
 
     def get_high(self) -> pd.Series:
         if self.history.empty:
@@ -86,7 +88,7 @@ class Company:
         return self.info
 
     def _load_history(self) -> None:
-        self.history = store.get_history(self.ticker, self.days, live=self.live)
+        self.history = store.get_history(self.ticker, self.days, end=self.end, live=self.live)
         if self.history is None:
             raise RuntimeError(f'No history for {self.ticker}')
 
@@ -99,8 +101,8 @@ class Company:
 
 
 if __name__ == '__main__':
-    company = Company('ADRA', days=365, live=True)
-    val = company.get_current_price()
-    print(val)
+    company = Company('IBM', days=365, end=30)
     val = company.get_close()
+    print(val)
+    val = company.get_last_price()
     print(val)
