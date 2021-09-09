@@ -172,8 +172,15 @@ def get_ticker_index(ticker:str) -> str:
 
 def get_current_price(ticker:str) -> float:
     price = 0.0
-
     history = get_history(ticker, 5, live=True)
+    if history is not None:
+        price = history.iloc[-1]['close']
+
+    return price
+
+def get_last_price(ticker:str) -> float:
+    price = 0.0
+    history = get_history(ticker, 30)
     if history is not None:
         price = history.iloc[-1]['close']
 

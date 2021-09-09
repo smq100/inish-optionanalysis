@@ -26,29 +26,29 @@ class Technical:
     def __str__(self):
         return f'Technical analysis for {self.ticker}'
 
-    def calc_sma(self, interval:int) -> pd.DataFrame:
-        df = pd.DataFrame()
+    def calc_sma(self, interval:int) -> pd.Series:
+        df = pd.Series()
         if interval > 5 and interval < self.days:
             df = trend.sma_indicator(self.history['close'], window=interval, fillna=True)
 
         return df
 
-    def calc_ema(self, interval:int) -> pd.DataFrame:
-        df = pd.DataFrame()
+    def calc_ema(self, interval:int) -> pd.Series:
+        df = pd.Series()
         if interval > 5 and interval < self.days:
             df = trend.ema_indicator(self.history['close'], window=interval, fillna=True)
 
         return df
 
-    def calc_rsi(self, interval:int=14) -> pd.DataFrame:
-        df = pd.DataFrame()
+    def calc_rsi(self, interval:int=14) -> pd.Series:
+        df = pd.Series()
         if interval > 5 and interval < self.days:
             df = momentum.rsi(self.history['close'], window=interval, fillna=True)
 
         return df
 
-    def calc_vwap(self) -> pd.DataFrame:
-        df = pd.DataFrame()
+    def calc_vwap(self) -> pd.Series:
+        df = pd.Series()
         vwap = volume.VolumeWeightedAveragePrice(self.history['high'], self.history['low'], self.history['close'], self.history['volume'], fillna=True)
         df = vwap.volume_weighted_average_price()
 

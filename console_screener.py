@@ -19,13 +19,14 @@ class Interface:
     def __init__(self, table:str='', screen:str='', verbose:bool=False, exit:bool=False, live:bool=False):
         self.table = table.upper()
         self.screen_base = screen
-        self.screen_path = ''
-        self.screen_init = BASEPATH + INIT_NAME + SCREEN_SUFFIX
         self.verbose = verbose
         self.exit = exit
         self.live = live
+        self.screen_path = ''
+        self.screen_init = BASEPATH + INIT_NAME + SCREEN_SUFFIX
         self.results:list[Result] = []
         self.valids = 0
+        self.end = 0
         self.screener:Screener = None
         self.type = ''
         self.task:threading.Thread = None
@@ -110,9 +111,9 @@ class Interface:
                     if self.valids > 0:
                         self.print_results()
             elif selection == 7:
-                if self.run_screen(backtest=True):
+                if self.run_backtest():
                     if self.valids > 0:
-                        self.print_results()
+                        self.print_backtest()
             elif selection == 8:
                 self.print_results()
             elif selection == 9:
@@ -229,9 +230,11 @@ class Interface:
         elif not self.screen_path:
             utils.print_error('No screen specified')
         else:
-            end = 0 if not backtest else 30
+            if not backtest:
+                self.end = 0
+
             try:
-                self.screener = Screener(self.table, screen=self.screen_path, end=end, live=self.live)
+                self.screener = Screener(self.table, screen=self.screen_path, end=self.end, live=self.live)
             except ValueError as e:
                 utils.print_error(str(e))
             else:
@@ -246,7 +249,7 @@ class Interface:
                 while self.task.is_alive(): pass
 
                 if self.screener.task_error == 'Done':
-                    self.results = self.screener.results
+                    self.results = sorted(self.screener.results, reverse=True, key=lambda r: float(r))
                     for result in self.results:
                         if result:
                             self.valids += 1
@@ -260,6 +263,20 @@ class Interface:
 
         return success
 
+    def run_backtest(self) -> bool:
+        input = utils.input_integer('Input number of days (10-100): ', 10, 100)
+        self.end = input
+
+        success = self.run_screen(backtest=True)
+        if success:
+            for result in self.results:
+                if result:
+                    result.price_last = result.company.get_last_price()
+                    result.price_current = store.get_last_price(result.company.ticker)
+                    result.backtest_success = (result.price_current > result.price_last)
+
+        return success
+
     def print_results(self, verbose:bool=False, all:bool=False, ticker:str='') -> None:
         if not self.table:
             utils.print_error('No table specified')
@@ -270,8 +287,7 @@ class Interface:
         else:
             utils.print_message(f'Tickers Identified ({self.screen_base})')
 
-            index = 0
-            self.results = sorted(self.results, reverse=True, key=lambda r: float(r))
+            index = 1
             for result in self.results:
                 if ticker:
                     [print(r) for r in result.results if ticker.upper().ljust(6, ' ') == r[:6]]
@@ -280,12 +296,26 @@ class Interface:
                 elif self.verbose or verbose:
                     [print(r) for r in result.results if result]
                 elif result:
+                    print(f'{index:>3}: {result} ({float(result):.2f})')
                     index += 1
-                    print(f'{result}({float(result):.2f}) ', end='')
-                    if index % 9 == 0: # Print 9 per line
-                        print()
         print()
-        print()
+
+    def print_backtest(self):
+        if not self.table:
+            utils.print_error('No table specified')
+        elif not self.screen_base:
+            utils.print_error('No screen specified')
+        elif len(self.results) == 0:
+            utils.print_message('No results were located')
+        else:
+            utils.print_message(f'Backtest ({self.screen_base})')
+
+            index = 1
+            for result in self.results:
+                if result:
+                    mark = '*' if result.backtest_success else ' '
+                    print(f'{index:>3}: {mark} {result} ({float(result):.2f}) C=${result.price_current:.2f}, L=${result.price_last:.2f}')
+                    index += 1
 
     def print_ticker_results(self):
         ticker = utils.input_text('Enter ticker: ')

@@ -19,6 +19,9 @@ class Result:
         self.success = success
         self.score = score
         self.results = results
+        self.backtest_success = False
+        self.price_last = 0.0
+        self.price_current = 0.0
 
     def __str__(self):
         return self.company.ticker
