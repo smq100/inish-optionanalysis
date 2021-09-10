@@ -220,16 +220,22 @@ class Interpreter:
         return self.company.get_volume()[sl]
 
     def _get_base_sma(self) -> pd.Series:
+        value = pd.Series()
         start = None if self.base_start == 0 else self.base_start
         stop = None if self.base_stop == 0 else self.base_stop
         sl = slice(start, stop)
-        return self.company.ta.calc_sma(self.base_length)[sl]
+        if self.company.ta is not None:
+            value = self.company.ta.calc_sma(self.base_length)[sl]
+        return value
 
     def _get_base_rsi(self) -> pd.Series:
+        value = pd.Series()
         start = None if self.base_start == 0 else self.base_start
         stop = None if self.base_stop == 0 else self.base_stop
         sl = slice(start, stop)
-        return self.company.ta.calc_rsi()[sl]
+        if self.company.ta is not None:
+            value = self.company.ta.calc_rsi(self.base_length)[sl]
+        return value
 
     def _get_base_beta(self) -> pd.Series:
         beta = self.company.get_beta()
@@ -268,7 +274,10 @@ class Interpreter:
         return self.company.get_volume()[sl]
 
     def _get_criteria_sma(self) -> pd.Series:
+        value = pd.Series()
         start = None if self.criteria_start == 0 else self.criteria_start
         stop = None if self.criteria_stop == 0 else self.criteria_stop
         sl = slice(start, stop)
-        return self.company.ta.calc_sma(self.criteria_length)[sl]
+        if self.company.ta is not None:
+            value = self.company.ta.calc_sma(self.criteria_length)[sl]
+        return value
