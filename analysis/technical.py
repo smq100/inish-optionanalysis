@@ -10,13 +10,14 @@ from utils import utils as utils
 
 
 class Technical:
-    def __init__(self, ticker:str, history:pd.DataFrame, days:int, live:bool=False):
+    def __init__(self, ticker:str, history:pd.DataFrame, days:int, end:int=0, live:bool=False):
         if store.is_ticker(ticker):
             self.ticker = ticker.upper()
             self.days = days
+            self.end = end
 
             if history is None or history.empty:
-                self.history = store.get_history(self.ticker, self.days, live=live)
+                self.history = store.get_history(self.ticker, self.days, end=self.end, live=live)
             else:
                 self.history = history
 

@@ -12,7 +12,6 @@ logger = utils.get_logger(logging.WARNING)
 
 BASEPATH = os.getcwd()+'/screener/screens/'
 SCREEN_SUFFIX = '.screen'
-INIT_NAME = 'init'
 
 
 class Interface:
@@ -23,7 +22,6 @@ class Interface:
         self.exit = exit
         self.live = live
         self.screen_path = ''
-        self.screen_init = BASEPATH + INIT_NAME + SCREEN_SUFFIX
         self.results:list[Result] = []
         self.valids = 0
         self.end = 0
@@ -203,8 +201,7 @@ class Interface:
                     if SCREEN_SUFFIX in entry.name:
                         self.script += [entry.path]
                         head, sep, tail = entry.name.partition('.')
-                        if head != INIT_NAME:
-                            paths += [head]
+                        paths += [head]
 
         if len(self.script) > 0:
             self.script.sort()
@@ -257,7 +254,7 @@ class Interface:
                     utils.print_message(f'{self.valids} Symbols Identified in {self.screener.task_time:.2f} seconds')
 
                     for i, result in enumerate(self.screener.task_results):
-                        utils.print_message(f'{i+1:>2}: {result}', creturn=0)
+                        utils.print_message(f'{i+1:>2}: {result}')
 
                     success = True
 
@@ -277,7 +274,7 @@ class Interface:
 
         return success
 
-    def print_results(self, verbose:bool=False, all:bool=False, ticker:str='') -> None:
+    def print_results(self, top:int=20, verbose:bool=False, all:bool=False, ticker:str='') -> None:
         if not self.table:
             utils.print_error('No table specified')
         elif not self.screen_base:
@@ -285,7 +282,7 @@ class Interface:
         elif len(self.results) == 0:
             utils.print_message('No results were located')
         else:
-            utils.print_message(f'Tickers Identified ({self.screen_base})')
+            utils.print_message(f'Screener {top} of {self.screener.task_success} ({self.screen_base})')
 
             index = 1
             for result in self.results:
@@ -298,9 +295,12 @@ class Interface:
                 elif result:
                     print(f'{index:>3}: {result} ({float(result):.2f})')
                     index += 1
+
+                if index > top:
+                    break
         print()
 
-    def print_backtest(self):
+    def print_backtest(self, top:int=20):
         if not self.table:
             utils.print_error('No table specified')
         elif not self.screen_base:
@@ -308,7 +308,7 @@ class Interface:
         elif len(self.results) == 0:
             utils.print_message('No results were located')
         else:
-            utils.print_message(f'Backtest ({self.screen_base})')
+            utils.print_message(f'Backtester {top} of {self.screener.task_success} ({self.screen_base})')
 
             index = 1
             for result in self.results:
@@ -316,6 +316,9 @@ class Interface:
                     mark = '*' if result.backtest_success else ' '
                     print(f'{index:>3}: {mark} {result} ({float(result):.2f}) C=${result.price_current:.2f}, L=${result.price_last:.2f}')
                     index += 1
+
+                if index > top:
+                    break
 
     def print_ticker_results(self):
         ticker = utils.input_text('Enter ticker: ')

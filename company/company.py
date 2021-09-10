@@ -5,6 +5,8 @@ from analysis.technical import Technical
 from data import store as store
 from utils import utils as utils
 
+_logger = utils.get_logger()
+
 
 class Company:
     def __init__(self, ticker:str, days:int, end:int=0, lazy:bool=True, live:bool=False):
@@ -35,34 +37,54 @@ class Company:
         return output
 
     def get_last_price(self) -> float:
+        value = -1.0
         if self.history.empty:
-            self._load_history()
+            if self._load_history():
+                value = self.history.iloc[-1]['close']
+        else:
+            value = self.history.iloc[-1]['close']
 
-        return self.history.iloc[-1]['close']
+        return value
 
     def get_high(self) -> pd.Series:
+        value = pd.Series()
         if self.history.empty:
-            self._load_history()
+            if self._load_history():
+                value = self.history['high']
+        else:
+            value = self.history['high']
 
-        return self.history['high']
+        return value
 
     def get_low(self) -> pd.Series:
+        value = pd.Series()
         if self.history.empty:
-            self._load_history()
+            if self._load_history():
+                value = self.history['low']
+        else:
+            value = self.history['low']
 
-        return self.history['low']
+        return value
 
     def get_close(self) -> pd.Series:
+        value = pd.Series()
         if self.history.empty:
-            self._load_history()
+            if self._load_history():
+                value = self.history['close']
+        else:
+            value = self.history['close']
 
-        return self.history['close']
+        return value
 
     def get_volume(self) -> pd.Series:
+        value = pd.Series()
         if self.history.empty:
-            self._load_history()
+            if self._load_history():
+                value = self.history['volume']
+        else:
+            value = self.history['volume']
 
-        return self.history['volume']
+        return value
 
     def get_beta(self) -> float:
         if not self.company:
@@ -87,12 +109,22 @@ class Company:
 
         return self.info
 
-    def _load_history(self) -> None:
+    def _load_history(self) -> bool:
+        success = True
         self.history = store.get_history(self.ticker, self.days, end=self.end, live=self.live)
         if self.history is None:
-            raise RuntimeError(f'No history for {self.ticker}')
+            success = False
+            _logger.warning(f'{__name__}: No history for {self.ticker}')
+        elif self.history.empty:
+            success = False
+            _logger.warning(f'{__name__}: Empty history for {self.ticker}')
+        else:
+            _logger.info(f'{__name__}: Fetched {len(self.history)} items from {self.ticker}. ')
+                # f'{self.days} days from {self.history.iloc[0]["date"]} to {self.history.iloc[-1]["date"]} (end={self.end})')
 
-        self.ta = Technical(self.ticker, self.history, self.days, live=self.live)
+            self.ta = Technical(self.ticker, self.history, self.days, end=self.end, live=self.live)
+
+        return success
 
     def _load_company(self) -> None:
         self.company = store.get_company(self.ticker, live=self.live)

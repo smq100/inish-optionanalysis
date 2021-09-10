@@ -1,6 +1,6 @@
 [
    {
-      "note":"Price > 20",
+      "note":"Price > 8",
       "base":{
          "technical":"close",
          "length":0,
@@ -12,7 +12,7 @@
       "conditional":"ge",
       "criteria":{
          "technical":"value",
-         "value":20,
+         "value":8.0,
          "length":0,
          "start":-1,
          "stop":0,

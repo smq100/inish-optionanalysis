@@ -361,7 +361,7 @@ if __name__ == '__main__':
     # logger = u.get_logger(DEBUG)
 
     if len(sys.argv) > 1:
-        t = get_history(sys.argv[1], end=30)
+        t = get_history(sys.argv[1])
     else:
         t = get_history('AAPL')
 

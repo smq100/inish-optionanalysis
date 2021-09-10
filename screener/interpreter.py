@@ -73,20 +73,50 @@ class Interpreter:
 
         # Base value
         if self.base_technical == VALID_TECHNICALS[2]:   # close
-            self.base = self._get_base_close()
+            value = self._get_base_close()
+            if not value.empty:
+                self.base = value
+            else:
+                self.enable_score = False
+
         elif self.base_technical == VALID_TECHNICALS[3]: # volume
-            self.base = self._get_base_volume()
-            self.enable_score = False
+            value = self._get_base_volume()
+            if not value.empty:
+                self.base = value
+            else:
+                self.enable_score = False
+
         elif self.base_technical == VALID_TECHNICALS[4]: # sma
-            self.base = self._get_base_sma()
+            value = self._get_base_sma()
+            if not value.empty:
+                self.base = value
+            else:
+                self.enable_score = False
+
         elif self.base_technical == VALID_TECHNICALS[5]: # rsi
-            self.base = self._get_base_rsi()
+            value = self._get_base_rsi()
+            if not value.empty:
+                self.base = value
+            else:
+                self.enable_score = False
+
         elif self.base_technical == VALID_TECHNICALS[6]: # beta
-            self.base = self._get_base_beta()
+            value = self._get_base_beta()
+            if not value.empty:
+                self.base = value
+            else:
+                self.enable_score = False
+
         elif self.base_technical == VALID_TECHNICALS[7]: # rating
-            self.base = self._get_base_rating()
+            value = self._get_base_rating()
+            if not value.empty:
+                self.base = value
+            else:
+                self.enable_score = False
+
         elif self.base_technical == VALID_TECHNICALS[9]: # true
             calculate = False
+
         else:
             raise SyntaxError('Invalid "base technical" specified in screen file')
 
