@@ -251,7 +251,7 @@ class Interface:
                         if result:
                             self.valids += 1
 
-                    utils.print_message(f'{self.valids} Symbols Identified in {self.screener.task_time:.2f} seconds')
+                    utils.print_message(f'{self.valids} symbols identified in {self.screener.task_time:.1f} seconds')
 
                     for i, result in enumerate(self.screener.task_results):
                         utils.print_message(f'{i+1:>2}: {result}')
@@ -260,7 +260,7 @@ class Interface:
 
         return success
 
-    def run_backtest(self) -> bool:
+    def run_backtest(self, bullish:bool=True) -> bool:
         input = utils.input_integer('Input number of days (10-100): ', 10, 100)
         self.end = input
 
@@ -270,7 +270,11 @@ class Interface:
                 if result:
                     result.price_last = result.company.get_last_price()
                     result.price_current = store.get_last_price(result.company.ticker)
-                    result.backtest_success = (result.price_current > result.price_last)
+
+                    if bullish:
+                        result.backtest_success = (result.price_current > result.price_last)
+                    else:
+                        result.backtest_success = (result.price_current < result.price_last)
 
         return success
 
@@ -314,7 +318,7 @@ class Interface:
             for result in self.results:
                 if result:
                     mark = '*' if result.backtest_success else ' '
-                    print(f'{index:>3}: {mark} {result} ({float(result):.2f}) C=${result.price_current:.2f}, L=${result.price_last:.2f}')
+                    print(f'{index:>3}: {mark} {result} ({float(result):.2f}) L=${result.price_last:.2f}, C=${result.price_current:.2f}')
                     index += 1
 
                 if index > top:
@@ -333,6 +337,7 @@ class Interface:
 
         if self.screener.task_error == 'None':
             utils.progress_bar(self.screener.task_completed, self.screener.task_total, prefix=prefix, suffix=suffix, length=50, reset=True)
+
             while self.task.is_alive and self.screener.task_error == 'None':
                 time.sleep(0.20)
                 total = self.screener.task_total

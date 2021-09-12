@@ -63,7 +63,7 @@
       }
    },
    {
-      "note":"Beta > 1.0",
+      "note":"Beta > 0.95",
       "base":{
          "technical":"beta",
          "length":0,
@@ -75,7 +75,7 @@
       "conditional":"ge",
       "criteria":{
          "technical":"value",
-         "value":1.0,
+         "value":0.95,
          "length":0,
          "start":-1,
          "stop":0,

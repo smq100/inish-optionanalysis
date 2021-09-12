@@ -146,52 +146,52 @@ class Interpreter:
 
         if not self.base.empty:
             base = self.base.iloc[-1] * self.base_factor
-            value = 0.0
+            criteria = 0.0
 
             if self.conditional == VALID_CONDITIONALS[0]: # le
                 if self.criteria_series == VALID_SERIES[2]: # na
                     if self.criteria.size > 0:
-                        value = self.criteria.iloc[-1] * self.criteria_factor
-                        self.score = value / base if base > 0 else 1.0
-                        if base <= value:
+                        criteria = self.criteria.iloc[-1] * self.criteria_factor
+                        self.score = criteria / base if base > 0 else 1.0
+                        if base <= criteria:
                             self.success = True
                 elif self.criteria_series == VALID_SERIES[0]: # min
                     if self.criteria.size > 0:
-                        value = self.criteria.min() * self.criteria_factor
-                        self.score = value / base if base > 0 else 1.0
-                        if base <= value:
+                        criteria = self.criteria.min() * self.criteria_factor
+                        self.score = criteria / base if base > 0 else 1.0
+                        if base <= criteria:
                             self.success = True
                 elif self.criteria_series == VALID_SERIES[1]: # max
                     if self.criteria.size > 0:
-                        value = self.criteria.max() * self.criteria_factor
-                        self.score = value / base if base > 0 else 1.0
-                        if base <= value:
+                        criteria = self.criteria.max() * self.criteria_factor
+                        self.score = criteria / base if base > 0 else 1.0
+                        if base <= criteria:
                             self.success = True
 
             elif self.conditional == VALID_CONDITIONALS[1]: # eq
                 if self.criteria.size > 0:
-                    value = self.criteria.min() * self.criteria_factor
-                    if base == value:
+                    criteria = self.criteria.min() * self.criteria_factor
+                    if base == criteria:
                         self.success = True
 
             elif self.conditional == VALID_CONDITIONALS[2]: # ge
                 if self.criteria_series == VALID_SERIES[2]: # na
                     if self.criteria.size > 0:
-                        value = self.criteria.iloc[-1] * self.criteria_factor
-                        self.score = base / value if value > 0 else 1.0
-                        if base >= value:
+                        criteria = self.criteria.iloc[-1] * self.criteria_factor
+                        self.score = base / criteria if criteria > 0 else 1.0
+                        if base >= criteria:
                             self.success = True
                 elif self.criteria_series == VALID_SERIES[0]: # min
                     if self.criteria.size > 0:
-                        value = self.criteria.min() * self.criteria_factor
-                        self.score = base / value if value > 0 else 1.0
-                        if base >= value:
+                        criteria = self.criteria.min() * self.criteria_factor
+                        self.score = base / criteria if criteria > 0 else 1.0
+                        if base >= criteria:
                             self.success = True
                 elif self.criteria_series == VALID_SERIES[1]: # max
                     if self.criteria.size > 0:
-                        value = self.criteria.max() * self.criteria_factor
-                        self.score = base / value if value > 0 else 1.0
-                        if base >= value:
+                        criteria = self.criteria.max() * self.criteria_factor
+                        self.score = base / criteria if criteria > 0 else 1.0
+                        if base >= criteria:
                             self.success = True
 
             self.score = self.score if self.enable_score else 1.0
@@ -199,7 +199,7 @@ class Interpreter:
             self.result = f'{self.company.ticker:6s}{str(self.success)[:1]}: {self.score:.2f}: {self.note} ' + \
                 f'{self.base_technical}({self.base_length})/{base:.2f}@{self.base_factor:.2f} ' + \
                 f'{self.conditional} ' + \
-                f'{self.criteria_technical}({self.criteria_length})/{self.criteria_start}/{self.criteria_series}/{value:.2f}@{self.criteria_factor:.2f}'
+                f'{self.criteria_technical}({self.criteria_length})/{self.criteria_start}/{self.criteria_series}/{criteria:.2f}@{self.criteria_factor:.2f}'
 
             _logger.info(self.result)
         else:

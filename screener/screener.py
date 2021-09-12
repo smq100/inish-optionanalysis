@@ -13,7 +13,7 @@ from .interpreter import Interpreter
 
 _logger = utils.get_logger()
 
-BASEPATH = os.getcwd()+'/screener/screens/'
+BASEPATH = os.getcwd() + '/screener/screens/'
 SCREEN_SUFFIX = '.screen'
 INIT_NAME = 'init'
 
@@ -73,57 +73,13 @@ class Screener(Threaded):
         self._concurrency = 10
 
         if screen:
-            if self.load_script(screen, init=self.screen_init):
-                self.open()
+            if self._load(screen, init=self.screen_init):
+                self._open()
             else:
                 raise ValueError(f'Script not found or invalid format: {screen}')
 
     def __str__(self):
         return f'{self.table}/{self.screen}'
-
-    def load_script(self, script:str, init:str='') -> bool:
-        self.scripts = []
-        if os.path.exists(script):
-            try:
-                with open(script) as f:
-                    self.scripts = json.load(f)
-            except:
-                self.scripts = []
-                _logger.error(f'{__name__}: File format error')
-            else:
-                if init:
-                    self._add_init_script(init)
-        else:
-            _logger.error(f'{__name__}: File "{script}" not found')
-
-        return bool(self.scripts)
-
-    def open(self) -> bool:
-        tickers = []
-
-        if self.type == 'all':
-            tickers = store.get_tickers()
-        elif self.type == 'exchange':
-            tickers = store.get_exchange_tickers(self.table)
-        elif self.type == 'index':
-            tickers = store.get_index_tickers(self.table)
-        else:
-            tickers = [self.table]
-
-        if len(tickers) > 0:
-            try:
-                self.companies = [Company(s, self.days, end=self.end, live=self.live) for s in tickers]
-            except ValueError as e:
-                _logger.warning(f'{__name__}: Invalid ticker {s}')
-
-            if len(self.companies) > 1:
-                _logger.info(f'{__name__}: Opened {len(self.companies)} symbols from {self.table} table')
-            else:
-                _logger.info(f'{__name__}: Opened symbol {self.table}')
-        else:
-            _logger.warning(f'{__name__}: No symbols available')
-
-        return len(self.companies) > 0
 
     @Threaded.threaded
     def run_script(self) -> list[str]:
@@ -162,6 +118,50 @@ class Screener(Threaded):
 
         # Return a list of successful tickers
         return [r.company.ticker for r in self.results if r]
+
+    def _load(self, script:str, init:str='') -> bool:
+        self.scripts = []
+        if os.path.exists(script):
+            try:
+                with open(script) as f:
+                    self.scripts = json.load(f)
+            except:
+                self.scripts = []
+                _logger.error(f'{__name__}: File format error')
+            else:
+                if init:
+                    self._add_init_script(init)
+        else:
+            _logger.error(f'{__name__}: File "{script}" not found')
+
+        return bool(self.scripts)
+
+    def _open(self) -> bool:
+        tickers = []
+
+        if self.type == 'all':
+            tickers = store.get_tickers()
+        elif self.type == 'exchange':
+            tickers = store.get_exchange_tickers(self.table)
+        elif self.type == 'index':
+            tickers = store.get_index_tickers(self.table)
+        else:
+            tickers = [self.table]
+
+        if len(tickers) > 0:
+            try:
+                self.companies = [Company(s, self.days, end=self.end, live=self.live) for s in tickers]
+            except ValueError as e:
+                _logger.warning(f'{__name__}: Invalid ticker {s}')
+
+            if len(self.companies) > 1:
+                _logger.info(f'{__name__}: Opened {len(self.companies)} symbols from {self.table} table')
+            else:
+                _logger.info(f'{__name__}: Opened symbol {self.table}')
+        else:
+            _logger.warning(f'{__name__}: No symbols available')
+
+        return len(self.companies) > 0
 
     def _run(self, companies:list[Company]) -> None:
         for ticker in companies:
@@ -218,5 +218,5 @@ if __name__ == '__main__':
     utils.get_logger(logging.DEBUG)
 
     s = Screener('DOW')
-    s.load_script('/Users/steve/Documents/Source Code/Personal/OptionAnalysis/screener/screens/test.screen')
+    s._load('/Users/steve/Documents/Source Code/Personal/OptionAnalysis/screener/screens/test.screen')
     # s.run_script()

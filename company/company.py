@@ -110,19 +110,18 @@ class Company:
         return self.info
 
     def _load_history(self) -> bool:
-        success = True
+        success = False
         self.history = store.get_history(self.ticker, self.days, end=self.end, live=self.live)
         if self.history is None:
-            success = False
             _logger.warning(f'{__name__}: No history for {self.ticker}')
         elif self.history.empty:
-            success = False
             _logger.warning(f'{__name__}: Empty history for {self.ticker}')
         else:
-            _logger.info(f'{__name__}: Fetched {len(self.history)} items from {self.ticker}. ')
-                # f'{self.days} days from {self.history.iloc[0]["date"]} to {self.history.iloc[-1]["date"]} (end={self.end})')
-
             self.ta = Technical(self.ticker, self.history, self.days, end=self.end, live=self.live)
+            success = True
+
+            _logger.info(f'{__name__}: Fetched {len(self.history)} items from {self.ticker}. '\
+                f'{self.days} days from {self.history.iloc[0]["date"]} to {self.history.iloc[-1]["date"]} (end={self.end})')
 
         return success
 

@@ -207,8 +207,10 @@ class Manager(Threaded):
     def update_history_exchange(self, exchange:str='') -> None:
         tickers = store.get_tickers(exchange)
         self.task_total = len(tickers)
+        running = self._concurrency
 
         def _history(tickers):
+            nonlocal running
             for sec in tickers:
                 self.task_ticker = sec
                 try:
@@ -220,6 +222,9 @@ class Manager(Threaded):
                     self.task_success += 1
 
                 self.task_completed += 1
+
+            running = running - 1
+            _logger.info(f'{__name__}: Completed updating tickers. {running} threads remaining')
 
         if self.task_total > 0:
             self.task_error = 'None'
