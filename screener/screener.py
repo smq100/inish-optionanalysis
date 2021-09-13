@@ -27,6 +27,9 @@ class Result:
         self.price_last = 0.0
         self.price_current = 0.0
 
+    def __repr__(self):
+        return f'<Result ({self.company.ticker})>'
+
     def __str__(self):
         return self.company.ticker
 
@@ -77,6 +80,9 @@ class Screener(Threaded):
                 self._open()
             else:
                 raise ValueError(f'Script not found or invalid format: {screen}')
+
+    def __repr__(self):
+        return f'<Screener ({self.table})>'
 
     def __str__(self):
         return f'{self.table}/{self.screen}'

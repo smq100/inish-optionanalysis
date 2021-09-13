@@ -32,6 +32,9 @@ class Company:
             self._load_history()
             self._load_company()
 
+    def __repr__(self):
+        return f'<Company ({self.ticker})>'
+
     def __str__(self):
         output = f'{self.ticker}'
         return output
@@ -47,7 +50,7 @@ class Company:
         return value
 
     def get_high(self) -> pd.Series:
-        value = pd.Series()
+        value = pd.Series(dtype=float)
         if self.history.empty:
             if self._load_history():
                 value = self.history['high']
@@ -57,7 +60,7 @@ class Company:
         return value
 
     def get_low(self) -> pd.Series:
-        value = pd.Series()
+        value = pd.Series(dtype=float)
         if self.history.empty:
             if self._load_history():
                 value = self.history['low']
@@ -67,7 +70,7 @@ class Company:
         return value
 
     def get_close(self) -> pd.Series:
-        value = pd.Series()
+        value = pd.Series(dtype=float)
         if self.history.empty:
             if self._load_history():
                 value = self.history['close']
@@ -77,7 +80,7 @@ class Company:
         return value
 
     def get_volume(self) -> pd.Series:
-        value = pd.Series()
+        value = pd.Series(dtype=float)
         if self.history.empty:
             if self._load_history():
                 value = self.history['volume']

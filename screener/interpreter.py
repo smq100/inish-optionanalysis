@@ -15,7 +15,7 @@ class Interpreter:
         self.company = company
         self.filter = filter
         self.note = ''
-        self.base = pd.Series()
+        self.base = pd.Series(dtype=float)
         self.base_technical = ''
         self.base_length = 0.0
         self.base_start = -1
@@ -23,7 +23,7 @@ class Interpreter:
         self.base_series = 'none'
         self.base_factor = 1.0
         self.conditional = ''
-        self.criteria = pd.Series()
+        self.criteria = pd.Series(dtype=float)
         self.criteria_value = 0.0
         self.criteria_technical = ''
         self.criteria_length = 0.0
@@ -35,6 +35,9 @@ class Interpreter:
         self.enable_score = True
         self.score = 1.0
         self.result = ''
+
+    def __repr__(self):
+        return f'<Interpreter ({self.company.ticker})>'
 
     def run(self) -> bool:
         if self.filter['base']['technical'] not in VALID_TECHNICALS:
@@ -200,10 +203,15 @@ class Interpreter:
                 f'{self.base_technical}({self.base_length})/{base:.2f}@{self.base_factor:.2f} ' + \
                 f'{self.conditional} ' + \
                 f'{self.criteria_technical}({self.criteria_length})/{self.criteria_start}/{self.criteria_series}/{criteria:.2f}@{self.criteria_factor:.2f}'
-
-            _logger.info(self.result)
         else:
             _logger.warning(f'{__name__}: No technical information for {self.company}')
+
+            self.result = f'{self.company.ticker:6s}{str(self.success)[:1]}: {self.score:.2f}: {self.note} ' + \
+                f'{self.base_technical}({self.base_length})/***@{self.base_factor:.2f} ' + \
+                f'{self.conditional} ' + \
+                f'{self.criteria_technical}({self.criteria_length})/{self.criteria_start}/{self.criteria_series}/***@{self.criteria_factor:.2f}'
+
+        _logger.info(self.result)
 
         return (self.success, self.score)
 
@@ -220,7 +228,7 @@ class Interpreter:
         return self.company.get_volume()[sl]
 
     def _get_base_sma(self) -> pd.Series:
-        value = pd.Series()
+        value = pd.Series(dtype=float)
         start = None if self.base_start == 0 else self.base_start
         stop = None if self.base_stop == 0 else self.base_stop
         sl = slice(start, stop)
@@ -229,7 +237,7 @@ class Interpreter:
         return value
 
     def _get_base_rsi(self) -> pd.Series:
-        value = pd.Series()
+        value = pd.Series(dtype=float)
         start = None if self.base_start == 0 else self.base_start
         stop = None if self.base_stop == 0 else self.base_stop
         sl = slice(start, stop)
@@ -274,7 +282,7 @@ class Interpreter:
         return self.company.get_volume()[sl]
 
     def _get_criteria_sma(self) -> pd.Series:
-        value = pd.Series()
+        value = pd.Series(dtype=float)
         start = None if self.criteria_start == 0 else self.criteria_start
         stop = None if self.criteria_stop == 0 else self.criteria_stop
         sl = slice(start, stop)

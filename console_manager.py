@@ -52,49 +52,52 @@ class Interface:
         menu_items = {
             '1': 'Database Information',
             '2': 'Ticker Information',
-            '3': 'Ticker Information (live)',
-            '4': 'List Exchange',
-            '5': 'List Index',
-            '6': 'Populate Exchange',
-            '7': 'Populate Index',
-            '8': 'Update Ticker(s)',
-            '9': 'Check Integrity',
-            '10': 'Delete Exchange',
-            '11': 'Delete Index',
-            '12': 'Delete Ticker',
-            '13': 'Reset Database',
+            '3': 'Ticker Information (prev)',
+            '4': 'Ticker Information (live)',
+            '5': 'List Exchange',
+            '6': 'List Index',
+            '7': 'Populate Exchange',
+            '8': 'Populate Index',
+            '9': 'Update Ticker(s)',
+            '10': 'Check Integrity',
+            '11': 'Delete Exchange',
+            '12': 'Delete Index',
+            '13': 'Delete Ticker',
+            '14': 'Reset Database',
             '0': 'Exit'
         }
 
         while True:
             if not self.ticker:
-                selection = utils.menu(menu_items, 'Select Operation', 0, 13)
+                selection = utils.menu(menu_items, 'Select Operation', 0, 14)
 
             if selection == 1:
                 self.show_database_information()
             elif selection == 2:
                 self.show_symbol_information(self.ticker)
             elif selection == 3:
-                self.show_symbol_information(self.ticker, live=True)
+                self.show_symbol_information(self.ticker, prompt=True)
             elif selection == 4:
-                self.list_exchange()
+                self.show_symbol_information(self.ticker, live=True)
             elif selection == 5:
-                self.list_index()
+                self.list_exchange()
             elif selection == 6:
-                self.populate_exchange()
+                self.list_index()
             elif selection == 7:
-                self.populate_index()
+                self.populate_exchange()
             elif selection == 8:
-                self.update_ticker(self.ticker)
+                self.populate_index()
             elif selection == 9:
-                self.check_integrity()
+                self.update_ticker(self.ticker)
             elif selection == 10:
-                self.delete_exchange()
+                self.check_integrity()
             elif selection == 11:
-                self.delete_index()
+                self.delete_exchange()
             elif selection == 12:
-                self.delete_ticker()
+                self.delete_index()
             elif selection == 13:
+                self.delete_ticker()
+            elif selection == 14:
                 self.reset_database()
             elif selection == 0:
                 break
@@ -118,12 +121,17 @@ class Interface:
         for i in info:
             print(f'{i["index"]:>16}:\t{i["count"]} symbols')
 
-    def show_symbol_information(self, ticker:str ='', live=False):
+    def show_symbol_information(self, ticker:str ='', prompt:bool=False, live:bool=False):
         if not ticker:
             ticker = utils.input_text('Enter ticker: ').upper()
 
         if ticker:
             if store.is_ticker(ticker):
+                if prompt:
+                    end = utils.input_integer('Input number of days: ', 0, 100)
+                else:
+                    end=0
+
                 company = store.get_company(ticker, live=live, extra=True)
                 if company:
                     if live:
@@ -157,7 +165,7 @@ class Interface:
                 else:
                     utils.print_error(f'{ticker} has no company information')
 
-                history = store.get_history(ticker, 100, live=live).round(2)
+                history = store.get_history(ticker, 100, end=end, live=live).round(2)
                 if history.empty:
                     utils.print_error(f'{ticker} has no price history')
                 else:

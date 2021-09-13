@@ -42,10 +42,10 @@
       }
    },
    {
-      "note":"RSI < 60",
+      "note":"RSI14 < 60",
       "base":{
          "technical":"rsi",
-         "length":0,
+         "length":14,
          "start":-1,
          "stop":0,
          "series":"none",

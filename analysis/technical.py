@@ -20,36 +20,38 @@ class Technical:
                 self.history = store.get_history(self.ticker, self.days, end=self.end, live=live)
             else:
                 self.history = history
-
         else:
             raise ValueError('Invalid symbol')
 
+    def __repr__(self):
+        return f'<Technical Analysis ({self.ticker})>'
+
     def __str__(self):
-        return f'Technical analysis for {self.ticker}'
+        return f'{len(self.history)} items for {self.ticker}'
 
     def calc_sma(self, interval:int) -> pd.Series:
-        df = pd.Series()
+        df = pd.Series(dtype=float)
         if interval > 5 and interval < self.days:
             df = trend.sma_indicator(self.history['close'], window=interval, fillna=True)
 
         return df
 
     def calc_ema(self, interval:int) -> pd.Series:
-        df = pd.Series()
+        df = pd.Series(dtype=float)
         if interval > 5 and interval < self.days:
             df = trend.ema_indicator(self.history['close'], window=interval, fillna=True)
 
         return df
 
     def calc_rsi(self, interval:int=14) -> pd.Series:
-        df = pd.Series()
+        df = pd.Series(dtype=float)
         if interval > 5 and interval < self.days:
             df = momentum.rsi(self.history['close'], window=interval, fillna=True)
 
         return df
 
     def calc_vwap(self) -> pd.Series:
-        df = pd.Series()
+        df = pd.Series(dtype=float)
         vwap = volume.VolumeWeightedAveragePrice(self.history['high'], self.history['low'], self.history['close'], self.history['volume'], fillna=True)
         df = vwap.volume_weighted_average_price()
 
@@ -81,6 +83,6 @@ class Technical:
         return df
 
 if __name__ == '__main__':
-    ta = Technical('AAPL', None, 365)
-    value = ta.calc_sma(21).iloc[-1]
-    print(value)
+    ta = Technical('HLT', None, 365)
+    value = ta.calc_rsi().iloc[-1]
+    print(f'{value:.2f}')
