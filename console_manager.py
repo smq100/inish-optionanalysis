@@ -7,7 +7,7 @@ from data import store as store
 from data import manager as manager
 from utils import utils as utils
 
-logger = utils.get_logger(logging.WARNING)
+logger = utils.get_logger(logging.WARNING, logfile='')
 
 
 class Interface:
@@ -52,8 +52,8 @@ class Interface:
         menu_items = {
             '1': 'Database Information',
             '2': 'Ticker Information',
-            '3': 'Ticker Information (prev)',
-            '4': 'Ticker Information (live)',
+            '3': 'Ticker Information (live)',
+            '4': 'Ticker Information (prev)',
             '5': 'List Exchange',
             '6': 'List Index',
             '7': 'Populate Exchange',
@@ -76,9 +76,9 @@ class Interface:
             elif selection == 2:
                 self.show_symbol_information(self.ticker)
             elif selection == 3:
-                self.show_symbol_information(self.ticker, prompt=True)
-            elif selection == 4:
                 self.show_symbol_information(self.ticker, live=True)
+            elif selection == 4:
+                self.show_symbol_information(self.ticker, prompt=True)
             elif selection == 5:
                 self.list_exchange()
             elif selection == 6:

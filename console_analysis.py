@@ -8,7 +8,7 @@ from data import store as store
 from utils import utils as utils
 
 
-_logger = utils.get_logger(logging.WARNING)
+_logger = utils.get_logger(logging.WARNING, logfile='')
 
 class Interface:
     def __init__(self, coor:str=''):

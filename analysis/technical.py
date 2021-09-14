@@ -8,6 +8,8 @@ from ta import trend, momentum, volatility, volume
 from data import store as store
 from utils import utils as utils
 
+_logger = utils.get_logger()
+
 
 class Technical:
     def __init__(self, ticker:str, history:pd.DataFrame, days:int, end:int=0, live:bool=False):
@@ -33,6 +35,8 @@ class Technical:
         df = pd.Series(dtype=float)
         if interval > 5 and interval < self.days:
             df = trend.sma_indicator(self.history['close'], window=interval, fillna=True)
+        else:
+            _logger.warning(f'{__name__}: Invalid interval for SMA')
 
         return df
 
@@ -40,6 +44,8 @@ class Technical:
         df = pd.Series(dtype=float)
         if interval > 5 and interval < self.days:
             df = trend.ema_indicator(self.history['close'], window=interval, fillna=True)
+        else:
+            _logger.warning(f'{__name__}: Invalid interval for EMA')
 
         return df
 
@@ -47,6 +53,8 @@ class Technical:
         df = pd.Series(dtype=float)
         if interval > 5 and interval < self.days:
             df = momentum.rsi(self.history['close'], window=interval, fillna=True)
+        else:
+            _logger.warning(f'{__name__}: Invalid interval for RSI')
 
         return df
 
@@ -79,6 +87,8 @@ class Technical:
 
             df = pd.concat([high, mid, low], axis=1)
             df.columns = ['High', 'Mid', 'Low']
+        else:
+            _logger.warning(f'{__name__}: Invalid interval for BB')
 
         return df
 

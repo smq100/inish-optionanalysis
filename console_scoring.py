@@ -6,7 +6,7 @@ from data import store as store
 from utils import utils as utils
 
 
-logger = utils.get_logger(logging.WARNING)
+logger = utils.get_logger(logging.WARNING, logfile='')
 
 
 class Interface:

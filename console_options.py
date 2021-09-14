@@ -1,5 +1,6 @@
 import sys, math
 import datetime as dt
+import logging
 
 import pandas as pd
 import numpy as np
@@ -18,7 +19,7 @@ from utils import utils as utils
 MAX_ROWS = 50
 MAX_COLS = 18
 
-_logger = utils.get_logger()
+_logger = utils.get_logger(logging.WARNING, logfile='')
 
 
 class Interface:

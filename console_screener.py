@@ -3,12 +3,12 @@ import time
 import threading
 import logging
 
-from screener.screener import Screener, Result
 import data as d
+from screener.screener import Screener, Result
 from data import store as store
 from utils import utils as utils
 
-logger = utils.get_logger(logging.ERROR)
+_logger = utils.get_logger(logging.WARNING, logfile='')
 
 BASEPATH = os.getcwd()+'/screener/screens/'
 SCREEN_SUFFIX = '.screen'
@@ -238,7 +238,9 @@ class Interface:
         elif not self.screen_path:
             utils.print_error('No screen specified')
         else:
-            if not backtest:
+            if backtest:
+                self.live = False
+            else:
                 self.end = 0
 
             try:

@@ -4,10 +4,10 @@ from logging import Logger
 LOG_DIR = './log'
 
 
-def get_logger(level=None, logfile=True) -> Logger:
+def get_logger(level:int=logging.WARNING, logfile:str='') -> Logger:
     logger = logging.getLogger('analysis')
 
-    if level is not None:
+    if logger is None:
         logger.handlers = []
         logger.setLevel(logging.DEBUG)
         logger.propagate = False # Prevent logging from propagating to the root logger
@@ -22,9 +22,9 @@ def get_logger(level=None, logfile=True) -> Logger:
         # File handler
         if logfile:
             fformat = logging.Formatter('%(asctime)s: %(levelname)s: %(message)s', datefmt='%H:%M:%S')
-            fh = logging.FileHandler(f'{LOG_DIR}/output.log', 'w+')
+            fh = logging.FileHandler(f'{LOG_DIR}/{logfile}.log', 'w+')
             fh.setFormatter(fformat)
-            fh.setLevel(logging.INFO)
+            fh.setLevel(logging.DEBUG)
             logger.addHandler(fh)
 
     return logger

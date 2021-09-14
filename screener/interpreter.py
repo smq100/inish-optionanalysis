@@ -72,6 +72,8 @@ class Interpreter:
         return self.success
 
     def _calculate(self) -> tuple:
+        self.base = pd.Series(dtype=float)
+        self.enable_score = False
         calculate = True
 
         # Base value
@@ -79,43 +81,36 @@ class Interpreter:
             value = self._get_base_close()
             if not value.empty:
                 self.base = value
-            else:
-                self.enable_score = False
+                self.enable_score = True
 
         elif self.base_technical == VALID_TECHNICALS[3]: # volume
             value = self._get_base_volume()
             if not value.empty:
                 self.base = value
-            else:
-                self.enable_score = False
 
         elif self.base_technical == VALID_TECHNICALS[4]: # sma
             value = self._get_base_sma()
             if not value.empty:
                 self.base = value
-            else:
-                self.enable_score = False
+                self.enable_score = True
 
         elif self.base_technical == VALID_TECHNICALS[5]: # rsi
             value = self._get_base_rsi()
             if not value.empty:
                 self.base = value
-            else:
-                self.enable_score = False
+                self.enable_score = True
 
         elif self.base_technical == VALID_TECHNICALS[6]: # beta
             value = self._get_base_beta()
             if not value.empty:
                 self.base = value
-            else:
-                self.enable_score = False
+                self.enable_score = True
 
         elif self.base_technical == VALID_TECHNICALS[7]: # rating
             value = self._get_base_rating()
             if not value.empty:
                 self.base = value
-            else:
-                self.enable_score = False
+                self.enable_score = True
 
         elif self.base_technical == VALID_TECHNICALS[9]: # true
             calculate = False
@@ -124,22 +119,21 @@ class Interpreter:
             raise SyntaxError('Invalid "base technical" specified in screen file')
 
         # Criteria value
-        if not calculate:
-            pass
-        elif self.criteria_technical == VALID_TECHNICALS[8]: # value
-            self.criteria = self._get_criteria()
-        elif self.criteria_technical == VALID_TECHNICALS[0]: # high
-            self.criteria = self._get_criteria_high()
-        elif self.criteria_technical == VALID_TECHNICALS[1]: # low
-            self.criteria = self._get_criteria_low()
-        elif self.criteria_technical == VALID_TECHNICALS[2]: # close
-            self.criteria = self._get_criteria_close()
-        elif self.criteria_technical == VALID_TECHNICALS[3]: # volume
-            self.criteria = self._get_criteria_volume()
-        elif self.criteria_technical == VALID_TECHNICALS[4]: # sma
-            self.criteria = self._get_criteria_sma()
-        else:
-            raise SyntaxError('Invalid "criteria technical" specified in screen file')
+        if calculate:
+            if self.criteria_technical == VALID_TECHNICALS[8]: # value
+                self.criteria = self._get_criteria()
+            elif self.criteria_technical == VALID_TECHNICALS[0]: # high
+                self.criteria = self._get_criteria_high()
+            elif self.criteria_technical == VALID_TECHNICALS[1]: # low
+                self.criteria = self._get_criteria_low()
+            elif self.criteria_technical == VALID_TECHNICALS[2]: # close
+                self.criteria = self._get_criteria_close()
+            elif self.criteria_technical == VALID_TECHNICALS[3]: # volume
+                self.criteria = self._get_criteria_volume()
+            elif self.criteria_technical == VALID_TECHNICALS[4]: # sma
+                self.criteria = self._get_criteria_sma()
+            else:
+                raise SyntaxError('Invalid "criteria technical" specified in screen file')
 
         return self._compare() if calculate else (True, 1.0)
 
