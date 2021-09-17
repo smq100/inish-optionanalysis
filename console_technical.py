@@ -11,15 +11,15 @@ from utils import utils as utils
 _logger = utils.get_logger(logging.WARNING, logfile='')
 
 class Interface:
-    def __init__(self, ticker:str, days:int=365, run:bool=False, exit:bool=False):
+    def __init__(self, ticker:str, days:int=365, exit:bool=False):
         self.ticker = ticker.upper()
         self.days = days
-        self.run = run
+        self.exit = exit
         self.technical:Technical = None
         self.tickers:list[str] = []
 
         if store.is_ticker(ticker.upper()):
-            if self.run:
+            if self.exit:
                 self.show_trend()
             else:
                 self.technical = Technical(self.ticker, None, 365)
@@ -27,7 +27,7 @@ class Interface:
         else:
             utils.print_error(f'Invalid ticker: {self.ticker}')
             self.ticker = ''
-            self.run = False
+            self.exit = False
             self.main_menu()
 
     def main_menu(self):
@@ -51,6 +51,9 @@ class Interface:
             elif selection == 3:
                 self.select_technical()
             elif selection == 0:
+                self.exit
+
+            if self.exit:
                 break
 
     def select_ticker(self):
@@ -198,10 +201,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Technical Analysis')
     parser.add_argument('-t', '--ticker', help='Run using ticker')
     parser.add_argument('-d', '--days', help='Days to run analysis', default=1000)
-    parser.add_argument('-r', help='Run trend analysis (only valid with -t)', action='store_true')
+    parser.add_argument('-x', '--exit',  help='Run trend analysis (only valid with -t) then exit', action='store_true')
 
     command = vars(parser.parse_args())
     if command['ticker']:
-        Interface(ticker=command['ticker'], days=int(command['days']), run=command['r'])
+        Interface(ticker=command['ticker'], days=int(command['days']), exit=command['exit'])
     else:
         Interface('AAPL')

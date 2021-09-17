@@ -194,9 +194,13 @@ def get_history(ticker:str, days:int=-1, end:int=0, live:bool=False) -> pd.DataF
         ValueError('Invalid value for "end"')
     elif live:
         results = fetcher.get_history_live(ticker, days)
-        _logger.info(f'{__name__}: Fetched {len(results)} days of live price history for {ticker}')
+        if results is not None:
+            _logger.info(f'{__name__}: Fetched {len(results)} days of live price history for {ticker}')
+        else:
+            _logger.warning(f'{__name__}: Unable to fetch live price history for {ticker}')
+
         if end > 0:
-            _logger.warning('"end" value ignored for live queries')
+            _logger.warning(f'{__name__}: "end" value ignored for live queries')
     else:
         with _session() as session:
             symbols = session.query(models.Security.id).filter(and_(models.Security.ticker==ticker, models.Security.active)).one_or_none()
