@@ -218,13 +218,13 @@ class Manager(Threaded):
                 except IntegrityError as e:
                     _logger.warning(f'{__name__}: UniqueViolation exception occurred for {sec}: {e}')
 
+                self.task_completed += 1
                 if days > 0:
                     self.task_success += 1
 
-                self.task_completed += 1
 
             running = running - 1
-            _logger.info(f'{__name__}: Completed updating tickers. {running} threads remaining')
+            _logger.info(f'{__name__}: Thread completed. {running} threads remaining')
 
         if self.task_total > 0:
             self.task_error = 'None'

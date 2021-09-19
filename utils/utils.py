@@ -4,10 +4,12 @@ from logging import Logger
 LOG_DIR = './log'
 
 
-def get_logger(level:int=logging.WARNING, logfile:str='') -> Logger:
+def get_logger(level:int=None, logfile:str='') -> Logger:
     logger = logging.getLogger('analysis')
 
-    if logger is None:
+    if level is None:
+        logger.info(f'{__name__}: Returning existing logger')
+    else:
         logger.handlers = []
         logger.setLevel(logging.DEBUG)
         logger.propagate = False # Prevent logging from propagating to the root logger
@@ -26,6 +28,8 @@ def get_logger(level:int=logging.WARNING, logfile:str='') -> Logger:
             fh.setFormatter(fformat)
             fh.setLevel(logging.DEBUG)
             logger.addHandler(fh)
+
+            logger.info(f'{__name__}: Created new logger')
 
     return logger
 

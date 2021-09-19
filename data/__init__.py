@@ -1,9 +1,13 @@
 import os
 import configparser
 
-
+# Databases
 OPTIONS_DB = ('Postgres', 'SQLite')
 ACTIVE_DB = OPTIONS_DB[0]
+
+# Data sources
+VALID_DATASOURCES = ('yfinance', 'quandl')
+ACTIVE_DATASOURCE = VALID_DATASOURCES[1]
 
 # Postgres
 CREDENTIALS = os.path.join(os.path.dirname(__file__), 'postgres.ini')

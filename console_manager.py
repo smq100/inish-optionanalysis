@@ -7,7 +7,7 @@ from data import store as store
 from data import manager as manager
 from utils import utils as utils
 
-logger = utils.get_logger(logging.WARNING, logfile='')
+_logger = utils.get_logger(logging.WARNING, logfile='output')
 
 
 class Interface:
@@ -46,6 +46,8 @@ class Interface:
             self.main_menu()
 
     def main_menu(self, selection=0):
+        _logger.info(f'{__name__}: Starting console...')
+
         if not self.stop:
             self.show_database_information()
 
@@ -56,9 +58,9 @@ class Interface:
             '4': 'Ticker Information (prev)',
             '5': 'List Exchange',
             '6': 'List Index',
-            '7': 'Populate Exchange',
-            '8': 'Populate Index',
-            '9': 'Update Ticker(s)',
+            '7': 'Update Ticker(s)',
+            '8': 'Populate Exchange',
+            '9': 'Populate Index',
             '10': 'Check Integrity',
             '11': 'Delete Exchange',
             '12': 'Delete Index',
@@ -84,11 +86,11 @@ class Interface:
             elif selection == 6:
                 self.list_index()
             elif selection == 7:
-                self.populate_exchange()
-            elif selection == 8:
-                self.populate_index()
-            elif selection == 9:
                 self.update_ticker(self.ticker)
+            elif selection == 8:
+                self.populate_exchange()
+            elif selection == 9:
+                self.populate_index()
             elif selection == 10:
                 self.check_integrity()
             elif selection == 11:
@@ -133,6 +135,7 @@ class Interface:
                     end=0
 
                 company = store.get_company(ticker, live=live, extra=True)
+                company=None
                 if company:
                     if live:
                         utils.print_message(f'{ticker} Company Information (live)')
@@ -165,7 +168,7 @@ class Interface:
                 else:
                     utils.print_error(f'{ticker} has no company information')
 
-                history = store.get_history(ticker, 100, end=end, live=live).round(2)
+                history = store.get_history(ticker, days=100, end=end, live=live).round(2)
                 if history.empty:
                     utils.print_error(f'{ticker} has no price history')
                 else:

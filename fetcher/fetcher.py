@@ -11,6 +11,7 @@ import quandl as qd
 import yfinance as yf
 import pandas as pd
 
+import data as d
 from utils import utils as utils
 
 _logger = utils.get_logger()
@@ -37,17 +38,11 @@ def validate_ticker(ticker:str) -> bool:
 
     return valid
 
-elapsed = 0.0
 def get_company_live(ticker:str) -> pd.DataFrame:
-    global elapsed
     company = None
 
-    # Throttle requests to help avoid being cut off by Yahoo
-    while time.perf_counter() - elapsed < THROTTLE: time.sleep(THROTTLE)
-    elapsed = time.perf_counter()
-
     try:
-        _logger.info(f'{__name__}: Fetching Yahoo live ticker information for {ticker}...')
+        _logger.info(f'{__name__}: Fetching live company information for {ticker} from Yahoo...')
         company = yf.Ticker(ticker)
         if company is not None:
             # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
@@ -58,7 +53,7 @@ def get_company_live(ticker:str) -> pd.DataFrame:
 
     return company
 
-def get_history_live(ticker:str, days:int=-1) -> pd.DataFrame:
+def _get_history_yfianace(ticker:str, days:int=-1) -> pd.DataFrame:
     history = None
 
     company = get_company_live(ticker)
@@ -76,43 +71,78 @@ def get_history_live(ticker:str, days:int=-1) -> pd.DataFrame:
                     history = company.history(start=f'{start:%Y-%m-%d}', end=f'{end:%Y-%m-%d}')
                     days = history.shape[0]
                     if history is None:
-                        _logger.warning(f'{__name__}: History information for {ticker} is None')
-                        break
+                        _logger.warning(f'{__name__}: {d.ACTIVE_DATASOURCE} history for {ticker} is None')
                     elif history.empty:
                         history = None
                         _logger.warning(f'{__name__}: History information for {ticker} is empty')
-                        break
                     else:
                         history.reset_index(inplace=True)
 
                         # Lower case columns to make consistent with Postgress column names
                         history.columns = history.columns.str.lower()
-                        _logger.info(f'{__name__}: Fetched {history.shape[0]} days of live history of {ticker} starting {start:%Y-%m-%d}')
-                        break
+                        history.drop(['dividends', 'stock splits'], 1, inplace=True)
+
+                        _logger.info(f'{__name__}: Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
+                    break
                 except Exception as e:
-                    _logger.error(f'{__name__}: Retry {retry} to fetch history of {ticker}: {e}')
+                    _logger.error(f'{__name__}: Retry {retry} to fetch history of {ticker} from {d.ACTIVE_DATASOURCE}: {e}')
                     history = None
                     time.sleep(1)
 
     return history
 
-def get_history_q(ticker:str, days:int=-1) -> pd.DataFrame:
-    if days < 0:
-        days = 7300 # 20 years
-    elif days > 1:
-        pass
-    else:
-        days = 100
-
-    start = dt.datetime.today() - dt.timedelta(days=days)
-
+def _get_history_quandl(ticker:str, days:int=-1) -> pd.DataFrame:
     history = pd.DataFrame()
 
-    _logger.info(f'{__name__}: Fetching quandl ticker information for {ticker}...')
-    history = qd.get(f'EOD/{ticker}')#, start_date=f'{start:%Y-%m-%d}')
-    if history is not None:
-        history.reset_index(inplace=True)
-        history.columns = history.columns.str.lower()
+    if days < 0:
+        days = 7300 # 20 years
+
+    if days > 0:
+        start = dt.datetime.today() - dt.timedelta(days=days)
+        history = pd.DataFrame()
+
+        for retry in range(3):
+            try:
+                history = qd.get(f'EOD/{ticker}', rows=days)
+                days = history.shape[0]
+                if history is None:
+                    _logger.warning(f'{__name__}: {d.ACTIVE_DATASOURCE} history for {ticker} is None')
+                elif history.empty:
+                    history = None
+                    _logger.warning(f'{__name__}: History information for {ticker} is empty')
+                else:
+                    history.reset_index(inplace=True)
+
+                    # Lower case columns to make consistent with Postgress column names
+                    history.columns = history.columns.str.lower()
+                    history.drop(['dividend', 'split', 'adj_open', 'adj_high', 'adj_low', 'adj_close', 'adj_volume'], 1, inplace=True)
+
+                    _logger.info(f'{__name__}: Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
+                break
+            except Exception as e:
+                _logger.error(f'{__name__}: Retry {retry} to fetch history of {ticker} from {d.ACTIVE_DATASOURCE}: {e}')
+                history = None
+                time.sleep(1)
+
+    return history
+
+_elapsed = 0.0
+def get_history_live(ticker:str, days:int=-1) -> pd.DataFrame:
+    global _elapsed
+    history = pd.DataFrame()
+
+    # Throttle requests to help avoid being cut off by data source
+    while time.perf_counter() - _elapsed < THROTTLE: time.sleep(THROTTLE)
+    _elapsed = time.perf_counter()
+
+    _logger.info(f'{__name__}: Fetching {ticker} history from {d.ACTIVE_DATASOURCE}...')
+
+    if d.ACTIVE_DATASOURCE == d.VALID_DATASOURCES[0]:
+        history = _get_history_yfianace(ticker, days=days)
+    elif d.ACTIVE_DATASOURCE == d.VALID_DATASOURCES[1]:
+        history = _get_history_quandl(ticker, days=days)
+    else:
+        raise ValueError('Invalid data source')
 
     return history
 
@@ -211,13 +241,14 @@ def get_treasury_rate(ticker:str) -> float:
 
 
 if __name__ == '__main__':
-    # from logging import DEBUG
-    # _logger = utils.get_logger(DEBUG)
+    from logging import WARNING
     import sys
+
+    _logger = utils.get_logger(WARNING, logfile='output')
     if len(sys.argv) > 1:
-        print(get_ratings(sys.argv[1]))
+        print(get_history_live(sys.argv[1]))
     else:
-        print(get_ratings('IBM'))
+        print(get_history_live('AAPL'))
 
     # start = dt.datetime.today() - dt.timedelta(days=10)
     # df = refresh_history('AAPL', 60)

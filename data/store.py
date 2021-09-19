@@ -361,12 +361,12 @@ def get_treasury_rate(ticker:str='DTB3') -> float:
 
 if __name__ == '__main__':
     import sys
-    # from logging import DEBUG
-    # logger = u.get_logger(DEBUG)
+    from logging import DEBUG
+    logger = utils.get_logger(DEBUG)
 
     if len(sys.argv) > 1:
-        t = get_history(sys.argv[1])
+        t = get_history(sys.argv[1], days=100, live=True)
     else:
-        t = get_history('AAPL')
+        t = get_history('AAPL', live=True)
 
     print(t)
