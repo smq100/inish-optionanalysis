@@ -53,8 +53,14 @@ def get_company_live(ticker:str) -> pd.DataFrame:
 
     return company
 
+_elapsed = 0.0
 def _get_history_yfianace(ticker:str, days:int=-1) -> pd.DataFrame:
+    global _elapsed
     history = None
+
+    # Throttle requests to help avoid being cut off by Yahoo
+    while time.perf_counter() - _elapsed < THROTTLE: time.sleep(THROTTLE)
+    _elapsed = time.perf_counter()
 
     company = get_company_live(ticker)
     if company is not None:
@@ -99,11 +105,13 @@ def _get_history_quandl(ticker:str, days:int=-1) -> pd.DataFrame:
 
     if days > 0:
         start = dt.datetime.today() - dt.timedelta(days=days)
-        history = pd.DataFrame()
 
         for retry in range(3):
             try:
-                history = qd.get(f'EOD/{ticker}', rows=days)
+                history = qd.get_table(f'QUOTEMEDIA/PRICES', \
+                    qopts={ 'columns': ['date', 'open', 'high', 'low', 'close', 'volume'] }, \
+                    ticker=ticker, paginate=True, date={'gte':f'{start:%Y-%m-%d}'})
+
                 days = history.shape[0]
                 if history is None:
                     _logger.warning(f'{__name__}: {d.ACTIVE_DATASOURCE} history for {ticker} is None')
@@ -113,9 +121,10 @@ def _get_history_quandl(ticker:str, days:int=-1) -> pd.DataFrame:
                 else:
                     history.reset_index(inplace=True)
 
-                    # Lower case columns to make consistent with Postgress column names
+                    # Clean some things up
                     history.columns = history.columns.str.lower()
-                    history.drop(['dividend', 'split', 'adj_open', 'adj_high', 'adj_low', 'adj_close', 'adj_volume'], 1, inplace=True)
+                    history.drop(['none'], 1, inplace=True)
+                    history.sort_values('date', ascending=True, inplace=True)
 
                     _logger.info(f'{__name__}: Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
                 break
@@ -126,14 +135,8 @@ def _get_history_quandl(ticker:str, days:int=-1) -> pd.DataFrame:
 
     return history
 
-_elapsed = 0.0
 def get_history_live(ticker:str, days:int=-1) -> pd.DataFrame:
-    global _elapsed
     history = pd.DataFrame()
-
-    # Throttle requests to help avoid being cut off by data source
-    while time.perf_counter() - _elapsed < THROTTLE: time.sleep(THROTTLE)
-    _elapsed = time.perf_counter()
 
     _logger.info(f'{__name__}: Fetching {ticker} history from {d.ACTIVE_DATASOURCE}...')
 

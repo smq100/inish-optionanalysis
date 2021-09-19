@@ -7,7 +7,7 @@ from data import store as store
 from data import manager as manager
 from utils import utils as utils
 
-_logger = utils.get_logger(logging.WARNING, logfile='output')
+_logger = utils.get_logger(logging.WARNING)#, logfile='output')
 
 
 class Interface:
@@ -135,7 +135,6 @@ class Interface:
                     end=0
 
                 company = store.get_company(ticker, live=live, extra=True)
-                company=None
                 if company:
                     if live:
                         utils.print_message(f'{ticker} Company Information (live)')

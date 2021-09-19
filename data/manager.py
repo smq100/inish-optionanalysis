@@ -199,7 +199,7 @@ class Manager(Threaded):
     def update_history_ticker(self, ticker:str='') -> int:
         days = 0
         if store.is_ticker(ticker):
-            days = self._refresh_history(ticker)
+            days = self._append_latest_history(ticker)
 
         return days
 
@@ -214,7 +214,7 @@ class Manager(Threaded):
             for sec in tickers:
                 self.task_ticker = sec
                 try:
-                    days = self._refresh_history(sec)
+                    days = self._append_latest_history(sec)
                 except IntegrityError as e:
                     _logger.warning(f'{__name__}: UniqueViolation exception occurred for {sec}: {e}')
 
@@ -448,7 +448,7 @@ class Manager(Threaded):
 
         return incomplete
 
-    def _refresh_history(self, ticker:str, update_company:bool=True) -> int:
+    def _append_latest_history(self, ticker:str, update_company:bool=True) -> int:
         ticker = ticker.upper()
         today = date.today()
         days = 0
@@ -470,7 +470,7 @@ class Manager(Threaded):
                 _logger.info(f'{__name__}: No price history for {ticker} in database')
 
             delta = (today - date_db).days
-            if delta > 1:
+            if delta > 0:
                 history = store.get_history(ticker, 365, live=True)
                 if history is None:
                     _logger.info(f'{__name__}: No pricing dataframe for {ticker}')

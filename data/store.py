@@ -197,7 +197,7 @@ def get_history(ticker:str, days:int=-1, end:int=0, live:bool=False) -> pd.DataF
         if results is not None:
             _logger.info(f'{__name__}: Fetched {len(results)} days of live price history for {ticker}')
         else:
-            _logger.warning(f'{__name__}: Unable to fetch live price history for {ticker}')
+            _logger.warning(f'{__name__}: Unable to fetch live price history for {ticker} from {d.ACTIVE_DATASOURCE}')
 
         if end > 0:
             _logger.warning(f'{__name__}: "end" value ignored for live queries')
@@ -220,7 +220,7 @@ def get_history(ticker:str, days:int=-1, end:int=0, live:bool=False) -> pd.DataF
                     if not results.empty:
                         results = results[:-end] if end > 0 else results
                         results.drop(['id', 'security_id'], 1, inplace=True)
-                        _logger.info(f'{__name__}: Fetched {len(results)} days of price history for {ticker} ({end})')
+                        _logger.info(f'{__name__}: Fetched {len(results)} days of price history for {ticker} from {d.ACTIVE_DATASOURCE} ({end})')
             else:
                 _logger.warning(f'{__name__}: No history found for {ticker}')
 
