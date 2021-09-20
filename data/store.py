@@ -247,7 +247,7 @@ def get_company(ticker:str, live:bool=False, extra:bool=False) -> dict:
                     results['precords'] = 0
 
                     ratings = fetcher.get_ratings(ticker)
-                    results['rating'] = sum(ratings) / float(len(ratings)) if ratings else 3.0
+                    results['rating'] = sum(ratings) / float(len(ratings)) if len(ratings) > 0 else 3.0
                     results['exchange'] = '?'
                 except Exception as e:
                     results = {}

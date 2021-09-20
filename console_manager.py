@@ -58,10 +58,10 @@ class Interface:
             '4': 'Ticker Information (prev)',
             '5': 'List Exchange',
             '6': 'List Index',
-            '7': 'Update Ticker(s)',
-            '8': 'Populate Exchange',
-            '9': 'Populate Index',
-            '10': 'Check Integrity',
+            '7': 'Update History',
+            '8': 'Check Integrity',
+            '9': 'Populate Exchange',
+            '10': 'Populate Index',
             '11': 'Delete Exchange',
             '12': 'Delete Index',
             '13': 'Delete Ticker',
@@ -86,13 +86,13 @@ class Interface:
             elif selection == 6:
                 self.list_index()
             elif selection == 7:
-                self.update_ticker(self.ticker)
+                self.update_history(self.ticker)
             elif selection == 8:
-                self.populate_exchange()
-            elif selection == 9:
-                self.populate_index()
-            elif selection == 10:
                 self.check_integrity()
+            elif selection == 9:
+                self.populate_exchange()
+            elif selection == 10:
+                self.populate_index()
             elif selection == 11:
                 self.delete_exchange()
             elif selection == 12:
@@ -110,18 +110,15 @@ class Interface:
     def show_database_information(self):
         utils.print_message(f'Database Information ({d.ACTIVE_DB})')
         info = self.manager.get_database_info()
-        for i in info:
-            print(f'{i["table"]:>16}:\t{i["count"]} records')
+        [print(f'{i["table"]:>16}:\t{i["count"]} records') for i in info]
 
         utils.print_message('Exchange Information')
         info = self.manager.get_exchange_info()
-        for i in info:
-            print(f'{i["exchange"]:>16}:\t{i["count"]} symbols')
+        [print(f'{i["exchange"]:>16}:\t{i["count"]} symbols') for i in info]
 
         utils.print_message('Index Information')
         info = self.manager.get_index_info()
-        for i in info:
-            print(f'{i["index"]:>16}:\t{i["count"]} symbols')
+        [print(f'{i["index"]:>16}:\t{i["count"]} symbols') for i in info]
 
     def show_symbol_information(self, ticker:str ='', prompt:bool=False, live:bool=False):
         if not ticker:
@@ -290,7 +287,7 @@ class Interface:
             print()
             utils.print_message(f'Identified {self.manager.task_total} missing items. {self.manager.task_success} items filled')
 
-    def update_ticker(self, ticker:str ='', progressbar=True):
+    def update_history(self, ticker:str ='', progressbar=True):
         menu_items = {}
         for i, exchange in enumerate(self.exchanges):
             menu_items[f'{i+1}'] = f'{exchange}'
@@ -303,7 +300,7 @@ class Interface:
         else:
             select = 5
 
-        if select == 5:
+        if select == 5: # Update/add single ticker
             if not ticker:
                 ticker = input('Please enter symbol, or 0 to cancel: ').upper()
 
@@ -312,14 +309,13 @@ class Interface:
                     days = self.manager.update_history_ticker(ticker)
                     utils.print_message(f'Added {days} days pricing for {ticker}')
                     self.show_symbol_information(ticker=ticker)
-                elif store.get_ticker_exchange(ticker):
+                elif store.is_exchange(ticker):
                     exchange = store.get_ticker_exchange(ticker)
                     if self.manager.add_securities_to_exchange([ticker], exchange):
                         utils.print_message(f'Added {ticker} to {exchange}')
                         self.show_symbol_information(ticker=ticker)
                     else:
                         utils.print_error(f'Error adding {ticker} to {exchange}')
-
                 else:
                     utils.print_error('Invalid ticker. Try another ticker or select "0" to cancel')
         elif select > 0:

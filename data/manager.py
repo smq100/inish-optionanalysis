@@ -196,7 +196,29 @@ class Manager(Threaded):
             self.task_error = f'No index {index}'
             _logger.warning(f'{__name__}: No valid index {index}')
 
-    def update_history_ticker(self, ticker:str='') -> int:
+    def update_company(self, ticker:str) -> bool:
+        updated = False
+        if store.is_ticker(ticker):
+            with self.session.begin() as session:
+                t = session.query(models.Security).filter(models.Security.ticker==ticker).one()
+                company = store.get_company(ticker, live=True)
+                if company:
+                    cmp = session.query(models.Company).filter(models.Company.security_id==t.id).one()
+                    cmp.name = company['name']
+                    cmp.description = company['description']
+                    cmp.url = company['url']
+                    cmp.sector = company['sector']
+                    cmp.industry = company['industry']
+                    cmp.beta = company['beta']
+                    cmp.marketcap = company['marketcap']
+                    cmp.rating = company['rating']
+                    updated = True
+                else:
+                    _logger.warning(f'{__name__}: No company information for {ticker}')
+
+        return updated
+
+    def update_history_ticker(self, ticker:str) -> int:
         days = 0
         if store.is_ticker(ticker):
             days = self._append_latest_history(ticker)
@@ -204,7 +226,7 @@ class Manager(Threaded):
         return days
 
     @Threaded.threaded
-    def update_history_exchange(self, exchange:str='') -> None:
+    def update_history_exchange(self, exchange:str) -> None:
         tickers = store.get_tickers(exchange)
         self.task_total = len(tickers)
         running = self._concurrency
@@ -448,7 +470,7 @@ class Manager(Threaded):
 
         return incomplete
 
-    def _append_latest_history(self, ticker:str, update_company:bool=True) -> int:
+    def _append_latest_history(self, ticker:str) -> int:
         ticker = ticker.upper()
         today = date.today()
         days = 0
@@ -503,21 +525,6 @@ class Manager(Threaded):
                                         p.volume = price['volume']
 
                                         t.pricing += [p]
-
-                                if update_company:
-                                    company = store.get_company(ticker, live=True)
-                                    if company:
-                                        cmp = session.query(models.Company).filter(models.Company.security_id==t.id).one()
-                                        cmp.name = company['name']
-                                        cmp.description = company['description']
-                                        cmp.url = company['url']
-                                        cmp.sector = company['sector']
-                                        cmp.industry = company['industry']
-                                        cmp.beta = company['beta']
-                                        cmp.marketcap = company['marketcap']
-                                        cmp.rating = company['rating']
-                                    else:
-                                        _logger.error(f'{__name__}: No compant information for {ticker}')
 
                         _logger.info(f'{__name__}: Updated {days} days pricing for {ticker} to {date_cloud:%Y-%m-%d}')
                     else:

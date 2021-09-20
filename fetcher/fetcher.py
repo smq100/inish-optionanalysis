@@ -11,6 +11,7 @@ import quandl as qd
 import yfinance as yf
 import pandas as pd
 
+import fetcher as f
 import data as d
 from utils import utils as utils
 
@@ -76,6 +77,7 @@ def _get_history_yfianace(ticker:str, days:int=-1) -> pd.DataFrame:
                 try:
                     history = company.history(start=f'{start:%Y-%m-%d}', end=f'{end:%Y-%m-%d}')
                     days = history.shape[0]
+
                     if history is None:
                         _logger.warning(f'{__name__}: {d.ACTIVE_DATASOURCE} history for {ticker} is None')
                     elif history.empty:
@@ -84,9 +86,10 @@ def _get_history_yfianace(ticker:str, days:int=-1) -> pd.DataFrame:
                     else:
                         history.reset_index(inplace=True)
 
-                        # Lower case columns to make consistent with Postgress column names
+                        # Clean some things up and make colums consistent with Postgres column names
                         history.columns = history.columns.str.lower()
                         history.drop(['dividends', 'stock splits'], 1, inplace=True)
+                        history.sort_values('date', ascending=True, inplace=True)
 
                         _logger.info(f'{__name__}: Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
                     break
@@ -94,6 +97,8 @@ def _get_history_yfianace(ticker:str, days:int=-1) -> pd.DataFrame:
                     _logger.error(f'{__name__}: Retry {retry} to fetch history of {ticker} from {d.ACTIVE_DATASOURCE}: {e}')
                     history = None
                     time.sleep(1)
+    else:
+        _logger.warning(f'{__name__}: No company information available for {ticker}')
 
     return history
 
@@ -111,8 +116,8 @@ def _get_history_quandl(ticker:str, days:int=-1) -> pd.DataFrame:
                 history = qd.get_table(f'QUOTEMEDIA/PRICES', \
                     qopts={ 'columns': ['date', 'open', 'high', 'low', 'close', 'volume'] }, \
                     ticker=ticker, paginate=True, date={'gte':f'{start:%Y-%m-%d}'})
-
                 days = history.shape[0]
+
                 if history is None:
                     _logger.warning(f'{__name__}: {d.ACTIVE_DATASOURCE} history for {ticker} is None')
                 elif history.empty:
@@ -121,7 +126,7 @@ def _get_history_quandl(ticker:str, days:int=-1) -> pd.DataFrame:
                 else:
                     history.reset_index(inplace=True)
 
-                    # Clean some things up
+                    # Clean some things up and make colums consistent with Postgres column names
                     history.columns = history.columns.str.lower()
                     history.drop(['none'], 1, inplace=True)
                     history.sort_values('date', ascending=True, inplace=True)
@@ -164,66 +169,31 @@ def get_option_chain(ticker:str) -> dict:
 
     return chain
 
-def get_ratings(ticker:str):
-    _RATINGS = {
-        'strongsell': 5,
-        'sell': 5,
-        'weaksell': 4,
-        'belowaverage': 4,
-        'underperform': 4,
-        'marketunderperform': 4,
-        'sectorunderperform': 4,
-        'weakbuy': 4,
-        'reduce': 4,
-        'underweight': 4,
-        'hold': 3,
-        'neutral': 3,
-        'perform': 3,
-        'mixed': 3,
-        'inline': 3,
-        'sectorweight': 3,
-        'peerperform': 3,
-        'equalweight': 3,
-        'overperform': 2,
-        'outperform': 2,
-        'marketoutperform': 2,
-        'sectoroutperform': 2,
-        'outperformer': 2,
-        'positive': 2,
-        'overweight': 2,
-        'sectorperform': 2,
-        'marketperform': 2,
-        'speculativebuy': 2,
-        'accumulate': 2,
-        'add': 2,
-        'buy': 1,
-        'strongbuy': 1,
-    }
-
+def get_ratings(ticker:str) -> list[int]:
     ratings = pd.DataFrame()
+    results = []
     try:
         _logger.info(f'{__name__}: Fetching Yahoo rating information for {ticker}...')
         company = yf.Ticker(ticker)
         if company is not None:
             ratings = company.recommendations
-            if ratings is not None:
-                end = dt.date.today()
-                start = end - dt.timedelta(days=60)
-                ratings = ratings.loc[start:end]
-
-                # Normalize rating text
+            if ratings is not None and not ratings.empty:
+                # Clean up and normalize text
                 ratings.reset_index()
+                ratings.sort_values('Date', ascending=True, inplace=True)
+                ratings = ratings.tail(10)
                 ratings = ratings['To Grade'].replace(' ', '', regex=True)
                 ratings = ratings.replace('-', '', regex=True)
                 ratings = ratings.replace('_', '', regex=True)
-                ratings = ratings.str.lower().tolist()
+
+                results = ratings.str.lower().tolist()
 
                 # Log any unhandled ranking so we can add it to the ratings list
-                [_logger.warning(f'{__name__}: Unhandled rating: {r} for {ticker}') for r in ratings if not r in _RATINGS]
+                [_logger.warning(f'{__name__}: Unhandled rating: {r} for {ticker}') for r in results if not r in f.RATINGS]
 
                 # Use the known ratings and convert to their numeric values
-                ratings = [r for r in ratings if r in _RATINGS]
-                ratings = [_RATINGS[r] for r in ratings]
+                results = [r for r in results if r in f.RATINGS]
+                results = [f.RATINGS[r] for r in results]
             else:
                 _logger.info(f'{__name__}: No ratings for {ticker}')
         else:
@@ -231,7 +201,7 @@ def get_ratings(ticker:str):
     except Exception as e:
         _logger.error(f'{__name__}: Unable to get ratings for {ticker}: {str(e)}')
 
-    return ratings
+    return results
 
 def get_treasury_rate(ticker:str) -> float:
     df = pd.DataFrame()
