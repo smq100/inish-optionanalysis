@@ -66,10 +66,10 @@ def is_list(list:str) -> bool:
 
     return exist
 
-def get_tickers(list:str='', inactive:bool=False) -> list[str]:
+def get_tickers(list:str, inactive:bool=False) -> list[str]:
     tickers = []
 
-    if not list:
+    if list.lower() == 'all':
         with _session() as session:
             if inactive:
                 symbols = session.query(models.Security.ticker).order_by(models.Security.ticker).all()

@@ -31,8 +31,8 @@ class Interface:
                 exit = True
                 utils.print_error(f'Invalid ticker specifed: {update}')
 
-        self.exchanges:list[str] = [e['abbreviation'] for e in d.EXCHANGES]
-        self.indexes:list[str] = [i['abbreviation'] for i in d.INDEXES]
+        self.exchanges:list[str] = store.get_exchanges()
+        self.indexes:list[str] = store.get_indexes()
         self.manager:manager.Manager = manager.Manager()
         self.task:threading.Thread = None
 
@@ -217,16 +217,8 @@ class Interface:
         if select > 0:
             ind = self.indexes[select-1]
             found = self.manager.list_index(ind)
-
             if len(found) > 0:
-                print()
-                index = 0
-                for ticker in found:
-                    print(f'{ticker} ', end='')
-                    index += 1
-                    if index % 20 == 0: # Print 20 per line
-                        print()
-                print()
+                self._list_tickers(found)
             else:
                 utils.print_message(f'No tickers in index {ind}')
 
@@ -406,21 +398,43 @@ class Interface:
             utils.print_message('Database not reset')
 
     def check_integrity(self) -> None:
-        exchanges = store.get_exchanges()
         utils.print_message('Missing Tickers')
-        for e in exchanges:
-            count = len(self.manager.identify_missing_securities(e))
-            print(f'{e:>16}:\t{count}')
+        missing_tickers = {e: self.manager.identify_missing_securities(e) for e in self.exchanges}
+        [print(f'{e:>16}:\t{len(missing_tickers[e])}') for e in self.exchanges]
 
         utils.print_message('Incomplete Companies')
-        for e in exchanges:
-            missing = self.manager.identify_incomplete_companies(e)
-            print(f'{e:>16}:\t{len(missing)}')
+        incomplete_companies = {e: self.manager.identify_incomplete_companies(e) for e in self.exchanges}
+        [print(f'{e:>16}:\t{len(incomplete_companies[e])}') for e in self.exchanges]
 
         utils.print_message('Incomplete Pricing')
-        for e in exchanges:
-            count = len(self.manager.identify_incomplete_pricing(e))
-            print(f'{e:>16}:\t{count}')
+        incomplete_pricing = {e: self.manager.identify_incomplete_pricing(e) for e in self.exchanges}
+        [print(f'{e:>16}:\t{len(incomplete_pricing[e])}') for e in self.exchanges]
+
+        while True:
+            menu_items = {
+                '1': 'List Missing',
+                '2': 'List Incomplete Companies',
+                '3': 'List Incomplete Pricing',
+                '0': 'Exit',
+            }
+            op = utils.menu(menu_items, 'Select Operation', 0, 3)
+
+            if op > 0:
+                menu_items = {}
+                for i, exc in enumerate(self.exchanges):
+                    menu_items[f'{i+1}'] = f'{exc}'
+                menu_items['0'] = 'Cancel'
+                exchange = utils.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(self.exchanges))
+
+                if exchange > 0:
+                    if op == 1:
+                        self._list_tickers(missing_tickers[menu_items[str(exchange)]])
+                    elif op == 2:
+                        self._list_tickers(incomplete_companies[menu_items[str(exchange)]])
+                    elif op == 3:
+                        self._list_tickers(incomplete_pricing[menu_items[str(exchange)]])
+            else:
+                break
 
     def create_missing_tables(self) -> None:
         self.manager.create_exchanges()
@@ -428,6 +442,17 @@ class Interface:
 
     def list_invalid(self):
         utils.print_message(f'Invalid: {self.manager.invalid_tickers}')
+
+    def _list_tickers(self, tickers:list[str]) -> None:
+        if len(tickers) > 0:
+            index = 0
+            print()
+            for ticker in tickers:
+                print(f'{ticker} ', end='')
+                index += 1
+                if index % 20 == 0: # Print 20 per line
+                    print()
+            print()
 
     def _show_progress(self, prefix:str, suffix:str) -> None:
         while not self.manager.task_error: pass
