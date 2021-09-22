@@ -196,7 +196,7 @@ class Manager(Threaded):
             self.task_error = f'No index {index}'
             _logger.warning(f'{__name__}: No valid index {index}')
 
-    def update_company(self, ticker:str) -> bool:
+    def update_company_ticker(self, ticker:str) -> bool:
         updated = False
         if store.is_ticker(ticker):
             with self.session.begin() as session:
@@ -204,6 +204,7 @@ class Manager(Threaded):
                 company = store.get_company(ticker, live=True)
                 if company:
                     cmp = session.query(models.Company).filter(models.Company.security_id==t.id).one()
+
                     cmp.name = company['name']
                     cmp.description = company['description']
                     cmp.url = company['url']
@@ -212,11 +213,45 @@ class Manager(Threaded):
                     cmp.beta = company['beta']
                     cmp.marketcap = company['marketcap']
                     cmp.rating = company['rating']
+
                     updated = True
                 else:
                     _logger.warning(f'{__name__}: No company information for {ticker}')
 
         return updated
+
+    @Threaded.threaded
+    def update_companies_exchange(self, exchange:str) -> None:
+        if store.is_exchange(exchange):
+            tickers = self.identify_incomplete_companies(exchange)
+            self.task_total = len(tickers)
+            concurrency = self._concurrency if self.task_total > self._concurrency else 1
+            running = concurrency
+
+        def update(tickers):
+            nonlocal running
+            for sec in tickers:
+                self.task_ticker = sec
+                if self.update_company_ticker(sec):
+                    self.task_success += 1
+
+                self.task_completed += 1
+
+            running = running - 1
+            _logger.info(f'{__name__}: Thread completed. {running} threads remaining')
+
+        if self.task_total > 0:
+            self.task_error = 'None'
+
+            with futures.ThreadPoolExecutor(max_workers=concurrency) as executor:
+                if concurrency > 1:
+                    random.shuffle(tickers)
+                    lists = np.array_split(tickers, concurrency)
+                    self.task_futures = [executor.submit(update, list) for list in lists]
+                else:
+                    self.task_futures = [executor.submit(update, tickers)]
+
+        self.task_error = 'Done'
 
     def update_history_ticker(self, ticker:str) -> int:
         days = 0
@@ -231,7 +266,7 @@ class Manager(Threaded):
         self.task_total = len(tickers)
         running = self._concurrency
 
-        def _history(tickers):
+        def append(tickers):
             nonlocal running
             for sec in tickers:
                 self.task_ticker = sec
@@ -244,7 +279,6 @@ class Manager(Threaded):
                 if days > 0:
                     self.task_success += 1
 
-
             running = running - 1
             _logger.info(f'{__name__}: Thread completed. {running} threads remaining')
 
@@ -255,9 +289,9 @@ class Manager(Threaded):
                 if self._concurrency > 1:
                     random.shuffle(tickers)
                     lists = np.array_split(tickers, self._concurrency)
-                    self.task_futures = [executor.submit(_history, list) for list in lists]
+                    self.task_futures = [executor.submit(append, list) for list in lists]
                 else:
-                    self.task_futures = [executor.submit(_history, tickers)]
+                    self.task_futures = [executor.submit(append, tickers)]
 
         self.task_error = 'Done'
 

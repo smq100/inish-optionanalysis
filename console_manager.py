@@ -291,7 +291,7 @@ class Interface:
         menu_items['0'] = 'Cancel'
 
         if not ticker:
-            select = utils.menu(menu_items, 'Select table, or 0 to cancel: ', 0, len(self.exchanges)+2)
+            select = utils.menu(menu_items, 'Select option, or 0 to cancel: ', 0, len(self.exchanges)+2)
         else:
             select = 5
 
@@ -326,19 +326,44 @@ class Interface:
                 utils.print_message(f'{self.manager.task_total} {exc} '\
                     f'Ticker pricing refreshed in {self.manager.task_time:.0f} seconds')
 
-    def update_company(self, ticker:str='') -> None:
-        if not ticker:
-            ticker = input('Please enter symbol, or 0 to cancel: ').upper()
+    def update_company(self, ticker:str='', progressbar:bool=True) -> None:
+        menu_items = {}
+        for i, exchange in enumerate(self.exchanges):
+            menu_items[f'{i+1}'] = f'{exchange}'
+        menu_items[f'{i+2}'] = 'All'
+        menu_items[f'{i+3}'] = 'Ticker'
+        menu_items['0'] = 'Cancel'
 
-        if ticker != '0':
-            if store.is_ticker(ticker):
-                if self.manager.update_company(ticker):
-                    utils.print_message('Success')
-                    self.show_symbol_information(ticker)
+        if not ticker:
+            select = utils.menu(menu_items, 'Select option, or 0 to cancel: ', 0, len(self.exchanges)+2)
+        else:
+            select = 5
+
+        if select == 5: # Update/add single ticker
+            if not ticker:
+                ticker = input('Please enter symbol, or 0 to cancel: ').upper()
+
+            if ticker != '0':
+                if store.is_ticker(ticker):
+                    if self.manager.update_company_ticker(ticker):
+                        utils.print_message('Success')
+                        self.show_symbol_information(ticker)
+                    else:
+                        utils.print_error('Error')
                 else:
-                    utils.print_error('Error')
-            else:
-                utils.print_error('Invalid ticker. Try another ticker or select "0" to cancel')
+                    utils.print_error('Invalid ticker. Try another ticker or select "0" to cancel')
+        elif select > 0:
+            exc = self.exchanges[select-1] if select <= len(self.exchanges) else ''
+            self.task = threading.Thread(target=self.manager.update_companies_exchange, args=[exc])
+            self.task.start()
+
+            if progressbar:
+                print()
+                self._show_progress('Progress', 'Completed')
+
+            if self.manager.task_error == 'Done':
+                utils.print_message(f'{self.manager.task_total} {exc} '\
+                    f'Ticker pricing refreshed in {self.manager.task_time:.0f} seconds')
 
     def delete_exchange(self, progressbar:bool=True) -> None:
         menu_items = {}
