@@ -202,7 +202,7 @@ class Manager(Threaded):
             with self.session.begin() as session:
                 t = session.query(models.Security).filter(models.Security.ticker==ticker).one()
                 company = store.get_company(ticker, live=True)
-                if company:
+                if company and company['name'] != store.UNAVAILABLE:
                     cmp = session.query(models.Company).filter(models.Company.security_id==t.id).one()
 
                     cmp.name = company['name']
@@ -215,14 +215,17 @@ class Manager(Threaded):
                     cmp.rating = company['rating']
 
                     updated = True
+
+                    _logger.info(f'{__name__}: Updated company information for {ticker}')
                 else:
-                    _logger.warning(f'{__name__}: No company information for {ticker}')
+                    _logger.info(f'{__name__}: No company information for {ticker}')
 
         return updated
 
     @Threaded.threaded
     def update_companies_exchange(self, exchange:str) -> None:
         if store.is_exchange(exchange):
+            self.task_error = 'None'
             tickers = self.identify_incomplete_companies(exchange)
             self.task_total = len(tickers)
             concurrency = self._concurrency if self.task_total > self._concurrency else 1
@@ -241,8 +244,6 @@ class Manager(Threaded):
             _logger.info(f'{__name__}: Thread completed. {running} threads remaining')
 
         if self.task_total > 0:
-            self.task_error = 'None'
-
             with futures.ThreadPoolExecutor(max_workers=concurrency) as executor:
                 if concurrency > 1:
                     random.shuffle(tickers)
@@ -254,9 +255,70 @@ class Manager(Threaded):
         self.task_error = 'Done'
 
     def update_history_ticker(self, ticker:str) -> int:
+        ticker = ticker.upper()
         days = 0
+
         if store.is_ticker(ticker):
-            days = self._append_latest_history(ticker)
+            today = date.today()
+
+            history = store.get_history(ticker)
+            if history.empty:
+                if self._add_history_to_security(ticker):
+                    _logger.info(f'{__name__}: Added full price history for {ticker}')
+                    if self._add_company_to_security(ticker):
+                        _logger.info(f'{__name__}: Added company information for {ticker}')
+                else:
+                    _logger.warning(f'{__name__}: No price history for {ticker}')
+            else:
+                date_db = history.iloc[-1]['date']
+                if date_db is not None:
+                    _logger.info(f'{__name__}: Last {ticker} price in database: {date_db:%Y-%m-%d}')
+                else:
+                    date_db = today - date(2000,1,1)
+                    _logger.info(f'{__name__}: No price history for {ticker} in database')
+
+                delta = (today - date_db).days
+                if delta > 0:
+                    history = store.get_history(ticker, 365, live=True)
+                    if history is None:
+                        _logger.info(f'{__name__}: No pricing dataframe for {ticker}')
+                    elif history.empty:
+                        _logger.info(f'{__name__}: Empty pricing dataframe for {ticker}')
+                    else:
+                        date_cloud = history.iloc[-1]['date'].to_pydatetime().date()
+                        _logger.info(f'{__name__}: Last {ticker} price in cloud: {date_cloud:%Y-%m-%d}')
+
+                        delta = (date_cloud - date_db).days
+                        if delta > 0:
+                            days = delta
+                            history = history[-delta:]
+                            history.reset_index(inplace=True)
+
+                            with self.session.begin() as session:
+                                t = session.query(models.Security).filter(models.Security.ticker==ticker).one()
+
+                                for _, price in history.iterrows():
+                                    if price['date']:
+                                        pri = session.query(models.Price.date).filter(and_(models.Price.security_id==t.id,
+                                            models.Price.date==price['date'])).one_or_none()
+                                        if pri is None:
+                                            p = models.Price()
+                                            p.date = price['date']
+                                            p.open = price['open']
+                                            p.high = price['high']
+                                            p.low = price['low']
+                                            p.close = price['close']
+                                            p.volume = price['volume']
+
+                                            t.pricing += [p]
+
+                            _logger.info(f'{__name__}: Updated {days} days pricing for {ticker} to {date_cloud:%Y-%m-%d}')
+                        else:
+                            _logger.info(f'{__name__}: {ticker} already up to date with cloud data')
+                else:
+                    _logger.info(f'{__name__}: {ticker} already up to date')
+        else:
+            _logger.info(f'{__name__}: Unknown ticker {ticker}')
 
         return days
 
@@ -271,7 +333,7 @@ class Manager(Threaded):
             for sec in tickers:
                 self.task_ticker = sec
                 try:
-                    days = self._append_latest_history(sec)
+                    days = self.update_history_ticker(sec)
                 except IntegrityError as e:
                     _logger.warning(f'{__name__}: UniqueViolation exception occurred for {sec}: {e}')
 
@@ -503,70 +565,6 @@ class Manager(Threaded):
             _logger.warning(f'{__name__}: {exchange} is not valid exchange')
 
         return incomplete
-
-    def _append_latest_history(self, ticker:str) -> int:
-        ticker = ticker.upper()
-        today = date.today()
-        days = 0
-
-        history = store.get_history(ticker)
-        if history.empty:
-            if self._add_history_to_security(ticker):
-                _logger.info(f'{__name__}: Added full price history for {ticker}')
-                if self._add_company_to_security(ticker):
-                    _logger.info(f'{__name__}: Added company information for {ticker}')
-            else:
-                _logger.warning(f'{__name__}: No price history for {ticker}')
-        else:
-            date_db = history.iloc[-1]['date']
-            if date_db is not None:
-                _logger.info(f'{__name__}: Last {ticker} price in database: {date_db:%Y-%m-%d}')
-            else:
-                date_db = today - date(2000,1,1)
-                _logger.info(f'{__name__}: No price history for {ticker} in database')
-
-            delta = (today - date_db).days
-            if delta > 0:
-                history = store.get_history(ticker, 365, live=True)
-                if history is None:
-                    _logger.info(f'{__name__}: No pricing dataframe for {ticker}')
-                elif history.empty:
-                    _logger.info(f'{__name__}: Empty pricing dataframe for {ticker}')
-                else:
-                    date_cloud = history.iloc[-1]['date'].to_pydatetime().date()
-                    _logger.info(f'{__name__}: Last {ticker} price in cloud: {date_cloud:%Y-%m-%d}')
-
-                    delta = (date_cloud - date_db).days
-                    if delta > 0:
-                        days = delta
-                        history = history[-delta:]
-                        history.reset_index(inplace=True)
-
-                        with self.session.begin() as session:
-                            t = session.query(models.Security).filter(models.Security.ticker==ticker).one()
-
-                            for _, price in history.iterrows():
-                                if price['date']:
-                                    pri = session.query(models.Price.date).filter(and_(models.Price.security_id==t.id,
-                                        models.Price.date==price['date'])).one_or_none()
-                                    if pri is None:
-                                        p = models.Price()
-                                        p.date = price['date']
-                                        p.open = price['open']
-                                        p.high = price['high']
-                                        p.low = price['low']
-                                        p.close = price['close']
-                                        p.volume = price['volume']
-
-                                        t.pricing += [p]
-
-                        _logger.info(f'{__name__}: Updated {days} days pricing for {ticker} to {date_cloud:%Y-%m-%d}')
-                    else:
-                        _logger.info(f'{__name__}: {ticker} already up to date with cloud data')
-            else:
-                _logger.info(f'{__name__}: {ticker} already up to date')
-
-        return days
 
     def _add_company_to_security(self, ticker:str, company:dict=None) -> bool:
         cmp = None

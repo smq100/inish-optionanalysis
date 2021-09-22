@@ -465,9 +465,6 @@ class Interface:
         self.manager.create_exchanges()
         self.manager.create_indexes()
 
-    def list_invalid(self):
-        utils.print_message(f'Invalid: {self.manager.invalid_tickers}')
-
     def _list_tickers(self, tickers:list[str]) -> None:
         if len(tickers) > 0:
             index = 0

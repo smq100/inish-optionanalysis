@@ -161,7 +161,7 @@ def progress_bar(iteration, total:int, prefix:str='', suffix:str='', ticker:str=
         back = length - position
         bar = ('-' * front) + fill + ('-' * back)
 
-        print(f'\rWorking |{bar}| {suffix}', end='\r')
+        print(f'\rWorking |{bar}|', end='\r')
 
 def mround(n, precision:float) -> float:
     val = float(round(n / precision) * precision)

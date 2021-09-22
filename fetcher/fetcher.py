@@ -39,8 +39,14 @@ def validate_ticker(ticker:str) -> bool:
 
     return valid
 
+_elapsed = 0.0
 def get_company_live(ticker:str) -> pd.DataFrame:
+    global _elapsed
     company = None
+
+    # Throttle requests to help avoid being cut off by Yahoo
+    while time.perf_counter() - _elapsed < THROTTLE: time.sleep(THROTTLE)
+    _elapsed = time.perf_counter()
 
     try:
         _logger.info(f'{__name__}: Fetching live company information for {ticker} from Yahoo...')
@@ -54,14 +60,8 @@ def get_company_live(ticker:str) -> pd.DataFrame:
 
     return company
 
-_elapsed = 0.0
 def _get_history_yfianace(ticker:str, days:int=-1) -> pd.DataFrame:
-    global _elapsed
     history = None
-
-    # Throttle requests to help avoid being cut off by Yahoo
-    while time.perf_counter() - _elapsed < THROTTLE: time.sleep(THROTTLE)
-    _elapsed = time.perf_counter()
 
     company = get_company_live(ticker)
     if company is not None:
