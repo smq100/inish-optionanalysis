@@ -303,7 +303,10 @@ class Interface:
             if top > self.screener.task_success:
                 top = self.screener.task_success
 
-            utils.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen_base})')
+            if ticker:
+                utils.print_message(f'Screener Results for {ticker} ({self.screen_base})')
+            else:
+                utils.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen_base})')
 
             index = 1
             for result in self.results:

@@ -10,4 +10,4 @@ Developed and tested with Python 3.9.0.
 * Option Strategy Analysis
 * Security Screening and Scoring
 * Technical Analysis with sophisticated support & resistance analysis
-* Local pricing database support
+* Local pricing history database support and data manager

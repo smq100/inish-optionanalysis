@@ -306,7 +306,7 @@ class Interface:
                     self.show_symbol_information(ticker=ticker)
                 elif store.is_exchange(ticker):
                     exchange = store.get_ticker_exchange(ticker)
-                    if self.manager.add_securities_to_exchange([ticker], exchange):
+                    if self.manager.add_security_to_exchange([ticker], exchange):
                         utils.print_message(f'Added {ticker} to {exchange}')
                         self.show_symbol_information(ticker=ticker)
                     else:

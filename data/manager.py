@@ -57,31 +57,42 @@ class Manager(Threaded):
     @Threaded.threaded
     def populate_exchange(self, exchange:str) -> None:
         exchange = exchange.upper()
-        self.invalid_tickers = []
-        self.retry = 0
 
-        with self.session() as session:
-            session.query(models.Exchange.abbreviation).filter(models.Exchange.abbreviation==exchange).one()
+        def add(tickers):
+            nonlocal running
+            for ticker in tickers:
+                self.task_ticker = ticker
+                if self.add_security_to_exchange(ticker):
+                    self.task_success += 1
 
-        tickers = list(store.get_exchange_tickers_master(exchange))
+                self.task_completed += 1
 
-        if len(tickers) > 10:
-            self.task_total = len(tickers)
-            self.task_error = 'None'
+            running -= 1
+            _logger.info(f'{__name__}: Thread completed. {running} threads remaining')
 
-            with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
-                if self._concurrency > 1:
-                    random.shuffle(tickers)
-                    lists = np.array_split(tickers, self._concurrency)
-                    self.task_futures = [executor.submit(self.add_securities_to_exchange, list, exchange) for list in lists]
-                else:
-                    self.task_futures = [executor.submit(self.add_securities_to_exchange, tickers, exchange)]
-        else:
-            _logger.warning(f'{__name__}: No symbols for {exchange}')
+        if store.is_exchange(exchange):
+            tickers = list(store.get_exchange_tickers_master(exchange))
+            self.invalid_tickers = []
+            self.retry = 0
+            running = self._concurrency
+
+            if len(tickers) > 10:
+                self.task_total = len(tickers)
+                self.task_error = 'None'
+
+                with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
+                    if self._concurrency > 1:
+                        random.shuffle(tickers)
+                        lists = np.array_split(tickers, self._concurrency)
+                        self.task_futures = [executor.submit(add, list, exchange) for list in lists]
+                    else:
+                        self.task_futures = [executor.submit(add, tickers, exchange)]
+            else:
+                _logger.warning(f'{__name__}: No symbols for {exchange}')
 
         self.task_error = 'Done'
 
-    def add_securities_to_exchange(self, tickers:list[str], exchange:str) -> bool:
+    def add_security_to_exchange(self, ticker:str, exchange:str) -> bool:
         exchange = exchange.upper()
         exit = False
         process = False
@@ -92,70 +103,65 @@ class Manager(Threaded):
             with self.session() as session:
                 exc = session.query(models.Exchange).filter(models.Exchange.abbreviation==exchange).one()
 
-                for ticker in tickers:
-                    sec = session.query(models.Security).filter(models.Security.ticker==ticker).one_or_none()
-                    if sec is None:
-                        process = False
-                        company = store.get_company(ticker, live=True)
-                        if company:
-                            history = store.get_history(ticker, live=True)
-                            if history is not None:
-                                process = True
-                            else:
-                                self.invalid_tickers += [ticker]
-                                _logger.warning(f'{__name__}: History information for {ticker} not available. Not added to database')
+                sec = session.query(models.Security).filter(models.Security.ticker==ticker).one_or_none()
+                if sec is None:
+                    process = False
+                    company = store.get_company(ticker, live=True)
+                    if company:
+                        history = store.get_history(ticker, live=True)
+                        if history is not None:
+                            process = True
                         else:
                             self.invalid_tickers += [ticker]
-                            _logger.warning(f'{__name__}: Company information for {ticker} not available. Not added to database')
-
-                        if process:
-                            try:
-                                self.task_ticker = ticker
-                                exc.securities += [models.Security(ticker)]
-                                session.commit()
-
-                                _logger.info(f'{__name__}: Added {ticker} to exchange {exchange}')
-
-                                self._add_history_to_security(ticker, history=history)
-                                self._add_company_to_security(ticker, company=company)
-                            except (ValueError, KeyError, IndexError) as e:
-                                self.invalid_tickers += [ticker]
-                                _logger.warning(f'{__name__}: Company info invalid for {ticker}: {str(e)}')
-                            except HTTPError as e:
-                                self.retry += 1
-                                _logger.warning(f'{__name__}: HTTP Error for {ticker}. Retry: {self.retry}: {str(e)}')
-                                if self.retry > retries:
-                                    self.invalid_tickers += [ticker]
-                                    exit = True
-                                    _logger.error(f'{__name__}: HTTP Error for {ticker}. Too many retries: {str(e)}')
-                                else:
-                                    time.sleep(5.0)
-                            except RuntimeError as e:
-                                self.retry += 1
-                                _logger.warning(f'{__name__}: Runtime Error for {ticker}. Retrying... {self.retry}: {str(e)}')
-                                if self.retry > retries:
-                                    self.invalid_tickers += [ticker]
-                                    exit = True
-                                    _logger.error(f'{__name__}: Runtime Error for {ticker}. Too many retries: {str(e)}')
-                            except Exception as e:
-                                self.retry += 1
-                                _logger.warning(f'{__name__}: Error for {ticker}. Retrying... {self.retry}: {str(e)}')
-                                if self.retry > retries:
-                                    self.invalid_tickers += [ticker]
-                                    exit = True
-                                    _logger.error(f'{__name__}: Error for {ticker}. Too many retries: {str(e)}')
-                            else:
-                                self.retry = 0
-                                self.task_success += 1
-                                success = True
+                            _logger.warning(f'{__name__}: History information for {ticker} not available. Not added to database')
                     else:
-                        _logger.info(f'{__name__}: {ticker} already exists')
+                        self.invalid_tickers += [ticker]
+                        _logger.warning(f'{__name__}: Company information for {ticker} not available. Not added to database')
 
-                    self.task_completed += 1
+                    if process:
+                        try:
+                            self.task_ticker = ticker
+                            exc.securities += [models.Security(ticker)]
+                            session.commit()
 
-                    if exit:
-                        _logger.error(f'{__name__}: Error adding ticker {ticker} to exchange')
-                        break
+                            _logger.info(f'{__name__}: Added {ticker} to exchange {exchange}')
+
+                            self._add_history_to_security(ticker, history=history)
+                            self._add_company_to_security(ticker, company=company)
+                        except (ValueError, KeyError, IndexError) as e:
+                            self.invalid_tickers += [ticker]
+                            _logger.warning(f'{__name__}: Company info invalid for {ticker}: {str(e)}')
+                        except HTTPError as e:
+                            self.retry += 1
+                            _logger.warning(f'{__name__}: HTTP Error for {ticker}. Retry: {self.retry}: {str(e)}')
+                            if self.retry > retries:
+                                self.invalid_tickers += [ticker]
+                                exit = True
+                                _logger.error(f'{__name__}: HTTP Error for {ticker}. Too many retries: {str(e)}')
+                            else:
+                                time.sleep(5.0)
+                        except RuntimeError as e:
+                            self.retry += 1
+                            _logger.warning(f'{__name__}: Runtime Error for {ticker}. Retrying... {self.retry}: {str(e)}')
+                            if self.retry > retries:
+                                self.invalid_tickers += [ticker]
+                                exit = True
+                                _logger.error(f'{__name__}: Runtime Error for {ticker}. Too many retries: {str(e)}')
+                        except Exception as e:
+                            self.retry += 1
+                            _logger.warning(f'{__name__}: Error for {ticker}. Retrying... {self.retry}: {str(e)}')
+                            if self.retry > retries:
+                                self.invalid_tickers += [ticker]
+                                exit = True
+                                _logger.error(f'{__name__}: Error for {ticker}. Too many retries: {str(e)}')
+                        else:
+                            self.retry = 0
+                            success = True
+                else:
+                    _logger.info(f'{__name__}: {ticker} already exists')
+
+                if exit:
+                    _logger.error(f'{__name__}: Error adding ticker {ticker} to exchange')
         else:
             _logger.error(f'{__name__}: Exchange {exchange} does not exist')
 
@@ -203,16 +209,15 @@ class Manager(Threaded):
                 t = session.query(models.Security).filter(models.Security.ticker==ticker).one()
                 company = store.get_company(ticker, live=True)
                 if company and company['name'] != store.UNAVAILABLE:
-                    cmp = session.query(models.Company).filter(models.Company.security_id==t.id).one()
-
-                    cmp.name = company['name']
-                    cmp.description = company['description']
-                    cmp.url = company['url']
-                    cmp.sector = company['sector']
-                    cmp.industry = company['industry']
-                    cmp.beta = company['beta']
-                    cmp.marketcap = company['marketcap']
-                    cmp.rating = company['rating']
+                    c = session.query(models.Company).filter(models.Company.security_id==t.id).one()
+                    c.name = company['name']
+                    c.description = company['description']
+                    c.url = company['url']
+                    c.sector = company['sector']
+                    c.industry = company['industry']
+                    c.beta = company['beta']
+                    c.marketcap = company['marketcap']
+                    c.rating = company['rating']
 
                     updated = True
 
@@ -224,12 +229,7 @@ class Manager(Threaded):
 
     @Threaded.threaded
     def update_companies_exchange(self, exchange:str) -> None:
-        if store.is_exchange(exchange):
-            self.task_error = 'None'
-            tickers = self.identify_incomplete_companies(exchange)
-            self.task_total = len(tickers)
-            concurrency = self._concurrency if self.task_total > self._concurrency else 1
-            running = concurrency
+        exchange = exchange.upper()
 
         def update(tickers):
             nonlocal running
@@ -240,17 +240,24 @@ class Manager(Threaded):
 
                 self.task_completed += 1
 
-            running = running - 1
+            running -= 1
             _logger.info(f'{__name__}: Thread completed. {running} threads remaining')
 
-        if self.task_total > 0:
-            with futures.ThreadPoolExecutor(max_workers=concurrency) as executor:
-                if concurrency > 1:
-                    random.shuffle(tickers)
-                    lists = np.array_split(tickers, concurrency)
-                    self.task_futures = [executor.submit(update, list) for list in lists]
-                else:
-                    self.task_futures = [executor.submit(update, tickers)]
+        if store.is_exchange(exchange):
+            self.task_error = 'None'
+            tickers = self.identify_incomplete_companies(exchange)
+            self.task_total = len(tickers)
+            concurrency = self._concurrency if self.task_total > self._concurrency else 1
+            running = concurrency
+
+            if self.task_total > 0:
+                with futures.ThreadPoolExecutor(max_workers=concurrency) as executor:
+                    if concurrency > 1:
+                        random.shuffle(tickers)
+                        lists = np.array_split(tickers, concurrency)
+                        self.task_futures = [executor.submit(update, list) for list in lists]
+                    else:
+                        self.task_futures = [executor.submit(update, tickers)]
 
         self.task_error = 'Done'
 
