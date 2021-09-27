@@ -36,8 +36,7 @@ class Company:
         return f'<Company ({self.ticker})>'
 
     def __str__(self):
-        output = f'{self.ticker}'
-        return output
+        return f'{self.ticker}'
 
     def get_last_price(self) -> float:
         value = -1.0

@@ -237,7 +237,7 @@ class Interface:
 
             if progressbar:
                 print()
-                self._show_progress('Progress', 'Completed')
+                self._show_progress('Progress', '')
 
             if self.manager.task_error == 'Done':
                 utils.print_message(f'{self.manager.task_success} {exc} '\
@@ -256,7 +256,7 @@ class Interface:
 
             if progressbar:
                 print()
-                self._show_progress('Progress', 'Completed')
+                self._show_progress('Progress', '')
 
             if self.manager.task_error == 'Done':
                 utils.print_message(f'{self.manager.task_success} {self.indexes[select-1]} Symbols populated in {self.manager.task_time:.0f} seconds')
@@ -277,7 +277,7 @@ class Interface:
 
             if progressbar:
                 print()
-                self._show_progress('Progress', 'Completed')
+                self._show_progress('Progress', '')
 
             print()
             utils.print_message(f'Identified {self.manager.task_total} missing items. {self.manager.task_success} items filled')
@@ -320,7 +320,7 @@ class Interface:
 
             if progressbar:
                 print()
-                self._show_progress('Progress', 'Completed')
+                self._show_progress('Progress', '')
 
             if self.manager.task_error == 'Done':
                 utils.print_message(f'{self.manager.task_total} {exc} '\
@@ -359,11 +359,11 @@ class Interface:
 
             if progressbar:
                 print()
-                self._show_progress('Progress', 'Completed')
+                self._show_progress('Progress', '')
 
             if self.manager.task_error == 'Done':
                 utils.print_message(f'{self.manager.task_total} {exc} '\
-                    f'Ticker pricing refreshed in {self.manager.task_time:.0f} seconds')
+                    f'Company infomation refreshed in {self.manager.task_time:.0f} seconds')
 
     def delete_exchange(self, progressbar:bool=True) -> None:
         menu_items = {}

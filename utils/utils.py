@@ -1,3 +1,4 @@
+import time
 import logging
 from logging import Logger
 
@@ -117,31 +118,46 @@ def input_text(message:str) -> str:
 completed = 0
 position = 0
 forward = True
+start = 0.0
 def progress_bar(iteration, total:int, prefix:str='', suffix:str='', ticker:str='',
     length:int=100, fill:str='█', reset:bool=False, success:int=-1, tasks:int=0) -> None:
     global completed
     global position
     global forward
+    global start
 
     if reset:
         completed = 0
         position = 0
         forward = True
+        start = time.perf_counter()
 
     if total > 0:
         filled = int(length * iteration // total)
         bar = fill * filled + '-' * (length - filled)
 
+        elapsed = time.perf_counter() - start
+        if completed > 5:
+            per = elapsed / completed
+            remaining = per * (total - iteration)
+            hours = remaining // 3660
+            minutes = hours % 60
+            seconds = remaining % 60
+        else:
+            hours = 0.0
+            minutes = 0.0
+            seconds = 0.0
+
         if iteration == completed:
-            pass
+            pass # Nothing new to draw
         elif success < 0:
             print(f'\r{prefix} |{bar}| {iteration}/{total} {suffix} {ticker}     ', end='\r')
         else:
-            print(f'\r{prefix} |{bar}| {iteration}/{total} ({success}) [{tasks}] {suffix} {ticker}     ', end='\r')
+            print(f'\r{prefix} |{bar}| {success}/{iteration}/{total} [{tasks}] {ticker:<5} {hours:02.0f}:{minutes:02.0f}:{seconds:02.0f} {suffix}     ', end='\r')
 
         completed = iteration
 
-        if iteration == total:
+        if completed == total:
             print()
     else: # Use oscillating marker when the total is not known
         if forward:

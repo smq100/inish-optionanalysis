@@ -202,13 +202,13 @@ class Manager(Threaded):
             self.task_error = f'No index {index}'
             _logger.warning(f'{__name__}: No valid index {index}')
 
-    def update_company_ticker(self, ticker:str) -> bool:
+    def update_company_ticker(self, ticker:str, replace=False) -> bool:
         updated = False
         if store.is_ticker(ticker):
             with self.session.begin() as session:
                 t = session.query(models.Security).filter(models.Security.ticker==ticker).one()
                 company = store.get_company(ticker, live=True)
-                if company and company['name'] != store.UNAVAILABLE:
+                if company and ((company['name'] != store.UNAVAILABLE) or replace):
                     c = session.query(models.Company).filter(models.Company.security_id==t.id).one()
                     c.name = company['name']
                     c.description = company['description']
@@ -228,14 +228,14 @@ class Manager(Threaded):
         return updated
 
     @Threaded.threaded
-    def update_companies_exchange(self, exchange:str) -> None:
+    def update_companies_exchange(self, exchange:str, replace=False) -> None:
         exchange = exchange.upper()
 
         def update(tickers):
             nonlocal running
             for sec in tickers:
                 self.task_ticker = sec
-                if self.update_company_ticker(sec):
+                if self.update_company_ticker(sec, replace=replace):
                     self.task_success += 1
 
                 self.task_completed += 1
@@ -245,7 +245,11 @@ class Manager(Threaded):
 
         if store.is_exchange(exchange):
             self.task_error = 'None'
-            tickers = self.identify_incomplete_companies(exchange)
+            if replace:
+                tickers = store.get_tickers(exchange)
+            else:
+                tickers = self.identify_incomplete_companies(exchange)
+
             self.task_total = len(tickers)
             concurrency = self._concurrency if self.task_total > self._concurrency else 1
             running = concurrency

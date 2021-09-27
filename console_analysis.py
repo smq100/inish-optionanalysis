@@ -65,7 +65,7 @@ class Interface:
 
                 if progressbar:
                     print()
-                    self._show_progress('Progress', 'Completed')
+                    self._show_progress('Progress', '')
 
                 utils.print_message(f'Coorelation Among {self.list} Symbols')
                 print(self.coorelate.task_object)

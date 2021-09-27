@@ -253,7 +253,7 @@ class Interface:
                 self.task = threading.Thread(target=self.screener.run_script)
                 self.task.start()
 
-                self.show_progress('Progress', 'Completed')
+                self.show_progress('Progress', '')
 
                 # Wait for thread to finish
                 while self.task.is_alive(): pass

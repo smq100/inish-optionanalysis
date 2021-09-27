@@ -174,7 +174,7 @@ class Screener(Threaded):
             success = []
             score = []
             result = []
-            self.task_ticker = ticker
+            self.task_ticker = str(ticker)
             for filter in self.scripts:
                 try:
                     interpreter = Interpreter(ticker, filter)
