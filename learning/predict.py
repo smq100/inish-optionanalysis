@@ -7,7 +7,7 @@ from tensorflow.keras.models import Sequential
 
 from base import Threaded
 from data import store as store
-from utils import utils as utils
+from utils import utils
 
 _models_dir = './learning/models'
 _days_train = 5000
@@ -16,7 +16,7 @@ _days_test = 1000
 _logger = utils.get_logger()
 
 class Prediction(Threaded):
-    def __init__(self, ticker:str, future:int=0):
+    def __init__(self, ticker:str, future:int=30):
         if store.is_ticker(ticker):
             self.ticker = ticker.upper()
             self.actual_prices = []
@@ -40,8 +40,6 @@ class Prediction(Threaded):
         self._data['returns'] = self._data.close.pct_change()
         self._data['log_returns'] = np.log(1 + self._data['returns'])
 
-        # _logger.debug(f'\r{self._data.tail(15)}')
-
         self._scaler = MinMaxScaler(feature_range=(0,1))
         scaled_data = self._scaler.fit_transform(self._data['close'].values.reshape(-1,1))
 
@@ -52,7 +50,7 @@ class Prediction(Threaded):
         self._y_train = [scaled_data[x+self.future_days, 0] for x in range(self.prediction_days, len(scaled_data)-self.future_days)]
         self._y_train = np.array(self._y_train)
 
-    def create_model(self, epochs=5, save=False):
+    def model(self, epochs=5, save=False):
         units = 50
         dropout = 0.20
         batch_size = 32
@@ -110,6 +108,6 @@ if __name__ == '__main__':
 
     predict = Prediction('MSFT')
     predict.prepare()
-    predict.create_model()
+    predict.model()
     predict.test()
     predict.plot()

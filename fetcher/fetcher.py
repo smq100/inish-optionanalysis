@@ -6,6 +6,7 @@ import os
 import time
 import datetime as dt
 import configparser
+import socket
 
 import quandl as qd
 import yfinance as yf
@@ -13,7 +14,7 @@ import pandas as pd
 
 import fetcher as f
 import data as d
-from utils import utils as utils
+from utils import utils
 
 _logger = utils.get_logger()
 
@@ -26,7 +27,21 @@ qd.ApiConfig.api_key = config['DEFAULT']['APIKEY']
 
 THROTTLE = 0.050 # Min secs between calls to Yahoo
 
+def is_connected(hostname:str='google.com') -> bool:
+    try:
+        host = socket.gethostbyname(hostname)
+        s = socket.create_connection((host, 80), 2)
+        s.close()
+    except:
+        return False
+    else:
+        return True
+
+_connected = is_connected()
+
 def validate_ticker(ticker:str) -> bool:
+    if not _connected: raise ConnectionError('No internet connection')
+
     valid = False
 
     # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
@@ -41,6 +56,8 @@ def validate_ticker(ticker:str) -> bool:
 
 _elapsed = 0.0
 def get_company_live(ticker:str) -> pd.DataFrame:
+    if not _connected: raise ConnectionError('No internet connection')
+
     global _elapsed
     company = None
 
@@ -61,6 +78,8 @@ def get_company_live(ticker:str) -> pd.DataFrame:
     return company
 
 def _get_history_yfianace(ticker:str, days:int=-1) -> pd.DataFrame:
+    if not _connected: raise ConnectionError('No internet connection')
+
     history = None
 
     company = get_company_live(ticker)
@@ -141,6 +160,8 @@ def _get_history_quandl(ticker:str, days:int=-1) -> pd.DataFrame:
     return history
 
 def get_history_live(ticker:str, days:int=-1) -> pd.DataFrame:
+    if not _connected: raise ConnectionError('No internet connection')
+
     history = pd.DataFrame()
 
     _logger.info(f'{__name__}: Fetching {ticker} history from {d.ACTIVE_DATASOURCE}...')
@@ -155,14 +176,17 @@ def get_history_live(ticker:str, days:int=-1) -> pd.DataFrame:
     return history
 
 def get_option_expiry(ticker:str) -> dict:
+    if not _connected: raise ConnectionError('No internet connection')
+
     company = get_company_live(ticker)
     value = company.options
 
     return value
 
 def get_option_chain(ticker:str) -> dict:
-    chain = {}
+    if not _connected: raise ConnectionError('No internet connection')
 
+    chain = {}
     company = get_company_live(ticker)
     if company is not None:
         chain = company.option_chain
@@ -170,6 +194,8 @@ def get_option_chain(ticker:str) -> dict:
     return chain
 
 def get_ratings(ticker:str) -> list[int]:
+    if not _connected: raise ConnectionError('No internet connection')
+
     ratings = pd.DataFrame()
     results = []
     try:
@@ -204,6 +230,8 @@ def get_ratings(ticker:str) -> list[int]:
     return results
 
 def get_treasury_rate(ticker:str) -> float:
+    if not _connected: raise ConnectionError('No internet connection')
+
     df = pd.DataFrame()
     df = qd.get(f'FRED/{ticker}')
     if df.empty:

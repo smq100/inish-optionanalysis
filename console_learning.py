@@ -2,16 +2,19 @@ import logging
 
 from learning.predict import Prediction
 from data import store as store
-from utils import utils as utils
+from utils import utils
 
 
 _logger = utils.get_logger(logging.WARNING, logfile='')
 
 class Interface:
-    def __init__(self, ticker='', days=0, exit=False):
+    def __init__(self, ticker='', days=30, exit=False):
         self.ticker = ticker.upper()
         self.days = days
         self.exit = exit
+
+        if days <= 0:
+            raise ValueError('Invalid number of days')
 
         if not ticker:
             self.main_menu()
@@ -27,6 +30,9 @@ class Interface:
                 '2': 'Run Pricing Prediction',
                 '0': 'Exit'
             }
+
+            if self.ticker:
+                menu_items['1'] = f'Specify ticker ({self.ticker})'
 
             if selection == 0:
                 selection = utils.menu(menu_items, 'Select Operation', 0, 2)
@@ -47,7 +53,7 @@ class Interface:
         if self.ticker:
             predict = Prediction(self.ticker, future=self.days)
             predict.prepare()
-            predict.create_model()
+            predict.model()
 
             utils.print_message(f'Metrics for {self.ticker}')
             print(f'Accuracy: {predict.accuracy:.3e}')
@@ -79,7 +85,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Learning')
     parser.add_argument('-t', '--ticker', help='Run using ticker')
-    parser.add_argument('-f', '--future', help='Future days', default=0)
+    parser.add_argument('-f', '--future', help='Future days', default=30)
     parser.add_argument('-x', help='Exit after running (only valid with -t)', action='store_true')
 
     command = vars(parser.parse_args())

@@ -13,7 +13,7 @@ from pricing.pricing import METHODS
 from pricing.pricing import Pricing
 from pricing.blackscholes import BlackScholes
 from pricing.montecarlo import MonteCarlo
-from utils import utils as utils
+from utils import utils
 
 
 IV_CUTOFF = 0.020

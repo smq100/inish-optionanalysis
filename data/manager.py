@@ -15,7 +15,7 @@ from base import Threaded
 import data as d
 from data import store as store
 from data import models as models
-from utils import utils as utils
+from utils import utils
 
 _logger = utils.get_logger()
 

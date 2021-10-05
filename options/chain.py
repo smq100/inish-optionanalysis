@@ -1,6 +1,6 @@
 from data import store as store
 from data import store as store
-from utils import utils as utils
+from utils import utils
 
 _logger = utils.get_logger()
 

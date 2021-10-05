@@ -1,6 +1,6 @@
 import pandas as pd
 
-from utils import utils as utils
+from utils import utils
 from company.company import Company
 
 _logger = utils.get_logger()

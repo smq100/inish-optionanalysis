@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import trendln
 
 from data import store as store
-from utils import utils as utils
+from utils import utils
 
 _logger = utils.get_logger()
 _rounding = 0.075

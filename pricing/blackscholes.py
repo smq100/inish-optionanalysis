@@ -3,7 +3,7 @@ import numpy as np
 import scipy.stats as stats
 
 from .pricing import Pricing, METHODS
-from utils import utils as utils
+from utils import utils
 
 _logger = utils.get_logger()
 

@@ -5,7 +5,7 @@ import threading
 import data as d
 from data import store as store
 from data import manager as manager
-from utils import utils as utils
+from utils import utils
 
 _logger = utils.get_logger(logging.WARNING)#, logfile='output')
 
@@ -35,6 +35,9 @@ class Interface:
         self.indexes:list[str] = store.get_indexes()
         self.manager:manager.Manager = manager.Manager()
         self.task:threading.Thread = None
+
+        if not store.is_live_connection():
+            utils.print_error('No Internet connection')
 
         if exit:
             pass
@@ -314,7 +317,7 @@ class Interface:
                 else:
                     utils.print_error('Invalid ticker. Try another ticker or select "0" to cancel')
         elif select > 0:
-            exc = self.exchanges[select-1] if select <= len(self.exchanges) else ''
+            exc = self.exchanges[select-1] if select <= len(self.exchanges) else 'all'
             self.task = threading.Thread(target=self.manager.update_history_exchange, args=[exc])
             self.task.start()
 
@@ -353,7 +356,7 @@ class Interface:
                 else:
                     utils.print_error('Invalid ticker. Try another ticker or select "0" to cancel')
         elif select > 0:
-            exc = self.exchanges[select-1] if select <= len(self.exchanges) else ''
+            exc = self.exchanges[select-1] if select <= len(self.exchanges) else 'all'
             self.task = threading.Thread(target=self.manager.update_companies_exchange, args=[exc])
             self.task.start()
 

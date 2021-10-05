@@ -6,7 +6,7 @@ import numpy as np
 
 from base import Threaded
 from company.company import Company
-from utils import utils as utils
+from utils import utils
 from data import store as store
 from .interpreter import Interpreter
 

@@ -6,7 +6,7 @@ https://github.com/chronossc/openpyxl
 from openpyxl import load_workbook
 
 from .sheet import Sheet
-from utils import utils as utils
+from utils import utils
 
 _logger = utils.get_logger()
 

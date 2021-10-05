@@ -8,7 +8,7 @@ import data as d
 from fetcher import fetcher as fetcher
 from fetcher.google import Google
 from fetcher.excel import Excel
-from utils import utils as utils
+from utils import utils
 from data import models as models
 
 _logger = utils.get_logger()
@@ -32,6 +32,10 @@ else:
 _session = sessionmaker(bind=_engine)
 
 UNAVAILABLE = 'unavailable'
+
+
+def is_live_connection() -> bool:
+    return fetcher.is_connected()
 
 def is_ticker(ticker:str, inactive:bool=False) -> bool:
     ticker = ticker.upper()

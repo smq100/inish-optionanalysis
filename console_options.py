@@ -14,7 +14,7 @@ from strategies.call import Call
 from strategies.put import Put
 from options.chain import Chain
 from data import store as store
-from utils import utils as utils
+from utils import utils
 
 MAX_ROWS = 50
 MAX_COLS = 18
@@ -31,6 +31,9 @@ class Interface:
         self.dirty_analyze = True
 
         pd.options.display.float_format = '{:,.2f}'.format
+
+        if not store.is_live_connection():
+            utils.print_error('No Internet connection')
 
         if store.is_ticker(ticker):
             self.chain = Chain(ticker)

@@ -3,7 +3,7 @@ import logging
 from analysis.scoring import ScoringAnalysis
 from analysis.technical import Technical
 from data import store as store
-from utils import utils as utils
+from utils import utils
 
 
 logger = utils.get_logger(logging.WARNING, logfile='')

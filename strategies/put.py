@@ -1,7 +1,7 @@
 import datetime as dt
 
 from strategies.strategy import Strategy, STRATEGIES
-from utils import utils as utils
+from utils import utils
 
 import pandas as pd
 

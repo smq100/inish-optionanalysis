@@ -3,7 +3,7 @@ import pandas as pd
 
 from analysis.technical import Technical
 from data import store as store
-from utils import utils as utils
+from utils import utils
 
 _logger = utils.get_logger()
 

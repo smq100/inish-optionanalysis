@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 
 from data import store as store
-from utils import utils as utils
+from utils import utils
 
 
 METHODS = ('black-scholes', 'monte-carlo')

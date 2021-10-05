@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from analysis.technical import Technical
 from analysis.trend import METHOD, SupportResistance
 from data import store as store
-from utils import utils as utils
+from utils import utils
 
 
 _logger = utils.get_logger(logging.WARNING, logfile='')

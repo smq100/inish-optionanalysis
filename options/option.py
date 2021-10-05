@@ -2,7 +2,7 @@ import datetime as dt
 import re
 
 from data import store as store
-from utils import utils as utils
+from utils import utils
 
 PRODUCTS = ('call', 'put')
 DIRECTIONS = ('long', 'short')
