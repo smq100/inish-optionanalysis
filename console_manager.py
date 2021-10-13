@@ -59,23 +59,22 @@ class Interface:
             '2': 'Ticker Information',
             '3': 'Ticker Information (live)',
             '4': 'Ticker Information (prev)',
-            '5': 'List Exchange',
-            '6': 'List Index',
-            '7': 'Update History',
-            '8': 'Update Company',
-            '9': 'Check Integrity',
-            '10': 'Populate Exchange',
-            '11': 'Populate Index',
-            '12': 'Delete Exchange',
-            '13': 'Delete Index',
-            '14': 'Delete Ticker',
-            '15': 'Reset Database',
+            '5': 'List Table',
+            '6': 'Update History',
+            '7': 'Update Company',
+            '8': 'Check Integrity',
+            '9': 'Populate Exchange',
+            '10': 'Populate Index',
+            '11': 'Delete Exchange',
+            '12': 'Delete Index',
+            '13': 'Delete Ticker',
+            '14': 'Reset Database',
             '0': 'Exit'
         }
 
         while True:
             if not self.ticker:
-                selection = utils.menu(menu_items, 'Select Operation', 0, 15)
+                selection = utils.menu(menu_items, 'Select Operation', 0, 14)
 
             if selection == 1:
                 self.show_database_information()
@@ -86,26 +85,24 @@ class Interface:
             elif selection == 4:
                 self.show_symbol_information(self.ticker, prompt=True)
             elif selection == 5:
-                self.list_exchange()
+                self.list_table()
             elif selection == 6:
-                self.list_index()
-            elif selection == 7:
                 self.update_history(self.ticker)
-            elif selection == 8:
+            elif selection == 7:
                 self.update_company()
-            elif selection == 9:
+            elif selection == 8:
                 self.check_integrity()
-            elif selection == 10:
+            elif selection == 9:
                 self.populate_exchange()
-            elif selection == 11:
+            elif selection == 10:
                 self.populate_index()
-            elif selection == 12:
+            elif selection == 11:
                 self.delete_exchange()
-            elif selection == 13:
+            elif selection == 12:
                 self.delete_index()
-            elif selection == 14:
+            elif selection == 13:
                 self.delete_ticker()
-            elif selection == 15:
+            elif selection == 14:
                 self.reset_database()
             elif selection == 0:
                 self.stop = True
@@ -187,43 +184,25 @@ class Interface:
             else:
                 utils.print_error(f'{ticker} not found')
 
-    def list_exchange(self) -> None:
-        menu_items = {}
-        for i, exchange in enumerate(self.exchanges):
-            menu_items[f'{i+1}'] = f'{exchange}'
-        menu_items['0'] = 'Cancel'
+    def list_table(self) -> None:
+        found = []
+        select = utils.input_text('Enter exchange, index, or ticker: ').upper()
+        if store.is_exchange(select):
+            found = self.manager.list_exchange(select)
+        elif store.is_list(select):
+            found = self.manager.list_index(select)
+        else:
+            utils.print_error(f'List {select} is not valid')
 
-        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(self.exchanges))
-        if select > 0:
-            exc = self.exchanges[select-1]
-            found = self.manager.list_exchange(exc)
-
-            if len(found) > 0:
-                print()
-                index = 0
-                for ticker in found:
-                    print(f'{ticker} ', end='')
-                    index += 1
-                    if index % 20 == 0: # Print 20 per line
-                        print()
-                print()
-            else:
-                utils.print_message(f'No tickers in exchange {exc}')
-
-    def list_index(self) -> None:
-        menu_items = {}
-        for i, index in enumerate(self.indexes):
-            menu_items[f'{i+1}'] = f'{index}'
-        menu_items['0'] = 'Cancel'
-
-        select = utils.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(self.indexes))
-        if select > 0:
-            ind = self.indexes[select-1]
-            found = self.manager.list_index(ind)
-            if len(found) > 0:
-                self._list_tickers(found)
-            else:
-                utils.print_message(f'No tickers in index {ind}')
+        if found:
+            print()
+            index = 0
+            for ticker in found:
+                print(f'{ticker} ', end='')
+                index += 1
+                if index % 20 == 0: # Print 20 per line
+                    print()
+            print()
 
     def populate_exchange(self, progressbar:bool=True) -> None:
         menu_items = {}

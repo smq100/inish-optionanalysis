@@ -4,14 +4,14 @@ import threading
 import logging
 
 import data as d
-from screener.screener import Screener, Result
+from screener.screener import Screener, Result, INIT_NAME
 from data import store as store
 from utils import utils
 
 _logger = utils.get_logger(logging.WARNING, logfile='')
 
 BASEPATH = os.getcwd()+'/screener/screens/'
-SCREEN_SUFFIX = '.screen'
+SCREEN_SUFFIX = 'screen'
 
 
 class Interface:
@@ -26,7 +26,6 @@ class Interface:
         self.results:list[Result] = []
         self.valids = 0
         self.screener:Screener = None
-        self.type = ''
         self.task:threading.Thread = None
 
         if type(backtest) == int:
@@ -37,20 +36,20 @@ class Interface:
 
         if self.table:
             if self.table == 'ALL':
-                self.type = 'all'
+                pass
             elif store.is_exchange(self.table):
-                self.type = 'exchange'
+                pass
             elif store.is_index(self.table):
-                self.type = 'index'
+                pass
             elif store.is_ticker(self.table):
-                self.type = 'symbol'
+                pass
             else:
                 self.table = ''
                 utils.print_error(f'Exchange, index or ticker not found: {self.table}')
 
         if self.screen_base:
-            if os.path.exists(BASEPATH+screen+SCREEN_SUFFIX):
-                self.screen_path = BASEPATH + self.screen_base + SCREEN_SUFFIX
+            if os.path.exists(BASEPATH+screen+'.'+SCREEN_SUFFIX):
+                self.screen_path = BASEPATH + self.screen_base + '.' + SCREEN_SUFFIX
             else:
                 self.screen_base = ''
                 utils.print_error(f'File "{self.screen_base}" not found')
@@ -69,66 +68,52 @@ class Interface:
             source = 'live' if self.live else d.ACTIVE_DB
             menu_items = {
                 '1': f'Select Data Source ({source})',
-                '2': 'Select Exchange',
-                '3': 'Select Index',
-                '4': 'Select Ticker',
-                '5': 'Select Screener',
-                '6': 'Run Screen',
-                '7': 'Run Backtest',
-                '8': 'Show Tickers',
-                '9': 'Show Results',
-                '10': 'Show Ticker Results',
-                '11': 'Show All',
+                '2': 'Select List',
+                '3': 'Select Screener',
+                '4': 'Run Screen',
+                '5': 'Run Backtest',
+                '6': 'Show Tickers',
+                '7': 'Show Results',
+                '8': 'Show Ticker Results',
+                '9': 'Show All',
                 '0': 'Exit'
             }
 
             if self.table:
-                if self.type == 'all':
-                    menu_items['2'] = f'Select Exchange (all)'
-                    menu_items['3'] = f'Select Index (all)'
-                elif self.type == 'exchange':
-                    menu_items['2'] = f'Select Exchange ({self.table})'
-                elif self.type == 'symbol':
-                    menu_items['4'] = f'Select Ticker ({self.table})'
-                else:
-                    menu_items['3'] = f'Select Index ({self.table})'
+                menu_items['2'] = f'Select List ({self.table})'
 
             if self.screen_base:
-                menu_items['5'] = f'Select Screener ({self.screen_base})'
+                menu_items['3'] = f'Select Screener ({self.screen_base})'
 
             if len(self.results) > 0:
-                menu_items['8'] = f'Show Tickers ({self.valids})'
-                menu_items['9'] = f'Show Results ({self.valids})'
-                menu_items['11'] = f'Show All ({len(self.results)})'
+                menu_items['6'] = f'Show Tickers ({self.valids})'
+                menu_items['7'] = f'Show Results ({self.valids})'
+                menu_items['9'] = f'Show All ({len(self.results)})'
 
             if selection == 0:
-                selection = utils.menu(menu_items, 'Select Operation', 0, 11)
+                selection = utils.menu(menu_items, 'Select Operation', 0, 9)
 
             if selection == 1:
                 self.select_source()
             if selection == 2:
-                self.select_exchange()
-            if selection == 3:
-                self.select_index()
-            if selection == 4:
-                self.select_ticker()
-            elif selection == 5:
+                self.select_list()
+            elif selection == 3:
                 self.select_screen()
-            elif selection == 6:
+            elif selection == 4:
                 if self.run_screen():
                     if self.valids > 0:
                         self.print_results()
-            elif selection == 7:
+            elif selection == 5:
                 if self.run_backtest(prompt=not self.auto):
                     if self.valids > 0:
                         self.print_backtest()
-            elif selection == 8:
+            elif selection == 6:
                 self.print_results()
-            elif selection == 9:
+            elif selection == 7:
                 self.print_results(verbose=True)
-            elif selection == 10:
+            elif selection == 8:
                 self.print_ticker_results()
-            elif selection == 11:
+            elif selection == 9:
                 self.print_results(all=True)
             elif selection == 0:
                 self.exit = True
@@ -151,53 +136,18 @@ class Interface:
         elif selection == 2:
             self.live = True
 
-        # if self.table:
-        #     self.screener = Screener(self.table, script=self.screen_path, live=self.live)
-
-    def select_exchange(self) -> None:
-        menu_items = {}
-        for exchange, item in enumerate(d.EXCHANGES):
-            menu_items[f'{exchange+1}'] = f'{item["abbreviation"]}'
-        menu_items['0'] = 'Cancel'
-
-        selection = utils.menu(menu_items, 'Select Exchange', 0, len(d.EXCHANGES))
-        if selection > 0:
-            exchange = d.EXCHANGES[selection-1]['abbreviation']
-            if len(store.get_exchange_tickers(exchange)) > 0:
-                self.table = exchange
-                self.type = 'exchange'
-            else:
-                self.table = ''
-                self.screener = None
-                utils.print_error(f'Exchange {exchange} has no symbols')
-
-    def select_index(self) -> None:
-        menu_items = {}
-        for i, item in enumerate(d.INDEXES):
-            menu_items[f'{i+1}'] = f'{item["abbreviation"]}'
-        menu_items['0'] = 'Cancel'
-
-        selection = utils.menu(menu_items, 'Select Index', 0, len(d.INDEXES))
-        if selection > 0:
-            index = d.INDEXES[selection-1]['abbreviation']
-            if len(store.get_index_tickers(index)) > 0:
-                self.table = index
-                self.type = 'index'
-            else:
-                self.table = ''
-                self.screener = None
-                utils.print_error(f'Index {index} has no symbols')
-
-    def select_ticker(self) -> None:
-        ticker = utils.input_text('Enter ticker: ')
-        ticker = ticker.upper()
-        if store.is_ticker(ticker):
-            self.table = ticker
-            self.type = 'symbol'
+    def select_list(self) -> None:
+        list = utils.input_text('Enter exchange, index, or ticker: ').upper()
+        if store.is_exchange(list):
+            self.table = list
+        elif store.is_list(list):
+            self.table = list
+        elif store.is_ticker(list):
+            self.table = list
         else:
             self.table = ''
             self.screener = None
-            utils.print_error(f'{ticker} not valid')
+            utils.print_error(f'List {list} is not valid')
 
     def select_screen(self) -> None:
         self.script = []
@@ -207,12 +157,18 @@ class Interface:
         with os.scandir(BASEPATH) as entries:
             for entry in entries:
                 if entry.is_file():
-                    if SCREEN_SUFFIX in entry.name:
+                    head, sep, tail = entry.name.partition('.')
+                    if tail != SCREEN_SUFFIX:
+                        pass
+                    elif head == INIT_NAME:
+                        pass
+                    elif head == 'test':
+                        pass
+                    else:
                         self.script += [entry.path]
-                        head, sep, tail = entry.name.partition('.')
                         paths += [head]
 
-        if len(self.script) > 0:
+        if paths:
             self.script.sort()
             paths.sort()
 
@@ -224,7 +180,7 @@ class Interface:
             selection = utils.menu(menu_items, 'Select Screen', 0, index+1)
             if selection > 0:
                 self.screen_base = paths[selection-1]
-                self.screen_path = BASEPATH + self.screen_base + SCREEN_SUFFIX
+                self.screen_path = BASEPATH + self.screen_base + '.' + SCREEN_SUFFIX
                 self.results = []
         else:
             utils.print_message('No screener files found')

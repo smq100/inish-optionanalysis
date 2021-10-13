@@ -21,7 +21,7 @@ class Prediction(Threaded):
             self.ticker = ticker.upper()
             self.actual_prices = []
             self.prediction_prices = []
-            self.prediction_days = 60
+            self.prediction_days = 30
             self.future_days = future
             self.loss = 0.0
             self.accuracy = 0.0

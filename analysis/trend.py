@@ -77,7 +77,7 @@ class Line:
         return output
 
 class SupportResistance:
-    def __init__(self, ticker, method='NSQUREDLOGN', best=5, days=365):
+    def __init__(self, ticker, method=['NSQUREDLOGN'], best=5, days=365):
         if best < 1:
             raise ValueError("'best' value must be > 0")
 
@@ -86,7 +86,7 @@ class SupportResistance:
 
         if (store.is_ticker(ticker)):
             self.ticker = ticker.upper()
-            self.method = METHOD[method]
+            self.method = METHOD[method[0]]
             self.best = best
             self.days = days
             self.history = None
@@ -191,7 +191,8 @@ class SupportResistance:
         for index, line in enumerate(self.lines):
             line.fit = index + 1
 
-        # Normalize scoring criteria to 10.0 scale
+        ## Normalize scoring criteria to 10.0 scale
+
         #    Rank
         max_ = 0.0
         for line in self.lines:
