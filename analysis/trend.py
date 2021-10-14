@@ -122,19 +122,26 @@ class SupportResistance:
         self.company = store.get_company(self.ticker)
         if not self.company:
             self.company['name'] = 'Error'
-            _logger.error(f'Unable to get company information ({self.ticker})')
+            _logger.warning(f'Unable to get company information ({self.ticker})')
 
         self.points = len(self.history)
         _logger.info(f'{__name__}: {self.points} pivot points identified from {self.history.iloc[0]["date"]} to {self.history.iloc[-1]["date"]}')
 
-        (self.lines_res, self.lines_sup), (self.values_res, self.values_sup) = self._calculate(self.methods[0])
+        for method in self.methods:
+            lines_res, lines_sup, values_res, values_sup = self._calculate(method)
+            self.lines_res += lines_res
+            self.lines_sup += lines_sup
+            self.values_res += values_res
+            self.values_sup += values_sup
 
-        # self.lines_res += [lines_res]
-        # self.lines_sup += [lines_sup]
-        # self.values_res += [values_res]
-        # self.values_sup += [values_sup]
+        # Remove duplicates
 
-    def _calculate(self, method:int) -> tuple[tuple[list[Line], list[Line]], tuple[list[float], list[float]]]:
+
+        # Sort lines based on final score
+        self.lines_res = sorted(self.lines_res, reverse=True, key=lambda l: l.get_score())
+        self.lines_sup = sorted(self.lines_sup, reverse=True, key=lambda l: l.get_score())
+
+    def _calculate(self, method:int) -> tuple[list[Line], list[Line], list[float], list[float]]:
         maxs = trendln.calc_support_resistance((None, self.history['high']), extmethod=self.extmethod, method=method, accuracy=self.accuracy)
         maximaIdxs, pmax, maxtrend, maxwindows = maxs
 
@@ -254,16 +261,10 @@ class SupportResistance:
             line.score.slope *= 10.0
             line.score.slope = 10.0 - line.score.slope # Lower is better
 
-        # Sort lines based on final score
-        lines = sorted(lines, reverse=True, key=lambda l: l.get_score())
+        lines_res = [line for line in lines if not line.support]
+        lines_sup = [line for line in lines if line.support]
 
-        res = [line for line in lines if not line.support]
-        lines_res = sorted(res, reverse=True, key=lambda l: l.get_score())
-
-        sup = [line for line in lines if line.support]
-        lines_sup = sorted(sup, reverse=True, key=lambda l: l.get_score())
-
-        # Calculate final support & resistance values
+        # Calculate final support & resistance values (and exclude duplicates)
         all = lines_res[:self.best] + lines_sup[:self.best]
         _lines = []
         for line in all:
@@ -289,7 +290,7 @@ class SupportResistance:
         _logger.info(f'{__name__}: {counts} support lines identified')
         [_logger.debug(f'{__name__}: Sup:{line}') for line in lines_sup]
 
-        return (lines_res, lines_sup), (values_res, values_sup)
+        return lines_res, lines_sup, values_res, values_sup
 
     def get_resistance(self) -> list[Line]:
         return self.lines_res[:self.best]
@@ -303,8 +304,8 @@ class SupportResistance:
         # plt.style.use('seaborn')
         plt.grid()
         plt.margins(x=0.1)
-        plt.title(f'{self.company["name"]} Support & Resistance ({self.method_names[0]})')
-        fig.canvas.manager.set_window_title(f'{self.ticker} ({self.method_names[0]})')
+        plt.title(f'{self.company["name"]} Support & Resistance')
+        fig.canvas.manager.set_window_title(f'{self.ticker}')
         line_width = 1.0
 
         if self.price < 30.0:

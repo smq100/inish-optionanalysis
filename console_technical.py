@@ -71,7 +71,7 @@ class Interface:
             self.days = utils.input_integer('Enter number of days: ', 30, 9999)
 
     def show_trend(self):
-        sr = SupportResistance(self.ticker, methods=['NSQUREDLOGN'], days=self.days)
+        sr = SupportResistance(self.ticker, methods=['NSQUREDLOGN', 'NCUBED'], days=self.days)
         sr.calculate()
         sr.plot(show=False)
 
