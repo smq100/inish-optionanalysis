@@ -6,6 +6,8 @@ trendln: https://github.com/GregoryMorse/trendln
 import matplotlib.pyplot as plt
 import trendln
 
+import pandas as pd
+
 from data import store as store
 from utils import utils
 
@@ -20,7 +22,29 @@ METHOD = {
     'PROBHOUGH': (trendln.METHOD_PROBHOUGH, 'PROBHOUGH'),
 }
 
-class Line:
+MAX_SCALE = 10.0
+
+class _Score:
+    def __init__(self):
+        self.fit = 0.0
+        self.width = 0.0
+        self.proximity = 0.0
+        self.points = 0.0
+        self.age = 0.0
+        self.slope = 0.0
+
+    def calculate(self) -> float:
+        score = (
+            (self.fit       * 0.05) +
+            (self.width     * 0.15) +
+            (self.proximity * 0.05) +
+            (self.points    * 0.20) +
+            (self.age       * 0.20) +
+            (self.slope     * 0.35))
+
+        return score
+
+class _Line:
     def __init__(self):
         self.support = False
         self.fit = 0
@@ -35,49 +59,30 @@ class Line:
         self.width = 0.0
         self.age = 0.0
         self.proximity = 0.0
-
-        class Score:
-            fit = 0.0
-            width = 0.0
-            proximity = 0.0
-            points = 0.0
-            age = 0.0
-            slope = 0.0
-
-        self.score = Score()
-
-    def get_score(self) -> float:
-        score = (
-            (self.score.fit       * 0.05) +
-            (self.score.width     * 0.15) +
-            (self.score.proximity * 0.05) +
-            (self.score.points    * 0.20) +
-            (self.score.age       * 0.20) +
-            (self.score.slope     * 0.35))
-
-        return score
+        self.score = 0.0
+        self._score = _Score()
 
     def __str__(self):
         dates = [point['date'] for point in self.points]
 
-        output = f'score={self.get_score():.2f}, '\
+        output = f'score={self.score:.2f}, '\
                  f'fit={self.fit:4n} '\
-                 f'*fit={self.score.fit:5.2f} '\
                  f'wid={self.width:4n} '\
-                 f'*wid={self.score.width:5.2f} '\
                  f'prox={self.proximity:5.1f} '\
-                 f'*prox={self.score.proximity:5.2f} '\
                  f'pnts={len(dates)} '\
-                 f'*pnts={self.score.points:5.2f} '\
                  f'age={self.age:4n} '\
-                 f'*age={self.score.age:5.2f}'\
                  f'slope={self.slope:4n} '\
+                 f'*fit={self.score.fit:5.2f} '\
+                 f'*wid={self.score.width:5.2f} '\
+                 f'*prox={self.score.proximity:5.2f} '\
+                 f'*pnts={self.score.points:5.2f} '\
+                 f'*age={self.score.age:5.2f}'\
                  f'*slope={self.score.slope:5.2f}'
 
         return output
 
 class SupportResistance:
-    def __init__(self, ticker, methods=['NSQUREDLOGN'], best=5, days=365):
+    def __init__(self, ticker, methods=['NSQUREDLOGN'], best=5, days=1000):
         if best < 1:
             raise ValueError("'best' value must be > 0")
 
@@ -90,20 +95,17 @@ class SupportResistance:
             self.method_names = [METHOD[method][1] for method in methods]
             self.best = best
             self.days = days
-            self.history = None
+            self.history = pd.DataFrame()
             self.price = 0.0
             self.company = {}
-            self.extmethod = trendln.METHOD_NUMDIFF # Pivit point detection: METHOD_NAIVE, METHOD_NAIVECONSEC, *METHOD_NUMDIFF
-            self.lines = []
-            self.lines_sup = []
-            self.lines_res = []
-            self.values_sup = []
-            self.values_res = []
+            self.lines:list[_Line] = []
+            self.lines_df = pd.DataFrame()
             self.slope_sup = 0.0
             self.intercept_sup = 0.0
             self.slope_res = 0.0
             self.intercept_res = 0.0
-            self.accuracy = 8
+            self._extmethod = trendln.METHOD_NUMDIFF # Pivit point detection: METHOD_NAIVE, METHOD_NAIVECONSEC, *METHOD_NUMDIFF
+            self._accuracy = 8
         else:
             raise ValueError('{__name__}: Error initializing {__class__} with ticker {ticker}')
 
@@ -127,33 +129,40 @@ class SupportResistance:
         self.points = len(self.history)
         _logger.info(f'{__name__}: {self.points} pivot points identified from {self.history.iloc[0]["date"]} to {self.history.iloc[-1]["date"]}')
 
-        for method in self.methods:
-            lines_res, lines_sup, values_res, values_sup = self._calculate(method)
-            self.lines_res += lines_res
-            self.lines_sup += lines_sup
-            self.values_res += values_res
-            self.values_sup += values_sup
+        # Calculate lines across methods and flatten
+        lines = [self._calculate_lines(method) for method in self.methods]
+        self.lines = [item for sublist in lines for item in sublist]
 
-        # Remove duplicates
+        self.lines_df = pd.DataFrame.from_records([vars(l) for l in self.lines])
+        self.lines_df.dropna(inplace=True)
+        self.lines_df.drop('_score', 1, inplace=True)
+        self.lines_df.drop('points', 1, inplace=True)
+        self.lines_df.sort_values(by=['score'], ascending=False, inplace=True)
+        self.lines_df.reset_index(drop=True, inplace=True)
 
+    def get_resistance(self) -> list[_Line]:
+        res = [line for line in self.lines if not line.support]
+        res = sorted(res, reverse=True, key=lambda l: l.score)
+        return res[:self.best]
 
-        # Sort lines based on final score
-        self.lines_res = sorted(self.lines_res, reverse=True, key=lambda l: l.get_score())
-        self.lines_sup = sorted(self.lines_sup, reverse=True, key=lambda l: l.get_score())
+    def get_support(self) -> list[_Line]:
+        sup = [line for line in self.lines if line.support]
+        sup = sorted(sup, reverse=True, key=lambda l: l.score)
+        return sup[:self.best]
 
-    def _calculate(self, method:int) -> tuple[list[Line], list[Line], list[float], list[float]]:
-        maxs = trendln.calc_support_resistance((None, self.history['high']), extmethod=self.extmethod, method=method, accuracy=self.accuracy)
+    def _calculate_lines(self, method:int) -> list[_Line]:
+        maxs = trendln.calc_support_resistance((None, self.history['high']), method=method, extmethod=self._extmethod, accuracy=self._accuracy)
         maximaIdxs, pmax, maxtrend, maxwindows = maxs
 
-        mins = trendln.calc_support_resistance((self.history['low'], None), extmethod=self.extmethod, method=method, accuracy=self.accuracy)
+        mins = trendln.calc_support_resistance((self.history['low'], None), method=method, extmethod=self._extmethod, accuracy=self._accuracy)
         minimaIdxs, pmin, mintrend, minwindows = mins
 
         self.slope_res = pmax[0]
         self.intercept_res = pmax[1]
 
-        lines = []
+        lines:list[_Line] = []
         for line in maxtrend:
-            newline = Line()
+            newline = _Line()
             newline.support = False
             newline.end_point = 0.0
             newline.points = []
@@ -174,7 +183,7 @@ class SupportResistance:
         self.intercept_sup = pmin[1]
 
         for line in mintrend:
-            newline = Line()
+            newline = _Line()
             newline.support = True
             newline.end_point = 0.0
             newline.points = []
@@ -206,24 +215,24 @@ class SupportResistance:
         for index, line in enumerate(lines):
             line.fit = index + 1
 
-        ## Normalize scoring criteria to 10.0 scale
+        ##   Normalize scoring criteria to MAX_SCALE scale ##
 
         #    Rank
         max_ = 0.0
         for line in lines:
             if line.fit > max_: max_ = line.fit
         for line in lines:
-            line.score.fit = line.fit / max_
-            line.score.fit *= 10.0
-            line.score.fit = 10.0 - line.score.fit # Lower is better
+            line._score.fit = line.fit / max_
+            line._score.fit *= MAX_SCALE
+            line._score.fit = MAX_SCALE - line._score.fit # Lower is better
 
         #    Width
         max_ = 0.0
         for line in lines:
             if line.width > max_: max_ = line.width
         for line in lines:
-            line.score.width = line.width / max_
-            line.score.width *= 10.0
+            line._score.width = line.width / max_
+            line._score.width *= MAX_SCALE
 
         #    Proximity
         max_ = 0.0
@@ -231,74 +240,45 @@ class SupportResistance:
             line.proximity = abs(line.end_point - self.price)
             if line.proximity > max_: max_ = line.proximity
         for line in lines:
-            line.score.proximity = line.proximity / max_
-            line.score.proximity *= 10.0
-            line.score.proximity = 10.0 - line.score.proximity # Lower is better
+            line._score.proximity = line.proximity / max_
+            line._score.proximity *= MAX_SCALE
+            line._score.proximity = MAX_SCALE - line._score.proximity # Lower is better
 
         #    Points
         max_ = 0.0
         for line in lines:
             if len(line.points) > max_: max_ = len(line.points)
         for line in lines:
-            line.score.points = len(line.points) / max_
-            line.score.points *= 10.0
+            line._score.points = len(line.points) / max_
+            line._score.points *= MAX_SCALE
 
         #    Age
         max_ = 0.0
         for line in lines:
             if line.age > max_: max_ = line.age
         for line in lines:
-            line.score.age = line.age / max_
-            line.score.age *= 10.0
-            line.score.age = 10.0 - line.score.age # Lower is better
+            line._score.age = line.age / max_
+            line._score.age *= MAX_SCALE
+            line._score.age = MAX_SCALE - line._score.age # Lower is better
 
         #    Slope
         max_ = 0.0
         for line in lines:
             if line.slope > max_: max_ = abs(line.slope)
         for line in lines:
-            line.score.slope = abs(line.slope) / max_
-            line.score.slope *= 10.0
-            line.score.slope = 10.0 - line.score.slope # Lower is better
+            line._score.slope = abs(line.slope) / max_
+            line._score.slope *= MAX_SCALE
+            line._score.slope = MAX_SCALE - line._score.slope # Lower is better
 
-        lines_res = [line for line in lines if not line.support]
-        lines_sup = [line for line in lines if line.support]
-
-        # Calculate final support & resistance values (and exclude duplicates)
-        all = lines_res[:self.best] + lines_sup[:self.best]
-        _lines = []
-        for line in all:
-            value = utils.mround(line.end_point, _rounding)
-            if value not in lines:
-                _lines += [value]
-
-        values_res = sorted([l for l in _lines if l >= self.price])
-        values_sup = sorted([l for l in _lines if l < self.price], reverse=True)
-
-        # Log the line details
-        countr = 0
-        counts = 0
         for line in lines:
-            if line.support:
-                counts += 1
-            else:
-                countr += 1
+            line.score = line._score.calculate()
 
-        _logger.info(f'{__name__}: {countr} resistance lines identified for method {method}')
-        [_logger.debug(f'{__name__}: Res:{line}') for line in lines_res]
-
-        _logger.info(f'{__name__}: {counts} support lines identified')
-        [_logger.debug(f'{__name__}: Sup:{line}') for line in lines_sup]
-
-        return lines_res, lines_sup, values_res, values_sup
-
-    def get_resistance(self) -> list[Line]:
-        return self.lines_res[:self.best]
-
-    def get_support(self) -> list[Line]:
-        return self.lines_sup[:self.best]
+        return lines
 
     def plot(self, show:bool=True, filename:str='', legend:bool=True, srlines:bool=False, trendlines:bool=False) -> plt.Figure:
+        resistance = self.get_resistance()
+        support = self.get_support()
+
         fig, ax1 = plt.subplots(figsize=(17,10))
         ax2 = ax1.secondary_yaxis('right')
         # plt.style.use('seaborn')
@@ -330,7 +310,7 @@ class SupportResistance:
         # Pivot points
         dates = []
         values = []
-        for line in self.get_resistance():
+        for line in resistance:
             for point in line.points:
                 index = point['index']
                 date = self.history.iloc[index]['date']
@@ -340,7 +320,7 @@ class SupportResistance:
 
         dates = []
         values = []
-        for line in self.get_support():
+        for line in support:
             for point in line.points:
                 index = point['index']
                 date = self.history.iloc[index]['date']
@@ -351,7 +331,7 @@ class SupportResistance:
         # Trend lines
         dates = []
         values = []
-        for line in self.get_resistance():
+        for line in resistance:
             index = line.points[0]['index']
             date = self.history.iloc[index]['date']
             dates = [date.strftime('%Y-%m-%d')]
@@ -365,7 +345,7 @@ class SupportResistance:
 
         dates = []
         values = []
-        for line in self.get_support():
+        for line in support:
             index = line.points[0]['index']
             date = self.history.iloc[index]['date']
             dates = [date.strftime('%Y-%m-%d')]
@@ -380,7 +360,7 @@ class SupportResistance:
         # Trend line extensions
         dates = []
         values = []
-        for line in self.get_resistance():
+        for line in resistance:
             index = line.points[-1]['index']
             date = self.history.iloc[index]['date']
             dates = [date.strftime('%Y-%m-%d')]
@@ -394,7 +374,7 @@ class SupportResistance:
 
         dates = []
         values = []
-        for line in self.get_support():
+        for line in support:
             index = line.points[-1]['index']
             date = self.history.iloc[index]['date']
             dates = [date.strftime('%Y-%m-%d')]
@@ -410,7 +390,7 @@ class SupportResistance:
         text = []
         dates = []
         values = []
-        for index, line in enumerate(self.get_resistance()):
+        for index, line in enumerate(resistance):
             ep = utils.mround(line.end_point, _rounding)
             if ep not in values:
                 date = self.history['date'].iloc[-1]
@@ -421,7 +401,7 @@ class SupportResistance:
 
         dates = []
         values = []
-        for index, line in enumerate(self.get_support()):
+        for index, line in enumerate(support):
             ep = utils.mround(line.end_point, _rounding)
             if ep not in values:
                 date = self.history['date'].iloc[-1]
@@ -453,11 +433,11 @@ class SupportResistance:
 
         # Current support and resistance levels
         if srlines:
-            for line in self.get_support():
+            for line in support:
                 ax1.hlines(line.end_point, 0, self.points, color='r', linestyle='--', linewidth=line_width)
                 # plt.axhline(y=line.end_point, color='r', linestyle='--', linewidth=line_width)
 
-            for line in self.get_resistance():
+            for line in resistance:
                 ax1.hlines(line.end_point, 0, self.points, color='g', linestyle='--', linewidth=line_width)
                 # plt.axhline(y=line.end_point, color='g', linestyle='--', linewidth=line_width)
 
@@ -505,9 +485,8 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         sr = SupportResistance(sys.argv[1])
     else:
-        sr = SupportResistance('IBM')
+        sr = SupportResistance('AAPL')
 
-    res, sup = sr.calculate()
-    print(f'Res: {res}')
-    print(f'Sup: {sup}')
-    sr.plot()
+    sr.calculate()
+    print(sr.lines_df)
+    # sr.plot()
