@@ -136,7 +136,7 @@ class SupportResistance:
         self.lines_df = pd.DataFrame.from_records([vars(l) for l in self.lines])
         self.lines_df.dropna(inplace=True)
         self.lines_df.drop('_score', 1, inplace=True)
-        self.lines_df.drop('points', 1, inplace=True)
+        # self.lines_df.drop('points', 1, inplace=True)
         self.lines_df.sort_values(by=['score'], ascending=False, inplace=True)
         self.lines_df.reset_index(drop=True, inplace=True)
 
@@ -488,5 +488,5 @@ if __name__ == '__main__':
         sr = SupportResistance('AAPL')
 
     sr.calculate()
-    print(sr.lines_df)
+    print(sr.lines_df['points'])
     # sr.plot()
