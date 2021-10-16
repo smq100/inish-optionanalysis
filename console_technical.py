@@ -1,3 +1,5 @@
+import time
+import threading
 import logging
 
 import matplotlib.pyplot as plt
@@ -14,7 +16,9 @@ class Interface:
         self.ticker = ticker.upper()
         self.days = days
         self.exit = exit
+        self.trend:SupportResistance = None
         self.tickers:list[str] = []
+        self.task:threading.Thread = None
 
         if store.is_ticker(ticker.upper()):
             if self.exit:
@@ -32,7 +36,7 @@ class Interface:
             menu_items = {
                 '1': 'Change Ticker',
                 '2': f'Days ({self.days})',
-                '3': 'Support & Resistance Chart',
+                '3': 'Calculate Support & Resistance',
                 '0': 'Exit'
             }
 
@@ -71,24 +75,29 @@ class Interface:
             self.days = utils.input_integer('Enter number of days: ', 30, 9999)
 
     def show_trend(self):
-        sr = SupportResistance(self.ticker, methods=['NSQUREDLOGN'], days=self.days)
-        sr.calculate()
-        sr.plot(show=False)
+        self.trend = SupportResistance(self.ticker, methods=['NSQUREDLOGN', 'NCUBED', 'HOUGHLINES', 'PROBHOUGH'], days=self.days)
+        self.task = threading.Thread(target=self.trend.calculate)
 
-        # sr = SupportResistance(self.ticker, methods=['NCUBED'], days=self.days)
-        # sr.calculate()
-        # sr.plot(show=False)
-
-        # sr = SupportResistance(self.ticker, methods=['HOUGHLINES'], days=self.days)
-        # sr.calculate()
-        # sr.plot(show=False)
-
-        # sr = SupportResistance(self.ticker, methods=['PROBHOUGH'], days=self.days)
-        # sr.calculate()
-        # sr.plot(show=False)
+        self.task.start()
+        self._show_progress()
+        self.trend.plot(show=False)
 
         plt.show()
 
+    def _show_progress(self) -> None:
+        while not self.trend.task_error: pass
+
+        if self.trend.task_error == 'None':
+            utils.progress_bar(0, 0, prefix='', suffix='', length=50, reset=True)
+            while self.trend.task_error == 'None':
+                time.sleep(0.10)
+                utils.progress_bar(0, 0, prefix='', suffix='', length=50)
+
+            if self.trend.task_error == 'Done':
+                utils.print_message(f'{self.trend.task_error}: {self.trend.task_total} lines calculated in {self.trend.task_time:.1f} seconds')
+
+        else:
+            utils.print_message(f'{self.trend.task_error}')
 
 if __name__ == '__main__':
     import argparse
