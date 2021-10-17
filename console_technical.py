@@ -12,7 +12,7 @@ from utils import utils
 _logger = utils.get_logger(logging.WARNING, logfile='')
 
 class Interface:
-    def __init__(self, ticker:str, days:int=365, exit:bool=False):
+    def __init__(self, ticker:str, days:int=1000, exit:bool=False):
         self.ticker = ticker.upper()
         self.days = days
         self.exit = exit
@@ -75,14 +75,16 @@ class Interface:
             self.days = utils.input_integer('Enter number of days: ', 30, 9999)
 
     def show_trend(self):
-        self.trend = SupportResistance(self.ticker, methods=['NSQUREDLOGN', 'NCUBED', 'HOUGHLINES', 'PROBHOUGH'], days=self.days)
+        methods = ['NSQUREDLOGN', 'NCUBED', 'HOUGHLINES', 'PROBHOUGH']
+        extmethods = ['NAIVE', 'NAIVECONSEC', 'NUMDIFF']
+
+        self.trend = SupportResistance(self.ticker, methods=methods, extmethods=extmethods, days=self.days)
         self.task = threading.Thread(target=self.trend.calculate)
-
         self.task.start()
-        self._show_progress()
-        self.trend.plot(show=False)
 
-        plt.show()
+        self._show_progress()
+
+        self.trend.plot()
 
     def _show_progress(self) -> None:
         while not self.trend.task_error: pass
@@ -90,14 +92,15 @@ class Interface:
         if self.trend.task_error == 'None':
             utils.progress_bar(0, 0, prefix='', suffix='', length=50, reset=True)
             while self.trend.task_error == 'None':
-                time.sleep(0.10)
-                utils.progress_bar(0, 0, prefix='', suffix='', length=50)
+                time.sleep(0.15)
+                utils.progress_bar(0, 0, prefix='', suffix=self.trend.task_message, length=50)
 
             if self.trend.task_error == 'Done':
                 utils.print_message(f'{self.trend.task_error}: {self.trend.task_total} lines calculated in {self.trend.task_time:.1f} seconds')
 
         else:
             utils.print_message(f'{self.trend.task_error}')
+
 
 if __name__ == '__main__':
     import argparse

@@ -8,6 +8,7 @@ class Threaded:
         self.task_success = 0
         self.task_ticker = ''
         self.task_error = ''
+        self.task_message = ''
         self.task_results = []
         self.task_object = None
         self.task_time = 0
@@ -20,6 +21,7 @@ class Threaded:
             self.task_success = 0
             self.task_ticker = ''
             self.task_error = ''
+            self.task_message = ''
             self.task_results = []
             self.task_object = None
             self.task_time = 0.0
