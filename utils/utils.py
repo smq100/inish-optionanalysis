@@ -30,7 +30,7 @@ def get_logger(level:int=None, logfile:str='') -> Logger:
             fh.setLevel(logging.DEBUG)
             logger.addHandler(fh)
 
-            logger.info(f'{__name__}: Created new logger')
+        logger.info(f'{__name__}: Created new logger')
 
     return logger
 

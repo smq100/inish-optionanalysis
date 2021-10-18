@@ -369,7 +369,7 @@ class Manager(Threaded):
         self.task_error = 'Done'
 
     def delete_database(self, recreate:bool=False):
-        if d.ACTIVE_DB == d.OPTIONS_DB[1]:
+        if d.ACTIVE_DB == d.VALID_DBS[1]:
             if os.path.exists(d.SQLITE_DATABASE_PATH):
                 os.remove(d.SQLITE_DATABASE_PATH)
                 _logger.info(f'{__name__}: Deleted {d.SQLITE_DATABASE_PATH}')

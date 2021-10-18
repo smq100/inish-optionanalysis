@@ -89,7 +89,7 @@ class _Line:
         return output
 
 class SupportResistance(Threaded):
-    def __init__(self, ticker:str, methods:list[str]=['NSQUREDLOGN'], extmethods:list[str]=['NUMDIFF'], best:int=7, days:int=1000):
+    def __init__(self, ticker:str, methods:list[str]=['NSQUREDLOGN'], extmethods:list[str]=['NUMDIFF'], best:int=8, days:int=1000):
         if best < 1:
             raise ValueError("'best' value must be > 0")
 
@@ -139,11 +139,11 @@ class SupportResistance(Threaded):
         _logger.info(f'{__name__}: {self.points} pivot points identified from {self.history.iloc[0]["date"]} to {self.history.iloc[-1]["date"]}')
 
         # Calculate lines across methods, extmethods, and flatten
-        lines = [self._calculate_lines(method, extmethod) for method in self.methods for extmethod in self.extmethods]
+        lines = [self._extract_lines(method, extmethod) for method in self.methods for extmethod in self.extmethods]
         self.lines = [item for sublist in lines for item in sublist]
 
         self.task_total = len(self.lines)
-        _logger.info(f'{__name__}: {self.task_total} total lines calculated')
+        _logger.info(f'{__name__}: {self.task_total} total lines extracted')
 
         # Create dataframe of lines then sort, round, and drop duplicates
         df = pd.DataFrame.from_records([vars(l) for l in self.lines])
@@ -158,7 +158,7 @@ class SupportResistance(Threaded):
 
         _logger.info(f'{__name__}: {len(self.lines_df)} rows created ({len(self.lines)-len(self.lines_df)} duplicates deleted)')
 
-    def _calculate_lines(self, method:str, extmethod:str) -> list[_Line]:
+    def _extract_lines(self, method:str, extmethod:str) -> list[_Line]:
         if not method in METHOD:
             assert ValueError(f'Invalid method {method}')
 
@@ -178,7 +178,7 @@ class SupportResistance(Threaded):
             newline = _Line()
             newline.support = False
             newline.end_point = 0.0
-            newline.points = []
+            newline.points = [{'index':point, 'date':''} for point in line[0]]
             newline.slope = line[1][0]
             newline.intercept = line[1][1]
             newline.ssr = line[1][2]
@@ -186,7 +186,6 @@ class SupportResistance(Threaded):
             newline.intercept_err = line[1][4]
             newline.area_avg = line[1][5]
 
-            newline.points = [{'index':point, 'date':''} for point in line[0]]
             newline.width = newline.points[-1]['index'] - newline.points[0]['index']
             newline.age = self.points - newline.points[-1]['index']
 
@@ -199,7 +198,7 @@ class SupportResistance(Threaded):
             newline = _Line()
             newline.support = True
             newline.end_point = 0.0
-            newline.points = []
+            newline.points = [{'index':point, 'date':''} for point in line[0]]
             newline.slope = line[1][0]
             newline.intercept = line[1][1]
             newline.ssr = line[1][2]
@@ -207,7 +206,6 @@ class SupportResistance(Threaded):
             newline.intercept_err = line[1][4]
             newline.area_avg = line[1][5]
 
-            newline.points = [{'index':point, 'date':''} for point in line[0]]
             newline.width = newline.points[-1]['index'] - newline.points[0]['index']
             newline.age = self.points - newline.points[-1]['index']
 
@@ -286,7 +284,7 @@ class SupportResistance(Threaded):
         for line in lines:
             line.score = line._score.calculate()
 
-        _logger.info(f'{__name__}: {len(lines)} lines calculated using {method} and {extmethod}')
+        _logger.info(f'{__name__}: {len(lines)} lines extracted using {method} and {extmethod}')
 
         return lines
 
@@ -518,6 +516,7 @@ class SupportResistance(Threaded):
 if __name__ == '__main__':
     import sys
     import logging
+
     utils.get_logger(logging.DEBUG)
 
     if len(sys.argv) > 1:

@@ -2,8 +2,8 @@ import os
 import configparser
 
 # Databases
-OPTIONS_DB = ('Postgres', 'SQLite')
-ACTIVE_DB = OPTIONS_DB[0]
+VALID_DBS = ('Postgres', 'SQLite')
+ACTIVE_DB = VALID_DBS[0]
 
 # Data sources
 VALID_DATASOURCES = ('quandl', 'yfinance')
@@ -23,9 +23,9 @@ POSTGRES_URI = f'postgresql+psycopg2://{dbuser}:{dbpw}@localhost:{port}/{db}'
 SQLITE_DATABASE_PATH = 'data/securities.db'
 SQLITE_URI = f'sqlite:///{SQLITE_DATABASE_PATH}'
 
-if ACTIVE_DB == OPTIONS_DB[0]:
+if ACTIVE_DB == VALID_DBS[0]:
     ACTIVE_URI = POSTGRES_URI
-elif ACTIVE_DB == OPTIONS_DB[1]:
+elif ACTIVE_DB == VALID_DBS[1]:
     ACTIVE_URI = SQLITE_URI
 
 # Symbol master spreadsheets
