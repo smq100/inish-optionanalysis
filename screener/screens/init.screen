@@ -63,6 +63,27 @@
       }
    },
    {
+      "note":"MCap > 5B",
+      "base":{
+         "technical":"mcap",
+         "length":0,
+         "start":-1,
+         "stop":0,
+         "series":"none",
+         "factor":1.0
+      },
+      "conditional":"ge",
+      "criteria":{
+         "technical":"value",
+         "value":5e9,
+         "length":0,
+         "start":-1,
+         "stop":0,
+         "series":"none",
+         "factor":1.0
+      }
+   },
+   {
       "note":"Rating < 3.1",
       "base":{
          "technical":"rating",

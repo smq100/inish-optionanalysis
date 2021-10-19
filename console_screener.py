@@ -28,11 +28,14 @@ class Interface:
         self.screener:Screener = None
         self.task:threading.Thread = None
 
+        abort = False
+
         if type(backtest) == int:
             self.end = backtest
         else:
-            utils.print_error("'backtest' must be an integer. Using a value of 0")
             self.end = 0
+            abort = False
+            utils.print_error("'backtest' must be an integer. Using a value of 0")
 
         if self.table:
             if self.table == 'ALL':
@@ -45,21 +48,25 @@ class Interface:
                 pass
             else:
                 self.table = ''
+                abort = True
                 utils.print_error(f'Exchange, index or ticker not found: {self.table}')
 
         if self.screen_base:
             if os.path.exists(BASEPATH+screen+'.'+SCREEN_SUFFIX):
                 self.screen_path = BASEPATH + self.screen_base + '.' + SCREEN_SUFFIX
             else:
+                utils.print_error(f'File "{self.screen_base}" not foundx')
+                abort = True
                 self.screen_base = ''
-                utils.print_error(f'File "{self.screen_base}" not found')
 
-        if self.table and self.screen_path and self.end > 0:
+        if abort:
+            pass
+        elif self.table and self.screen_path and self.end > 0:
             self.auto = True
-            self.main_menu(selection=7)
+            self.main_menu(selection=5)
         elif self.table and self.screen_path:
             self.auto = True
-            self.main_menu(selection=6)
+            self.main_menu(selection=4)
         else:
             self.main_menu()
 
@@ -72,10 +79,9 @@ class Interface:
                 '3': 'Select Screener',
                 '4': 'Run Screen',
                 '5': 'Run Backtest',
-                '6': 'Show Tickers',
-                '7': 'Show Results',
-                '8': 'Show Ticker Results',
-                '9': 'Show All',
+                '6': 'Show All',
+                '7': 'Show Top',
+                '8': 'Show Ticker',
                 '0': 'Exit'
             }
 
@@ -86,12 +92,10 @@ class Interface:
                 menu_items['3'] = f'Select Screener ({self.screen_base})'
 
             if len(self.results) > 0:
-                menu_items['6'] = f'Show Tickers ({self.valids})'
-                menu_items['7'] = f'Show Results ({self.valids})'
-                menu_items['9'] = f'Show All ({len(self.results)})'
+                menu_items['6'] = f'Show All ({self.valids})'
 
             if selection == 0:
-                selection = utils.menu(menu_items, 'Select Operation', 0, 9)
+                selection = utils.menu(menu_items, 'Select Operation', 0, 8)
 
             if selection == 1:
                 self.select_source()
@@ -102,19 +106,17 @@ class Interface:
             elif selection == 4:
                 if self.run_screen():
                     if self.valids > 0:
-                        self.print_results()
+                        self.print_results(top=20)
             elif selection == 5:
                 if self.run_backtest(prompt=not self.auto):
                     if self.valids > 0:
-                        self.print_backtest()
+                        self.print_backtest(top=20)
             elif selection == 6:
                 self.print_results()
             elif selection == 7:
-                self.print_results(verbose=True)
+                self.print_results(top=20)
             elif selection == 8:
                 self.print_ticker_results()
-            elif selection == 9:
-                self.print_results(all=True)
             elif selection == 0:
                 self.exit = True
 
@@ -205,25 +207,19 @@ class Interface:
                 utils.print_error(str(e))
             else:
                 self.results = []
-                self.valids = 0
                 self.task = threading.Thread(target=self.screener.run_script)
                 self.task.start()
 
                 self.show_progress('Progress', '')
 
-                # Wait for thread to finish
-                while self.task.is_alive(): pass
-
                 if self.screener.task_error == 'Done':
                     self.results = sorted(self.screener.results, reverse=True, key=lambda r: float(r))
+                    self.valids = 0
                     for result in self.results:
                         if result:
                             self.valids += 1
 
                     utils.print_message(f'{self.valids} symbols identified in {self.screener.task_time:.1f} seconds')
-
-                    for i, result in enumerate(self.screener.task_results):
-                        utils.print_message(f'{i+1:>2}: {result}')
 
                     success = True
 
@@ -248,7 +244,7 @@ class Interface:
 
         return success
 
-    def print_results(self, top:int=20, verbose:bool=False, all:bool=False, ticker:str='') -> None:
+    def print_results(self, top:int=-1, verbose:bool=False, ticker:str='') -> None:
         if not self.table:
             utils.print_error('No table specified')
         elif not self.screen_base:
@@ -256,8 +252,14 @@ class Interface:
         elif len(self.results) == 0:
             utils.print_message('No results were located')
         else:
-            if top > self.screener.task_success:
+            if top <= 0:
+                results = sorted(self.screener.results, key=lambda r: str(r))
                 top = self.screener.task_success
+            elif top > self.screener.task_success:
+                results = sorted(self.screener.results, reverse=True, key=lambda r: float(r))
+                top = self.screener.task_success
+            else:
+                results = sorted(self.screener.results, reverse=True, key=lambda r: float(r))
 
             if ticker:
                 utils.print_message(f'Screener Results for {ticker} ({self.screen_base})')
@@ -265,11 +267,9 @@ class Interface:
                 utils.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen_base})')
 
             index = 1
-            for result in self.results:
+            for result in results:
                 if ticker:
                     [print(r) for r in result.results if ticker.upper().ljust(6, ' ') == r[:6]]
-                elif all:
-                    [print(r) for r in result.results]
                 elif self.verbose or verbose:
                     [print(r) for r in result.results if result]
                 elif result:
@@ -280,7 +280,7 @@ class Interface:
                     break
         print()
 
-    def print_backtest(self, top:int=20):
+    def print_backtest(self, top:int=-1):
         if not self.table:
             utils.print_error('No table specified')
         elif not self.screen_base:
@@ -288,7 +288,9 @@ class Interface:
         elif len(self.results) == 0:
             utils.print_message('No results were located')
         else:
-            if top > self.screener.task_success:
+            if top <= 0:
+                top = self.screener.task_success
+            elif top > self.screener.task_success:
                 top = self.screener.task_success
 
             utils.print_message(f'Backtest Results {top} of {self.screener.task_success} ({self.screen_base})')

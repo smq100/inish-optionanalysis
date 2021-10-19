@@ -3,10 +3,12 @@ trendln: https://github.com/GregoryMorse/trendln
          https://towardsdatascience.com/programmatic-identification-of-support-resistance-trend-lines-with-python-d797a4a90530,
 '''
 
-import matplotlib.pyplot as plt
-import trendln
+import math
 
+import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
+import trendln
 
 from base import Threaded
 from data import store as store
@@ -138,7 +140,7 @@ class SupportResistance(Threaded):
         self.points = len(self.history)
         _logger.info(f'{__name__}: {self.points} pivot points identified from {self.history.iloc[0]["date"]} to {self.history.iloc[-1]["date"]}')
 
-        # Calculate lines across methods, extmethods, and flatten
+        # Extract lines across methods, extmethods, and flatten
         lines = [self._extract_lines(method, extmethod) for method in self.methods for extmethod in self.extmethods]
         self.lines = [item for sublist in lines for item in sublist]
 
@@ -289,31 +291,50 @@ class SupportResistance(Threaded):
         return lines
 
     def get_values(self) -> tuple[list[float], list[float]]:
-        lines = self._get_resistance()
+        lines = self.get_resistance()
         res = [value.end_point for value in lines.itertuples()]
 
-        lines = self._get_support()
+        lines = self.get_support()
         sup = [value.end_point for value in lines.itertuples()]
 
         return res, sup
 
-    def _get_resistance(self) -> pd.DataFrame:
+    def get_resistance(self, ascending:bool=False) -> pd.DataFrame:
         df = self.lines_df[self.lines_df['support'] == False].copy()
-        df.sort_values(by=['score'], ascending=False, inplace=True)
+        df.sort_values(by=['score'], ascending=ascending, inplace=True)
         df.reset_index(drop=True, inplace=True)
 
         return df.iloc[:self.best]
 
-    def _get_support(self) -> pd.DataFrame:
+    def get_support(self, ascending:bool=False) -> pd.DataFrame:
         df = self.lines_df[self.lines_df['support'] == True].copy()
-        df.sort_values(by=['score'], ascending=False, inplace=True)
+        df.sort_values(by=['score'], ascending=ascending, inplace=True)
         df.reset_index(drop=True, inplace=True)
 
         return df.iloc[:self.best]
+
+    def get_stats(self, support:bool) -> tuple[float, float]:
+        df_r = self.get_resistance()
+        df_s = self.get_support()
+        frames = [df_r, df_s]
+        df = pd.concat(frames)
+        max = df.iloc[0]['score']
+
+        if support:
+            values = [df.iloc[n]['end_point'] for n in range(self.best*2-1) if df.iloc[n]['end_point'] >= self.price]
+            weights = [df.iloc[n]['score']/max for n in range(self.best*2-1) if df.iloc[n]['end_point'] >= self.price]
+        else:
+            values = [df.iloc[n]['end_point'] for n in range(self.best*2-1) if df.iloc[n]['end_point'] < self.price]
+            weights = [df.iloc[n]['score']/max for n in range(self.best*2-1) if df.iloc[n]['end_point'] < self.price]
+
+        print(f'{self.price=}')
+        print(f'{values=}')
+        print(f'{weights=}')
+        return _weighted_avg_and_std(values, weights)
 
     def plot(self, show:bool=True, filename:str='', legend:bool=True, srlines:bool=False, trendlines:bool=False) -> plt.Figure:
-        resistance = self._get_resistance()
-        support = self._get_support()
+        resistance = self.get_resistance()
+        support = self.get_support()
 
         fig, ax1 = plt.subplots(figsize=(17,10))
         ax2 = ax1.secondary_yaxis('right')
@@ -512,6 +533,11 @@ class SupportResistance(Threaded):
 
         return fig
 
+def _weighted_avg_and_std(values:list[float], weights:list[float]) -> tuple[float, float]:
+    average = np.average(values, weights=weights)
+    variance = np.average((values-average)**2, weights=weights)
+    return (average, math.sqrt(variance))
+
 
 if __name__ == '__main__':
     import sys
@@ -527,4 +553,6 @@ if __name__ == '__main__':
         sr = SupportResistance('AAPL')
 
     sr.calculate()
-    sr.plot()
+    print(sr.get_stats(support=True))
+    print(sr.get_stats(support=False))
+    # sr.plot()

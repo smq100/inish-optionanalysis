@@ -5,7 +5,7 @@ from company.company import Company
 
 _logger = utils.get_logger()
 
-VALID_TECHNICALS = ('high', 'low', 'close', 'volume', 'sma', 'rsi', 'beta', 'rating', 'value', 'true')
+VALID_TECHNICALS = ('high', 'low', 'close', 'volume', 'sma', 'rsi', 'beta', 'rating', 'mcap', 'value', 'true')
 VALID_CONDITIONALS = ('le', 'eq', 'ge')
 VALID_SERIES = ('min', 'max', 'none')
 
@@ -112,7 +112,13 @@ class Interpreter:
                 self.base = value
                 self.enable_score = True
 
-        elif self.base_technical == VALID_TECHNICALS[9]: # true
+        elif self.base_technical == VALID_TECHNICALS[8]: # mcap
+            value = self._get_base_mcap()
+            if not value.empty:
+                self.base = value
+                self.enable_score = True
+
+        elif self.base_technical == VALID_TECHNICALS[10]: # true
             calculate = False
 
         else:
@@ -120,7 +126,7 @@ class Interpreter:
 
         # Criteria value
         if calculate:
-            if self.criteria_technical == VALID_TECHNICALS[8]: # value
+            if self.criteria_technical == VALID_TECHNICALS[9]: # value
                 self.criteria = self._get_criteria()
             elif self.criteria_technical == VALID_TECHNICALS[0]: # high
                 self.criteria = self._get_criteria_high()
@@ -245,6 +251,10 @@ class Interpreter:
 
     def _get_base_rating(self) -> pd.Series:
         rating = self.company.get_rating()
+        return pd.Series(rating)
+
+    def _get_base_mcap(self) -> pd.Series:
+        rating = float(self.company.get_marketcap())
         return pd.Series(rating)
 
     def _get_criteria(self) -> pd.Series:

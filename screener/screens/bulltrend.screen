@@ -42,6 +42,27 @@
       }
    },
    {
+      "note":"Price > SMA200",
+      "base":{
+         "technical":"close",
+         "length":0,
+         "start":-1,
+         "stop":0,
+         "series":"none",
+         "factor":1.0
+      },
+      "conditional":"ge",
+      "criteria":{
+         "technical":"sma",
+         "value":0.0,
+         "length":200,
+         "start":-1,
+         "stop":0,
+         "series":"none",
+         "factor":1.0
+      }
+   },
+   {
       "note":"RSI14 < 60",
       "base":{
          "technical":"rsi",

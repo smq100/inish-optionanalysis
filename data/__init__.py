@@ -20,13 +20,15 @@ db = config['DEFAULT']['DB']
 POSTGRES_URI = f'postgresql+psycopg2://{dbuser}:{dbpw}@localhost:{port}/{db}'
 
 # SQLite
-SQLITE_DATABASE_PATH = 'data/securities.db'
-SQLITE_URI = f'sqlite:///{SQLITE_DATABASE_PATH}'
+SQLITE_FILE_PATH = 'data/securities.db'
+SQLITE_URI = f'sqlite:///{SQLITE_FILE_PATH}'
 
 if ACTIVE_DB == VALID_DBS[0]:
     ACTIVE_URI = POSTGRES_URI
 elif ACTIVE_DB == VALID_DBS[1]:
     ACTIVE_URI = SQLITE_URI
+else:
+    ACTIVE_URI = ''
 
 # Symbol master spreadsheets
 VALID_SPREADSHEETS = ('google', 'excel')
@@ -41,4 +43,3 @@ EXCHANGES = ({'abbreviation':'NASDAQ', 'name':'National Association of Securitie
 
 INDEXES =   ({'abbreviation':'SP500',  'name':'Standard & Poors 500'},
              {'abbreviation':'DOW',    'name':'DOW Industrials'})
-            #  {'abbreviation':'CUSTOM', 'name':'Custom Index'})

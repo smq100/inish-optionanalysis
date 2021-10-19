@@ -370,11 +370,11 @@ class Manager(Threaded):
 
     def delete_database(self, recreate:bool=False):
         if d.ACTIVE_DB == d.VALID_DBS[1]:
-            if os.path.exists(d.SQLITE_DATABASE_PATH):
-                os.remove(d.SQLITE_DATABASE_PATH)
-                _logger.info(f'{__name__}: Deleted {d.SQLITE_DATABASE_PATH}')
+            if os.path.exists(d.SQLITE_FILE_PATH):
+                os.remove(d.SQLITE_FILE_PATH)
+                _logger.info(f'{__name__}: Deleted {d.SQLITE_FILE_PATH}')
             else:
-                _logger.warning(f'{__name__}: File does not exist: {d.SQLITE_DATABASE_PATH}')
+                _logger.warning(f'{__name__}: File does not exist: {d.SQLITE_FILE_PATH}')
         else:
             models.Base.metadata.drop_all(self.engine)
 
