@@ -32,7 +32,7 @@ EXTMETHOD = {
 }
 
 MAX_SCALE = 10.0
-ACCURACY = 8
+ACCURACY = 4
 
 class _Score:
     def __init__(self):
@@ -169,8 +169,8 @@ class SupportResistance(Threaded):
 
         self._calculate_stats()
         _logger.debug(f'{__name__}: Res: wavg={self.stats.weighted_avg_res:.2f}, wstd={self.stats.weighted_std_res:.2f}')
-        _logger.debug(f'{__name__}: Sup: wavg={self.stats.weighted_avg_sup:.2f}, wstd={self.stats.weighted_std_sup:.2f}')
         _logger.debug(f'{__name__}: Res: mavg={self.stats.modified_avg_res:.2f}')
+        _logger.debug(f'{__name__}: Sup: wavg={self.stats.weighted_avg_sup:.2f}, wstd={self.stats.weighted_std_sup:.2f}')
         _logger.debug(f'{__name__}: Sup: mavg={self.stats.modified_avg_sup:.2f}')
 
         self.task_error = 'Done'
@@ -329,7 +329,10 @@ class SupportResistance(Threaded):
         ### Resistance
         values = [df.iloc[n]['end_point'] for n in range(ittr) if df.iloc[n]['end_point'] >= self.price]
         weights = [df.iloc[n]['score']/max for n in range(ittr) if df.iloc[n]['end_point'] >= self.price]
-        if values and weights:
+
+        _logger.info(f'{__name__}: Res: {len(values)} total points >= {self.price:.2f}')
+
+        if values:
             (self.stats.weighted_avg_res, self.stats.weighted_std_res) = _weighted_avg_and_sd(values, weights)
         else:
             (self.stats.weighted_avg_res, self.stats.weighted_std_res) = (0.0, 0.0)
@@ -339,17 +342,24 @@ class SupportResistance(Threaded):
             values = [df.iloc[n]['end_point'] for n in range(ittr) if
                 (df.iloc[n]['end_point'] >= self.price) and
                 (df.iloc[n]['end_point'] < (self.price+(2*self.stats.weighted_std_res)))]
+
+            _logger.info(f'{__name__}: Res: {len(values)} modified points >= {self.price:.2f}')
+
             if values:
                 self.stats.modified_avg_res = np.mean(values)
             else:
                 self.stats.modified_avg_res = 0.0
         else:
             self.stats.modified_avg_res = 0.0
+            _logger.info(f'{__name__}: Res: 0 modified points >= {self.price:.2f}')
 
         ### Support
         values = [df.iloc[n]['end_point'] for n in range(ittr) if df.iloc[n]['end_point'] < self.price]
         weights = [df.iloc[n]['score']/max for n in range(ittr) if df.iloc[n]['end_point'] < self.price]
-        if values and weights:
+
+        _logger.info(f'{__name__}: Sup: {len(values)} total points < {self.price:.2f}')
+
+        if values:
             (self.stats.weighted_avg_sup, self.stats.weighted_std_sup) = _weighted_avg_and_sd(values, weights)
         else:
             (self.stats.weighted_avg_sup, self.stats.weighted_std_sup) = (0.0, 0.0)
@@ -359,12 +369,16 @@ class SupportResistance(Threaded):
             values = [df.iloc[n]['end_point'] for n in range(ittr) if
                 (df.iloc[n]['end_point'] < self.price) and
                 (df.iloc[n]['end_point'] > (self.price-(2*self.stats.weighted_std_sup)))]
+
+            _logger.info(f'{__name__}: Sup: {len(values)} modified points < {self.price:.2f}')
+
             if values:
                 self.stats.modified_avg_sup = np.mean(values)
             else:
                 self.stats.modified_avg_sup = 0.0
         else:
             self.stats.modified_avg_sup = 0.0
+            _logger.info(f'{__name__}: Res: 0 modified points < {self.price:.2f}')
 
     def plot(self, show:bool=True, legend:bool=True, trendlines:bool=False, filename:str='') -> plt.Figure:
         resistance = self._get_resistance()
@@ -524,10 +538,12 @@ class SupportResistance(Threaded):
 
         # Aggregate resistance & support lines
         if self.stats.modified_avg_res > 0.0:
-            ax1.hlines(self.stats.modified_avg_res, 0, self.points, color='red', linestyle='--', label='Aggregate Resistance', linewidth=1.0)
-        if self.stats.modified_avg_sup > 0.0:
-            ax1.hlines(self.stats.modified_avg_sup, 0, self.points, color='green', linestyle='--', label='Aggregate Support', linewidth=1.0)
+            ax1.hlines(self.stats.modified_avg_res, 0, self.points, color='red', linestyle='-.', label='Aggregate Resistance', linewidth=1.0)
 
+        if self.stats.modified_avg_sup > 0.0:
+            ax1.hlines(self.stats.modified_avg_sup, 0, self.points, color='green', linestyle='-.', label='Aggregate Support', linewidth=1.0)
+
+        # Trendlines
         if trendlines:
             index = 0
             date = self.history.iloc[index]['date']
@@ -576,10 +592,10 @@ if __name__ == '__main__':
     utils.get_logger(logging.DEBUG)
 
     if len(sys.argv) > 1:
-        sr = SupportResistance(sys.argv[1])
-        # methods = ['NSQUREDLOGN', 'NCUBED', 'HOUGHLINES', 'PROBHOUGH']
-        # extmethods = ['NAIVE', 'NAIVECONSEC', 'NUMDIFF']
-        # sr = SupportResistance(sys.argv[1], methods=methods, extmethods=extmethods)
+        # sr = SupportResistance(sys.argv[1])
+        methods = ['NSQUREDLOGN', 'NCUBED', 'HOUGHLINES', 'PROBHOUGH']
+        extmethods = ['NAIVE', 'NAIVECONSEC', 'NUMDIFF']
+        sr = SupportResistance(sys.argv[1], methods=methods, extmethods=extmethods)
     else:
         sr = SupportResistance('AAPL')
 
