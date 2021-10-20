@@ -32,6 +32,7 @@ EXTMETHOD = {
 }
 
 MAX_SCALE = 10.0
+ACCURACY = 8
 
 class _Score:
     def __init__(self):
@@ -90,6 +91,19 @@ class _Line:
 
         return output
 
+class _Stats:
+    def __init__(self):
+        self.slope_res = 0.0
+        self.intercept_res = 0.0
+        self.weighted_avg_res = 0.0
+        self.weighted_std_res = 0.0
+        self.modified_avg_res = 0.0
+        self.slope_sup = 0.0
+        self.intercept_sup = 0.0
+        self.weighted_avg_sup = 0.0
+        self.weighted_std_sup = 0.0
+        self.modified_avg_sup = 0.0
+
 class SupportResistance(Threaded):
     def __init__(self, ticker:str, methods:list[str]=['NSQUREDLOGN'], extmethods:list[str]=['NUMDIFF'], best:int=8, days:int=1000):
         if best < 1:
@@ -101,6 +115,7 @@ class SupportResistance(Threaded):
         if (store.is_ticker(ticker)):
             self.ticker = ticker.upper()
             self.methods = methods
+            self.extmethods = extmethods
             self.best = best
             self.days = days
             self.history = pd.DataFrame()
@@ -108,12 +123,7 @@ class SupportResistance(Threaded):
             self.company = {}
             self.lines:list[_Line] = []
             self.lines_df = pd.DataFrame()
-            self.slope_sup = 0.0
-            self.intercept_sup = 0.0
-            self.slope_res = 0.0
-            self.intercept_res = 0.0
-            self.extmethods = extmethods
-            self._accuracy = 8
+            self.stats = _Stats()
         else:
             raise ValueError('{__name__}: Error initializing {__class__} with ticker {ticker}')
 
@@ -155,10 +165,15 @@ class SupportResistance(Threaded):
         df = df.round(4)
         df.drop_duplicates(subset=['slope', 'intercept'], inplace=True)
         self.lines_df = df.reset_index(drop=True)
+        _logger.info(f'{__name__}: {len(self.lines_df)} rows created ({len(self.lines)-len(self.lines_df)} duplicates deleted)')
+
+        self._calculate_stats()
+        _logger.debug(f'{__name__}: Res: wavg={self.stats.weighted_avg_res:.2f}, wstd={self.stats.weighted_std_res:.2f}')
+        _logger.debug(f'{__name__}: Sup: wavg={self.stats.weighted_avg_sup:.2f}, wstd={self.stats.weighted_std_sup:.2f}')
+        _logger.debug(f'{__name__}: Res: mavg={self.stats.modified_avg_res:.2f}')
+        _logger.debug(f'{__name__}: Sup: mavg={self.stats.modified_avg_sup:.2f}')
 
         self.task_error = 'Done'
-
-        _logger.info(f'{__name__}: {len(self.lines_df)} rows created ({len(self.lines)-len(self.lines_df)} duplicates deleted)')
 
     def _extract_lines(self, method:str, extmethod:str) -> list[_Line]:
         if not method in METHOD:
@@ -166,14 +181,14 @@ class SupportResistance(Threaded):
 
         self.task_message = f'{method}/{extmethod}'
 
-        result = trendln.calc_support_resistance((None, self.history['high']), method=METHOD[method], extmethod=EXTMETHOD[extmethod], accuracy=self._accuracy)
+        result = trendln.calc_support_resistance((None, self.history['high']), method=METHOD[method], extmethod=EXTMETHOD[extmethod], accuracy=ACCURACY)
         maximaIdxs, pmax, maxtrend, maxwindows = result
 
-        result = trendln.calc_support_resistance((self.history['low'], None), method=METHOD[method], extmethod=EXTMETHOD[extmethod], accuracy=self._accuracy)
+        result = trendln.calc_support_resistance((self.history['low'], None), method=METHOD[method], extmethod=EXTMETHOD[extmethod], accuracy=ACCURACY)
         minimaIdxs, pmin, mintrend, minwindows = result
 
-        self.slope_res = pmax[0]
-        self.intercept_res = pmax[1]
+        self.stats.slope_res = pmax[0]
+        self.stats.intercept_res = pmax[1]
 
         lines:list[_Line] = []
         for line in maxtrend:
@@ -193,8 +208,8 @@ class SupportResistance(Threaded):
 
             lines += [newline]
 
-        self.slope_sup = pmin[0]
-        self.intercept_sup = pmin[1]
+        self.stats.slope_sup = pmin[0]
+        self.stats.intercept_sup = pmin[1]
 
         for line in mintrend:
             newline = _Line()
@@ -290,55 +305,74 @@ class SupportResistance(Threaded):
 
         return lines
 
-    def get_values(self) -> tuple[list[float], list[float]]:
-        lines = self.get_resistance()
-        res = [value.end_point for value in lines.itertuples()]
-
-        lines = self.get_support()
-        sup = [value.end_point for value in lines.itertuples()]
-
-        return res, sup
-
-    def get_resistance(self, ascending:bool=False) -> pd.DataFrame:
+    def _get_resistance(self, ascending:bool=False) -> pd.DataFrame:
         df = self.lines_df[self.lines_df['support'] == False].copy()
         df.sort_values(by=['score'], ascending=ascending, inplace=True)
         df.reset_index(drop=True, inplace=True)
 
         return df.iloc[:self.best]
 
-    def get_support(self, ascending:bool=False) -> pd.DataFrame:
+    def _get_support(self, ascending:bool=False) -> pd.DataFrame:
         df = self.lines_df[self.lines_df['support'] == True].copy()
         df.sort_values(by=['score'], ascending=ascending, inplace=True)
         df.reset_index(drop=True, inplace=True)
 
         return df.iloc[:self.best]
 
-    def get_stats(self, support:bool) -> tuple[float, float]:
-        df_r = self.get_resistance()
-        df_s = self.get_support()
-        frames = [df_r, df_s]
+    def _calculate_stats(self) -> None:
+        frames = [self._get_resistance(), self._get_support()]
         df = pd.concat(frames)
+        df.sort_values(by=['score'], ascending=False, inplace=True)
         max = df.iloc[0]['score']
+        ittr = (self.best * 2) - 1
 
-        if support:
-            values = [df.iloc[n]['end_point'] for n in range(self.best*2-1) if df.iloc[n]['end_point'] >= self.price]
-            weights = [df.iloc[n]['score']/max for n in range(self.best*2-1) if df.iloc[n]['end_point'] >= self.price]
+        ### Resistance
+        values = [df.iloc[n]['end_point'] for n in range(ittr) if df.iloc[n]['end_point'] >= self.price]
+        weights = [df.iloc[n]['score']/max for n in range(ittr) if df.iloc[n]['end_point'] >= self.price]
+        if values and weights:
+            (self.stats.weighted_avg_res, self.stats.weighted_std_res) = _weighted_avg_and_sd(values, weights)
         else:
-            values = [df.iloc[n]['end_point'] for n in range(self.best*2-1) if df.iloc[n]['end_point'] < self.price]
-            weights = [df.iloc[n]['score']/max for n in range(self.best*2-1) if df.iloc[n]['end_point'] < self.price]
+            (self.stats.weighted_avg_res, self.stats.weighted_std_res) = (0.0, 0.0)
 
-        print(f'{self.price=}')
-        print(f'{values=}')
-        print(f'{weights=}')
-        return _weighted_avg_and_std(values, weights)
+        if self.stats.weighted_std_res > 0.0:
+            # Recalculate removing outliers (outside 2 std dev's)
+            values = [df.iloc[n]['end_point'] for n in range(ittr) if
+                (df.iloc[n]['end_point'] >= self.price) and
+                (df.iloc[n]['end_point'] < (self.price+(2*self.stats.weighted_std_res)))]
+            if values:
+                self.stats.modified_avg_res = np.mean(values)
+            else:
+                self.stats.modified_avg_res = 0.0
+        else:
+            self.stats.modified_avg_res = 0.0
 
-    def plot(self, show:bool=True, filename:str='', legend:bool=True, srlines:bool=False, trendlines:bool=False) -> plt.Figure:
-        resistance = self.get_resistance()
-        support = self.get_support()
+        ### Support
+        values = [df.iloc[n]['end_point'] for n in range(ittr) if df.iloc[n]['end_point'] < self.price]
+        weights = [df.iloc[n]['score']/max for n in range(ittr) if df.iloc[n]['end_point'] < self.price]
+        if values and weights:
+            (self.stats.weighted_avg_sup, self.stats.weighted_std_sup) = _weighted_avg_and_sd(values, weights)
+        else:
+            (self.stats.weighted_avg_sup, self.stats.weighted_std_sup) = (0.0, 0.0)
+
+        if self.stats.weighted_std_sup > 0.0:
+            # Recalculate removing outliers (outside 2 std dev's)
+            values = [df.iloc[n]['end_point'] for n in range(ittr) if
+                (df.iloc[n]['end_point'] < self.price) and
+                (df.iloc[n]['end_point'] > (self.price-(2*self.stats.weighted_std_sup)))]
+            if values:
+                self.stats.modified_avg_sup = np.mean(values)
+            else:
+                self.stats.modified_avg_sup = 0.0
+        else:
+            self.stats.modified_avg_sup = 0.0
+
+    def plot(self, show:bool=True, legend:bool=True, trendlines:bool=False, filename:str='') -> plt.Figure:
+        resistance = self._get_resistance()
+        support = self._get_support()
 
         fig, ax1 = plt.subplots(figsize=(17,10))
         ax2 = ax1.secondary_yaxis('right')
-        # plt.style.use('seaborn')
+        plt.style.use('seaborn')
         plt.grid()
         plt.margins(x=0.1)
         plt.title(f'{self.company["name"]} Support & Resistance')
@@ -485,39 +519,35 @@ class SupportResistance(Threaded):
                 index += 1
 
         # Price line
-        ax1.hlines(self.price, 0, self.points, color='blue', linestyle='--', label='Current Price', linewidth=1.0)
-        ax1.text(self.points+5, self.price, f'{self.price:.2f}', color='blue', va='center', size='small')
+        ax1.hlines(self.price, 0, self.points, color='black', linestyle='--', label='Current Price', linewidth=1.0)
+        ax1.text(self.points+5, self.price, f'{self.price:.2f}', color='black', va='center', size='small')
 
-        # Current support and resistance levels
-        if srlines:
-            for line in support.itertuples():
-                ax1.hlines(line.end_point, 0, self.points, color='r', linestyle='--', linewidth=line_width)
-                # plt.axhline(y=line.end_point, color='r', linestyle='--', linewidth=line_width)
-
-            for line in resistance.itertuples():
-                ax1.hlines(line.end_point, 0, self.points, color='g', linestyle='--', linewidth=line_width)
-                # plt.axhline(y=line.end_point, color='g', linestyle='--', linewidth=line_width)
+        # Aggregate resistance & support lines
+        if self.stats.modified_avg_res > 0.0:
+            ax1.hlines(self.stats.modified_avg_res, 0, self.points, color='red', linestyle='--', label='Aggregate Resistance', linewidth=1.0)
+        if self.stats.modified_avg_sup > 0.0:
+            ax1.hlines(self.stats.modified_avg_sup, 0, self.points, color='green', linestyle='--', label='Aggregate Support', linewidth=1.0)
 
         if trendlines:
             index = 0
             date = self.history.iloc[index]['date']
             dates = [date.strftime('%Y-%m-%d')]
-            values = [self.intercept_res]
+            values = [self.stats.intercept_res]
             index = self.points-1
             date = self.history.iloc[index]['date']
             dates += [date.strftime('%Y-%m-%d')]
-            values += [self.slope_res * self.points + self.intercept_res]
+            values += [self.stats.slope_res * self.points + self.stats.intercept_res]
 
             ax1.plot(dates, values, '--', color='darkgreen', label='Avg Resistance', linewidth=1.7)
 
             index = 0
             date = self.history.iloc[index]['date']
             dates = [date.strftime('%Y-%m-%d')]
-            values = [self.intercept_sup]
+            values = [self.stats.intercept_sup]
             index = self.points-1
             date = self.history.iloc[index]['date']
             dates += [date.strftime('%Y-%m-%d')]
-            values += [self.slope_sup * self.points + self.intercept_sup]
+            values += [self.stats.slope_sup * self.points + self.stats.intercept_sup]
 
             ax1.plot(dates, values, '--', color='darkred', label='Avg Support', linewidth=1.7)
 
@@ -533,7 +563,7 @@ class SupportResistance(Threaded):
 
         return fig
 
-def _weighted_avg_and_std(values:list[float], weights:list[float]) -> tuple[float, float]:
+def _weighted_avg_and_sd(values:list[float], weights:list[float]) -> tuple[float, float]:
     average = np.average(values, weights=weights)
     variance = np.average((values-average)**2, weights=weights)
     return (average, math.sqrt(variance))
@@ -546,13 +576,12 @@ if __name__ == '__main__':
     utils.get_logger(logging.DEBUG)
 
     if len(sys.argv) > 1:
-        methods = ['NSQUREDLOGN', 'NCUBED', 'HOUGHLINES', 'PROBHOUGH']
-        extmethods = ['NAIVE', 'NAIVECONSEC', 'NUMDIFF']
-        sr = SupportResistance(sys.argv[1], methods=methods, extmethods=extmethods)
+        sr = SupportResistance(sys.argv[1])
+        # methods = ['NSQUREDLOGN', 'NCUBED', 'HOUGHLINES', 'PROBHOUGH']
+        # extmethods = ['NAIVE', 'NAIVECONSEC', 'NUMDIFF']
+        # sr = SupportResistance(sys.argv[1], methods=methods, extmethods=extmethods)
     else:
         sr = SupportResistance('AAPL')
 
     sr.calculate()
-    print(sr.get_stats(support=True))
-    print(sr.get_stats(support=False))
-    # sr.plot()
+    sr.plot()

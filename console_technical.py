@@ -75,18 +75,19 @@ class Interface:
 
     def calculate_trends(self):
         if self.quick:
-            methods = ['NSQUREDLOGN']
-            extmethods = ['NUMDIFF']
+            self.trend = SupportResistance(self.ticker, days=self.days)
         else:
             methods = ['NSQUREDLOGN', 'NCUBED', 'HOUGHLINES', 'PROBHOUGH']
             extmethods = ['NAIVE', 'NAIVECONSEC', 'NUMDIFF']
+            self.trend = SupportResistance(self.ticker, methods=methods, extmethods=extmethods, days=self.days)
 
-        self.trend = SupportResistance(self.ticker, methods=methods, extmethods=extmethods, days=self.days)
         self.task = threading.Thread(target=self.trend.calculate)
         self.task.start()
 
         self._show_progress()
 
+        utils.print_message(f'Resitance Average: {self.trend.stats.modified_avg_res:.2f} (std={self.trend.stats.weighted_std_res:.2f})')
+        utils.print_message(f'Support Average:   {self.trend.stats.modified_avg_sup:.2f} (std={self.trend.stats.weighted_std_sup:.2f})', creturn=0)
         self.trend.plot()
 
     def _show_progress(self) -> None:
