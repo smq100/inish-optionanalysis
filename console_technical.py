@@ -86,8 +86,8 @@ class Interface:
 
         self._show_progress()
 
-        utils.print_message(f'Resitance Average: {self.trend.stats.modified_avg_res:.2f} (std={self.trend.stats.weighted_std_res:.2f})')
-        utils.print_message(f'Support Average:   {self.trend.stats.modified_avg_sup:.2f} (std={self.trend.stats.weighted_std_sup:.2f})', creturn=0)
+        utils.print_message(f'Resitance Average: {self.trend.stats.res_modified_mean:.2f} (std={self.trend.stats.res_weighted_std:.2f})')
+        utils.print_message(f'Support Average:   {self.trend.stats.sup_modified_mean:.2f} (std={self.trend.stats.sup_weighted_std:.2f})', creturn=0)
         self.trend.plot()
 
     def _show_progress(self) -> None:
