@@ -151,7 +151,7 @@ class SupportResistance(Threaded):
         self.points = len(self.history)
         _logger.info(f'{__name__}: {self.points} pivot points identified from {self.history.iloc[0]["date"]} to {self.history.iloc[-1]["date"]}')
 
-        # Extract lines across methods, extmethods, and flatten
+        # Extract lines across methods, extmethods, and then flatten
         lines = [self._extract_lines(method, extmethod) for method in self.methods for extmethod in self.extmethods]
         self.lines = [item for sublist in lines for item in sublist]
 
@@ -168,7 +168,7 @@ class SupportResistance(Threaded):
         self.lines_df = df.reset_index(drop=True)
         _logger.info(f'{__name__}: {len(self.lines_df)} rows created ({len(self.lines)-len(self.lines_df)} duplicates deleted)')
 
-        self._calculate_weighted_stats()
+        self._calculate_stats()
 
         self.task_error = 'Done'
 
@@ -302,26 +302,32 @@ class SupportResistance(Threaded):
 
         return lines
 
-    def _get_resistance(self, ascending:bool=False) -> pd.DataFrame:
+    def _get_resistance(self, best:int=0, ascending:bool=False) -> pd.DataFrame:
+        if best <= 0: best = self.best
+
         df = self.lines_df[self.lines_df['support'] == False].copy()
         df.sort_values(by=['score'], ascending=ascending, inplace=True)
         df.reset_index(drop=True, inplace=True)
 
-        return df.iloc[:self.best]
+        return df.iloc[:best]
 
-    def _get_support(self, ascending:bool=False) -> pd.DataFrame:
+    def _get_support(self, best:int=0, ascending:bool=False) -> pd.DataFrame:
+        if best <= 0: best = self.best
+
         df = self.lines_df[self.lines_df['support'] == True].copy()
         df.sort_values(by=['score'], ascending=ascending, inplace=True)
         df.reset_index(drop=True, inplace=True)
 
-        return df.iloc[:self.best]
+        return df.iloc[:best]
 
-    def _calculate_weighted_stats(self) -> None:
-        frames = [self._get_resistance(), self._get_support()]
-        _df = pd.concat(frames)
-        self.best_df = _df.sort_values(by=['score'], ascending=False)
+    def _calculate_stats(self, best:int=0) -> None:
+        if best <= 0: best = self.best
+        ittr = (best * 2) - 1
+
+        frames = [self._get_resistance(best=best), self._get_support(best=best)]
+        df = pd.concat(frames)
+        self.best_df = df.sort_values(by=['score'], ascending=False)
         max = self.best_df.iloc[0]['score']
-        ittr = (self.best * 2) - 1
 
         ### Resistance
         values = [self.best_df.iloc[n]['end_point'] for n in range(ittr) if self.best_df.iloc[n]['end_point'] > self.price]
@@ -345,10 +351,11 @@ class SupportResistance(Threaded):
             (self.stats.sup_weighted_mean, self.stats.sup_weighted_std) = (0.0, 0.0)
         _logger.info(f'{__name__}: Sup: wmean={self.stats.sup_weighted_mean:.2f}, wstd={self.stats.sup_weighted_std:.2f}')
 
-        self._calculate_modified_stats()
+        self._calculate_modified_stats(best=best)
 
-    def _calculate_modified_stats(self) -> None:
-        ittr = (self.best * 2) - 1
+    def _calculate_modified_stats(self, best:int=0) -> None:
+        if best <= 0: best = self.best
+        ittr = (best * 2) - 1
 
         # Resistance. Recalculate removing outliers
         values = []

@@ -27,8 +27,8 @@ class Interface:
         else:
             utils.print_error(f'Invalid ticker: {self.ticker}')
             self.ticker = ''
-            self.exit = False
-            self.main_menu()
+            if not self.exit:
+                self.main_menu()
 
     def main_menu(self):
         while True:
