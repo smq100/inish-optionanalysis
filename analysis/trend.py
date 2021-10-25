@@ -123,7 +123,6 @@ class SupportResistance(Threaded):
             self.company = {}
             self.lines:list[_Line] = []
             self.lines_df = pd.DataFrame()
-            self.best_df = pd.DataFrame()
             self.stats = _Stats()
         else:
             raise ValueError('{__name__}: Error initializing {__class__} with ticker {ticker}')
@@ -305,7 +304,7 @@ class SupportResistance(Threaded):
     def _get_resistance(self, best:int=0, ascending:bool=False) -> pd.DataFrame:
         if best <= 0: best = self.best
 
-        df = self.lines_df[self.lines_df['support'] == False].copy()
+        df = self.lines_df[self.lines_df['end_point'] >= self.price].copy()
         df.sort_values(by=['score'], ascending=ascending, inplace=True)
         df.reset_index(drop=True, inplace=True)
 
@@ -314,7 +313,7 @@ class SupportResistance(Threaded):
     def _get_support(self, best:int=0, ascending:bool=False) -> pd.DataFrame:
         if best <= 0: best = self.best
 
-        df = self.lines_df[self.lines_df['support'] == True].copy()
+        df = self.lines_df[self.lines_df['end_point'] < self.price].copy()
         df.sort_values(by=['score'], ascending=ascending, inplace=True)
         df.reset_index(drop=True, inplace=True)
 
@@ -322,36 +321,36 @@ class SupportResistance(Threaded):
 
     def _calculate_stats(self, best:int=0) -> None:
         if best <= 0: best = self.best
-        ittr = (best * 2) - 1
-
-        frames = [self._get_resistance(best=best), self._get_support(best=best)]
-        df = pd.concat(frames)
-        self.best_df = df.sort_values(by=['score'], ascending=False)
-        max = self.best_df.iloc[0]['score']
 
         ### Resistance
-        values = [self.best_df.iloc[n]['end_point'] for n in range(ittr) if self.best_df.iloc[n]['end_point'] > self.price]
-        weights = [self.best_df.iloc[n]['score']/max for n in range(ittr) if self.best_df.iloc[n]['end_point'] > self.price]
+        df = self._get_resistance()
+        values = df['end_point'].to_list()
+        weights = [df.iloc[n]['score'] for n in range(len(df))]
         _logger.info(f'{__name__}: Res: {len(values)} total points >= {self.price:.2f}')
 
         if values:
-            (self.stats.res_weighted_mean, self.stats.res_weighted_std) = _weighted_mean_and_std(values, weights)
+            (self.stats.res_weighted_mean, self.stats.res_weighted_std) = _calculate_weighted_mean_and_std(values, weights)
         else:
             (self.stats.res_weighted_mean, self.stats.res_weighted_std) = (0.0, 0.0)
+        self.stats.res_modified_mean = self.stats.res_weighted_mean
+
         _logger.info(f'{__name__}: Res: wmean={self.stats.res_weighted_mean:.2f}, wstd={self.stats.res_weighted_std:.2f}')
 
         ### Support
-        values = [self.best_df.iloc[n]['end_point'] for n in range(ittr) if self.best_df.iloc[n]['end_point'] < self.price]
-        weights = [self.best_df.iloc[n]['score']/max for n in range(ittr) if self.best_df.iloc[n]['end_point'] < self.price]
+        df = self._get_support()
+        values = df['end_point'].to_list()
+        weights = [df.iloc[n]['score'] for n in range(len(df))]
         _logger.info(f'{__name__}: Sup: {len(values)} total points < {self.price:.2f}')
 
         if values:
-            (self.stats.sup_weighted_mean, self.stats.sup_weighted_std) = _weighted_mean_and_std(values, weights)
+            (self.stats.sup_weighted_mean, self.stats.sup_weighted_std) = _calculate_weighted_mean_and_std(values, weights)
         else:
             (self.stats.sup_weighted_mean, self.stats.sup_weighted_std) = (0.0, 0.0)
+        self.stats.sup_modified_mean = self.stats.sup_weighted_mean
+
         _logger.info(f'{__name__}: Sup: wmean={self.stats.sup_weighted_mean:.2f}, wstd={self.stats.sup_weighted_std:.2f}')
 
-        self._calculate_modified_stats(best=best)
+        # self._calculate_modified_stats(best=best)
 
     def _calculate_modified_stats(self, best:int=0) -> None:
         if best <= 0: best = self.best
@@ -582,7 +581,7 @@ class SupportResistance(Threaded):
 
         return fig
 
-def _weighted_mean_and_std(values:list[float], weights:list[float]) -> tuple[float, float]:
+def _calculate_weighted_mean_and_std(values:list[float], weights:list[float]) -> tuple[float, float]:
     average = np.average(values, weights=weights)
     variance = np.average((values-average)**2, weights=weights)
     return (average, math.sqrt(variance))
