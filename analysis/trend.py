@@ -42,6 +42,7 @@ class _Score:
         self.points = 0.0
         self.age = 0.0
         self.slope = 0.0
+        self.basis = True
 
     def calculate(self) -> float:
         score = (
@@ -50,7 +51,9 @@ class _Score:
             (self.proximity * 0.05) +
             (self.points    * 0.20) +
             (self.age       * 0.20) +
-            (self.slope     * 0.35))
+            (self.slope     * 0.30))
+
+        if self.basis: score += 0.05
 
         return score
 
@@ -74,7 +77,6 @@ class _Line:
 
     def __str__(self):
         dates = [point['date'] for point in self.points]
-
         output = f'score={self.score:.2f}, '\
                  f'fit={self.fit:4n} '\
                  f'wid={self.width:4n} '\
@@ -105,7 +107,7 @@ class _Stats:
         self.sup_modified_mean = 0.0
 
 class SupportResistance(Threaded):
-    def __init__(self, ticker:str, methods:list[str]=['NSQUREDLOGN'], extmethods:list[str]=['NUMDIFF'], best:int=10, days:int=1000):
+    def __init__(self, ticker:str, methods:list[str]=['NSQUREDLOGN'], extmethods:list[str]=['NUMDIFF'], best:int=8, days:int=1000):
         if best < 1:
             raise ValueError("'best' value must be > 0")
 
@@ -232,7 +234,7 @@ class SupportResistance(Threaded):
 
         # Calculate end point extension (y = mx + b)
         for line in lines:
-            line.end_point = (self.points * line.slope) + line.intercept
+            line.end_point = (line.slope * self.points) + line.intercept
 
         # Sort lines based on mathematical fit (ssr) and set the line ranking
         lines = sorted(lines, key=lambda l: l.ssr)
@@ -294,6 +296,13 @@ class SupportResistance(Threaded):
             line._score.slope *= MAX_SCALE
             line._score.slope = MAX_SCALE - line._score.slope # Lower is better
 
+        #   Basis (line type matches position. Ex: end point of support line is below current price, resistence end point above)
+        for line in lines:
+            if line.support:
+                line._score.basis = True if line.end_point < self.price else False
+            else:
+                line._score.basis = True if line.end_point >= self.price else False
+
         for line in lines:
             line.score = line._score.calculate()
 
@@ -301,19 +310,27 @@ class SupportResistance(Threaded):
 
         return lines
 
-    def _get_resistance(self, best:int=0, ascending:bool=False) -> pd.DataFrame:
+    def _get_resistance(self, method_price:bool=True, best:int=0, ascending:bool=False) -> pd.DataFrame:
         if best <= 0: best = self.best
 
-        df = self.lines_df[self.lines_df['end_point'] >= self.price].copy()
+        if method_price:
+            df = self.lines_df[self.lines_df['end_point'] >= self.price].copy()
+        else:
+            df = self.lines_df[self.lines_df['support'] == False].copy()
+
         df.sort_values(by=['score'], ascending=ascending, inplace=True)
         df.reset_index(drop=True, inplace=True)
 
         return df.iloc[:best]
 
-    def _get_support(self, best:int=0, ascending:bool=False) -> pd.DataFrame:
+    def _get_support(self, method_price:bool=True, best:int=0, ascending:bool=False) -> pd.DataFrame:
         if best <= 0: best = self.best
 
-        df = self.lines_df[self.lines_df['end_point'] < self.price].copy()
+        if method_price:
+            df = self.lines_df[self.lines_df['end_point'] < self.price].copy()
+        else:
+            df = self.lines_df[self.lines_df['support'] == True].copy()
+
         df.sort_values(by=['score'], ascending=ascending, inplace=True)
         df.reset_index(drop=True, inplace=True)
 
@@ -350,41 +367,9 @@ class SupportResistance(Threaded):
 
         _logger.info(f'{__name__}: Sup: wmean={self.stats.sup_weighted_mean:.2f}, wstd={self.stats.sup_weighted_std:.2f}')
 
-        # self._calculate_modified_stats(best=best)
-
-    def _calculate_modified_stats(self, best:int=0) -> None:
-        if best <= 0: best = self.best
-        ittr = (best * 2) - 1
-
-        # Resistance. Recalculate removing outliers
-        values = []
-        self.stats.res_modified_mean = 0.0
-        if self.stats.res_weighted_std > 0.0:
-            values = [self.best_df.iloc[n]['end_point'] for n in range(ittr) if
-                (self.best_df.iloc[n]['end_point'] >= self.price) and
-                (self.best_df.iloc[n]['end_point'] < (self.price+(self.price*0.50)))]
-            if values:
-                self.stats.res_modified_mean = np.mean(values)
-
-        _logger.info(f'{__name__}: Res: {len(values)} modified points >= {self.price:.2f}')
-        _logger.info(f'{__name__}: Res: mmean={self.stats.res_modified_mean:.2f}')
-
-        # Support. Recalculate removing outliers
-        values = []
-        self.stats.sup_modified_mean = 0.0
-        if self.stats.sup_weighted_std > 0.0:
-            values = [self.best_df.iloc[n]['end_point'] for n in range(ittr) if
-                (self.best_df.iloc[n]['end_point'] < self.price) and
-                (self.best_df.iloc[n]['end_point'] > (self.price-(self.price*0.50)))]
-            if values:
-                self.stats.sup_modified_mean = np.mean(values)
-
-        _logger.info(f'{__name__}: Sup: {len(values)} modified points < {self.price:.2f}')
-        _logger.info(f'{__name__}: Sup: mmean={self.stats.sup_modified_mean:.2f}')
-
     def plot(self, show:bool=True, legend:bool=True, trendlines:bool=False, filename:str='') -> plt.Figure:
-        resistance = self._get_resistance()
-        support = self._get_support()
+        resistance = self._get_resistance(method_price=False)
+        support = self._get_support(method_price=False)
 
         fig, ax1 = plt.subplots(figsize=(17,10))
         ax2 = ax1.secondary_yaxis('right')
@@ -423,7 +408,7 @@ class SupportResistance(Threaded):
                 date = self.history.iloc[index]['date']
                 dates += [date.strftime('%Y-%m-%d')]
                 values += [self.history.iloc[index]['high']]
-        ax1.plot(dates, values, '.g')
+        ax1.plot(dates, values, '.r')
 
         dates = []
         values = []
@@ -433,7 +418,7 @@ class SupportResistance(Threaded):
                 date = self.history.iloc[index]['date']
                 dates += [date.strftime('%Y-%m-%d')]
                 values += [self.history.iloc[index]['low']]
-        ax1.plot(dates, values, '.r')
+        ax1.plot(dates, values, '.g')
 
         # Trend lines
         dates = []
@@ -448,7 +433,7 @@ class SupportResistance(Threaded):
             dates += [date.strftime('%Y-%m-%d')]
             values += [self.history.iloc[index]['high']]
 
-            ax1.plot(dates, values, '-g', linewidth=line_width)
+            ax1.plot(dates, values, '-r', linewidth=line_width)
 
         dates = []
         values = []
@@ -462,7 +447,7 @@ class SupportResistance(Threaded):
             dates += [date.strftime('%Y-%m-%d')]
             values += [self.history.iloc[index]['low']]
 
-            ax1.plot(dates, values, '-r', linewidth=line_width)
+            ax1.plot(dates, values, '-g', linewidth=line_width)
 
         # Trend line extensions
         dates = []
@@ -477,7 +462,7 @@ class SupportResistance(Threaded):
             dates += [date.strftime('%Y-%m-%d')]
             values += [line.end_point]
 
-            ax1.plot(dates, values, ':g', linewidth=line_width)
+            ax1.plot(dates, values, ':r', linewidth=line_width)
 
         dates = []
         values = []
@@ -491,7 +476,7 @@ class SupportResistance(Threaded):
             dates += [date.strftime('%Y-%m-%d')]
             values += [line.end_point]
 
-            ax1.plot(dates, values, ':r', linewidth=line_width)
+            ax1.plot(dates, values, ':g', linewidth=line_width)
 
         # End points
         dates = []
@@ -503,8 +488,8 @@ class SupportResistance(Threaded):
                 date = self.history['date'].iloc[-1]
                 dates += [date.strftime('%Y-%m-%d')]
                 values += [ep]
-                text += [{'text':f'{line.end_point:.2f}:{index+1}', 'value':line.end_point, 'color':'green'}]
-        ax1.plot(dates, values, '.g')
+                text += [{'text':f'{line.end_point:.2f}:{index+1}', 'value':line.end_point, 'color':'red'}]
+        ax1.plot(dates, values, '.r')
 
         dates = []
         values = []
@@ -514,8 +499,8 @@ class SupportResistance(Threaded):
                 date = self.history['date'].iloc[-1]
                 dates += [date.strftime('%Y-%m-%d')]
                 values += [ep]
-                text += [{'text':f'{line.end_point:.2f}:{index+1}', 'value':line.end_point, 'color':'red'}]
-        ax1.plot(dates, values, '.r')
+                text += [{'text':f'{line.end_point:.2f}:{index+1}', 'value':line.end_point, 'color':'green'}]
+        ax1.plot(dates, values, '.g')
 
         # End points text
         ylimits = ax1.get_ylim()
@@ -535,15 +520,15 @@ class SupportResistance(Threaded):
                 index += 1
 
         # Price line
-        ax1.hlines(self.price, 0, self.points, color='black', linestyle='--', label='Current Price', linewidth=1.0)
+        ax1.hlines(self.price, -20, self.points, color='black', linestyle='--', label='Current Price', linewidth=1.0)
         ax1.text(self.points+5, self.price, f'{self.price:.2f}', color='black', va='center', size='small')
 
         # Aggregate resistance & support lines
         if self.stats.res_modified_mean > 0.0:
-            ax1.hlines(self.stats.res_modified_mean, 0, self.points, color='red', linestyle='-.', label='Aggregate Resistance', linewidth=1.0)
+            ax1.hlines(self.stats.res_modified_mean, -20, self.points, color='red', linestyle='-.', label='Aggregate Resistance', linewidth=1.0)
 
         if self.stats.sup_modified_mean > 0.0:
-            ax1.hlines(self.stats.sup_modified_mean, 0, self.points, color='green', linestyle='-.', label='Aggregate Support', linewidth=1.0)
+            ax1.hlines(self.stats.sup_modified_mean, -20, self.points, color='green', linestyle='-.', label='Aggregate Support', linewidth=1.0)
 
         # Trendlines
         if trendlines:
