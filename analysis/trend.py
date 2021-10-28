@@ -152,7 +152,7 @@ class SupportResistance(Threaded):
         self.points = len(self.history)
         _logger.info(f'{__name__}: {self.points} pivot points identified from {self.history.iloc[0]["date"]} to {self.history.iloc[-1]["date"]}')
 
-        # Extract lines across methods, extmethods, and then flatten
+        # Extract lines across methods, extmethods, and then flatten all the results
         lines = [self._extract_lines(method, extmethod) for method in self.methods for extmethod in self.extmethods]
         self.lines = [item for sublist in lines for item in sublist]
 
@@ -164,7 +164,7 @@ class SupportResistance(Threaded):
         df.dropna(inplace=True)
         df.drop('_score', 1, inplace=True)
         df.sort_values(by=['score'], ascending=False, inplace=True)
-        df = df.round(4)
+        df = df.round(6)
         df.drop_duplicates(subset=['slope', 'intercept'], inplace=True)
         self.lines_df = df.reset_index(drop=True)
         _logger.info(f'{__name__}: {len(self.lines_df)} rows created ({len(self.lines)-len(self.lines_df)} duplicates deleted)')
@@ -310,61 +310,71 @@ class SupportResistance(Threaded):
 
         return lines
 
-    def _get_resistance(self, method_price:bool=True, best:int=0, ascending:bool=False) -> pd.DataFrame:
+    def _get_resistance(self, method_price:bool=True, best:int=0) -> pd.DataFrame:
         if best <= 0: best = self.best
 
-        if method_price:
-            df = self.lines_df[self.lines_df['end_point'] >= self.price].copy()
-        else:
-            df = self.lines_df[self.lines_df['support'] == False].copy()
+        df = self.lines_df[self.lines_df['support'] == False].copy()
+        df = df.iloc[:best].sort_values(by=['score'], ascending=False)
 
-        df.sort_values(by=['score'], ascending=ascending, inplace=True)
+        if method_price:
+            dfs = self.lines_df[self.lines_df['support'] == True].copy()
+            dfs = df.iloc[:best].sort_values(by=['score'], ascending=False)
+            df = pd.concat([df, dfs])
+            df = df[df['end_point'] >= self.price]
+            df = df.iloc[:best].sort_values(by=['end_point'], ascending=True)
+
         df.reset_index(drop=True, inplace=True)
 
-        return df.iloc[:best]
+        return df
 
-    def _get_support(self, method_price:bool=True, best:int=0, ascending:bool=False) -> pd.DataFrame:
+    def _get_support(self, method_price:bool=True, best:int=0) -> pd.DataFrame:
         if best <= 0: best = self.best
 
-        if method_price:
-            df = self.lines_df[self.lines_df['end_point'] < self.price].copy()
-        else:
-            df = self.lines_df[self.lines_df['support'] == True].copy()
+        df = self.lines_df[self.lines_df['support'] == True].copy()
+        df = df.iloc[:best].sort_values(by=['score'], ascending=False)
 
-        df.sort_values(by=['score'], ascending=ascending, inplace=True)
+        if method_price:
+            dfr = self.lines_df[self.lines_df['support'] == False].copy()
+            dfr = df.iloc[:best].sort_values(by=['score'], ascending=False)
+            df = pd.concat([df, dfr])
+            df = df[df['end_point'] < self.price]
+            df = df.iloc[:best].sort_values(by=['end_point'], ascending=False)
+
         df.reset_index(drop=True, inplace=True)
 
-        return df.iloc[:best]
+        return df
 
     def _calculate_stats(self, best:int=0) -> None:
         if best <= 0: best = self.best
 
-        ### Resistance
+        # Resistance
         df = self._get_resistance()
         values = df['end_point'].to_list()
         weights = [df.iloc[n]['score'] for n in range(len(df))]
-        _logger.info(f'{__name__}: Res: {len(values)} total points >= {self.price:.2f}')
 
         if values:
             (self.stats.res_weighted_mean, self.stats.res_weighted_std) = _calculate_weighted_mean_and_std(values, weights)
+            self.stats.res_modified_mean = values[0]
         else:
             (self.stats.res_weighted_mean, self.stats.res_weighted_std) = (0.0, 0.0)
-        self.stats.res_modified_mean = self.stats.res_weighted_mean
+            self.stats.res_modified_mean = 0.0
 
+        _logger.info(f'{__name__}: Res: {len(values)} total points >= {self.price:.2f}')
         _logger.info(f'{__name__}: Res: wmean={self.stats.res_weighted_mean:.2f}, wstd={self.stats.res_weighted_std:.2f}')
 
-        ### Support
+        # Support
         df = self._get_support()
         values = df['end_point'].to_list()
         weights = [df.iloc[n]['score'] for n in range(len(df))]
-        _logger.info(f'{__name__}: Sup: {len(values)} total points < {self.price:.2f}')
 
         if values:
             (self.stats.sup_weighted_mean, self.stats.sup_weighted_std) = _calculate_weighted_mean_and_std(values, weights)
+            self.stats.sup_modified_mean = values[0]
         else:
             (self.stats.sup_weighted_mean, self.stats.sup_weighted_std) = (0.0, 0.0)
-        self.stats.sup_modified_mean = self.stats.sup_weighted_mean
+            self.stats.sup_modified_mean = 0.0
 
+        _logger.info(f'{__name__}: Sup: {len(values)} total points < {self.price:.2f}')
         _logger.info(f'{__name__}: Sup: wmean={self.stats.sup_weighted_mean:.2f}, wstd={self.stats.sup_weighted_std:.2f}')
 
     def plot(self, show:bool=True, legend:bool=True, trendlines:bool=False, filename:str='') -> plt.Figure:
