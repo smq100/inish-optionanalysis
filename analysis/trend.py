@@ -99,12 +99,12 @@ class _Stats:
         self.res_intercept = 0.0
         self.res_weighted_mean = 0.0
         self.res_weighted_std = 0.0
-        self.res_modified_mean = 0.0
+        self.res_level = 0.0
         self.sup_slope = 0.0
         self.sup_intercept = 0.0
         self.sup_weighted_mean = 0.0
         self.sup_weighted_std = 0.0
-        self.sup_modified_mean = 0.0
+        self.sup_level = 0.0
 
 class SupportResistance(Threaded):
     def __init__(self, ticker:str, methods:list[str]=['NSQUREDLOGN'], extmethods:list[str]=['NUMDIFF'], best:int=8, days:int=1000):
@@ -235,6 +235,7 @@ class SupportResistance(Threaded):
         # Calculate end point extension (y = mx + b)
         for line in lines:
             line.end_point = (line.slope * self.points) + line.intercept
+            if line.end_point < 0.0: line.end_point = 0.0
 
         # Sort lines based on mathematical fit (ssr) and set the line ranking
         lines = sorted(lines, key=lambda l: l.ssr)
@@ -314,14 +315,13 @@ class SupportResistance(Threaded):
         if best <= 0: best = self.best
 
         df = self.lines_df[self.lines_df['support'] == False].copy()
-        df = df.iloc[:best].sort_values(by=['score'], ascending=False)
+        df = df.sort_values(by=['score'], ascending=False)[:best]
 
         if method_price:
-            dfs = self.lines_df[self.lines_df['support'] == True].copy()
-            dfs = df.iloc[:best].sort_values(by=['score'], ascending=False)
+            dfs = self._get_support(method_price=False)
             df = pd.concat([df, dfs])
             df = df[df['end_point'] >= self.price]
-            df = df.iloc[:best].sort_values(by=['end_point'], ascending=True)
+            df = df.sort_values(by=['end_point'], ascending=True)
 
         df.reset_index(drop=True, inplace=True)
 
@@ -331,14 +331,13 @@ class SupportResistance(Threaded):
         if best <= 0: best = self.best
 
         df = self.lines_df[self.lines_df['support'] == True].copy()
-        df = df.iloc[:best].sort_values(by=['score'], ascending=False)
+        df = df.sort_values(by=['score'], ascending=False)[:best]
 
         if method_price:
-            dfr = self.lines_df[self.lines_df['support'] == False].copy()
-            dfr = df.iloc[:best].sort_values(by=['score'], ascending=False)
+            dfr = self._get_resistance(method_price=False)
             df = pd.concat([df, dfr])
             df = df[df['end_point'] < self.price]
-            df = df.iloc[:best].sort_values(by=['end_point'], ascending=False)
+            df = df.sort_values(by=['end_point'], ascending=False)
 
         df.reset_index(drop=True, inplace=True)
 
@@ -354,10 +353,10 @@ class SupportResistance(Threaded):
 
         if values:
             (self.stats.res_weighted_mean, self.stats.res_weighted_std) = _calculate_weighted_mean_and_std(values, weights)
-            self.stats.res_modified_mean = values[0]
+            self.stats.res_level = values[0]
         else:
             (self.stats.res_weighted_mean, self.stats.res_weighted_std) = (0.0, 0.0)
-            self.stats.res_modified_mean = 0.0
+            self.stats.res_level = 0.0
 
         _logger.info(f'{__name__}: Res: {len(values)} total points >= {self.price:.2f}')
         _logger.info(f'{__name__}: Res: wmean={self.stats.res_weighted_mean:.2f}, wstd={self.stats.res_weighted_std:.2f}')
@@ -369,10 +368,10 @@ class SupportResistance(Threaded):
 
         if values:
             (self.stats.sup_weighted_mean, self.stats.sup_weighted_std) = _calculate_weighted_mean_and_std(values, weights)
-            self.stats.sup_modified_mean = values[0]
+            self.stats.sup_level = values[0]
         else:
             (self.stats.sup_weighted_mean, self.stats.sup_weighted_std) = (0.0, 0.0)
-            self.stats.sup_modified_mean = 0.0
+            self.stats.sup_level = 0.0
 
         _logger.info(f'{__name__}: Sup: {len(values)} total points < {self.price:.2f}')
         _logger.info(f'{__name__}: Sup: wmean={self.stats.sup_weighted_mean:.2f}, wstd={self.stats.sup_weighted_std:.2f}')
@@ -534,11 +533,11 @@ class SupportResistance(Threaded):
         ax1.text(self.points+5, self.price, f'{self.price:.2f}', color='black', va='center', size='small')
 
         # Aggregate resistance & support lines
-        if self.stats.res_modified_mean > 0.0:
-            ax1.hlines(self.stats.res_modified_mean, -20, self.points, color='red', linestyle='-.', label='Aggregate Resistance', linewidth=1.0)
+        if self.stats.res_level > 0.0:
+            ax1.hlines(self.stats.res_level, -20, self.points, color='red', linestyle='-.', label='Aggregate Resistance', linewidth=1.0)
 
-        if self.stats.sup_modified_mean > 0.0:
-            ax1.hlines(self.stats.sup_modified_mean, -20, self.points, color='green', linestyle='-.', label='Aggregate Support', linewidth=1.0)
+        if self.stats.sup_level > 0.0:
+            ax1.hlines(self.stats.sup_level, -20, self.points, color='green', linestyle='-.', label='Aggregate Support', linewidth=1.0)
 
         # Trendlines
         if trendlines:
