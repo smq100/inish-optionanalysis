@@ -192,14 +192,14 @@ def get_last_price(ticker:str) -> float:
 
 def get_history(ticker:str, days:int=-1, end:int=0, live:bool=False) -> pd.DataFrame:
     ticker = ticker.upper()
-    results = pd.DataFrame()
+    history = pd.DataFrame()
 
     if end < 0:
         ValueError('Invalid value for "end"')
     elif live:
-        results = fetcher.get_history_live(ticker, days)
-        if results is not None:
-            _logger.info(f'{__name__}: Fetched {len(results)} days of live price history for {ticker}')
+        history = fetcher.get_history_live(ticker, days)
+        if history is not None:
+            _logger.info(f'{__name__}: Fetched {len(history)} days of live price history for {ticker}')
         else:
             _logger.warning(f'{__name__}: Unable to fetch live price history for {ticker} from {d.ACTIVE_DATASOURCE}')
 
@@ -220,15 +220,15 @@ def get_history(ticker:str, days:int=-1, end:int=0, live:bool=False) -> pd.DataF
                     p = session.query(models.Price).filter(and_(models.Price.security_id==symbols.id, models.Price.date >= start)).order_by(models.Price.date)
 
                 if p is not None:
-                    results = pd.read_sql(p.statement, _engine)
-                    if not results.empty:
-                        results = results[:-end] if end > 0 else results
-                        results.drop(['id', 'security_id'], 1, inplace=True)
-                        _logger.info(f'{__name__}: Fetched {len(results)} days of price history for {ticker} from {d.ACTIVE_DB} ({end} days prior)')
+                    history = pd.read_sql(p.statement, _engine)
+                    if not history.empty:
+                        history = history[:-end] if end > 0 else history
+                        history.drop(['id', 'security_id'], 1, inplace=True)
+                        _logger.info(f'{__name__}: Fetched {len(history)} days of price history for {ticker} from {d.ACTIVE_DB} ({end} days prior)')
             else:
                 _logger.warning(f'{__name__}: No history found for {ticker}')
 
-    return results
+    return history
 
 def get_company(ticker:str, live:bool=False, extra:bool=False) -> dict:
     ticker = ticker.upper()

@@ -2,6 +2,8 @@ import time
 import threading
 import logging
 
+import matplotlib.pyplot as plt
+
 from analysis.trend import SupportResistance
 from data import store as store
 from utils import utils
@@ -11,22 +13,21 @@ _logger = utils.get_logger(logging.WARNING, logfile='')
 
 class Interface:
     def __init__(self, ticker:str, days:int=1000, quick:bool=False, exit:bool=False):
-        self.ticker = ticker.upper()
+        self.tickers = [ticker.upper()]
         self.days = days
         self.quick = quick
         self.exit = exit
         self.trend:SupportResistance = None
-        self.tickers:list[str] = []
         self.task:threading.Thread = None
 
         if store.is_ticker(ticker.upper()):
             if self.exit:
-                self.calculate_trends()
+                self.calculate_support_and_resistance()
             else:
                 self.main_menu()
         else:
-            utils.print_error(f'Invalid ticker: {self.ticker}')
-            self.ticker = ''
+            utils.print_error(f'Invalid ticker: {self.tickers[0]}')
+            self.tickers[0] = ''
             if not self.exit:
                 self.main_menu()
 
@@ -34,22 +35,28 @@ class Interface:
         while True:
             menu_items = {
                 '1': 'Change Ticker',
-                '2': f'Days ({self.days})',
-                '3': 'Calculate Support & Resistance',
+                '2': 'Add Ticker',
+                '3': f'Days ({self.days})',
+                '4': 'Calculate Support & Resistance',
                 '0': 'Exit'
             }
 
-            if self.ticker is not None:
-                menu_items['1'] = f'Change Ticker ({self.ticker})'
+            if self.tickers is not None:
+                menu_items['1'] = f'Change Ticker ({", ".join(self.tickers)})'
 
-            selection = utils.menu(menu_items, 'Select Operation', 0, 3)
+            if self.quick:
+                menu_items['4'] += ' (quick)'
+
+            selection = utils.menu(menu_items, 'Select Operation', 0, 4)
 
             if selection == 1:
                 self.select_ticker()
-            elif selection == 2:
-                self.select_days()
+            if selection == 2:
+                self.add_ticker()
             elif selection == 3:
-                self.calculate_trends()
+                self.select_days()
+            elif selection == 4:
+                self.calculate_support_and_resistance()
             elif selection == 0:
                 self.exit = True
 
@@ -60,10 +67,26 @@ class Interface:
         valid = False
 
         while not valid:
-            self.ticker = input('Please enter symbol, or 0 to cancel: ').upper()
-            if self.ticker != '0':
-                valid = store.is_ticker(self.ticker)
-                if not valid:
+            ticker = input('Please enter symbol, or 0 to cancel: ').upper()
+            if ticker != '0':
+                valid = store.is_ticker(ticker)
+                if valid:
+                    self.tickers[0] = ticker
+                else:
+                    utils.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
+            else:
+                break
+
+    def add_ticker(self):
+        valid = False
+
+        while not valid:
+            ticker = input('Please enter symbol, or 0 to cancel: ').upper()
+            if ticker != '0':
+                valid = store.is_ticker(ticker)
+                if valid:
+                    self.tickers += [ticker]
+                else:
                     utils.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
             else:
                 break
@@ -73,22 +96,25 @@ class Interface:
         while self.days < 30:
             self.days = utils.input_integer('Enter number of days: ', 30, 9999)
 
-    def calculate_trends(self):
+    def calculate_support_and_resistance(self):
         if self.quick:
-            self.trend = SupportResistance(self.ticker, days=self.days)
+            self.trend = SupportResistance(self.tickers[0], days=self.days)
         else:
             methods = ['NSQUREDLOGN', 'NCUBED', 'HOUGHLINES', 'PROBHOUGH']
             extmethods = ['NAIVE', 'NAIVECONSEC', 'NUMDIFF']
-            self.trend = SupportResistance(self.ticker, methods=methods, extmethods=extmethods, days=self.days)
+            self.trend = SupportResistance(self.tickers[0], methods=methods, extmethods=extmethods, days=self.days)
 
         self.task = threading.Thread(target=self.trend.calculate)
         self.task.start()
 
         self._show_progress()
 
+        figure = self.trend.plot()
+        plt.figure(figure)
+        plt.show()
+
         utils.print_message(f'Resitance: {self.trend.stats.res_level:.2f} (std={self.trend.stats.res_weighted_std:.2f})')
         utils.print_message(f'Support:   {self.trend.stats.sup_level:.2f} (std={self.trend.stats.sup_weighted_std:.2f})', creturn=0)
-        self.trend.plot()
 
     def _show_progress(self) -> None:
         while not self.trend.task_error: pass

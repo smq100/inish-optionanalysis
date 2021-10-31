@@ -123,8 +123,7 @@ class SupportResistance(Threaded):
             self.history = pd.DataFrame()
             self.price = 0.0
             self.company = {}
-            self.lines:list[_Line] = []
-            self.lines_df = pd.DataFrame()
+            self.lines = pd.DataFrame()
             self.stats = _Stats()
         else:
             raise ValueError('{__name__}: Error initializing {__class__} with ticker {ticker}')
@@ -140,10 +139,7 @@ class SupportResistance(Threaded):
 
         self.task_error = 'None'
 
-        self.price = store.get_current_price(self.ticker)
-        if self.price <= 0.0:
-            raise ValueError('Unable to get price')
-
+        self.price = self.history.iloc[-1]['close']
         self.company = store.get_company(self.ticker)
         if not self.company:
             self.company['name'] = 'Error'
@@ -154,20 +150,20 @@ class SupportResistance(Threaded):
 
         # Extract lines across methods, extmethods, and then flatten all the results
         lines = [self._extract_lines(method, extmethod) for method in self.methods for extmethod in self.extmethods]
-        self.lines = [item for sublist in lines for item in sublist]
+        lines = [item for sublist in lines for item in sublist]
 
-        self.task_total = len(self.lines)
+        self.task_total = len(lines)
         _logger.info(f'{__name__}: {self.task_total} total lines extracted')
 
         # Create dataframe of lines then sort, round, and drop duplicates
-        df = pd.DataFrame.from_records([vars(l) for l in self.lines])
+        df = pd.DataFrame.from_records([vars(l) for l in lines])
         df.dropna(inplace=True)
         df.drop('_score', 1, inplace=True)
         df.sort_values(by=['score'], ascending=False, inplace=True)
         df = df.round(6)
         df.drop_duplicates(subset=['slope', 'intercept'], inplace=True)
-        self.lines_df = df.reset_index(drop=True)
-        _logger.info(f'{__name__}: {len(self.lines_df)} rows created ({len(self.lines)-len(self.lines_df)} duplicates deleted)')
+        self.lines = df.reset_index(drop=True)
+        _logger.info(f'{__name__}: {len(self.lines)} rows created ({len(lines)-len(self.lines)} duplicates deleted)')
 
         self._calculate_stats()
 
@@ -314,7 +310,7 @@ class SupportResistance(Threaded):
     def _get_resistance(self, method_price:bool=True, best:int=0) -> pd.DataFrame:
         if best <= 0: best = self.best
 
-        df = self.lines_df[self.lines_df['support'] == False].copy()
+        df = self.lines[self.lines['support'] == False].copy()
         df = df.sort_values(by=['score'], ascending=False)[:best]
 
         if method_price:
@@ -330,7 +326,7 @@ class SupportResistance(Threaded):
     def _get_support(self, method_price:bool=True, best:int=0) -> pd.DataFrame:
         if best <= 0: best = self.best
 
-        df = self.lines_df[self.lines_df['support'] == True].copy()
+        df = self.lines[self.lines['support'] == True].copy()
         df = df.sort_values(by=['score'], ascending=False)[:best]
 
         if method_price:
@@ -346,47 +342,54 @@ class SupportResistance(Threaded):
     def _calculate_stats(self, best:int=0) -> None:
         if best <= 0: best = self.best
 
+        def calculate(support:bool) -> tuple[float, float, float]:
+            weighted_mean = 0.0
+            weighted_std = 0.0
+            level = 0.0
+
+            if support:
+                df = self._get_support(best=best)
+            else:
+                df = self._get_resistance(best=best)
+
+            if not df.empty:
+                norm = max(df['score'].to_list())
+                values = df['end_point'].to_list()
+                weights = [df.iloc[n]['score'] / norm for n in range(len(df))]
+
+                # Closest end point to price
+                level = values[0]
+
+                # Weighted average according to scores
+                weighted_mean = np.average(values, weights=weights)
+
+                # Std Dev
+                variance = np.average((values-weighted_mean)**2, weights=weights)
+                weighted_std = math.sqrt(variance)
+            else:
+                _logger.warning(f'{__name__}: Empty dataframe calculating stats')
+
+            return weighted_mean, weighted_std, level
+
         # Resistance
-        df = self._get_resistance()
-        values = df['end_point'].to_list()
-        weights = [df.iloc[n]['score'] for n in range(len(df))]
-
-        if values:
-            (self.stats.res_weighted_mean, self.stats.res_weighted_std) = _calculate_weighted_mean_and_std(values, weights)
-            self.stats.res_level = values[0]
-        else:
-            (self.stats.res_weighted_mean, self.stats.res_weighted_std) = (0.0, 0.0)
-            self.stats.res_level = 0.0
-
-        _logger.info(f'{__name__}: Res: {len(values)} total points >= {self.price:.2f}')
-        _logger.info(f'{__name__}: Res: wmean={self.stats.res_weighted_mean:.2f}, wstd={self.stats.res_weighted_std:.2f}')
+        self.stats.res_weighted_mean, self.stats.res_weighted_std, self.stats.res_level = calculate(False)
+        _logger.info(f'{__name__}: Res: wmean={self.stats.res_weighted_mean:.2f}, wstd={self.stats.res_weighted_std:.2f}, level={self.stats.res_level}')
 
         # Support
-        df = self._get_support()
-        values = df['end_point'].to_list()
-        weights = [df.iloc[n]['score'] for n in range(len(df))]
+        self.stats.sup_weighted_mean, self.stats.sup_weighted_std, self.stats.sup_level = calculate(True)
+        _logger.info(f'{__name__}: Sup: wmean={self.stats.sup_weighted_mean:.2f}, wstd={self.stats.sup_weighted_std:.2f}, level={self.stats.sup_level}')
 
-        if values:
-            (self.stats.sup_weighted_mean, self.stats.sup_weighted_std) = _calculate_weighted_mean_and_std(values, weights)
-            self.stats.sup_level = values[0]
-        else:
-            (self.stats.sup_weighted_mean, self.stats.sup_weighted_std) = (0.0, 0.0)
-            self.stats.sup_level = 0.0
-
-        _logger.info(f'{__name__}: Sup: {len(values)} total points < {self.price:.2f}')
-        _logger.info(f'{__name__}: Sup: wmean={self.stats.sup_weighted_mean:.2f}, wstd={self.stats.sup_weighted_std:.2f}')
-
-    def plot(self, show:bool=True, legend:bool=True, trendlines:bool=False, filename:str='') -> plt.Figure:
+    def plot(self, show:bool=False, legend:bool=True, trendlines:bool=False, filename:str='') -> plt.Figure:
         resistance = self._get_resistance(method_price=False)
         support = self._get_support(method_price=False)
 
-        fig, ax1 = plt.subplots(figsize=(17,10))
+        figure, ax1 = plt.subplots(figsize=(17,10))
         ax2 = ax1.secondary_yaxis('right')
         plt.style.use('seaborn')
         plt.grid()
         plt.margins(x=0.1)
         plt.title(f'{self.company["name"]} Support & Resistance')
-        fig.canvas.manager.set_window_title(f'{self.ticker} Support & Resistance')
+        figure.canvas.manager.set_window_title(f'{self.ticker} Support & Resistance')
         line_width = 1.0
 
         if self.price < 30.0:
@@ -567,18 +570,13 @@ class SupportResistance(Threaded):
             plt.legend(loc='upper left')
 
         if filename:
-            fig.savefig(filename, dpi=150)
+            figure.savefig(filename, dpi=150)
             _logger.info(f'{__name__}: Saved plot as {filename}')
 
         if show:
             plt.show()
 
-        return fig
-
-def _calculate_weighted_mean_and_std(values:list[float], weights:list[float]) -> tuple[float, float]:
-    average = np.average(values, weights=weights)
-    variance = np.average((values-average)**2, weights=weights)
-    return (average, math.sqrt(variance))
+        return figure
 
 
 if __name__ == '__main__':
@@ -596,4 +594,4 @@ if __name__ == '__main__':
         sr = SupportResistance('AAPL')
 
     sr.calculate()
-    sr.plot()
+    sr.plot(show=True)
