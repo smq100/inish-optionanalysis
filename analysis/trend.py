@@ -137,7 +137,6 @@ class SupportResistance(Threaded):
         if self.history is None:
             raise ValueError('Unable to get history')
 
-        self.task_error = 'None'
         self.task_message = self.ticker
 
         self.price = self.history.iloc[-1]['close']
@@ -147,9 +146,9 @@ class SupportResistance(Threaded):
             _logger.warning(f'Unable to get company information ({self.ticker})')
 
         self.points = len(self.history)
-        _logger.info(f'{__name__}: {self.points} pivot points identified from {self.history.iloc[0]["date"]} to {self.history.iloc[-1]["date"]}')
+        self.task_error = 'None'
 
-        # Extract lines across methods, extmethods, and then flatten all the results
+        # Extract lines across methods, extmethods, and then flatten the results
         lines = [self._extract_lines(method, extmethod) for method in self.methods for extmethod in self.extmethods]
         lines = [item for sublist in lines for item in sublist]
 

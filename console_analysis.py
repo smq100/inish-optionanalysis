@@ -1,150 +1,365 @@
+import os
 import time
 import threading
 import logging
 
 import data as d
-from analysis.correlate import Correlate
+from screener.screener import Screener, Result, INIT_NAME
 from data import store as store
 from utils import utils
 
-
 _logger = utils.get_logger(logging.WARNING, logfile='')
 
+BASEPATH = os.getcwd()+'/screener/screens/'
+SCREEN_SUFFIX = 'screen'
+
+
 class Interface:
-    def __init__(self, coor:str=''):
-        self.list = coor.upper()
-        self.coorelate:Correlate = None
-        self.exchanges = [e['abbreviation'] for e in d.EXCHANGES]
-        self.indexes = [i['abbreviation'] for i in d.INDEXES]
-        self.tickers:list[str] = []
+    def __init__(self, table:str='', screen:str='', backtest:int=0, verbose:bool=False, exit:bool=False, live:bool=False):
+        self.table = table.upper()
+        self.screen_base = screen
+        self.verbose = verbose
+        self.exit = exit
+        self.live = live
+        self.auto = False
+        self.screen_path = ''
+        self.results:list[Result] = []
+        self.valids = 0
+        self.screener:Screener = None
+        self.task:threading.Thread = None
 
-        if not coor:
-            self.main_menu()
-        elif store.is_list(self.list):
-            self.main_menu(selection=1)
+        abort = False
+
+        if type(backtest) == int:
+            self.end = backtest
         else:
-            utils.print_error('Invalid list specified')
+            self.end = 0
+            abort = False
+            utils.print_error("'backtest' must be an integer. Using a value of 0")
 
-    def main_menu(self, selection=0):
+        if self.table:
+            if self.table == 'ALL':
+                pass
+            elif store.is_exchange(self.table):
+                pass
+            elif store.is_index(self.table):
+                pass
+            elif store.is_ticker(self.table):
+                pass
+            else:
+                self.table = ''
+                abort = True
+                utils.print_error(f'Exchange, index or ticker not found: {self.table}')
+
+        if self.screen_base:
+            if os.path.exists(BASEPATH+screen+'.'+SCREEN_SUFFIX):
+                self.screen_path = BASEPATH + self.screen_base + '.' + SCREEN_SUFFIX
+            else:
+                utils.print_error(f'File "{self.screen_base}" not foundx')
+                abort = True
+                self.screen_base = ''
+
+        if abort:
+            pass
+        elif self.table and self.screen_path and self.end > 0:
+            self.auto = True
+            self.main_menu(selection=5)
+        elif self.table and self.screen_path:
+            self.auto = True
+            self.main_menu(selection=4)
+        else:
+            self.main_menu()
+
+    def main_menu(self, selection:int=0) -> None:
         while True:
+            source = 'live' if self.live else d.ACTIVE_DB
             menu_items = {
-                '1': 'Compute Coorelation',
-                '2': 'Best Coorelation',
-                '3': 'Least Coorelation',
-                '4': 'ticker Coorelation',
+                '1': f'Select Data Source ({source})',
+                '2': 'Select List',
+                '3': 'Select Screener',
+                '4': 'Run Screen',
+                '5': 'Run Backtest',
+                '6': 'Show All',
+                '7': 'Show Top',
+                '8': 'Show Ticker',
                 '0': 'Exit'
             }
 
+            if self.table:
+                menu_items['2'] = f'Select List ({self.table})'
+
+            if self.screen_base:
+                menu_items['3'] = f'Select Screener ({self.screen_base})'
+
+            if len(self.results) > 0:
+                menu_items['6'] = f'Show All ({self.valids})'
+
             if selection == 0:
-                selection = utils.menu(menu_items, 'Select Operation', 0, 4)
+                selection = utils.menu(menu_items, 'Select Operation', 0, 8)
 
             if selection == 1:
-                self.compute_coorelation()
-            elif selection == 2:
-                self.get_best_coorelation()
+                self.select_source()
+            if selection == 2:
+                self.select_list()
             elif selection == 3:
-                self.get_least_coorelation()
+                self.select_screen()
             elif selection == 4:
-                self.get_ticker_coorelation()
+                if self.run_screen():
+                    if self.valids > 0:
+                        self.print_results(top=20)
+            elif selection == 5:
+                if self.run_backtest(prompt=not self.auto):
+                    if self.valids > 0:
+                        self.print_backtest(top=20)
+            elif selection == 6:
+                self.print_results()
+            elif selection == 7:
+                self.print_results(top=20)
+            elif selection == 8:
+                self.print_ticker_results()
             elif selection == 0:
-                break
+                self.exit = True
 
             selection = 0
 
-    def compute_coorelation(self, progressbar=True):
-        if not self.list:
-            self.list = self._get_list()
+            if self.exit:
+                break
 
-        if self.list:
-            self.tickers = store.get_tickers(self.list)
-            self.coorelate = Correlate(self.tickers)
+    def select_source(self) -> None:
+        menu_items = {
+            '1': 'Database',
+            '2': 'Live',
+            '0': 'Cancel',
+        }
 
-            if self.coorelate:
-                self.task = threading.Thread(target=self.coorelate.compute_correlation)
+        selection = utils.menu(menu_items, 'Select Data Source', 0, 2)
+        if selection == 1:
+            self.live = False
+        elif selection == 2:
+            self.live = True
+
+    def select_list(self) -> None:
+        list = utils.input_text('Enter exchange, index, or ticker: ').upper()
+        if store.is_exchange(list):
+            self.table = list
+        elif store.is_list(list):
+            self.table = list
+        elif store.is_ticker(list):
+            self.table = list
+        else:
+            self.table = ''
+            self.screener = None
+            utils.print_error(f'List {list} is not valid')
+
+    def select_screen(self) -> None:
+        self.script = []
+        self.results = []
+        self.valids = 0
+        paths = []
+        with os.scandir(BASEPATH) as entries:
+            for entry in entries:
+                if entry.is_file():
+                    head, sep, tail = entry.name.partition('.')
+                    if tail != SCREEN_SUFFIX:
+                        pass
+                    elif head == INIT_NAME:
+                        pass
+                    elif head == 'test':
+                        pass
+                    else:
+                        self.script += [entry.path]
+                        paths += [head]
+
+        if paths:
+            self.script.sort()
+            paths.sort()
+
+            menu_items = {}
+            for index, item in enumerate(paths):
+                menu_items[f'{index+1}'] = f'{item.title()}'
+            menu_items['0'] = 'Cancel'
+
+            selection = utils.menu(menu_items, 'Select Screen', 0, index+1)
+            if selection > 0:
+                self.screen_base = paths[selection-1]
+                self.screen_path = BASEPATH + self.screen_base + '.' + SCREEN_SUFFIX
+                self.results = []
+        else:
+            utils.print_message('No screener files found')
+
+    def run_screen(self, backtest:bool=False) -> bool:
+        success = False
+        self.auto = False
+
+        if not self.table:
+            utils.print_error('No exchange, index, or ticker specified')
+        elif not self.screen_path:
+            utils.print_error('No screen specified')
+        else:
+            if backtest:
+                self.live = False
+            else:
+                self.end = 0
+
+            try:
+                self.screener = Screener(self.table, screen=self.screen_path, end=self.end, live=self.live)
+            except ValueError as e:
+                utils.print_error(str(e))
+            else:
+                self.results = []
+                self.task = threading.Thread(target=self.screener.run_script)
                 self.task.start()
 
-                if progressbar:
-                    print()
-                    self._show_progress('Progress', '')
+                self.show_progress('Progress', '')
 
-                utils.print_message(f'Coorelation Among {self.list} Symbols')
-                print(self.coorelate.task_object)
+                if self.screener.task_error == 'Done':
+                    self.results = sorted(self.screener.results, reverse=True, key=lambda r: float(r))
+                    self.valids = 0
+                    for result in self.results:
+                        if result:
+                            self.valids += 1
+
+                    utils.print_message(f'{self.valids} symbols identified in {self.screener.task_time:.1f} seconds')
+
+                    success = True
+
+        return success
+
+    def run_backtest(self, prompt:bool=True, bullish:bool=True) -> bool:
+        if prompt:
+            input = utils.input_integer('Input number of days (10-100): ', 10, 100)
+            self.end = input
+
+        success = self.run_screen(backtest=True)
+        if success:
+            for result in self.results:
+                if result:
+                    result.price_last = result.company.get_last_price()
+                    result.price_current = store.get_last_price(result.company.ticker)
+
+                    if bullish:
+                        result.backtest_success = (result.price_current > result.price_last)
+                    else:
+                        result.backtest_success = (result.price_current < result.price_last)
+
+        return success
+
+    def print_results(self, top:int=-1, verbose:bool=False, ticker:str='') -> None:
+        if not self.table:
+            utils.print_error('No table specified')
+        elif not self.screen_base:
+            utils.print_error('No screen specified')
+        elif len(self.results) == 0:
+            utils.print_message('No results were located')
+        else:
+            if top <= 0:
+                results = sorted(self.screener.results, key=lambda r: str(r))
+                top = self.screener.task_success
+            elif top > self.screener.task_success:
+                results = sorted(self.screener.results, reverse=True, key=lambda r: float(r))
+                top = self.screener.task_success
             else:
-                utils.print_error('Invaid symbol list')
-                _logger.error(f'{__name__}: Invalid symbol list')
+                results = sorted(self.screener.results, reverse=True, key=lambda r: float(r))
 
-    def get_best_coorelation(self):
-        if not self.coorelate:
-            utils.print_error('Run coorelation first')
-        elif not self.coorelate:
-            utils.print_error('Run coorelation first')
-        else:
-            utils.print_message(f'Best Coorelations in {self.list}')
-            best = self.coorelate.get_sorted_coorelations(20, True)
-            [print(f'{item[0]}/{item[1]:<5}\t{item[2]:.4f}') for item in best]
-
-    def get_least_coorelation(self):
-        if not self.coorelate:
-            utils.print_error('Run coorelation first')
-        elif not self.coorelate:
-            utils.print_error('Run coorelation first')
-        else:
-            utils.print_message(f'Least Coorelations in {self.list}')
-            best = self.coorelate.get_sorted_coorelations(20, False)
-            [print(f'{item[0]}/{item[1]:<5}\t{item[2]:.4f}') for item in best]
-
-    def get_ticker_coorelation(self):
-        if not self.coorelate:
-            utils.print_error('Run coorelation first')
-        elif not self.coorelate:
-            utils.print_error('Run coorelation first')
-        else:
-            ticker = utils.input_text('Enter symbol: ').upper()
-            if not store.is_ticker(ticker):
-                utils.print_error('Invalid symbol')
+            if ticker:
+                utils.print_message(f'Screener Results for {ticker} ({self.screen_base})')
             else:
-                ds = self.coorelate.get_ticker_coorelation(ticker)
-                utils.print_message(f'Highest correlation for {ticker}')
-                [print(f'{sym:>5}: {val:.5f}') for sym, val in ds[-1:-11:-1].iteritems()]
-                utils.print_message(f'Lowest correlation for {ticker}')
-                [print(f'{sym:>5}: {val:.5f}') for sym, val in ds[:10].iteritems()]
+                utils.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen_base})')
 
-    def _get_list(self):
-        list = ''
-        menu_items = {}
-        for i, exchange in enumerate(self.exchanges):
-            menu_items[f'{i+1}'] = f'{exchange}'
-        for i, index in enumerate(self.indexes, i):
-            menu_items[f'{i+1}'] = f'{index}'
-        menu_items['0'] = 'Cancel'
+            index = 1
+            for result in results:
+                if ticker:
+                    [print(r) for r in result.results if ticker.upper().ljust(6, ' ') == r[:6]]
+                elif self.verbose or verbose:
+                    [print(r) for r in result.results if result]
+                elif result:
+                    print(f'{index:>3}: {result} ({float(result):.2f})')
+                    index += 1
 
-        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, i+1)
-        if select > 0:
-            list = menu_items[f'{select}']
+                if index > top:
+                    break
+        print()
 
-        return list
+    def print_backtest(self, top:int=-1):
+        if not self.table:
+            utils.print_error('No table specified')
+        elif not self.screen_base:
+            utils.print_error('No screen specified')
+        elif len(self.results) == 0:
+            utils.print_message('No results were located')
+        else:
+            if top <= 0:
+                top = self.screener.task_success
+            elif top > self.screener.task_success:
+                top = self.screener.task_success
 
-    def _show_progress(self, prefix, suffix):
-        while not self.coorelate.task_error: pass
+            utils.print_message(f'Backtest Results {top} of {self.screener.task_success} ({self.screen_base})')
 
-        if self.coorelate.task_error == 'None':
-            total = self.coorelate.task_total
-            utils.progress_bar(self.coorelate.task_completed, self.coorelate.task_total, prefix=prefix, suffix=suffix, reset=True)
-            while self.task.is_alive and self.coorelate.task_error == 'None':
+            index = 1
+            for result in self.results:
+                if result:
+                    mark = '*' if result.backtest_success else ' '
+                    print(f'{index:>3}: {mark} {result} ({float(result):.2f}) ${result.price_last:.2f}/${result.price_current:.2f}')
+                    index += 1
+
+                if index > top:
+                    break
+
+    def print_ticker_results(self):
+        ticker = utils.input_text('Enter ticker: ')
+        if ticker:
+            ticker = ticker.upper()
+            if store.is_ticker(ticker):
+                self.print_results(ticker=ticker)
+
+    def show_progress(self, prefix, suffix) -> None:
+        # Wait for thread to initialize
+        while not self.screener.task_error: pass
+
+        if self.screener.task_error == 'None':
+            utils.progress_bar(self.screener.task_completed, self.screener.task_total, prefix=prefix, suffix=suffix, reset=True)
+
+            while self.task.is_alive and self.screener.task_error == 'None':
                 time.sleep(0.20)
-                completed = self.coorelate.task_completed
-                ticker = self.coorelate.task_ticker
-                utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, ticker=ticker)
+                total = self.screener.task_total
+                completed = self.screener.task_completed
+                success = self.screener.task_success
+                ticker = self.screener.task_ticker
+                tasks = len([True for future in self.screener.task_futures if future.running()])
 
+                utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, ticker=ticker, success=success, tasks=tasks)
+
+            utils.print_message('Processed Messages')
+
+            results = [future.result() for future in self.screener.task_futures if future.result() is not None]
+            if len(results) > 0:
+                [print(result) for result in results]
+            else:
+                print('None')
+        else:
+            utils.print_message(f'{self.screener.task_error}')
 
 if __name__ == '__main__':
     import argparse
 
-    parser = argparse.ArgumentParser(description='Analysis')
-    parser.add_argument('-c', '--coorelate', help='Coorelate the list')
+    parser = argparse.ArgumentParser(description='Screener')
+    parser.add_argument('-t', '--table', help='Specify a symbol or table', required=False, default='')
+    parser.add_argument('-s', '--screen', help='Specify a screening script', required=False, default='')
+    parser.add_argument('-b', '--backtest', help='Run a backtest (only valid with -t and -s)', required=False, default=0)
+    parser.add_argument('-x', '--exit', help='Run the script and quit (only valid with -t and -s) then exit', action='store_true')
+    parser.add_argument('-v', '--verbose', help='Show verbose output', action='store_true')
 
     command = vars(parser.parse_args())
-    if command['coorelate']:
-        Interface(coor=command['coorelate'])
+    table = ''
+    screen = ''
+
+    if 'table' in command.keys():
+        table = command['table']
+
+    if 'screen' in command.keys():
+        screen = command['screen']
+
+    if screen and table and command['exit']:
+        Interface(table, screen, backtest=int(command['backtest']), verbose=command['verbose'], exit=True)
     else:
-        Interface()
+        Interface(table, screen, backtest=int(command['backtest']), verbose=command['verbose'])
