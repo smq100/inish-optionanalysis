@@ -462,7 +462,7 @@ class Interface:
         while not self.manager.task_error: pass
 
         if self.manager.task_error == 'None':
-            utils.progress_bar(self.manager.task_completed, self.manager.task_total, prefix=prefix, suffix=suffix, length=50, reset=True)
+            utils.progress_bar(self.manager.task_completed, self.manager.task_total, prefix=prefix, suffix=suffix, reset=True)
             while self.task.is_alive and self.manager.task_error == 'None':
                 time.sleep(0.20)
                 total = self.manager.task_total
@@ -472,9 +472,9 @@ class Interface:
                 tasks = len([True for future in self.manager.task_futures if future.running()])
 
                 if total > 0:
-                    utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, ticker=symbol, length=50, success=success, tasks=tasks)
+                    utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, ticker=symbol, success=success, tasks=tasks)
                 else:
-                    utils.progress_bar(completed, total, prefix=prefix, suffix='', length=50)
+                    utils.progress_bar(completed, total, prefix=prefix)
 
             results = [future.result() for future in self.manager.task_futures if future.result() is not None]
             if len(results) > 0:

@@ -317,7 +317,7 @@ class Interface:
         while not self.screener.task_error: pass
 
         if self.screener.task_error == 'None':
-            utils.progress_bar(self.screener.task_completed, self.screener.task_total, prefix=prefix, suffix=suffix, length=50, reset=True)
+            utils.progress_bar(self.screener.task_completed, self.screener.task_total, prefix=prefix, suffix=suffix, reset=True)
 
             while self.task.is_alive and self.screener.task_error == 'None':
                 time.sleep(0.20)
@@ -327,7 +327,7 @@ class Interface:
                 ticker = self.screener.task_ticker
                 tasks = len([True for future in self.screener.task_futures if future.running()])
 
-                utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, ticker=ticker, length=50, success=success, tasks=tasks)
+                utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, ticker=ticker, success=success, tasks=tasks)
 
             utils.print_message('Processed Messages')
 

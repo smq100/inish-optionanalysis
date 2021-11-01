@@ -138,6 +138,7 @@ class SupportResistance(Threaded):
             raise ValueError('Unable to get history')
 
         self.task_error = 'None'
+        self.task_message = self.ticker
 
         self.price = self.history.iloc[-1]['close']
         self.company = store.get_company(self.ticker)
@@ -167,13 +168,11 @@ class SupportResistance(Threaded):
 
         self._calculate_stats()
 
-        self.task_error = 'Done'
+        self.task_error = 'Hold'
 
     def _extract_lines(self, method:str, extmethod:str) -> list[_Line]:
         if not method in METHOD:
             assert ValueError(f'Invalid method {method}')
-
-        self.task_message = f'{method}/{extmethod}'
 
         result = trendln.calc_support_resistance((None, self.history['high']), method=METHOD[method], extmethod=EXTMETHOD[extmethod], accuracy=ACCURACY)
         maximaIdxs, pmax, maxtrend, maxwindows = result
@@ -367,7 +366,7 @@ class SupportResistance(Threaded):
                 variance = np.average((values-weighted_mean)**2, weights=weights)
                 weighted_std = math.sqrt(variance)
             else:
-                _logger.warning(f'{__name__}: Empty dataframe calculating stats')
+                _logger.info(f'{__name__}: Empty dataframe calculating stats')
 
             return weighted_mean, weighted_std, level
 
@@ -383,21 +382,20 @@ class SupportResistance(Threaded):
         resistance = self._get_resistance(method_price=False)
         support = self._get_support(method_price=False)
 
+        plt.style.use('seaborn-bright')
         figure, ax1 = plt.subplots(figsize=(17,10))
-        ax2 = ax1.secondary_yaxis('right')
-        plt.style.use('seaborn')
         plt.grid()
         plt.margins(x=0.1)
-        plt.title(f'{self.company["name"]} Support & Resistance')
+        plt.title(f'{self.company["name"]}')
         figure.canvas.manager.set_window_title(f'{self.ticker} Support & Resistance')
         line_width = 1.0
 
         if self.price < 30.0:
-            ax1.yaxis.set_major_formatter('${x:.2f}')
-            ax2.yaxis.set_major_formatter('${x:.2f}')
+            ax1.yaxis.set_major_formatter('{x:.2f}')
         else:
-            ax1.yaxis.set_major_formatter('${x:.0f}')
-            ax2.yaxis.set_major_formatter('${x:.0f}')
+            ax1.yaxis.set_major_formatter('{x:.0f}')
+
+        ax1.secondary_yaxis('right')
 
         # Highs & Lows
         length = len(self.history)

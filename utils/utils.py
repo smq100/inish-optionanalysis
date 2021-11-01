@@ -120,7 +120,8 @@ position = 0
 forward = True
 start = 0.0
 def progress_bar(iteration, total:int, prefix:str='', suffix:str='', ticker:str='',
-    length:int=100, fill:str='█', reset:bool=False, success:int=-1, tasks:int=0) -> None:
+        length:int=50, fill:str='█', reset:bool=False, success:int=-1, tasks:int=0) -> None:
+
     global completed
     global position
     global forward
@@ -159,6 +160,7 @@ def progress_bar(iteration, total:int, prefix:str='', suffix:str='', ticker:str=
 
         if completed == total:
             print()
+
     else: # Use oscillating marker when the total is not known
         if forward:
             if position < length:
@@ -197,4 +199,4 @@ if __name__ == '__main__':
 
     while(True):
         time.sleep(0.05)
-        progress_bar(0, -1, 'Progress', 'Completed', length=50)
+        progress_bar(0, -1, 'Progress', 'Completed')
