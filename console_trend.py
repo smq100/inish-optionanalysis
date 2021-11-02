@@ -100,10 +100,9 @@ class Interface:
             self.days = utils.input_integer('Enter number of days: ', 30, 9999)
 
     def calculate_support_and_resistance(self):
-        if not self.tickers:
-            utils.print_error('Enter a ticker before calculating')
-        else:
+        if self.tickers:
             utils.progress_bar(0, 0, reset=True)
+
             for ticker in self.tickers:
                 if self.quick:
                     self.trend = SupportResistance(ticker, days=self.days)
@@ -117,21 +116,20 @@ class Interface:
 
                 self._show_progress()
 
-                # utils.print_message(f'Resitance: {ticker} {self.trend.stats.res_level:.2f} (std={self.trend.stats.res_weighted_std:.2f})')
-                # utils.print_message(f'Support:   {ticker} {self.trend.stats.sup_level:.2f} (std={self.trend.stats.sup_weighted_std:.2f})', creturn=0)
-
                 figure = self.trend.plot()
                 plt.figure(figure)
 
             print()
             plt.show()
+        else:
+            utils.print_error('Enter a ticker before calculating')
 
     def _show_progress(self) -> None:
         while not self.trend.task_error: pass
 
         if self.trend.task_error == 'None':
             while self.trend.task_error == 'None':
-                time.sleep(0.15)
+                time.sleep(0.20)
                 utils.progress_bar(0, 0, suffix=self.trend.task_message)
 
             if self.trend.task_error == 'Hold':

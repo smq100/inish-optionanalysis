@@ -3,7 +3,9 @@ import time
 import threading
 import logging
 
-import data as d
+import matplotlib.pyplot as plt
+
+from analysis.trend import SupportResistance
 from screener.screener import Screener, Result, INIT_NAME
 from data import store as store
 from utils import utils
@@ -12,15 +14,15 @@ _logger = utils.get_logger(logging.WARNING, logfile='')
 
 BASEPATH = os.getcwd()+'/screener/screens/'
 SCREEN_SUFFIX = 'screen'
-
+LISTTOP = 10
 
 class Interface:
-    def __init__(self, table:str='', screen:str='', backtest:int=0, verbose:bool=False, exit:bool=False, live:bool=False):
+    def __init__(self, table:str='', screen:str='', quick:bool=True, exit:bool=False):
         self.table = table.upper()
         self.screen_base = screen
-        self.verbose = verbose
+        self.quick = quick
         self.exit = exit
-        self.live = live
+        self.days = 1000
         self.auto = False
         self.screen_path = ''
         self.results:list[Result] = []
@@ -29,13 +31,6 @@ class Interface:
         self.task:threading.Thread = None
 
         abort = False
-
-        if type(backtest) == int:
-            self.end = backtest
-        else:
-            self.end = 0
-            abort = False
-            utils.print_error("'backtest' must be an integer. Using a value of 0")
 
         if self.table:
             if self.table == 'ALL':
@@ -49,74 +44,56 @@ class Interface:
             else:
                 self.table = ''
                 abort = True
-                utils.print_error(f'Exchange, index or ticker not found: {self.table}')
+                utils.print_error('Exchange, index or ticker not found')
 
         if self.screen_base:
             if os.path.exists(BASEPATH+screen+'.'+SCREEN_SUFFIX):
                 self.screen_path = BASEPATH + self.screen_base + '.' + SCREEN_SUFFIX
             else:
-                utils.print_error(f'File "{self.screen_base}" not foundx')
+                utils.print_error(f'File "{self.screen_base}" not found')
                 abort = True
                 self.screen_base = ''
 
         if abort:
             pass
-        elif self.table and self.screen_path and self.end > 0:
-            self.auto = True
-            self.main_menu(selection=5)
         elif self.table and self.screen_path:
             self.auto = True
-            self.main_menu(selection=4)
+            self.main_menu(selection=3)
         else:
             self.main_menu()
 
     def main_menu(self, selection:int=0) -> None:
         while True:
-            source = 'live' if self.live else d.ACTIVE_DB
             menu_items = {
-                '1': f'Select Data Source ({source})',
-                '2': 'Select List',
-                '3': 'Select Screener',
-                '4': 'Run Screen',
-                '5': 'Run Backtest',
-                '6': 'Show All',
-                '7': 'Show Top',
-                '8': 'Show Ticker',
+                '1': 'Select List',
+                '2': 'Select Screener',
+                '3': 'Run Screen',
+                '4': 'Analyze',
+                '5': 'Show Top',
                 '0': 'Exit'
             }
 
             if self.table:
-                menu_items['2'] = f'Select List ({self.table})'
+                menu_items['1'] = f'Select List ({self.table})'
 
             if self.screen_base:
-                menu_items['3'] = f'Select Screener ({self.screen_base})'
-
-            if len(self.results) > 0:
-                menu_items['6'] = f'Show All ({self.valids})'
+                menu_items['2'] = f'Select Screener ({self.screen_base})'
 
             if selection == 0:
-                selection = utils.menu(menu_items, 'Select Operation', 0, 8)
+                selection = utils.menu(menu_items, 'Select Operation', 0, 5)
 
             if selection == 1:
-                self.select_source()
-            if selection == 2:
                 self.select_list()
-            elif selection == 3:
+            elif selection == 2:
                 self.select_screen()
-            elif selection == 4:
+            elif selection == 3:
                 if self.run_screen():
                     if self.valids > 0:
-                        self.print_results(top=20)
+                        self.print_results(top=LISTTOP)
+            elif selection == 4:
+                self.analyze()
             elif selection == 5:
-                if self.run_backtest(prompt=not self.auto):
-                    if self.valids > 0:
-                        self.print_backtest(top=20)
-            elif selection == 6:
-                self.print_results()
-            elif selection == 7:
-                self.print_results(top=20)
-            elif selection == 8:
-                self.print_ticker_results()
+                self.print_results(top=LISTTOP)
             elif selection == 0:
                 self.exit = True
 
@@ -124,19 +101,6 @@ class Interface:
 
             if self.exit:
                 break
-
-    def select_source(self) -> None:
-        menu_items = {
-            '1': 'Database',
-            '2': 'Live',
-            '0': 'Cancel',
-        }
-
-        selection = utils.menu(menu_items, 'Select Data Source', 0, 2)
-        if selection == 1:
-            self.live = False
-        elif selection == 2:
-            self.live = True
 
     def select_list(self) -> None:
         list = utils.input_text('Enter exchange, index, or ticker: ').upper()
@@ -187,7 +151,7 @@ class Interface:
         else:
             utils.print_message('No screener files found')
 
-    def run_screen(self, backtest:bool=False) -> bool:
+    def run_screen(self) -> bool:
         success = False
         self.auto = False
 
@@ -196,13 +160,8 @@ class Interface:
         elif not self.screen_path:
             utils.print_error('No screen specified')
         else:
-            if backtest:
-                self.live = False
-            else:
-                self.end = 0
-
             try:
-                self.screener = Screener(self.table, screen=self.screen_path, end=self.end, live=self.live)
+                self.screener = Screener(self.table, screen=self.screen_path)
             except ValueError as e:
                 utils.print_error(str(e))
             else:
@@ -210,7 +169,7 @@ class Interface:
                 self.task = threading.Thread(target=self.screener.run_script)
                 self.task.start()
 
-                self.show_progress('Progress', '')
+                self._show_progress_screen('Screening', '')
 
                 if self.screener.task_error == 'Done':
                     self.results = sorted(self.screener.results, reverse=True, key=lambda r: float(r))
@@ -225,24 +184,31 @@ class Interface:
 
         return success
 
-    def run_backtest(self, prompt:bool=True, bullish:bool=True) -> bool:
-        if prompt:
-            input = utils.input_integer('Input number of days (10-100): ', 10, 100)
-            self.end = input
+    def analyze(self) -> None:
+        if len(self.results) > 0:
+            utils.progress_bar(0, 0, reset=True)
 
-        success = self.run_screen(backtest=True)
-        if success:
-            for result in self.results:
-                if result:
-                    result.price_last = result.company.get_last_price()
-                    result.price_current = store.get_last_price(result.company.ticker)
+            tickers = [str(result) for result in self.results if bool(result)]
+            for ticker in tickers:
+                if self.quick:
+                    self.trend = SupportResistance(ticker, days=self.days)
+                else:
+                    methods = ['NSQUREDLOGN', 'NCUBED', 'HOUGHLINES', 'PROBHOUGH']
+                    extmethods = ['NAIVE', 'NAIVECONSEC', 'NUMDIFF']
+                    self.trend = SupportResistance(ticker, methods=methods, extmethods=extmethods, days=self.days)
 
-                    if bullish:
-                        result.backtest_success = (result.price_current > result.price_last)
-                    else:
-                        result.backtest_success = (result.price_current < result.price_last)
+                self.task = threading.Thread(target=self.trend.calculate)
+                self.task.start()
 
-        return success
+                self._show_progress_analyze()
+
+                figure = self.trend.plot()
+                plt.figure(figure)
+
+            print()
+            plt.show()
+        else:
+            utils.print_error('Run screen before analyzing')
 
     def print_results(self, top:int=-1, verbose:bool=False, ticker:str='') -> None:
         if not self.table:
@@ -253,13 +219,13 @@ class Interface:
             utils.print_message('No results were located')
         else:
             if top <= 0:
-                results = sorted(self.screener.results, key=lambda r: str(r))
+                results = sorted(self.results, key=lambda r: str(r))
                 top = self.screener.task_success
             elif top > self.screener.task_success:
-                results = sorted(self.screener.results, reverse=True, key=lambda r: float(r))
+                results = sorted(self.results, reverse=True, key=lambda r: float(r))
                 top = self.screener.task_success
             else:
-                results = sorted(self.screener.results, reverse=True, key=lambda r: float(r))
+                results = sorted(self.results, reverse=True, key=lambda r: float(r))
 
             if ticker:
                 utils.print_message(f'Screener Results for {ticker} ({self.screen_base})')
@@ -270,7 +236,7 @@ class Interface:
             for result in results:
                 if ticker:
                     [print(r) for r in result.results if ticker.upper().ljust(6, ' ') == r[:6]]
-                elif self.verbose or verbose:
+                elif verbose:
                     [print(r) for r in result.results if result]
                 elif result:
                     print(f'{index:>3}: {result} ({float(result):.2f})')
@@ -280,64 +246,37 @@ class Interface:
                     break
         print()
 
-    def print_backtest(self, top:int=-1):
-        if not self.table:
-            utils.print_error('No table specified')
-        elif not self.screen_base:
-            utils.print_error('No screen specified')
-        elif len(self.results) == 0:
-            utils.print_message('No results were located')
-        else:
-            if top <= 0:
-                top = self.screener.task_success
-            elif top > self.screener.task_success:
-                top = self.screener.task_success
-
-            utils.print_message(f'Backtest Results {top} of {self.screener.task_success} ({self.screen_base})')
-
-            index = 1
-            for result in self.results:
-                if result:
-                    mark = '*' if result.backtest_success else ' '
-                    print(f'{index:>3}: {mark} {result} ({float(result):.2f}) ${result.price_last:.2f}/${result.price_current:.2f}')
-                    index += 1
-
-                if index > top:
-                    break
-
-    def print_ticker_results(self):
-        ticker = utils.input_text('Enter ticker: ')
-        if ticker:
-            ticker = ticker.upper()
-            if store.is_ticker(ticker):
-                self.print_results(ticker=ticker)
-
-    def show_progress(self, prefix, suffix) -> None:
-        # Wait for thread to initialize
+    def _show_progress_screen(self, prefix, suffix) -> None:
         while not self.screener.task_error: pass
 
-        if self.screener.task_error == 'None':
-            utils.progress_bar(self.screener.task_completed, self.screener.task_total, prefix=prefix, suffix=suffix, reset=True)
+        utils.progress_bar(self.screener.task_completed, self.screener.task_total, prefix=prefix, suffix=suffix, reset=True)
+        while self.screener.task_error == 'None':
+            time.sleep(0.20)
+            total = self.screener.task_total
+            completed = self.screener.task_completed
+            success = self.screener.task_success
+            ticker = self.screener.task_ticker
+            tasks = len([True for future in self.screener.task_futures if future.running()])
 
-            while self.task.is_alive and self.screener.task_error == 'None':
+            utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, ticker=ticker, success=success, tasks=tasks)
+
+    def _show_progress_analyze(self) -> None:
+        while not self.trend.task_error: pass
+
+        if self.trend.task_error == 'None':
+            while self.trend.task_error == 'None':
                 time.sleep(0.20)
-                total = self.screener.task_total
-                completed = self.screener.task_completed
-                success = self.screener.task_success
-                ticker = self.screener.task_ticker
-                tasks = len([True for future in self.screener.task_futures if future.running()])
+                utils.progress_bar(0, 0, suffix=self.trend.task_message)
 
-                utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, ticker=ticker, success=success, tasks=tasks)
-
-            utils.print_message('Processed Messages')
-
-            results = [future.result() for future in self.screener.task_futures if future.result() is not None]
-            if len(results) > 0:
-                [print(result) for result in results]
+            if self.trend.task_error == 'Hold':
+                pass
+            elif self.trend.task_error == 'Done':
+                utils.print_message(f'{self.trend.task_error}: {self.trend.task_total} lines extracted in {self.trend.task_time:.1f} seconds')
             else:
-                print('None')
+                utils.print_error(f'{self.trend.task_error}: Error extracting lines')
         else:
-            utils.print_message(f'{self.screener.task_error}')
+            utils.print_message(f'{self.trend.task_error}')
+
 
 if __name__ == '__main__':
     import argparse
@@ -345,7 +284,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Screener')
     parser.add_argument('-t', '--table', help='Specify a symbol or table', required=False, default='')
     parser.add_argument('-s', '--screen', help='Specify a screening script', required=False, default='')
-    parser.add_argument('-b', '--backtest', help='Run a backtest (only valid with -t and -s)', required=False, default=0)
     parser.add_argument('-x', '--exit', help='Run the script and quit (only valid with -t and -s) then exit', action='store_true')
     parser.add_argument('-v', '--verbose', help='Show verbose output', action='store_true')
 
@@ -360,6 +298,6 @@ if __name__ == '__main__':
         screen = command['screen']
 
     if screen and table and command['exit']:
-        Interface(table, screen, backtest=int(command['backtest']), verbose=command['verbose'], exit=True)
+        Interface(table, screen, exit=True)
     else:
-        Interface(table, screen, backtest=int(command['backtest']), verbose=command['verbose'])
+        Interface(table, screen)
