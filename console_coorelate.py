@@ -59,19 +59,15 @@ class Interface:
             self.tickers = store.get_tickers(self.list)
             self.coorelate = Correlate(self.tickers)
 
-            if self.coorelate:
-                self.task = threading.Thread(target=self.coorelate.compute_correlation)
-                self.task.start()
+            self.task = threading.Thread(target=self.coorelate.compute_correlation)
+            self.task.start()
 
-                if progressbar:
-                    print()
-                    self._show_progress('Progress', '')
+            if progressbar:
+                print()
+                self._show_progress('Progress', '')
 
-                utils.print_message(f'Coorelation Among {self.list} Symbols')
-                print(self.coorelate.task_object)
-            else:
-                utils.print_error('Invaid symbol list')
-                _logger.error(f'{__name__}: Invalid symbol list')
+            utils.print_message(f'Coorelation Among {self.list} Symbols')
+            print(self.coorelate.correlation)
 
     def get_best_coorelation(self):
         if not self.coorelate:

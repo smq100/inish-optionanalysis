@@ -109,7 +109,15 @@ def input_float(message:str, min_:float, max_:float) -> float:
 
 def input_text(message:str) -> str:
     val = input(message)
-    if any(char.isdigit() for char in val):
+    if not all(char.isalpha() for char in val):
+        val = ''
+        print_error('Symbol value must be all letters')
+
+    return val
+
+def input_alphanum(message:str) -> str:
+    val = input(message)
+    if not all(char.isalnum() for char in val):
         val = ''
         print_error('Symbol value must be all letters')
 

@@ -103,7 +103,7 @@ class Interface:
                 break
 
     def select_list(self) -> None:
-        list = utils.input_text('Enter exchange, index, or ticker: ').upper()
+        list = utils.input_alphanum('Enter exchange, index, or ticker: ').upper()
         if store.is_exchange(list):
             self.table = list
         elif store.is_list(list):
@@ -188,7 +188,7 @@ class Interface:
         if len(self.results) > 0:
             utils.progress_bar(0, 0, reset=True)
 
-            tickers = [str(result) for result in self.results if bool(result)]
+            tickers = [str(result) for result in self.results if bool(result)][:LISTTOP]
             for ticker in tickers:
                 if self.quick:
                     self.trend = SupportResistance(ticker, days=self.days)

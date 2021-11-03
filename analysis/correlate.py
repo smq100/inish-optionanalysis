@@ -15,7 +15,7 @@ class Correlate(Threaded):
             raise ValueError('Invalid list of tickers')
 
         self.tickers = tickers
-        self.correlation = None
+        self.correlation:pd.DataFrame = None
 
     @Threaded.threaded
     def compute_correlation(self) -> None:
