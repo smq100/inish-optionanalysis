@@ -45,20 +45,20 @@ class Correlate(Threaded):
 
         self.task_error = 'Done'
 
-    def get_sorted_coorelations(self, count:int, best:bool) -> list[float]:
+    def get_sorted_coorelations(self, count:int, best:bool) -> list[tuple[str, str, float]]:
         all = self.get_all_coorelations()
         if all is not None:
             all.sort(key=lambda sym: sym[2], reverse=best)
 
         return all[:count]
 
-    def get_all_coorelations(self) -> list:
+    def get_all_coorelations(self) -> list[tuple[str, str, float]]:
         all = []
         if self.correlation is not None and not self.correlation.empty:
             coors = (self.get_ticker_coorelation(sym) for sym in self.correlation)
             for sym in coors:
                 for s in sym.iteritems():
-                    # Arrange the symbol names so we can more easily remove duplicaates
+                    # Arrange the symbol names so we can more easily remove duplicates
                     if sym.name < tuple(s)[0]:
                         t = (sym.name, tuple(s)[0], tuple(s)[1])
                     else:

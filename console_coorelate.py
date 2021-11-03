@@ -99,11 +99,12 @@ class Interface:
             if not store.is_ticker(ticker):
                 utils.print_error('Invalid symbol')
             else:
-                ds = self.coorelate.get_ticker_coorelation(ticker)
-                utils.print_message(f'Highest correlation for {ticker}')
-                [print(f'{sym:>5}: {val:.5f}') for sym, val in ds[-1:-11:-1].iteritems()]
-                utils.print_message(f'Lowest correlation for {ticker}')
-                [print(f'{sym:>5}: {val:.5f}') for sym, val in ds[:10].iteritems()]
+                df = self.coorelate.get_ticker_coorelation(ticker)
+                utils.print_message(f'Highest correlations to {ticker}')
+                [print(f'{sym:>5}: {val:.5f}') for sym, val in df[-1:-11:-1].iteritems()]
+
+                utils.print_message(f'Lowest correlations to {ticker}')
+                [print(f'{sym:>5}: {val:.5f}') for sym, val in df[:10].iteritems()]
 
     def _get_list(self):
         list = ''
@@ -126,6 +127,7 @@ class Interface:
         if self.coorelate.task_error == 'None':
             total = self.coorelate.task_total
             utils.progress_bar(self.coorelate.task_completed, self.coorelate.task_total, prefix=prefix, suffix=suffix, reset=True)
+
             while self.task.is_alive and self.coorelate.task_error == 'None':
                 time.sleep(0.20)
                 completed = self.coorelate.task_completed

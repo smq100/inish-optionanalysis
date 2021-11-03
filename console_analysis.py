@@ -5,8 +5,9 @@ import logging
 
 import matplotlib.pyplot as plt
 
-from analysis.trend import SupportResistance
 from screener.screener import Screener, Result, INIT_NAME
+from analysis.trend import SupportResistance
+from analysis.correlate import Correlate
 from data import store as store
 from utils import utils
 
@@ -28,6 +29,7 @@ class Interface:
         self.results:list[Result] = []
         self.valids = 0
         self.screener:Screener = None
+        self.correlate:Correlate = None
         self.task:threading.Thread = None
 
         abort = False
@@ -65,22 +67,23 @@ class Interface:
     def main_menu(self, selection:int=0) -> None:
         while True:
             menu_items = {
-                '1': 'Select List',
-                '2': 'Select Screener',
-                '3': 'Run Screen',
-                '4': 'Analyze',
-                '5': 'Show Top',
+                '1': 'Select Table',
+                '2': 'Select Screen',
+                '3': 'Screen',
+                '4': 'Coorelate',
+                '5': 'Analyze',
+                '6': 'Show Top',
                 '0': 'Exit'
             }
 
             if self.table:
-                menu_items['1'] = f'Select List ({self.table})'
+                menu_items['1'] = f'Select Table ({self.table})'
 
             if self.screen_base:
-                menu_items['2'] = f'Select Screener ({self.screen_base})'
+                menu_items['2'] = f'Select Screen ({self.screen_base})'
 
             if selection == 0:
-                selection = utils.menu(menu_items, 'Select Operation', 0, 5)
+                selection = utils.menu(menu_items, 'Select Operation', 0, 6)
 
             if selection == 1:
                 self.select_list()
@@ -91,7 +94,9 @@ class Interface:
                     if self.valids > 0:
                         self.print_results(top=LISTTOP)
             elif selection == 4:
-                self.analyze()
+                self.run_coorelate()
+            elif selection == 5:
+                self.run_analyze()
             elif selection == 5:
                 self.print_results(top=LISTTOP)
             elif selection == 0:
@@ -169,7 +174,7 @@ class Interface:
                 self.task = threading.Thread(target=self.screener.run_script)
                 self.task.start()
 
-                self._show_progress_screen('Screening', '')
+                self._show_progress_screen('Screening')
 
                 if self.screener.task_error == 'Done':
                     self.results = sorted(self.screener.results, reverse=True, key=lambda r: float(r))
@@ -184,9 +189,28 @@ class Interface:
 
         return success
 
-    def analyze(self) -> None:
+    def run_coorelate(self) -> None:
         if len(self.results) > 0:
-            utils.progress_bar(0, 0, reset=True)
+            table = store.get_tickers(self.table)
+            self.coorelate = Correlate(table)
+
+            self.task = threading.Thread(target=self.coorelate.compute_correlation)
+            self.task.start()
+
+            print()
+            self._show_progress_correlate('Correlating')
+
+            tickers = [str(result) for result in self.results if bool(result)][:LISTTOP]
+            for ticker in tickers:
+                utils.print_message(f'Highest correlations to {ticker}')
+                df = self.coorelate.get_ticker_coorelation(ticker)
+                [print(f'{sym:>5}: {val:.5f}') for sym, val in df[-1:-4:-1].iteritems()]
+        else:
+            utils.print_error('Run screen before correlating')
+
+    def run_analyze(self) -> None:
+        if len(self.results) > 0:
+            utils.progress_bar(0, 0, prefix='Analyzing', reset=True)
 
             tickers = [str(result) for result in self.results if bool(result)][:LISTTOP]
             for ticker in tickers:
@@ -200,7 +224,7 @@ class Interface:
                 self.task = threading.Thread(target=self.trend.calculate)
                 self.task.start()
 
-                self._show_progress_analyze()
+                self._show_progress_analyze('Analyzing')
 
                 figure = self.trend.plot()
                 plt.figure(figure)
@@ -246,10 +270,10 @@ class Interface:
                     break
         print()
 
-    def _show_progress_screen(self, prefix, suffix) -> None:
+    def _show_progress_screen(self, prefix) -> None:
         while not self.screener.task_error: pass
 
-        utils.progress_bar(self.screener.task_completed, self.screener.task_total, prefix=prefix, suffix=suffix, reset=True)
+        utils.progress_bar(self.screener.task_completed, self.screener.task_total, prefix=prefix, reset=True)
         while self.screener.task_error == 'None':
             time.sleep(0.20)
             total = self.screener.task_total
@@ -258,15 +282,28 @@ class Interface:
             ticker = self.screener.task_ticker
             tasks = len([True for future in self.screener.task_futures if future.running()])
 
-            utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, ticker=ticker, success=success, tasks=tasks)
+            utils.progress_bar(completed, total, prefix=prefix, ticker=ticker, success=success, tasks=tasks)
 
-    def _show_progress_analyze(self) -> None:
+    def _show_progress_correlate(self, prefix):
+        while not self.coorelate.task_error: pass
+
+        if self.coorelate.task_error == 'None':
+            total = self.coorelate.task_total
+            utils.progress_bar(self.coorelate.task_completed, self.coorelate.task_total, prefix=prefix, reset=True)
+
+            while self.task.is_alive and self.coorelate.task_error == 'None':
+                time.sleep(0.20)
+                completed = self.coorelate.task_completed
+                ticker = self.coorelate.task_ticker
+                utils.progress_bar(completed, total, prefix=prefix, ticker=ticker)
+
+    def _show_progress_analyze(self, prefix) -> None:
         while not self.trend.task_error: pass
 
         if self.trend.task_error == 'None':
             while self.trend.task_error == 'None':
                 time.sleep(0.20)
-                utils.progress_bar(0, 0, suffix=self.trend.task_message)
+                utils.progress_bar(0, 0, prefix=prefix, suffix=self.trend.task_message)
 
             if self.trend.task_error == 'Hold':
                 pass

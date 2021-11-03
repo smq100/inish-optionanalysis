@@ -127,7 +127,7 @@ completed = 0
 position = 0
 forward = True
 start = 0.0
-def progress_bar(iteration, total:int, prefix:str='', suffix:str='', ticker:str='',
+def progress_bar(iteration, total:int, prefix:str='Working', suffix:str='', ticker:str='',
         length:int=50, fill:str='█', reset:bool=False, success:int=-1, tasks:int=0) -> None:
 
     global completed
@@ -187,7 +187,7 @@ def progress_bar(iteration, total:int, prefix:str='', suffix:str='', ticker:str=
         back = length - position
         bar = ('-' * front) + fill + ('-' * back)
 
-        print(f'\rWorking |{bar}| {suffix}             ', end='\r')
+        print(f'\r{prefix} |{bar}| {suffix}             ', end='\r')
 
 def mround(n, precision:float) -> float:
     val = float(round(n / precision) * precision)
