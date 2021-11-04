@@ -71,19 +71,19 @@ class Correlate(Threaded):
         return all
 
     def get_ticker_coorelation(self, ticker:str) -> pd.DataFrame:
-        df = pd.DataFrame()
+        series = pd.Series
         ticker = ticker.upper()
 
         if self.correlation is not None and not self.correlation.empty:
             if ticker in self.correlation.index:
-                df = self.correlation[ticker].sort_values()
-                df.drop(ticker, inplace=True) # Drop own entry (coor = 1.0)
+                series = self.correlation[ticker].sort_values()
+                series.drop(ticker, inplace=True) # Drop own entry (coor = 1.0)
             else:
                 _logger.warning(f'{__name__}: Invalid ticker {ticker}')
         else:
                 _logger.warning(f'{__name__}: No dataframe')
 
-        return df
+        return pd.DataFrame({'ticker':series.index, 'value':series.values})
 
 
 if __name__ == '__main__':

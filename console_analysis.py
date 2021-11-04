@@ -205,24 +205,26 @@ class Interface:
             tickers = [str(result) for result in self.results if bool(result)][:LISTTOP]
             for ticker in tickers:
                 df = self.coorelate.get_ticker_coorelation(ticker)
-                self.results_corr += [df.index[-1]]
+                self.results_corr += [df.iloc[-1]]
 
                 utils.print_message(f'Highest correlations to {ticker}')
-                [print(f'{sym:>5}: {val:.5f}') for sym, val in df[-1:-4:-1].iteritems()]
+                [print(f'{result[1]:>5}: {result[2]:.5f}') for result in df.iloc[-1:-4:-1].itertuples()]
 
-            answer = utils.input_text('Run analysis on top findings? (y/n): ').upper()
-            if answer == 'Y':
-                self.run_analyze(False)
+            answer = utils.input_text('Run analysis on top findings? (y/n): ').lower()
+            if answer == 'y':
+                self.run_analyze(True)
         else:
             utils.print_error('Run screen before correlating')
 
     def run_analyze(self, corr:bool=False) -> None:
-        results = self.results if not corr else self.results_corr
+        if len(self.results) > 0:
+            if corr:
+                tickers = [result["ticker"] for result in self.results_corr]
+            else:
+                tickers = [str(result) for result in self.results if bool(result)][:LISTTOP]
 
-        if len(results) > 0:
             utils.progress_bar(0, 0, prefix='Analyzing', reset=True)
 
-            tickers = [str(result) for result in results if bool(result)][:LISTTOP]
             for ticker in tickers:
                 if self.quick:
                     self.trend = SupportResistance(ticker, days=self.days)
