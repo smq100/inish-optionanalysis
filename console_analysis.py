@@ -27,6 +27,7 @@ class Interface:
         self.auto = False
         self.screen_path = ''
         self.results:list[Result] = []
+        self.results_corr:list[str] = []
         self.valids = 0
         self.screener:Screener = None
         self.correlate:Correlate = None
@@ -97,7 +98,7 @@ class Interface:
                 self.run_coorelate()
             elif selection == 5:
                 self.run_analyze()
-            elif selection == 5:
+            elif selection == 6:
                 self.print_results(top=LISTTOP)
             elif selection == 0:
                 self.exit = True
@@ -200,19 +201,28 @@ class Interface:
             print()
             self._show_progress_correlate('Correlating')
 
+            self.results_corr = []
             tickers = [str(result) for result in self.results if bool(result)][:LISTTOP]
             for ticker in tickers:
-                utils.print_message(f'Highest correlations to {ticker}')
                 df = self.coorelate.get_ticker_coorelation(ticker)
+                self.results_corr += [df.index[-1]]
+
+                utils.print_message(f'Highest correlations to {ticker}')
                 [print(f'{sym:>5}: {val:.5f}') for sym, val in df[-1:-4:-1].iteritems()]
+
+            answer = utils.input_text('Run analysis on top findings? (y/n): ').upper()
+            if answer == 'Y':
+                self.run_analyze(False)
         else:
             utils.print_error('Run screen before correlating')
 
-    def run_analyze(self) -> None:
-        if len(self.results) > 0:
+    def run_analyze(self, corr:bool=False) -> None:
+        results = self.results if not corr else self.results_corr
+
+        if len(results) > 0:
             utils.progress_bar(0, 0, prefix='Analyzing', reset=True)
 
-            tickers = [str(result) for result in self.results if bool(result)][:LISTTOP]
+            tickers = [str(result) for result in results if bool(result)][:LISTTOP]
             for ticker in tickers:
                 if self.quick:
                     self.trend = SupportResistance(ticker, days=self.days)

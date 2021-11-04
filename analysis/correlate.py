@@ -40,7 +40,8 @@ class Correlate(Threaded):
                     main_df = main_df.join(df, how='outer')
 
         if not main_df.empty:
-            self.correlation = main_df.fillna(main_df.mean()).corr()
+            self.correlation = main_df.fillna(main_df.mean())
+            self.correlation = main_df.corr()
             self.task_object = self.correlation
 
         self.task_error = 'Done'
