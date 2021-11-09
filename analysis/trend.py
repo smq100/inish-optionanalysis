@@ -386,7 +386,7 @@ class SupportResistance(Threaded):
         plt.grid()
         plt.margins(x=0.1)
         plt.title(f'{self.company["name"]}')
-        figure.canvas.manager.set_window_title(f'{self.ticker} Support & Resistance')
+        figure.canvas.manager.set_window_title(f'{self.ticker}')
         line_width = 1.0
 
         if self.price < 30.0:

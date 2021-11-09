@@ -16,6 +16,7 @@ _logger = utils.get_logger(logging.WARNING, logfile='')
 BASEPATH = os.getcwd()+'/screener/screens/'
 SCREEN_SUFFIX = 'screen'
 LISTTOP = 10
+LISTTOP_CORR = 3
 
 class Interface:
     def __init__(self, table:str='', screen:str='', quick:bool=True, exit:bool=False):
@@ -208,18 +209,18 @@ class Interface:
                 self.results_corr += [df.iloc[-1]]
 
                 utils.print_message(f'Highest correlations to {ticker}')
-                [print(f'{result[1]:>5}: {result[2]:.5f}') for result in df.iloc[-1:-4:-1].itertuples()]
+                [print(f'{result[1]:>5}: {result[2]:.5f}') for result in df.iloc[-1:-(LISTTOP_CORR+1):-1].itertuples()]
 
-            answer = utils.input_text('Run analysis on top findings? (y/n): ').lower()
-            if answer == 'y':
+            answer = utils.input_text('\nRun analysis on top findings? (y/n): ')
+            if answer.lower() == 'y':
                 self.run_analyze(True)
         else:
-            utils.print_error('Run screen before correlating')
+            utils.print_error('Please run screen before correlating')
 
     def run_analyze(self, corr:bool=False) -> None:
         if len(self.results) > 0:
             if corr:
-                tickers = [result["ticker"] for result in self.results_corr]
+                tickers = [result['ticker'] for result in self.results_corr]
             else:
                 tickers = [str(result) for result in self.results if bool(result)][:LISTTOP]
 
