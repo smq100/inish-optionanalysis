@@ -176,7 +176,7 @@ class Interface:
                 self.task = threading.Thread(target=self.screener.run_script)
                 self.task.start()
 
-                self._show_progress_screen('Screening')
+                self._show_progress_screen()
 
                 if self.screener.task_error == 'Done':
                     self.results = sorted(self.screener.results, reverse=True, key=lambda r: float(r))
@@ -200,7 +200,7 @@ class Interface:
             self.task.start()
 
             print()
-            self._show_progress_correlate('Correlating')
+            self._show_progress_correlate()
 
             self.results_corr = []
             tickers = [str(result) for result in self.results if bool(result)][:LISTTOP]
@@ -208,8 +208,7 @@ class Interface:
                 df = self.coorelate.get_ticker_coorelation(ticker)
                 self.results_corr += [df.iloc[-1]]
 
-                utils.print_message(f'Highest correlations to {ticker}')
-                [print(f'{result[1]:>5}: {result[2]:.5f}') for result in df.iloc[-1:-(LISTTOP_CORR+1):-1].itertuples()]
+                [print(f'{ticker}/{result[1]}: {result[2]:.5f}') for result in df.iloc[-1:-(LISTTOP_CORR+1):-1].itertuples() if result[2]>0.95]
 
             answer = utils.input_text('\nRun analysis on top findings? (y/n): ')
             if answer.lower() == 'y':
@@ -237,7 +236,7 @@ class Interface:
                 self.task = threading.Thread(target=self.trend.calculate)
                 self.task.start()
 
-                self._show_progress_analyze('Analyzing')
+                self._show_progress_analyze()
 
                 figure = self.trend.plot()
                 plt.figure(figure)
@@ -283,9 +282,10 @@ class Interface:
                     break
         print()
 
-    def _show_progress_screen(self, prefix) -> None:
+    def _show_progress_screen(self) -> None:
         while not self.screener.task_error: pass
 
+        prefix = 'Screening'
         utils.progress_bar(self.screener.task_completed, self.screener.task_total, prefix=prefix, reset=True)
         while self.screener.task_error == 'None':
             time.sleep(0.20)
@@ -297,10 +297,11 @@ class Interface:
 
             utils.progress_bar(completed, total, prefix=prefix, ticker=ticker, success=success, tasks=tasks)
 
-    def _show_progress_correlate(self, prefix):
+    def _show_progress_correlate(self):
         while not self.coorelate.task_error: pass
 
         if self.coorelate.task_error == 'None':
+            prefix = 'Correlating'
             total = self.coorelate.task_total
             utils.progress_bar(self.coorelate.task_completed, self.coorelate.task_total, prefix=prefix, reset=True)
 
@@ -310,13 +311,13 @@ class Interface:
                 ticker = self.coorelate.task_ticker
                 utils.progress_bar(completed, total, prefix=prefix, ticker=ticker)
 
-    def _show_progress_analyze(self, prefix) -> None:
+    def _show_progress_analyze(self) -> None:
         while not self.trend.task_error: pass
 
         if self.trend.task_error == 'None':
             while self.trend.task_error == 'None':
                 time.sleep(0.20)
-                utils.progress_bar(0, 0, prefix=prefix, suffix=self.trend.task_message)
+                utils.progress_bar(0, 0, prefix='Analyzing', suffix=self.trend.task_message)
 
             if self.trend.task_error == 'Hold':
                 pass

@@ -128,7 +128,7 @@ position = 0
 forward = True
 start = 0.0
 def progress_bar(iteration, total:int, prefix:str='Working', suffix:str='', ticker:str='',
-        length:int=50, reset:bool=False, success:int=-1, tasks:int=0) -> None:
+        length:int=50, fill='█', reset:bool=False, success:int=-1, tasks:int=0) -> None:
 
     global completed
     global position
@@ -143,7 +143,7 @@ def progress_bar(iteration, total:int, prefix:str='Working', suffix:str='', tick
 
     if total > 0:
         filled = int(length * iteration // total)
-        bar = ('█' * filled) + ('-' * (length - filled))
+        bar = (fill * filled) + ('-' * (length - filled))
 
         elapsed = time.perf_counter() - start
         if completed > 5:
