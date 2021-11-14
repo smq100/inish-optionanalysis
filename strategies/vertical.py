@@ -2,7 +2,8 @@ import datetime as dt
 
 import pandas as pd
 
-from strategies.strategy import Strategy, STRATEGIES
+import strategies
+from strategies.strategy import Strategy
 from utils import utils
 
 _logger = utils.get_logger()
@@ -11,7 +12,7 @@ class Vertical(Strategy):
     def __init__(self, ticker, product, direction, quantity):
         super().__init__(ticker, product, direction, quantity)
 
-        self.name = STRATEGIES[2]
+        self.name = strategies.STRATEGIES_BROAD[2]
 
         # Default to a week from Friday as expiry
         d = dt.datetime.today()
@@ -24,16 +25,20 @@ class Vertical(Strategy):
             if direction == 'long':
                 self.add_leg(self.quantity, product, 'long', self.initial_spot, expiry)
                 self.add_leg(self.quantity, product, 'short', self.initial_spot + 2.0, expiry)
+                self.analysis.credit_debit = 'debit'
             else:
                 self.add_leg(self.quantity, product, 'long', self.initial_spot + 2.0, expiry)
                 self.add_leg(self.quantity, product, 'short', self.initial_spot, expiry)
+                self.analysis.credit_debit = 'credit'
         else:
             if direction == 'long':
                 self.add_leg(self.quantity, product, 'long', self.initial_spot + 2.0, expiry)
                 self.add_leg(self.quantity, product, 'short', self.initial_spot, expiry)
+                self.analysis.credit_debit = 'debit'
             else:
                 self.add_leg(self.quantity, product, 'long', self.initial_spot, expiry)
                 self.add_leg(self.quantity, product, 'short', self.initial_spot + 2.0, expiry)
+                self.analysis.credit_debit = 'credit'
 
     def __str__(self):
         return f'{self.name} {self.product} {self.analysis.credit_debit} spread'

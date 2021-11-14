@@ -2,7 +2,8 @@ import datetime as dt
 
 import pandas as pd
 
-from strategies.strategy import Strategy, STRATEGIES
+import strategies
+from strategies.strategy import Strategy
 from utils import utils
 
 _logger = utils.get_logger()
@@ -12,7 +13,7 @@ class Call(Strategy):
         product = 'call'
         super().__init__(ticker, product, direction, quantity)
 
-        self.name = STRATEGIES[0]
+        self.name = strategies.STRATEGIES_BROAD[0]
 
         # Default to a week from Friday as expiry
         d = dt.datetime.today()

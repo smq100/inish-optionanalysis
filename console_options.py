@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as clrs
 import matplotlib.ticker as mticker
 
+import strategies
 from strategies.strategy import Strategy
 from strategies.vertical import Vertical
 from strategies.call import Call
@@ -23,7 +24,7 @@ _logger = utils.get_logger(logging.WARNING, logfile='')
 
 
 class Interface:
-    def __init__(self, ticker:str, strategy:str, direction:str, quantity:int=1, autoload:str=''):
+    def __init__(self, ticker:str, strategy:str, direction:str, quantity:int=1, analyze:bool=False):
         self.ticker = ticker.upper()
         self.strategy:Strategy = None
         self.quantity = quantity
@@ -32,21 +33,18 @@ class Interface:
 
         pd.options.display.float_format = '{:,.2f}'.format
 
-        if not store.is_live_connection():
-            utils.print_error('No Internet connection')
+        if store.is_live_connection():
+            if store.is_ticker(ticker):
+                self.chain = Chain(ticker)
 
-        if store.is_ticker(ticker):
-            self.chain = Chain(ticker)
-
-            if autoload:
-                if self.load_strategy(self.ticker, autoload, direction, self.quantity):
+                if self.load_strategy(self.ticker, strategy, direction, quantity, analyze):
                     self.main_menu()
+                else:
+                    utils.print_error('Problem loading strategy')
             else:
-                self.strategy = Call(self.ticker, strategy, direction, self.quantity)
-                self.calculate()
-                self.main_menu()
+                utils.print_error('Invalid ticker specified')
         else:
-            utils.print_error('Invalid ticker symbol specified')
+            utils.print_error('Internet connection required')
 
     def main_menu(self) -> None:
         while True:
@@ -266,8 +264,8 @@ class Interface:
             modified = True
 
             self.chain = Chain(ticker)
-            self.load_strategy(ticker, 'call', 'long', False)
-            utils.print_message('The strategy has been set to a long call', False)
+            self.load_strategy(ticker, 'call', 'long', 1, analyze=True)
+            utils.print_message('The strategy has been reset to a long call', False)
 
         return modified
 
@@ -318,7 +316,7 @@ class Interface:
         contract = ''
 
         # Go directly to get expire date if not already entered
-        if self.chain.expire is None:
+        if not self.chain.expire:
             exp = self.select_chain_expiry()
             self.strategy.update_expiry(exp)
             if self.strategy.name != 'vertical':
@@ -333,7 +331,7 @@ class Interface:
 
         if not contract:
             while True:
-                if self.chain.expire is not None:
+                if self.chain.expire:
                     expiry = self.chain.expire
                 else:
                     expiry = 'None selected'
@@ -368,7 +366,7 @@ class Interface:
                     self.strategy.update_expiry(exp)
 
                 elif selection == 2:
-                    if self.chain.expire is not None:
+                    if self.chain.expire:
                         if self.strategy.name == 'vertical':
                             leg = utils.input_integer('(1) Long leg, or (2) short leg: ', 1, 2) - 1
                         else:
@@ -422,7 +420,7 @@ class Interface:
     def select_chain_option(self, product:str) -> str:
         options = None
         contract = ''
-        if self.chain.expire is None:
+        if not self.chain.expire:
             utils.print_error('No expiry date delected')
         elif product == 'call':
             options = self.chain.get_chain('call')
@@ -492,36 +490,34 @@ class Interface:
 
             utils.print_error('Unknown method selected')
 
-    def load_strategy(self, ticker:str, name:str, direction:str, analyze=True) -> bool:
-        modified = False
+    def load_strategy(self, ticker:str, strategy:str, direction:str, quantity:int, analyze:bool=False) -> bool:
+        modified = True
+
+        if strategy not in strategies.STRATEGIES:
+            raise ValueError('Invalid strategy')
+        if direction not in strategies.DIRECTIONS:
+            raise ValueError('Invalid direction')
+        if quantity < 1:
+            raise ValueError('Invalid quantity')
 
         try:
-            if name.lower() == 'call':
-                modified = True
-                self.strategy = Call(ticker, 'call', direction, self.quantity)
-                if analyze:
-                    self.analyze()
-            elif name.lower() == 'put':
-                modified = True
-                self.strategy = Put(ticker, 'put', direction, self.quantity)
-                if analyze:
-                    self.analyze()
-            elif name.lower() == 'vertc':
-                modified = True
-                self.strategy = Vertical(ticker, 'call', direction, self.quantity)
-                if analyze:
-                    self.analyze()
-            elif name.lower() == 'vertp':
-                modified = True
-                self.strategy = Vertical(ticker, 'put', direction, self.quantity)
-                if analyze:
-                    self.analyze()
+            if strategy.lower() == 'call':
+                self.strategy = Call(ticker, 'call', direction, quantity)
+            elif strategy.lower() == 'put':
+                self.strategy = Put(ticker, 'put', direction, quantity)
+            elif strategy.lower() == 'vertc':
+                self.strategy = Vertical(ticker, 'call', direction, quantity)
+            elif strategy.lower() == 'vertp':
+                self.strategy = Vertical(ticker, 'put', direction, quantity)
             else:
+                modified = False
                 utils.print_error('Unknown argument')
-
         except Exception as e:
             utils.print_error(str(sys.exc_info()[1]))
-            return False
+            modified = False
+
+        if modified and analyze:
+            self.analyze()
 
         return modified
 
@@ -657,13 +653,11 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Option Strategy Analyzer')
     parser.add_argument('-t', '--ticker', help='Specify the ticker symbol', required=False, default='AAPL')
-    parser.add_argument('-s', '--strategy', help='Load and analyze strategy', required=False, choices=['call', 'put', 'vertc', 'vertp'], default=None)
-    parser.add_argument('-d', '--direction', help='Specify the direction', required=False, choices=['long', 'short'], default='long')
+    parser.add_argument('-s', '--strategy', help='Load and analyze strategy', required=False, choices=['call', 'put', 'vertc', 'vertp'], default='vertp')
+    parser.add_argument('-d', '--direction', help='Specify the direction', required=False, choices=['long', 'short'], default='short ')
     parser.add_argument('-q', '--quantity', help='Specify the quantity', required=False, default='1')
+    parser.add_argument('-a', '--analyze', help='Analyze the strategy', action='store_true')
 
     command = vars(parser.parse_args())
-
-    if command['strategy']:
-        Interface(ticker=command['ticker'], strategy='call', direction=command['direction'], quantity=int(command['quantity']), autoload=command['strategy'])
-    else:
-        Interface(command['ticker'], 'call', 'long')
+    Interface(ticker=command['ticker'], strategy=command['strategy'], direction=command['direction'],
+        quantity=int(command['quantity']), analyze=command['analyze'])

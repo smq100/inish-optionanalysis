@@ -247,53 +247,43 @@ if __name__ == '__main__':
 
     _logger = utils.get_logger(WARNING, logfile='output')
     if len(sys.argv) > 1:
-        print(get_history_live(sys.argv[1]))
+        c = get_company_live(sys.argv[1])
     else:
-        print(get_history_live('AAPL'))
+        c = get_company_live('AAPL')
 
-    # start = dt.datetime.today() - dt.timedelta(days=10)
-    # df = refresh_history('AAPL', 60)
-    # print(yf.download('AAPL'))
-    # print(df.history(start=f'{start:%Y-%m-%d}'))
-    # print(df.info)
-    # print(df.actions)
-    # print(df.dividends)
-    # print(df.splits)
-    # print(df.institutional_holders)
-    # print(df.quarterly_financials)
-    # print(df.quarterly_balancesheet)
-    # print(df.quarterly_balance_sheet)
-    # print(df.quarterly_cashflow)
-    # print(df.major_holders)
-    # print(df.sustainability)
-    # print(df.recommendations)
-    # print(df.calendar)
-    # print(df.isin)
-    # print(df.options)
-    # print(df.option_chain)
+    print(c.mutualfund_holders)
+    # dates = c.options
+    # chain = c.option_chain(dates[0])
+    # print(chain.calls)
 
 
     '''
     Retrieves a company object that may be used to gather numerous data about the company and security.
 
     Ticker attributes include:
-        .info
         .history(start="2010-01-01",  end=”2020-07-21”)
+        .analysis
         .actions
+        .balance_sheet
+        .calendar
+        .cashflow
         .dividends
-        .splits
-        .quarterly_financials
-        .major_holders
+        .earnings
+        .financials
+        .info
         .institutional_holders
+        .isin
+        .major_holders
+        .mutualfund_holders
+        .options
+        .option_chain
+        .quarterly_financials
         .quarterly_balance_sheet
         .quarterly_cashflow
         .quarterly_earnings
-        .sustainability
         .recommendations
-        .calendar
-        .isin
-        .options
-        .option_chain
+        .splits
+        .sustainability
 
     :return: <object> YFinance Ticker object
     '''

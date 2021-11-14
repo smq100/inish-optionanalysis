@@ -6,8 +6,9 @@ import math
 
 import pandas as pd
 
+import strategies
 from company.company import Company
-from options.option import PRODUCTS, DIRECTIONS, Option
+from options.option import Option
 from analysis.strategy import StrategyAnalysis
 from pricing.pricing import METHODS
 from pricing.pricing import Pricing
@@ -17,17 +18,18 @@ from utils import utils
 
 
 IV_CUTOFF = 0.020
-STRATEGIES = ['call', 'put', 'vertical']
 
 _logger = utils.get_logger()
 
 
 class Strategy(ABC):
     def __init__(self, ticker:str, product:str, direction:str, quantity:int):
-        if product not in PRODUCTS:
+        if product not in strategies.PRODUCTS:
             raise ValueError('Invalid product')
-        if direction not in DIRECTIONS:
+        if direction not in strategies.DIRECTIONS:
             raise ValueError('Invalid direction')
+        if quantity < 1:
+            raise ValueError('Invalid quantity')
 
         self.name = ''
         self.ticker = ticker
@@ -123,9 +125,9 @@ class Strategy(ABC):
 
 class Leg:
     def __init__(self, strategy:Strategy, ticker:str, quantity:int, product:str, direction:str, strike:float, expiry:datetime.datetime):
-        if product not in PRODUCTS:
+        if product not in strategies.PRODUCTS:
             raise ValueError('Invalid product')
-        if direction not in DIRECTIONS:
+        if direction not in strategies.DIRECTIONS:
             raise ValueError('Invalid direction')
         if quantity < 1:
             raise ValueError('Invalid quantity')

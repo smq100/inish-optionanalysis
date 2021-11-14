@@ -5,14 +5,12 @@ from utils import utils
 _logger = utils.get_logger()
 
 class Chain:
-    def __init__(self, ticker):
+    def __init__(self, ticker:str):
         if not store.is_ticker(ticker):
-            _logger.error(f'Error initializing {__class__}')
+            raise ValueError('Not a valid ticker')
         else:
-            self.ticker = ticker
-            self.company = None
-            self.expire = None
-            self.width = 1
+            self.ticker:str = ticker
+            self.expire:str = ''
 
     def get_expiry(self):
         return store.get_option_expiry(self.ticker)

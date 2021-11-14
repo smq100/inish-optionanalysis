@@ -4,9 +4,6 @@ import re
 from data import store as store
 from utils import utils
 
-PRODUCTS = ('call', 'put')
-DIRECTIONS = ('long', 'short')
-
 _logger = utils.get_logger()
 
 
