@@ -4,6 +4,7 @@ import threading
 import logging
 
 import matplotlib.pyplot as plt
+from pandas import DataFrame
 
 from screener.screener import Screener, Result, INIT_NAME
 from analysis.trend import SupportResistance
@@ -17,6 +18,7 @@ BASEPATH = os.getcwd()+'/screener/screens/'
 SCREEN_SUFFIX = 'screen'
 LISTTOP = 10
 LISTTOP_CORR = 3
+COOR_CUTOFF = 0.85
 
 class Interface:
     def __init__(self, table:str='', screen:str='', quick:bool=True, exit:bool=False):
@@ -28,7 +30,7 @@ class Interface:
         self.auto = False
         self.screen_path = ''
         self.results:list[Result] = []
-        self.results_corr:list[str] = []
+        self.results_corr:list[tuple[str,DataFrame.Series]]
         self.valids = 0
         self.screener:Screener = None
         self.correlate:Correlate = None
@@ -75,6 +77,7 @@ class Interface:
                 '4': 'Coorelate',
                 '5': 'Analyze',
                 '6': 'Show Top',
+                '7': 'Show All',
                 '0': 'Exit'
             }
 
@@ -84,8 +87,11 @@ class Interface:
             if self.screen_base:
                 menu_items['2'] = f'Select Screen ({self.screen_base})'
 
+            if len(self.results) > 0:
+                menu_items['7'] = f'Show All ({self.valids})'
+
             if selection == 0:
-                selection = utils.menu(menu_items, 'Select Operation', 0, 6)
+                selection = utils.menu(menu_items, 'Select Operation', 0, 7)
 
             if selection == 1:
                 self.select_list()
@@ -96,11 +102,14 @@ class Interface:
                     if self.valids > 0:
                         self.print_results(top=LISTTOP)
             elif selection == 4:
-                self.run_coorelate()
+                if self.run_coorelate():
+                    self.print_coorelations()
             elif selection == 5:
                 self.run_analyze()
             elif selection == 6:
                 self.print_results(top=LISTTOP)
+            elif selection == 7:
+                self.print_results()
             elif selection == 0:
                 self.exit = True
 
@@ -191,7 +200,8 @@ class Interface:
 
         return success
 
-    def run_coorelate(self) -> None:
+    def run_coorelate(self) -> bool:
+        success = False
         if len(self.results) > 0:
             table = store.get_tickers(self.table)
             self.coorelate = Correlate(table)
@@ -206,20 +216,18 @@ class Interface:
             tickers = [str(result) for result in self.results if bool(result)][:LISTTOP]
             for ticker in tickers:
                 df = self.coorelate.get_ticker_coorelation(ticker)
-                self.results_corr += [df.iloc[-1]]
+                self.results_corr += [(ticker, df.iloc[-1])]
 
-                [print(f'{ticker}/{result[1]}: {result[2]:.5f}') for result in df.iloc[-1:-(LISTTOP_CORR+1):-1].itertuples() if result[2]>0.95]
-
-            answer = utils.input_text('\nRun analysis on top findings? (y/n): ')
-            if answer.lower() == 'y':
-                self.run_analyze(True)
+            success = True
         else:
             utils.print_error('Please run screen before correlating')
+
+        return success
 
     def run_analyze(self, corr:bool=False) -> None:
         if len(self.results) > 0:
             if corr:
-                tickers = [result['ticker'] for result in self.results_corr]
+                tickers = [result[1]['ticker'] for result in self.results_corr if result[1]["value"] > COOR_CUTOFF][:LISTTOP_CORR]
             else:
                 tickers = [str(result) for result in self.results if bool(result)][:LISTTOP]
 
@@ -241,8 +249,9 @@ class Interface:
                 figure = self.trend.plot()
                 plt.figure(figure)
 
-            print()
-            plt.show()
+            if tickers:
+                print()
+                plt.show()
         else:
             utils.print_error('Run screen before analyzing')
 
@@ -255,11 +264,11 @@ class Interface:
             utils.print_message('No results were located')
         else:
             if top <= 0:
+                top = self.screener.task_success
                 results = sorted(self.results, key=lambda r: str(r))
-                top = self.screener.task_success
             elif top > self.screener.task_success:
-                results = sorted(self.results, reverse=True, key=lambda r: float(r))
                 top = self.screener.task_success
+                results = sorted(self.results, reverse=True, key=lambda r: float(r))
             else:
                 results = sorted(self.results, reverse=True, key=lambda r: float(r))
 
@@ -282,14 +291,26 @@ class Interface:
                     break
         print()
 
+    def print_coorelations(self):
+        results = [f'{result[0]:<5}/{result[1]["ticker"]:<5} {result[1]["value"]:.5f}' for result in self.results_corr if result[1]["value"] > COOR_CUTOFF]
+        if results:
+            utils.print_message('Coorelation Results')
+            [print(result) for result in results]
+            answer = utils.input_text('\nRun analysis on top findings? (y/n): ')
+            if answer.lower() == 'y':
+                self.run_analyze(True)
+        else:
+            utils.print_message('No significant coorelations found')
+
     def _show_progress_screen(self) -> None:
         while not self.screener.task_error: pass
 
         prefix = 'Screening'
+        total = self.screener.task_total
         utils.progress_bar(self.screener.task_completed, self.screener.task_total, prefix=prefix, reset=True)
+
         while self.screener.task_error == 'None':
             time.sleep(0.20)
-            total = self.screener.task_total
             completed = self.screener.task_completed
             success = self.screener.task_success
             ticker = self.screener.task_ticker
@@ -303,13 +324,14 @@ class Interface:
         if self.coorelate.task_error == 'None':
             prefix = 'Correlating'
             total = self.coorelate.task_total
-            utils.progress_bar(self.coorelate.task_completed, self.coorelate.task_total, prefix=prefix, reset=True)
+            utils.progress_bar(self.coorelate.task_completed, self.coorelate.task_total, success=self.coorelate.task_success, prefix=prefix, reset=True)
 
             while self.task.is_alive and self.coorelate.task_error == 'None':
                 time.sleep(0.20)
                 completed = self.coorelate.task_completed
+                success = completed
                 ticker = self.coorelate.task_ticker
-                utils.progress_bar(completed, total, prefix=prefix, ticker=ticker)
+                utils.progress_bar(completed, total, prefix=prefix, ticker=ticker, success=success)
 
     def _show_progress_analyze(self) -> None:
         while not self.trend.task_error: pass

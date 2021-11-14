@@ -26,7 +26,6 @@ class Correlate(Threaded):
 
         for ticker in self.tickers:
             self.task_ticker = ticker
-            self.task_completed += 1
 
             df = store.get_history(ticker, 365)
             if not df.empty:
@@ -39,10 +38,13 @@ class Correlate(Threaded):
                 else:
                     main_df = main_df.join(df, how='outer')
 
+            self.task_completed += 1
+
         if not main_df.empty:
             self.correlation = main_df.fillna(main_df.mean())
             self.correlation = main_df.corr()
             self.task_object = self.correlation
+            self.task_success += 1
 
         self.task_error = 'Done'
 

@@ -160,8 +160,10 @@ def progress_bar(iteration, total:int, prefix:str='Working', suffix:str='', tick
             pass # Nothing new to draw
         elif success < 0:
             print(f'\r{prefix} |{bar}| {iteration}/{total} {suffix} {ticker}     ', end='\r')
-        else:
+        elif tasks > 0:
             print(f'\r{prefix} |{bar}| {success}/{iteration}/{total} [{tasks}] {ticker:<5} {hours:02.0f}:{minutes:02.0f}:{seconds:02.0f} {suffix}     ', end='\r')
+        else:
+            print(f'\r{prefix} |{bar}| {success}/{iteration}/{total} {ticker:<5} {hours:02.0f}:{minutes:02.0f}:{seconds:02.0f} {suffix}     ', end='\r')
 
         completed = iteration
 
