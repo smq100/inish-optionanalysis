@@ -6,6 +6,7 @@ import strategies
 from strategies.strategy import Strategy
 from utils import utils
 
+
 _logger = utils.get_logger()
 
 class Call(Strategy):
@@ -32,10 +33,7 @@ class Call(Strategy):
 
             price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
 
-            if self.legs[0].direction == 'long':
-                self.analysis.credit_debit = 'debit'
-            else:
-                self.analysis.credit_debit = 'credit'
+            self.analysis.credit_debit = 'debit' if self.legs[0].direction == 'long' else 'credit'
 
             # Calculate net debit or credit
             self.analysis.amount = price * self.quantity

@@ -42,6 +42,8 @@ class Strategy(ABC):
         self.initial_spot = 0.0
         self.initial_spot = self.get_current_spot(ticker, True)
 
+        self.analysis.credit_debit = 'debit' if direction == 'long' else 'credit'
+
     def __str__(self):
         return 'Strategy abstract base class'
 
@@ -61,7 +63,6 @@ class Strategy(ABC):
             leg.option.expiry = date
 
     def add_leg(self, quantity:int, product:str, direction:str, strike:float, expiry:datetime.datetime) -> int:
-        # Add one day to act as expiry value
         expiry += datetime.timedelta(days=1)
 
         leg = Leg(self, self.ticker, quantity, product, direction, strike, expiry)
@@ -134,13 +135,13 @@ class Leg:
 
         self.company:Company = Company(ticker, days=1)
         self.option:Option = Option(ticker, product, strike, expiry)
-        self.strategy = strategy
-        self.quantity = quantity
-        self.product = product
-        self.direction = direction
-        self.pricing_method = 'black-scholes'
+        self.strategy:Strategy = strategy
+        self.quantity:int = quantity
+        self.product:str = product
+        self.direction:str = direction
+        self.pricing_method:str = 'black-scholes'
         self.pricer:Pricing = None
-        self.table = None
+        self.table:pd.DataFrame = None
 
     def __str__(self):
         if self.option.calc_price > 0.0:
@@ -181,15 +182,15 @@ class Leg:
             else:
                 raise ValueError('Unknown pricing model')
 
-            _logger.debug(f'{__name__}: Calculating price using {self.pricing_method}')
+            _logger.info(f'{__name__}: Calculating price using {self.pricing_method}')
 
             # Calculate prices
             if self.option.implied_volatility < IV_CUTOFF:
                 self.pricer.calculate_price()
-                _logger.debug(f'{__name__}: Using calculated volatility')
+                _logger.info(f'{__name__}: Using calculated volatility')
             else:
                 self.pricer.calculate_price(volatility=self.option.implied_volatility)
-                _logger.debug(f'{__name__}: Using implied volatility = {self.option.implied_volatility:.4f}')
+                _logger.info(f'{__name__}: Using implied volatility = {self.option.implied_volatility:.4f}')
 
             if self.product == 'call':
                 self.option.calc_price = price = self.pricer.price_call

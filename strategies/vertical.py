@@ -14,7 +14,7 @@ class Vertical(Strategy):
 
         self.name = strategies.STRATEGIES_BROAD[2]
 
-        # Default to a week from Friday as expiry
+        # Default expiry to a week from Friday
         d = dt.datetime.today()
         while d.weekday() != 4:
             d += dt.timedelta(1)
@@ -25,20 +25,16 @@ class Vertical(Strategy):
             if direction == 'long':
                 self.add_leg(self.quantity, product, 'long', self.initial_spot, expiry)
                 self.add_leg(self.quantity, product, 'short', self.initial_spot + 2.0, expiry)
-                self.analysis.credit_debit = 'debit'
             else:
                 self.add_leg(self.quantity, product, 'long', self.initial_spot + 2.0, expiry)
                 self.add_leg(self.quantity, product, 'short', self.initial_spot, expiry)
-                self.analysis.credit_debit = 'credit'
         else:
             if direction == 'long':
                 self.add_leg(self.quantity, product, 'long', self.initial_spot + 2.0, expiry)
                 self.add_leg(self.quantity, product, 'short', self.initial_spot, expiry)
-                self.analysis.credit_debit = 'debit'
             else:
                 self.add_leg(self.quantity, product, 'long', self.initial_spot, expiry)
                 self.add_leg(self.quantity, product, 'short', self.initial_spot + 2.0, expiry)
-                self.analysis.credit_debit = 'credit'
 
     def __str__(self):
         return f'{self.name} {self.product} {self.analysis.credit_debit} spread'
@@ -83,33 +79,19 @@ class Vertical(Strategy):
         if dlong:
             loss = self.analysis.amount
             gain = (self.quantity * (self.legs[0].option.strike - self.legs[1].option.strike)) - loss
-
-            if self.product == 'call':
-                self.analysis.sentiment = 'bullish'
-            else:
-                self.analysis.sentiment = 'bearish'
+            self.analysis.sentiment = 'bullish' if self.product == 'call' else 'bearish'
         else:
             gain = self.analysis.amount
             loss = (self.quantity * (self.legs[1].option.strike - self.legs[0].option.strike)) - gain
-
-            if self.product == 'call':
-                self.analysis.sentiment = 'bearish'
-            else:
-                self.analysis.sentiment = 'bullish'
+            self.analysis.sentiment = 'bearish' if self.product == 'call' else 'bullish'
 
         return gain, loss
 
     def calc_breakeven(self) -> float:
         if self.analysis.credit_debit == 'debit':
-            if self.product == 'call':
-                breakeven = self.legs[1].option.strike + self.analysis.amount
-            else:
-                breakeven = self.legs[1].option.strike + self.analysis.amount
+            breakeven = self.legs[1].option.strike + self.analysis.amount
         else:
-            if self.product == 'call':
-                breakeven = self.legs[1].option.strike - self.analysis.amount
-            else:
-                breakeven = self.legs[1].option.strike - self.analysis.amount
+            breakeven = self.legs[1].option.strike - self.analysis.amount
 
         return breakeven
 

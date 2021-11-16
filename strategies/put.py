@@ -1,10 +1,11 @@
 import datetime as dt
 
+import pandas as pd
+
 import strategies
 from strategies.strategy import Strategy
 from utils import utils
 
-import pandas as pd
 
 _logger = utils.get_logger()
 
@@ -32,10 +33,7 @@ class Put(Strategy):
 
             price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
 
-            if self.legs[0].direction == 'long':
-                self.analysis.credit_debit = 'debit'
-            else:
-                self.analysis.credit_debit = 'credit'
+            self.analysis.credit_debit = 'debit' if self.legs[0].direction == 'long' else 'credit'
 
             # Calculate net debit or credit
             self.analysis.amount = price * self.quantity
@@ -50,17 +48,17 @@ class Put(Strategy):
             self.analysis.breakeven = self.calc_breakeven()
 
     def generate_profit_table(self) -> pd.DataFrame:
-        dframe = pd.DataFrame()
+        profit = pd.DataFrame()
         price = self.legs[0].option.calc_price
 
         if self.legs[0].direction == 'long':
-            dframe = self.legs[0].table - price
-            dframe = dframe.applymap(lambda x: x if x > -price else -price)
+            profit = self.legs[0].table - price
+            profit = profit.applymap(lambda x: x if x > -price else -price)
         else:
-            dframe = self.legs[0].table
-            dframe = dframe.applymap(lambda x: (price - x) if x < price else -(x - price))
+            profit = self.legs[0].table
+            profit = profit.applymap(lambda x: (price - x) if x < price else -(x - price))
 
-        return dframe
+        return profit
 
     def calc_max_gain_loss(self) -> tuple[float, float]:
         if self.legs[0].direction == 'long':
