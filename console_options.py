@@ -1,6 +1,9 @@
-import sys, math
-import datetime as dt
+import sys
+import math
+import time
+import threading
 import logging
+import datetime as dt
 
 import pandas as pd
 import numpy as np
@@ -23,28 +26,38 @@ MAX_COLS = 18
 _logger = utils.get_logger(logging.WARNING, logfile='')
 
 
-class Interface:
-    def __init__(self, ticker:str, strategy:str, direction:str, quantity:int=1, analyze:bool=False):
+class Interface():
+    def __init__(self, ticker:str, strategy:str, direction:str, width:int=1, quantity:int=1, analyze:bool=False):
         self.ticker = ticker.upper()
-        self.strategy:Strategy = None
+        self.width = width
         self.quantity = quantity
+        self.strategy:Strategy = None
+        self.chain:Chain = None
         self.dirty_calculate = True
         self.dirty_analyze = True
+        self.task:threading.Thread = None
 
         pd.options.display.float_format = '{:,.2f}'.format
 
-        if store.is_live_connection():
-            if store.is_ticker(ticker):
-                self.chain = Chain(ticker)
-
-                if self.load_strategy(self.ticker, strategy, direction, quantity, analyze):
-                    self.main_menu()
-                else:
-                    utils.print_error('Problem loading strategy')
-            else:
-                utils.print_error('Invalid ticker specified')
-        else:
+        if not store.is_live_connection():
             utils.print_error('Internet connection required')
+        elif not store.is_ticker(ticker):
+            utils.print_error('Invalid ticker specified')
+        elif strategy not in strategies.STRATEGIES:
+            utils.print_error('Invalid strategy specified')
+        elif direction not in strategies.DIRECTIONS:
+            utils.print_error('Invalid direction specified')
+        elif width < 1:
+            utils.print_error('Invalid width specified')
+        elif quantity < 1:
+            utils.print_error('Invalid quantity specified')
+        else:
+            self.chain = Chain(self.ticker)
+
+            if self.load_strategy(self.ticker, strategy, direction, self.width, self.quantity, analyze):
+                self.main_menu()
+            else:
+                utils.print_error('Problem loading strategy')
 
     def main_menu(self) -> None:
         while True:
@@ -232,7 +245,10 @@ class Interface:
     def analyze(self) -> None:
         errors = self.strategy.get_errors()
         if not errors:
-            self.strategy.analyze()
+            self.task = threading.Thread(target=self.strategy.analyze)
+            self.task.start()
+
+            self._show_progress()
 
             self.dirty_calculate = False
             self.dirty_analyze = False
@@ -277,38 +293,28 @@ class Interface:
             '0': 'Done/Cancel',
         }
 
-        modified = False
+        modified = True
         selection = utils.menu(menu_items, 'Select Strategy', 0, 3)
 
         if selection == 1:
             d = utils.input_integer('(1) Long, or (2) short: ', 1, 2)
             direction = 'long' if d == 1 else 'short'
-            self.strategy = Call(self.strategy.ticker, 'call', direction, self.quantity)
-
-            self.dirty_calculate = True
-            self.dirty_analyze = True
-            modified = True
-
+            self.load_strategy(self.strategy.ticker, 'call', direction, self.width, self.quantity, analyze=False)
         elif selection == 2:
             d = utils.input_integer('(1) Long, or (2) short: ', 1, 2)
             direction = 'long' if d == 1 else 'short'
-            self.strategy = Put(self.strategy.ticker, 'put', direction, self.quantity)
-
-            self.dirty_calculate = True
-            self.dirty_analyze = True
-            modified = True
-
+            self.load_strategy(self.strategy.ticker, 'put', direction, self.width, self.quantity, analyze=False)
         elif selection == 3:
             p = utils.input_integer('(1) Call, or (2) Put: ', 1, 2)
             product = 'call' if p == 1 else 'put'
             d = utils.input_integer('(1) Debit, or (2) credit: ', 1, 2)
             direction = 'long' if d == 1 else 'short'
-
-            self.strategy = Vertical(self.strategy.ticker, product, direction, self.quantity)
-
-            self.dirty_calculate = True
-            self.dirty_analyze = True
-            modified = True
+            if product == 'call':
+                self.load_strategy(self.strategy.ticker, 'vertc', direction, self.width, self.quantity, analyze=False)
+            else:
+                self.load_strategy(self.strategy.ticker, 'vertp', direction, self.width, self.quantity, analyze=False)
+        else:
+            modified = False
 
         return modified
 
@@ -345,7 +351,7 @@ class Interface:
                     '1': f'Select Expiry Date ({expiry})',
                     '2': f'Select {product} Option',
                     '3': f'Quantity ({self.quantity})',
-                    '4': 'Done',
+                    '0': 'Done'
                 }
 
                 loaded = '' if  self.strategy.legs[0].option.last_price > 0 else '*'
@@ -358,7 +364,7 @@ class Interface:
                 else:
                     menu_items['2'] += f' (${self.strategy.legs[0].option.strike:.2f}{loaded})'
 
-                selection = utils.menu(menu_items, 'Select Operation', 0, 4)
+                selection = utils.menu(menu_items, 'Select Operation', 0, 3)
 
                 ret = True
                 if selection == 1:
@@ -388,8 +394,6 @@ class Interface:
                         utils.print_error('Please first select expiry date')
                 elif selection == 3:
                     self.quantity = utils.input_integer('Enter quantity (1 - 10): ', 1, 10)
-                elif selection == 4:
-                    break
                 elif selection == 0:
                     break
 
@@ -490,7 +494,7 @@ class Interface:
 
             utils.print_error('Unknown method selected')
 
-    def load_strategy(self, ticker:str, strategy:str, direction:str, quantity:int, analyze:bool=False) -> bool:
+    def load_strategy(self, ticker:str, strategy:str, direction:str, width:int, quantity:int, analyze:bool=False) -> bool:
         modified = True
 
         if strategy not in strategies.STRATEGIES:
@@ -500,15 +504,19 @@ class Interface:
         if quantity < 1:
             raise ValueError('Invalid quantity')
 
+        self.ticker = ticker.upper()
+        self.width = width
+        self.quantity = quantity
+
         try:
             if strategy.lower() == 'call':
-                self.strategy = Call(ticker, 'call', direction, quantity)
+                self.strategy = Call(ticker, 'call', direction, self.width, self.quantity)
             elif strategy.lower() == 'put':
-                self.strategy = Put(ticker, 'put', direction, quantity)
+                self.strategy = Put(ticker, 'put', direction, self.width, self.quantity)
             elif strategy.lower() == 'vertc':
-                self.strategy = Vertical(ticker, 'call', direction, quantity)
+                self.strategy = Vertical(ticker, 'call', direction, self.width, self.quantity)
             elif strategy.lower() == 'vertp':
-                self.strategy = Vertical(ticker, 'put', direction, quantity)
+                self.strategy = Vertical(ticker, 'put', direction, self.width, self.quantity)
             else:
                 modified = False
                 utils.print_error('Unknown argument')
@@ -516,10 +524,23 @@ class Interface:
             utils.print_error(str(sys.exc_info()[1]))
             modified = False
 
-        if modified and analyze:
-            self.analyze()
+        if modified:
+            self.dirty_calculate = True
+            self.dirty_analyze = True
+
+            if analyze:
+                self.analyze()
 
         return modified
+
+    def _show_progress(self) -> None:
+        print()
+
+        while self.task.is_alive():
+            time.sleep(0.20)
+            utils.progress_bar(0, 0, prefix='Analyzing', suffix=self.ticker)
+
+        print()
 
     def _show_chart(self, table:str, title:str, charttype:str) -> None:
         if not isinstance(table, pd.DataFrame):
@@ -654,10 +675,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Option Strategy Analyzer')
     parser.add_argument('-t', '--ticker', help='Specify the ticker symbol', required=False, default='AAPL')
     parser.add_argument('-s', '--strategy', help='Load and analyze strategy', required=False, choices=['call', 'put', 'vertc', 'vertp'], default='vertp')
-    parser.add_argument('-d', '--direction', help='Specify the direction', required=False, choices=['long', 'short'], default='short ')
+    parser.add_argument('-d', '--direction', help='Specify the direction', required=False, choices=['long', 'short'], default='short')
+    parser.add_argument('-w', '--width', help='Specify the width (used for spreads)', required=False, default='1')
     parser.add_argument('-q', '--quantity', help='Specify the quantity', required=False, default='1')
-    parser.add_argument('-a', '--analyze', help='Analyze the strategy', action='store_true')
+    parser.add_argument('-a', '--analyze', help='Analyze the strategy', required=False, action='store_true')
 
     command = vars(parser.parse_args())
     Interface(ticker=command['ticker'], strategy=command['strategy'], direction=command['direction'],
-        quantity=int(command['quantity']), analyze=command['analyze'])
+        width=int(command['width']), quantity=int(command['quantity']), analyze=command['analyze'])

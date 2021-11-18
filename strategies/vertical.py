@@ -7,10 +7,11 @@ from strategies.strategy import Strategy
 from utils import utils
 
 _logger = utils.get_logger()
+DEFAULT_WIDTH = 2.0
 
 class Vertical(Strategy):
-    def __init__(self, ticker, product, direction, quantity):
-        super().__init__(ticker, product, direction, quantity)
+    def __init__(self, ticker:str, product:str, direction:str, width:int, quantity:int):
+        super().__init__(ticker, product, direction, width, quantity)
 
         self.name = strategies.STRATEGIES_BROAD[2]
 
@@ -20,21 +21,21 @@ class Vertical(Strategy):
             d += dt.timedelta(1)
         expiry = d + dt.timedelta(days=6)
 
-        # Add legs (Important: long leg is always first)
+        # Add legs. Long leg is always first!
         if product == 'call':
             if direction == 'long':
                 self.add_leg(self.quantity, product, 'long', self.initial_spot, expiry)
-                self.add_leg(self.quantity, product, 'short', self.initial_spot + 2.0, expiry)
+                self.add_leg(self.quantity, product, 'short', self.initial_spot + DEFAULT_WIDTH, expiry)
             else:
-                self.add_leg(self.quantity, product, 'long', self.initial_spot + 2.0, expiry)
+                self.add_leg(self.quantity, product, 'long', self.initial_spot + DEFAULT_WIDTH, expiry)
                 self.add_leg(self.quantity, product, 'short', self.initial_spot, expiry)
         else:
             if direction == 'long':
-                self.add_leg(self.quantity, product, 'long', self.initial_spot + 2.0, expiry)
+                self.add_leg(self.quantity, product, 'long', self.initial_spot + DEFAULT_WIDTH, expiry)
                 self.add_leg(self.quantity, product, 'short', self.initial_spot, expiry)
             else:
                 self.add_leg(self.quantity, product, 'long', self.initial_spot, expiry)
-                self.add_leg(self.quantity, product, 'short', self.initial_spot + 2.0, expiry)
+                self.add_leg(self.quantity, product, 'short', self.initial_spot + DEFAULT_WIDTH, expiry)
 
     def __str__(self):
         return f'{self.name} {self.product} {self.analysis.credit_debit} spread'

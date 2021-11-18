@@ -10,9 +10,9 @@ from utils import utils
 _logger = utils.get_logger()
 
 class Put(Strategy):
-    def __init__(self, ticker, product, direction, quantity):
+    def __init__(self, ticker:str, product:str, direction:str, width:int, quantity:int):
         product = 'put'
-        super().__init__(ticker, product, direction, quantity)
+        super().__init__(ticker, product, direction, width, quantity)
 
         self.name = strategies.STRATEGIES_BROAD[1]
 

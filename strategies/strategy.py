@@ -23,7 +23,7 @@ _logger = utils.get_logger()
 
 
 class Strategy(ABC):
-    def __init__(self, ticker:str, product:str, direction:str, quantity:int):
+    def __init__(self, ticker:str, product:str, direction:str, width:int, quantity:int):
         if product not in strategies.PRODUCTS:
             raise ValueError('Invalid product')
         if direction not in strategies.DIRECTIONS:
@@ -36,7 +36,7 @@ class Strategy(ABC):
         self.product = product
         self.direction = direction
         self.quantity = quantity
-        self.width = 1
+        self.width = width
         self.analysis = StrategyAnalysis()
         self.legs:list[Leg] = []
         self.initial_spot = 0.0
