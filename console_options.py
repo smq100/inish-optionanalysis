@@ -318,8 +318,8 @@ class Interface():
 
         return modified
 
-    def select_chain(self) -> str:
-        contract = ''
+    def select_chain(self) -> list[str]:
+        contracts = []
 
         # Go directly to get expire date if not already entered
         if not self.chain.expire:
@@ -328,24 +328,18 @@ class Interface():
             if self.strategy.name != 'vertical':
                 # Go directly to choose option if only one leg in strategy
                 if self.strategy.legs[0].option.product == 'call':
-                    contract = self.select_chain_option('call')
+                    contracts = self.select_chain_options('call')
                 else:
-                    contract = self.select_chain_option('put')
+                    contracts = self.select_chain_options('put')
 
-                if contract:
-                    self.strategy.legs[0].option.load_contract(contract)
+                if contracts:
+                    self.strategy.legs[0].option.load_contract(contracts[0])
 
-        if not contract:
-            while True:
-                if self.chain.expire:
-                    expiry = self.chain.expire
-                else:
-                    expiry = 'None selected'
-
-                if self.strategy.legs[0].option.product == 'call':
-                    product = 'Call'
-                else:
-                    product = 'Put'
+        if not contracts:
+            done = False
+            while not done:
+                expiry = self.chain.expire if self.chain.expire else 'None selected'
+                product = 'Call' if self.strategy.legs[0].option.product == 'call' else 'Put'
 
                 menu_items = {
                     '1': f'Select Expiry Date ({expiry})',
@@ -373,34 +367,30 @@ class Interface():
 
                 elif selection == 2:
                     if self.chain.expire:
-                        if self.strategy.name == 'vertical':
-                            leg = utils.input_integer('(1) Long leg, or (2) short leg: ', 1, 2) - 1
-                        else:
-                            leg = 0
+                        leg = 0
+                        qty = 2 if self.strategy.name == 'vertical' else 1
 
                         if self.strategy.legs[leg].option.product == 'call':
-                            contract = self.select_chain_option('call')
+                            contracts = self.select_chain_options('call', qty=qty)
                         else:
-                            contract = self.select_chain_option('put')
+                            contracts = self.select_chain_options('put', qty=qty)
 
-                        if contract:
-                            ret = self.strategy.legs[leg].option.load_contract(contract)
+                        if contracts:
+                            ret = self.strategy.legs[leg].option.load_contract(contracts[0])
                         else:
                             utils.print_error('No option selected')
 
-                        if self.strategy.name != 'vertical':
-                            break
                     else:
                         utils.print_error('Please first select expiry date')
                 elif selection == 3:
                     self.quantity = utils.input_integer('Enter quantity (1 - 10): ', 1, 10)
                 elif selection == 0:
-                    break
+                    done = True
 
                 if not ret:
                     utils.print_error('Error loading option. Please try again')
 
-        return contract
+        return contracts
 
     def select_chain_expiry(self) -> str:
         expiry = self.chain.get_expiry()
@@ -421,9 +411,9 @@ class Interface():
 
         return expiry
 
-    def select_chain_option(self, product:str) -> str:
+    def select_chain_options(self, product:str, qty:int=1) -> list[str]:
         options = None
-        contract = ''
+        contracts = []
         if not self.chain.expire:
             utils.print_error('No expiry date delected')
         elif product == 'call':
@@ -435,22 +425,19 @@ class Interface():
             menu_items = {}
             for i, row in options.iterrows():
                 itm = 'ITM' if bool(row["inTheMoney"]) else 'OTM'
-                menu_items[f'{i+1}'] = \
-                    f'${row["strike"]:7.2f} '\
-                    f'${row["lastPrice"]:7.2f} '\
-                    f'{itm}'
+                menu_items[f'{i+1}'] = f'${row["strike"]:7.2f} ${row["lastPrice"]:7.2f} {itm}'
 
             select = utils.menu(menu_items, 'Select option, or 0 to cancel: ', 0, i+1)
             if select > 0:
                 sel_row = options.iloc[select-1]
-                contract = sel_row['contractSymbol']
+                contracts += [sel_row['contractSymbol']]
 
                 self.dirty_calculate = True
                 self.dirty_analyze = True
         else:
             utils.print_error('Invalid selection')
 
-        return contract
+        return contracts
 
     def select_settings(self) -> None:
         while True:
@@ -674,8 +661,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Option Strategy Analyzer')
     parser.add_argument('-t', '--ticker', help='Specify the ticker symbol', required=False, default='AAPL')
-    parser.add_argument('-s', '--strategy', help='Load and analyze strategy', required=False, choices=['call', 'put', 'vertc', 'vertp'], default='vertp')
-    parser.add_argument('-d', '--direction', help='Specify the direction', required=False, choices=['long', 'short'], default='short')
+    parser.add_argument('-s', '--strategy', help='Load and analyze strategy', required=False, choices=['call', 'put', 'vertc', 'vertp'], default='call')
+    parser.add_argument('-d', '--direction', help='Specify the direction', required=False, choices=['long', 'short'], default='long')
     parser.add_argument('-w', '--width', help='Specify the width (used for spreads)', required=False, default='1')
     parser.add_argument('-q', '--quantity', help='Specify the quantity', required=False, default='1')
     parser.add_argument('-a', '--analyze', help='Analyze the strategy', required=False, action='store_true')

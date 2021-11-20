@@ -15,8 +15,6 @@ from data import store as store
 from utils import utils
 
 
-METHODS = ('black-scholes', 'monte-carlo')
-
 _logger = utils.get_logger()
 
 

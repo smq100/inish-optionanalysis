@@ -49,7 +49,7 @@ class Put(Strategy):
 
     def generate_profit_table(self) -> pd.DataFrame:
         profit = pd.DataFrame()
-        price = self.legs[0].option.calc_price
+        price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
 
         if self.legs[0].direction == 'long':
             profit = self.legs[0].table - price
@@ -61,14 +61,15 @@ class Put(Strategy):
         return profit
 
     def calc_max_gain_loss(self) -> tuple[float, float]:
+        price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
         if self.legs[0].direction == 'long':
             self.analysis.sentiment = 'bearish'
-            max_gain = (self.legs[0].option.strike - self.legs[0].option.calc_price) * self.quantity
-            max_loss = self.legs[0].option.calc_price * self.quantity
+            max_gain = (self.legs[0].option.strike - price) * self.quantity
+            max_loss = price * self.quantity
         else:
             self.analysis.sentiment = 'bullish'
-            max_gain = self.legs[0].option.calc_price * self.quantity
-            max_loss = (self.legs[0].option.strike - self.legs[0].option.calc_price) * self.quantity
+            max_gain = price * self.quantity
+            max_loss = (self.legs[0].option.strike - price) * self.quantity
 
         return max_gain, max_loss
 

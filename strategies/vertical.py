@@ -76,7 +76,10 @@ class Vertical(Strategy):
     def calc_max_gain_loss(self) -> tuple[float, float]:
         gain = loss = 0.0
 
-        dlong = (self.legs[0].option.calc_price > self.legs[1].option.calc_price)
+        price_long = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
+        price_short = self.legs[1].option.last_price if self.legs[1].option.last_price > 0.0 else self.legs[1].option.calc_price
+
+        dlong = (price_long > price_short)
         if dlong:
             loss = self.analysis.amount
             gain = (self.quantity * (self.legs[0].option.strike - self.legs[1].option.strike)) - loss

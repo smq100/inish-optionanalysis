@@ -7,10 +7,11 @@ import math
 import pandas as pd
 
 import strategies
+import pricing
+from data import store as store
 from company.company import Company
 from options.option import Option
 from analysis.strategy import StrategyAnalysis
-from pricing.pricing import METHODS
 from pricing.pricing import Pricing
 from pricing.blackscholes import BlackScholes
 from pricing.montecarlo import MonteCarlo
@@ -24,10 +25,14 @@ _logger = utils.get_logger()
 
 class Strategy(ABC):
     def __init__(self, ticker:str, product:str, direction:str, width:int, quantity:int):
+        if not store.is_ticker(ticker):
+            raise ValueError('Invalid ticker')
         if product not in strategies.PRODUCTS:
             raise ValueError('Invalid product')
         if direction not in strategies.DIRECTIONS:
             raise ValueError('Invalid direction')
+        if width < 1:
+            raise ValueError('Invalid width')
         if quantity < 1:
             raise ValueError('Invalid quantity')
 
@@ -37,10 +42,11 @@ class Strategy(ABC):
         self.direction = direction
         self.quantity = quantity
         self.width = width
+        self.pricing_method = 'black-scholes'
         self.analysis = StrategyAnalysis()
         self.legs:list[Leg] = []
         self.initial_spot = 0.0
-        self.initial_spot = self.get_current_spot(ticker, True)
+        self.initial_spot = self.get_current_spot(ticker, roundup=True)
 
         self.analysis.credit_debit = 'debit' if direction == 'long' else 'credit'
 
@@ -70,9 +76,15 @@ class Strategy(ABC):
 
         return len(self.legs)
 
-    def get_current_spot(self, ticker:str, roundup=False) -> float:
+    def get_current_spot(self, ticker:str, roundup:bool=False) -> float:
         expiry = datetime.datetime.today() + datetime.timedelta(days=10)
-        pricer = MonteCarlo(ticker, expiry, self.initial_spot)
+
+        if self.pricing_method == 'black-scholes':
+            pricer = BlackScholes(ticker, expiry, self.initial_spot)
+        elif self.pricing_method == 'monte-carlo':
+            pricer = MonteCarlo(ticker, expiry, self.initial_spot)
+        else:
+            raise ValueError('Unknown pricing model')
 
         if roundup:
             spot = math.ceil(pricer.spot_price)
@@ -82,7 +94,8 @@ class Strategy(ABC):
         return spot
 
     def set_pricing_method(self, method:str):
-        if method in METHODS:
+        if method in pricing.PRICING_METHODS:
+            self.pricing_method = method
             for leg in self.legs:
                 leg.pricing_method = method
         else:
