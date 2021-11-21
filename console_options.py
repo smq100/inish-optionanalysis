@@ -5,8 +5,8 @@ import threading
 import logging
 import datetime as dt
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.colors as clrs
 import matplotlib.ticker as mticker
@@ -27,7 +27,7 @@ _logger = utils.get_logger(logging.WARNING, logfile='')
 
 
 class Interface():
-    def __init__(self, ticker:str, strategy:str, direction:str, width:int=1, quantity:int=1, analyze:bool=False):
+    def __init__(self, ticker:str, strategy:str, direction:str, width:int=0, quantity:int=1, analyze:bool=False):
         self.ticker = ticker.upper()
         self.width = width
         self.quantity = quantity
@@ -47,10 +47,14 @@ class Interface():
             utils.print_error('Invalid strategy specified')
         elif direction not in strategies.DIRECTIONS:
             utils.print_error('Invalid direction specified')
-        elif width < 1:
+        elif width < 0:
             utils.print_error('Invalid width specified')
         elif quantity < 1:
             utils.print_error('Invalid quantity specified')
+        elif strategy == 'vertp' and width < 1:
+            utils.print_error('Invalid width specified')
+        elif strategy == 'vertc' and width < 1:
+            utils.print_error('Invalid width specified')
         else:
             self.chain = Chain(self.ticker)
 
@@ -299,10 +303,12 @@ class Interface():
         if selection == 1:
             d = utils.input_integer('(1) Long, or (2) short: ', 1, 2)
             direction = 'long' if d == 1 else 'short'
+            self.width = 0
             self.load_strategy(self.strategy.ticker, 'call', direction, self.width, self.quantity, analyze=False)
         elif selection == 2:
             d = utils.input_integer('(1) Long, or (2) short: ', 1, 2)
             direction = 'long' if d == 1 else 'short'
+            self.width = 0
             self.load_strategy(self.strategy.ticker, 'put', direction, self.width, self.quantity, analyze=False)
         elif selection == 3:
             p = utils.input_integer('(1) Call, or (2) Put: ', 1, 2)
@@ -343,51 +349,49 @@ class Interface():
 
                 menu_items = {
                     '1': f'Select Expiry Date ({expiry})',
-                    '2': f'Select {product} Option',
-                    '3': f'Quantity ({self.quantity})',
+                    '2': f'Quantity ({self.quantity})',
+                    '3': f'Select {product} Option',
                     '0': 'Done'
                 }
 
                 loaded = '' if  self.strategy.legs[0].option.last_price > 0 else '*'
 
                 if self.strategy.name == 'vertical':
-                    menu_items['2'] = f'Select {product} Options'
-                    menu_items['2'] += f' '\
+                    menu_items['3'] = f'Select {product} Option'
+                    menu_items['3'] += f' '\
                         f'(L:${self.strategy.legs[0].option.strike:.2f}{loaded}'\
                         f' S:${self.strategy.legs[1].option.strike:.2f}{loaded})'
                 else:
-                    menu_items['2'] += f' (${self.strategy.legs[0].option.strike:.2f}{loaded})'
+                    menu_items['3'] += f' (${self.strategy.legs[0].option.strike:.2f}{loaded})'
 
                 selection = utils.menu(menu_items, 'Select Operation', 0, 3)
 
-                ret = True
+                success = True
                 if selection == 1:
                     exp = self.select_chain_expiry()
                     self.strategy.update_expiry(exp)
-
                 elif selection == 2:
+                    self.quantity = utils.input_integer('Enter quantity (1 - 10): ', 1, 10)
+                elif selection == 3:
                     if self.chain.expire:
                         leg = 0
-                        qty = 2 if self.strategy.name == 'vertical' else 1
-
                         if self.strategy.legs[leg].option.product == 'call':
-                            contracts = self.select_chain_options('call', qty=qty)
+                            contracts = self.select_chain_options('call')
                         else:
-                            contracts = self.select_chain_options('put', qty=qty)
+                            contracts = self.select_chain_options('put')
 
                         if contracts:
-                            ret = self.strategy.legs[leg].option.load_contract(contracts[0])
+                            for leg, contract in enumerate(contracts):
+                                success = self.strategy.legs[leg].option.load_contract(contract)
                         else:
                             utils.print_error('No option selected')
 
                     else:
                         utils.print_error('Please first select expiry date')
-                elif selection == 3:
-                    self.quantity = utils.input_integer('Enter quantity (1 - 10): ', 1, 10)
                 elif selection == 0:
                     done = True
 
-                if not ret:
+                if not success:
                     utils.print_error('Error loading option. Please try again')
 
         return contracts
@@ -411,7 +415,7 @@ class Interface():
 
         return expiry
 
-    def select_chain_options(self, product:str, qty:int=1) -> list[str]:
+    def select_chain_options(self, product:str) -> list[str]:
         options = None
         contracts = []
         if not self.chain.expire:
@@ -425,12 +429,27 @@ class Interface():
             menu_items = {}
             for i, row in options.iterrows():
                 itm = 'ITM' if bool(row["inTheMoney"]) else 'OTM'
-                menu_items[f'{i+1}'] = f'${row["strike"]:7.2f} ${row["lastPrice"]:7.2f} {itm}'
+                menu_items[f'{i+1}'] = f'${row["strike"]:7.2f} ${row["lastPrice"]:6.2f} {itm}'
 
             select = utils.menu(menu_items, 'Select option, or 0 to cancel: ', 0, i+1)
             if select > 0:
-                sel_row = options.iloc[select-1]
-                contracts += [sel_row['contractSymbol']]
+                select -= 1
+                sel_row = options.iloc[select]
+                contracts = [sel_row['contractSymbol']] # First contract
+
+                if self.width > 0:
+                    if product == 'call':
+                        if self.strategy.legs[1].direction == 'long':
+                            sel_row = options.iloc[select-1] if select > 1 else None # long call (debit)
+                        else:
+                            sel_row = options.iloc[select+1] if select < options.shape[0] else None # short call (credit)
+                    elif self.strategy.legs[1].direction == 'long':
+                        sel_row = options.iloc[select-1] if select < options.shape[0] else None # long put (debit)
+                    else:
+                        sel_row = options.iloc[select+1] if select > 1 else None # short put (credit)
+
+                    if sel_row is not None:
+                        contracts += [sel_row['contractSymbol']] # Second contract
 
                 self.dirty_calculate = True
                 self.dirty_analyze = True
@@ -490,6 +509,10 @@ class Interface():
             raise ValueError('Invalid direction')
         if quantity < 1:
             raise ValueError('Invalid quantity')
+        if strategy == 'vertp' and width < 1:
+            raise ValueError('Invalid width specified')
+        if strategy == 'vertc' and width < 1:
+            raise ValueError('Invalid width specified')
 
         self.ticker = ticker.upper()
         self.width = width
@@ -497,8 +520,10 @@ class Interface():
 
         try:
             if strategy.lower() == 'call':
+                self.width = 0
                 self.strategy = Call(ticker, 'call', direction, self.width, self.quantity)
             elif strategy.lower() == 'put':
+                self.width = 0
                 self.strategy = Put(ticker, 'put', direction, self.width, self.quantity)
             elif strategy.lower() == 'vertc':
                 self.strategy = Vertical(ticker, 'call', direction, self.width, self.quantity)
@@ -522,6 +547,7 @@ class Interface():
 
     def _show_progress(self) -> None:
         print()
+        utils.progress_bar(0, 0, prefix='Analyzing', suffix=self.ticker, reset=True)
 
         while self.task.is_alive():
             time.sleep(0.20)
@@ -663,7 +689,7 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--ticker', help='Specify the ticker symbol', required=False, default='AAPL')
     parser.add_argument('-s', '--strategy', help='Load and analyze strategy', required=False, choices=['call', 'put', 'vertc', 'vertp'], default='call')
     parser.add_argument('-d', '--direction', help='Specify the direction', required=False, choices=['long', 'short'], default='long')
-    parser.add_argument('-w', '--width', help='Specify the width (used for spreads)', required=False, default='1')
+    parser.add_argument('-w', '--width', help='Specify the width (used for spreads)', required=False, default='0')
     parser.add_argument('-q', '--quantity', help='Specify the quantity', required=False, default='1')
     parser.add_argument('-a', '--analyze', help='Analyze the strategy', required=False, action='store_true')
 

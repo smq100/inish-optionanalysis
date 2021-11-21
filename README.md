@@ -5,7 +5,7 @@
 * Developed and tested with Python 3.9.0.
 
 ## Features
-* Option Strategy Analysis
+* Option Strategy Analysis (calls, puts, and vertical spreads currently supported)
 * Security Screening and Scoring
 * Technical Analysis with sophisticated support & resistance analysis
 * Local pricing history database support and data manager

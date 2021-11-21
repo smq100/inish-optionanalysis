@@ -31,7 +31,7 @@ class Strategy(ABC):
             raise ValueError('Invalid product')
         if direction not in strategies.DIRECTIONS:
             raise ValueError('Invalid direction')
-        if width < 1:
+        if width < 0:
             raise ValueError('Invalid width')
         if quantity < 1:
             raise ValueError('Invalid quantity')
