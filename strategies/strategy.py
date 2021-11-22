@@ -123,8 +123,8 @@ class Strategy(ABC):
 
         if len(self.legs) > 0:
             percent = 0.20
-            min_ = self.legs[0].company.spot * (1 - percent)
-            max_ = self.legs[0].company.spot * (1 + percent)
+            min_ = self.legs[0].company.price * (1 - percent)
+            max_ = self.legs[0].company.price * (1 + percent)
 
             step_ = (max_ - min_) / 40.0
             step_ = utils.mround(step_, step_ / 10.0)
@@ -162,7 +162,7 @@ class Leg:
             d2 = 'cv' if self.option.implied_volatility < IV_CUTOFF else 'iv'
             d3 = '*' if self.option.implied_volatility < IV_CUTOFF else ''
             output = f'{self.quantity:2d} '\
-            f'{self.company.ticker}@${self.company.spot:.2f} '\
+            f'{self.company.ticker}@${self.company.price:.2f} '\
             f'{self.direction} '\
             f'{self.product} '\
             f'${self.option.strike:.2f} for '\
@@ -211,7 +211,7 @@ class Leg:
                 self.option.calc_price = price = self.pricer.price_put
 
             self.option.spot = self.pricer.spot_price
-            self.company.spot = self.pricer.spot_price
+            self.company.price = self.pricer.spot_price
             self.option.rate = self.pricer.risk_free_rate
             self.option.calc_volatility = self.pricer.volatility
             self.company.volatility = self.pricer.volatility

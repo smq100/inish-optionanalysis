@@ -386,7 +386,7 @@ class Interface():
                             for leg, contract in enumerate(contracts):
                                 success = self.strategy.legs[leg].option.load_contract(contract)
                         else:
-                            utils.print_error('No option selected')
+                            utils.print_error('Invalid option selected')
                     else:
                         utils.print_error('Please first select expiry date')
                 elif selection == 0:
@@ -441,16 +441,18 @@ class Interface():
                 if self.width > 0:
                     if product == 'call':
                         if self.strategy.direction == 'long':
-                            sel_row = options.iloc[select+1] if select > 1 else None # long call (debit)
+                            sel_row = options.iloc[select+self.width] if (select+self.width) < options.shape[0] else None # long call (debit)
                         else:
-                            sel_row = options.iloc[select-1] if select < options.shape[0] else None # short call (credit)
+                            sel_row = options.iloc[select-self.width] if (select-self.width) >= 0 else None # short call (credit)
                     elif self.strategy.direction == 'long':
-                        sel_row = options.iloc[select-1] if select < options.shape[0] else None # long put (debit)
+                        sel_row = options.iloc[select-self.width] if (select-self.width) >= 0 else None # long put (debit)
                     else:
-                        sel_row = options.iloc[select+1] if select > 1 else None # short put (credit)
+                        sel_row = options.iloc[select+self.width] if (select+self.width) < options.shape[0] else None # short put (credit)
 
                     if sel_row is not None:
                         contracts += [sel_row['contractSymbol']] # Second contract
+                    else:
+                        contracts = []
 
                 self.dirty_calculate = True
                 self.dirty_analyze = True

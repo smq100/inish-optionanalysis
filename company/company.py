@@ -17,7 +17,7 @@ class Company:
         self.info = {}
         self.history:pd.DataFrame = pd.DataFrame()
         self.company = {}
-        self.spot = 0.0
+        self.price = 0.0
         self.volatility = 0.0
         self.ta = None
 
