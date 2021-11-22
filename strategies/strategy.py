@@ -106,11 +106,11 @@ class Strategy(ABC):
         return pd.DataFrame()
 
     @abc.abstractmethod
-    def calc_max_gain_loss(self) -> tuple[float, float]:
+    def calculate_max_gain_loss(self) -> tuple[float, float]:
         return (0.0, 0.0)
 
     @abc.abstractmethod
-    def calc_breakeven(self) -> float:
+    def calculate_breakeven(self) -> float:
         return 0.0
 
     def get_errors(self) -> str:

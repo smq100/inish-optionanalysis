@@ -59,39 +59,52 @@ class Vertical(Strategy):
             # Calculate net debit or credit
             self.analysis.amount = abs(price_long - price_short) * self.quantity
 
+            # Calculate min max
+            self.analysis.max_gain, self.analysis.max_loss = self.calculate_max_gain_loss()
+
+            # Calculate breakeven
+            self.analysis.breakeven = self.calculate_breakeven()
+
             # Generate profit table
             self.analysis.table = self.generate_profit_table()
 
-            # Calculate min max
-            self.analysis.max_gain, self.analysis.max_loss = self.calc_max_gain_loss()
-
-            # Calculate breakeven
-            self.analysis.breakeven = self.calc_breakeven()
-
     def generate_profit_table(self) -> pd.DataFrame:
-        profit = ((self.legs[0].table - self.legs[1].table) * self.quantity) + self.analysis.amount
+        if self.analysis.credit_debit == 'credit':
+            profit = ((self.legs[0].table - self.legs[1].table) * self.quantity) + self.analysis.amount
+        else:
+            profit = ((self.legs[0].table - self.legs[1].table) * self.quantity) - self.analysis.amount
 
         return profit
 
-    def calc_max_gain_loss(self) -> tuple[float, float]:
+    def calculate_max_gain_loss(self) -> tuple[float, float]:
         gain = loss = 0.0
 
         price_long = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
         price_short = self.legs[1].option.last_price if self.legs[1].option.last_price > 0.0 else self.legs[1].option.calc_price
 
-        dlong = (price_long > price_short)
-        if dlong:
-            loss = self.analysis.amount
-            gain = (self.quantity * (self.legs[0].option.strike - self.legs[1].option.strike)) - loss
-            self.analysis.sentiment = 'bullish' if self.product == 'call' else 'bearish'
+        debit = (price_long > price_short)
+        if self.product == 'call':
+            if debit:
+                loss = self.analysis.amount
+                gain = (self.quantity * (self.legs[1].option.strike - self.legs[0].option.strike)) - loss
+                self.analysis.sentiment = 'bullish'
+            else:
+                gain = self.analysis.amount
+                loss = (self.quantity * (self.legs[0].option.strike - self.legs[1].option.strike)) - gain
+                self.analysis.sentiment = 'bearish'
         else:
-            gain = self.analysis.amount
-            loss = (self.quantity * (self.legs[1].option.strike - self.legs[0].option.strike)) - gain
-            self.analysis.sentiment = 'bearish' if self.product == 'call' else 'bullish'
+            if debit:
+                loss = self.analysis.amount
+                gain = (self.quantity * (self.legs[0].option.strike - self.legs[1].option.strike)) - loss
+                self.analysis.sentiment = 'bearish'
+            else:
+                gain = self.analysis.amount
+                loss = (self.quantity * (self.legs[1].option.strike - self.legs[0].option.strike)) - gain
+                self.analysis.sentiment = 'bullish'
 
         return gain, loss
 
-    def calc_breakeven(self) -> float:
+    def calculate_breakeven(self) -> float:
         if self.analysis.credit_debit == 'debit':
             breakeven = self.legs[1].option.strike + self.analysis.amount
         else:

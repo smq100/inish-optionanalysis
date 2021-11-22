@@ -130,7 +130,8 @@ class Interface():
                 if val == 0:
                     val = utils.input_integer('(1) Table, (2) Chart, (3) Contour, (4) Surface, or (0) Cancel: ', 0, 4)
                 if val > 0:
-                        title = f'Value: {self.strategy.legs[leg].company}'
+                        # title = f'Value: {self.strategy.legs[leg].company}'
+                        title = f'{self.strategy.legs[leg]}'
                         rows, cols = table_.shape
 
                         if rows > MAX_ROWS:
@@ -258,6 +259,7 @@ class Interface():
             self.dirty_analyze = False
 
             self.show_analysis(val=1)
+            self.show_analysis(val=2)
         else:
             utils.print_error(errors)
 
