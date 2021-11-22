@@ -27,7 +27,7 @@ _logger = utils.get_logger(logging.WARNING, logfile='')
 
 
 class Interface():
-    def __init__(self, ticker:str, strategy:str, direction:str, width:int=0, quantity:int=1, analyze:bool=False):
+    def __init__(self, ticker:str, strategy:str, direction:str, width:int=0, quantity:int=1, analyze:bool=False, exit:bool=False):
         self.ticker = ticker.upper()
         self.width = width
         self.quantity = quantity
@@ -59,7 +59,8 @@ class Interface():
             self.chain = Chain(self.ticker)
 
             if self.load_strategy(self.ticker, strategy, direction, self.width, self.quantity, analyze):
-                self.main_menu()
+                if not exit:
+                    self.main_menu()
             else:
                 utils.print_error('Problem loading strategy')
 
@@ -68,7 +69,7 @@ class Interface():
             menu_items = {
                 '1': f'Change Symbol ({self.strategy.ticker})',
                 '2': f'Change Strategy ({self.strategy})',
-                '3': 'Select Options',
+                '3': 'Select Option',
                 '4': 'View Option Details',
                 '5': 'View Value',
                 '6': 'Analyze Stategy',
@@ -80,7 +81,7 @@ class Interface():
             loaded = '' if  self.strategy.legs[0].option.last_price > 0 else '*'
 
             if self.strategy.name == 'vertical':
-                menu_items['3'] += f' '\
+                menu_items['3'] += f's '\
                     f'(L:${self.strategy.legs[0].option.strike:.2f}{loaded}'\
                     f' S:${self.strategy.legs[1].option.strike:.2f}{loaded})'
             else:
@@ -249,7 +250,9 @@ class Interface():
 
     def analyze(self) -> None:
         errors = self.strategy.get_errors()
-        if not errors:
+        if errors:
+            utils.print_error(errors)
+        else:
             self.task = threading.Thread(target=self.strategy.analyze)
             self.task.start()
 
@@ -260,8 +263,6 @@ class Interface():
 
             self.show_analysis(val=1)
             self.show_analysis(val=2)
-        else:
-            utils.print_error(errors)
 
     def reset(self) -> None:
         self.strategy.reset()
@@ -352,15 +353,14 @@ class Interface():
                 menu_items = {
                     '1': f'Select Expiry Date ({expiry})',
                     '2': f'Quantity ({self.quantity})',
-                    '3': f'Select {product} Option',
+                    '3': f'Select Option',
                     '0': 'Done'
                 }
 
                 loaded = '' if  self.strategy.legs[0].option.last_price > 0 else '*'
 
                 if self.strategy.name == 'vertical':
-                    menu_items['3'] = f'Select {product} Option'
-                    menu_items['3'] += f' '\
+                    menu_items['3'] += f's '\
                         f'(L:${self.strategy.legs[0].option.strike:.2f}{loaded}'\
                         f' S:${self.strategy.legs[1].option.strike:.2f}{loaded})'
                 else:
@@ -387,7 +387,6 @@ class Interface():
                                 success = self.strategy.legs[leg].option.load_contract(contract)
                         else:
                             utils.print_error('No option selected')
-
                     else:
                         utils.print_error('Please first select expiry date')
                 elif selection == 0:
@@ -430,7 +429,7 @@ class Interface():
         if options is not None:
             menu_items = {}
             for i, row in options.iterrows():
-                itm = 'ITM' if bool(row["inTheMoney"]) else 'OTM'
+                itm = 'ITM' if bool(row['inTheMoney']) else 'OTM'
                 menu_items[f'{i+1}'] = f'${row["strike"]:7.2f} ${row["lastPrice"]:6.2f} {itm}'
 
             select = utils.menu(menu_items, 'Select option, or 0 to cancel: ', 0, i+1)
@@ -441,11 +440,11 @@ class Interface():
 
                 if self.width > 0:
                     if product == 'call':
-                        if self.strategy.legs[1].direction == 'long':
-                            sel_row = options.iloc[select-1] if select > 1 else None # long call (debit)
+                        if self.strategy.direction == 'long':
+                            sel_row = options.iloc[select+1] if select > 1 else None # long call (debit)
                         else:
-                            sel_row = options.iloc[select+1] if select < options.shape[0] else None # short call (credit)
-                    elif self.strategy.legs[1].direction == 'long':
+                            sel_row = options.iloc[select-1] if select < options.shape[0] else None # short call (credit)
+                    elif self.strategy.direction == 'long':
                         sel_row = options.iloc[select-1] if select < options.shape[0] else None # long put (debit)
                     else:
                         sel_row = options.iloc[select+1] if select > 1 else None # short put (credit)
@@ -694,7 +693,8 @@ if __name__ == '__main__':
     parser.add_argument('-w', '--width', help='Specify the width (used for spreads)', required=False, default='0')
     parser.add_argument('-q', '--quantity', help='Specify the quantity', required=False, default='1')
     parser.add_argument('-a', '--analyze', help='Analyze the strategy', required=False, action='store_true')
+    parser.add_argument('-x', '--exit', help='Run and exit', required=False, action='store_true')
 
     command = vars(parser.parse_args())
     Interface(ticker=command['ticker'], strategy=command['strategy'], direction=command['direction'],
-        width=int(command['width']), quantity=int(command['quantity']), analyze=command['analyze'])
+        width=int(command['width']), quantity=int(command['quantity']), analyze=command['analyze'], exit=command['exit'])
