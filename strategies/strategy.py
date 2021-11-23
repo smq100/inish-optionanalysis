@@ -68,6 +68,9 @@ class Strategy(ABC):
         for leg in self.legs:
             leg.option.expiry = date
 
+    def fetch_leg(self, itm:bool, distance:int=1) -> None:
+        pass
+
     def add_leg(self, quantity:int, product:str, direction:str, strike:float, expiry:datetime.datetime) -> int:
         expiry += datetime.timedelta(days=1)
 
@@ -115,6 +118,26 @@ class Strategy(ABC):
 
     def get_errors(self) -> str:
         return ''
+
+    @staticmethod
+    def compress_table(table:pd.DataFrame, rows:int, cols:int) -> pd.DataFrame:
+        if not isinstance(table, pd.DataFrame):
+            raise ValueError("'table' must be a Pandas DataFrame")
+        else:
+            srows, scols = table.shape
+            if cols > 0 and cols < scols:
+                # thin out cols
+                step = int(math.ceil(scols/cols))
+                end = table[table.columns[-2::]]        # Save the last two cols
+                table = table[table.columns[:-2:step]]  # Thin the table (less the last two cols)
+                table = pd.concat([table, end], axis=1) # Add back the last two cols
+
+            if rows > 0 and rows < srows:
+                # Thin out rows
+                step = int(math.ceil(srows/rows))
+                table = table.iloc[::step]
+
+        return table
 
     def _calc_price_min_max_step(self) -> tuple[float, float, float]:
         min_ = 0.0
@@ -167,14 +190,15 @@ class Leg:
             f'{self.product} '\
             f'${self.option.strike:.2f} for '\
             f'{str(self.option.expiry)[:10]}'\
-            f'=${self.option.last_price:.2f}{d3} each (${self.option.calc_price:.2f}{d1}/{d2})'
+            f'=${self.option.last_price:.2f}{d3} each (${self.option.calc_price:.2f} {d1}/{d2})'
 
             if not self.option.contract_ticker:
                 output += ' *option not selected'
 
             if self.option.last_price > 0.0:
                 if self.option.implied_volatility < IV_CUTOFF and self.option.implied_volatility > 0.0:
-                    output += '\n    *** Warning: The implied volatility is unsually low, perhaps due to after-hours. Using calculated volatility.'
+                    output += '\n    *** Warning: The iv is unsually low, perhaps due to after-hours. Using cv.'
+
                 diff = self.option.calc_price / self.option.last_price
                 if diff > 1.50 or diff < 0.50:
                     output += '\n    *** Warning: The calculated price is significantly different than the last traded price.'
@@ -304,7 +328,7 @@ class Leg:
         df = pd.DataFrame()
 
         if self.option.calc_price > 0.0:
-            cols, step = self._calc_date_step()
+            cols, step = self._calculate_date_step()
             if cols > 1:
                 row = []
                 table = []
@@ -369,19 +393,17 @@ class Leg:
 
         return df
 
-    def _calc_date_step(self) -> tuple[int, int]:
+    def _calculate_date_step(self) -> tuple[int, int]:
         cols = int(math.ceil(self.option.time_to_maturity * 365))
         step = 1
 
         return cols, step
 
     def _validate(self) -> bool:
-        valid = False
 
-        if self.company.ticker:
-            valid = True
+        valid = bool(self.company.ticker)
 
-        # Check for valid method
+        # Check for valid pricing method
         if not valid:
             pass
         elif self.pricing_method == 'black-scholes':
