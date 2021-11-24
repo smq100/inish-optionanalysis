@@ -6,7 +6,7 @@ import math
 
 import pandas as pd
 
-import strategies
+import strategies as s
 import pricing
 from data import store as store
 from company.company import Company
@@ -25,12 +25,12 @@ _logger = utils.get_logger()
 
 
 class Strategy(ABC):
-    def __init__(self, ticker:str, product:str, direction:str, width:int, quantity:int):
+    def __init__(self, ticker:str, product:str, direction:str, width:int, quantity:int, load_default:bool=False):
         if not store.is_ticker(ticker):
             raise ValueError('Invalid ticker')
-        if product not in strategies.PRODUCTS:
+        if product not in s.PRODUCTS:
             raise ValueError('Invalid product')
-        if direction not in strategies.DIRECTIONS:
+        if direction not in s.DIRECTIONS:
             raise ValueError('Invalid direction')
         if width < 0:
             raise ValueError('Invalid width')
@@ -78,28 +78,6 @@ class Strategy(ABC):
 
         return len(self.legs)
 
-    def fetch_default_contract(self, leg:int, itm:bool, distance:int, weeks:int) -> str:
-        if leg < 0:
-            raise ValueError('Invalid distance')
-        if distance < 0:
-            raise ValueError('Invalid distance')
-        if weeks < 0:
-            raise ValueError('Invalid weeks')
-
-        contract = ''
-        expiry = self.chain.get_expiry()
-        self.chain.expire = expiry[weeks]
-        _logger.debug(f'{__name__}: {self.chain.expire}')
-
-        options = self.chain.get_chain(self.legs[leg].product)
-        _logger.debug(f'{__name__}: {options}')
-
-        itm = self.chain.get_itm()
-        if itm >= 0:
-            contract = options.iloc[itm]["contractSymbol"]
-
-        return contract
-
     def get_current_spot(self, ticker:str, roundup:bool=False) -> float:
         expiry = dt.datetime.today() + dt.timedelta(days=10)
 
@@ -124,6 +102,10 @@ class Strategy(ABC):
                 leg.pricing_method = method
         else:
             raise ValueError('Invalid pricing method')
+
+    @abc.abstractmethod
+    def fetch_default_contracts(self, itm:bool, distance:int, weeks:int) -> str:
+        return ''
 
     @abc.abstractmethod
     def generate_profit_table(self) -> pd.DataFrame:
@@ -183,9 +165,9 @@ class Strategy(ABC):
 
 class Leg:
     def __init__(self, strategy:Strategy, ticker:str, quantity:int, product:str, direction:str, strike:float, expiry:dt.datetime):
-        if product not in strategies.PRODUCTS:
+        if product not in s.PRODUCTS:
             raise ValueError('Invalid product')
-        if direction not in strategies.DIRECTIONS:
+        if direction not in s.DIRECTIONS:
             raise ValueError('Invalid direction')
         if quantity < 1:
             raise ValueError('Invalid quantity')
@@ -213,7 +195,7 @@ class Leg:
             f'{str(self.option.expiry)[:10]}'\
             f'=${self.option.last_price:.2f}{d3} each (${self.option.calc_price:.2f} {d1}/{d2})'
 
-            if not self.option.contract_ticker:
+            if not self.option.contract_name:
                 output += ' *option not selected'
 
             if self.option.last_price > 0.0:
@@ -442,11 +424,14 @@ if __name__ == '__main__':
 
     utils.get_logger(logging.DEBUG)
 
-    strategy = Call('AAPL', 'call', 'long', 1, 1)
+    strategy = Call('AAPL', 'call', 'long', 1, 1, True)
+    strategy.analyze()
+    print(strategy.analysis.table)
+
     # strategy = Put('AAPL', 'put', 'long', 1, 1)
     # strategy.legs[0].calculate(table=False, greeks=False)
     # output = f'${strategy.legs[0].option.calc_price:.2f}, ({strategy.legs[0].option.strike:.2f})'
     # print(output)
 
-    contract = strategy.fetch_default_contract(0, True, 1, 4)
-    print(contract)
+    # contract = strategy.fetch_default_contracts(0, True, 1, 4)
+    # print(contract)

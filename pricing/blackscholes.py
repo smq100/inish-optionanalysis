@@ -47,8 +47,6 @@ class BlackScholes(Pricing):
         self.price_put = (self.strike_price * np.exp(-1 * self.risk_free_rate * time_to_maturity) * stats.norm.cdf(-1 * d2, 0.0, 1.0) -
             (spot_price * np.exp(-1 * self.dividend * time_to_maturity)) * stats.norm.cdf(-1 * d1, 0.0, 1.0))
 
-        _logger.debug(f'{__name__}: Call:{self.price_call:.2f}, Put:{self.price_put:.2f}')
-
         return self.price_call, self.price_put
 
     def calculate_delta(self, spot_price:float=-1.0, time_to_maturity:float=-1.0, volatility:float=-1.0) -> tuple[float, float]:
@@ -75,8 +73,6 @@ class BlackScholes(Pricing):
         self.delta_call = np.exp(-self.dividend * time_to_maturity) * stats.norm.cdf(d1, 0.0, 1.0)
         self.delta_put = -np.exp(-self.dividend * time_to_maturity) * stats.norm.cdf(-d1, 0.0, 1.0)
 
-        _logger.debug(f'{__name__}: Call:{self.delta_call:.2f}, Put:{self.delta_put:.2f}')
-
         return self.delta_call, self.delta_put
 
     def calculate_gamma(self, spot_price:float=-1.0, time_to_maturity:float=-1.0, volatility:float=-1.0) -> tuple[float, float]:
@@ -101,8 +97,6 @@ class BlackScholes(Pricing):
         gamma = np.exp(-self.dividend * time_to_maturity) * stats.norm.pdf(d1, 0.0, 1.0) / spot_price * volatility * np.sqrt(time_to_maturity)
 
         self.gamma_call = self.gamma_put = gamma * 365.0
-
-        _logger.debug(f'{__name__}: Call:{self.gamma_call:.2f}, Put:{self.gamma_put:.2f}')
 
         return self.gamma_call, self.gamma_put
 
@@ -149,8 +143,6 @@ class BlackScholes(Pricing):
         self.theta_call = theta_call / 365.0
         self.theta_put = theta_put / 365.0
 
-        _logger.debug(f'{__name__}: Call:{self.theta_call:.2f}, Put:{self.theta_put:.2f}')
-
         return self.theta_call, self.theta_put
 
     def calculate_vega(self, spot_price:float=-1.0, time_to_maturity:float=-1.0, volatility:float=-1.0) -> tuple[float, float]:
@@ -175,8 +167,6 @@ class BlackScholes(Pricing):
         vega = 1 / np.sqrt(2 * np.pi) * spot_price * np.exp(-self.dividend * time_to_maturity) * np.exp(-d1 ** 2 * 0.5) * np.sqrt(time_to_maturity)
 
         self.vega_call = self.vega_put = vega / 100.0
-
-        _logger.debug(f'{__name__}: Call:{self.vega_call:.2f}, Put:{self.vega_put:.2f}')
 
         return self.vega_call, self.vega_put
 
@@ -204,8 +194,6 @@ class BlackScholes(Pricing):
 
         self.rho_call = rho_call / 100.0
         self.rho_put = rho_put / 100.0
-
-        _logger.debug(f'{__name__}: Call:{self.rho_call:.2f}, Put:{self.rho_put:.2f}')
 
         return self.rho_call, self.rho_put
 

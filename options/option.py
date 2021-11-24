@@ -28,7 +28,7 @@ class Option:
         self.rho = 0.0
 
         # Fetched online with YFinance
-        self.contract_ticker = ''
+        self.contract_name = ''
         self.last_trade_date = ''
         self.last_price = 0.0
         self.bid = 0.0
@@ -43,8 +43,8 @@ class Option:
         self.currency = ''
 
     def __str__(self):
-        ticker = self.contract_ticker if self.contract_ticker else 'No contract selected'
-        return f'Contract:{ticker}\n'\
+        name = self.contract_name if self.contract_name else 'No contract selected'
+        return f'Contract:{name}\n'\
             f'Ticker: {self.ticker}\n'\
             f'Product: {self.product.title()}\n'\
             f'Expiry: {self.expiry:%Y-%m-%d} ({self.time_to_maturity*365:.0f}/{self.time_to_maturity:.5f})\n'\
@@ -83,7 +83,7 @@ class Option:
         contract = _get_contract(contract_name)
 
         if contract is not None:
-            self.contract_ticker = contract['contractSymbol']
+            self.contract_name = contract['contractSymbol']
             self.last_trade_date = contract['lastTradeDate']
             self.strike = contract['strike']
             self.last_price = contract['lastPrice']
@@ -98,18 +98,20 @@ class Option:
             self.contract_size = contract['contractSize']
             self.currency = contract['currency']
 
+            _logger.info(f'{__name__}: Loaded contract {contract_name}')
+
             if self.last_price > 0.0:
                 diff = self.calc_price / self.last_price
                 if diff > 1.25 or diff < 0.75:
-                    _logger.debug(f'{__name__}: The calculated price is significantly different than the last traded price')
+                    _logger.info(f'{__name__}: The calculated price is significantly different than the last traded price')
 
         else:
             ret = False
 
         return ret
 
-def _get_contract(contract_ticker:str) -> str:
-    parsed = _parse_contract_name(contract_ticker)
+def _get_contract(contract_name:str) -> str:
+    parsed = _parse_contract_name(contract_name)
 
     ticker = parsed['ticker']
     product = parsed['product']
@@ -121,7 +123,7 @@ def _get_contract(contract_ticker:str) -> str:
         else:
             chain = store.get_option_chain(ticker)(expiry).puts
 
-        contract = chain.loc[chain['contractSymbol'] == contract_ticker]
+        contract = chain.loc[chain['contractSymbol'] == contract_name]
         return contract.iloc[0]
     except Exception as e:
         print(str(e))

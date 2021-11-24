@@ -25,7 +25,7 @@ _logger = utils.get_logger(logging.WARNING, logfile='')
 
 
 class Interface():
-    def __init__(self, ticker:str, strategy:str, direction:str, width:int=0, quantity:int=1, analyze:bool=False, exit:bool=False):
+    def __init__(self, ticker:str, strategy:str, direction:str, width:int=0, quantity:int=1, default:bool=False, analyze:bool=False, exit:bool=False):
         self.ticker = ticker.upper()
         self.width = width
         self.quantity = quantity
@@ -51,13 +51,11 @@ class Interface():
             utils.print_error('Invalid width specified')
         elif strategy == 'vertc' and width < 1:
             utils.print_error('Invalid width specified')
+        elif self.load_strategy(self.ticker, strategy, direction, self.width, self.quantity, default, analyze or exit):
+            if not exit:
+                self.main_menu()
         else:
-
-            if self.load_strategy(self.ticker, strategy, direction, self.width, self.quantity, analyze or exit):
-                if not exit:
-                    self.main_menu()
-            else:
-                utils.print_error('Problem loading strategy')
+            utils.print_error('Problem loading strategy')
 
     def main_menu(self) -> None:
         while True:
@@ -111,7 +109,7 @@ class Interface():
             elif selection == 0:
                 break
 
-    def load_strategy(self, ticker:str, strategy:str, direction:str, width:int, quantity:int, analyze:bool=False) -> bool:
+    def load_strategy(self, ticker:str, strategy:str, direction:str, width:int, quantity:int, default:bool=False, analyze:bool=False) -> bool:
         modified = True
 
         if strategy not in strategies.STRATEGIES:
@@ -132,14 +130,14 @@ class Interface():
         try:
             if strategy.lower() == 'call':
                 self.width = 0
-                self.strategy = Call(ticker, 'call', direction, self.width, self.quantity)
+                self.strategy = Call(ticker, 'call', direction, self.width, self.quantity, default)
             elif strategy.lower() == 'put':
                 self.width = 0
-                self.strategy = Put(ticker, 'put', direction, self.width, self.quantity)
+                self.strategy = Put(ticker, 'put', direction, self.width, self.quantity, default)
             elif strategy.lower() == 'vertc':
-                self.strategy = Vertical(ticker, 'call', direction, self.width, self.quantity)
+                self.strategy = Vertical(ticker, 'call', direction, self.width, self.quantity, default)
             elif strategy.lower() == 'vertp':
-                self.strategy = Vertical(ticker, 'put', direction, self.width, self.quantity)
+                self.strategy = Vertical(ticker, 'put', direction, self.width, self.quantity, default)
             else:
                 modified = False
                 utils.print_error('Unknown argument')
@@ -223,7 +221,7 @@ class Interface():
                 if style == 0:
                     style = utils.input_integer('(1) Summary, (2) Table, (3) Chart, (4) Contour, (5) Surface, or (0) Cancel: ', 0, 5)
                 if style > 0:
-                    title = f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].company}) {str(self.strategy).title()}'
+                    title = f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].company}) {str(self.strategy).title()} {self.strategy.legs[0].option.contract_name}'
 
                     rows, cols = analysis.shape
                     if rows > MAX_ROWS:
@@ -331,21 +329,21 @@ class Interface():
             d = utils.input_integer('(1) Long, or (2) short: ', 1, 2)
             direction = 'long' if d == 1 else 'short'
             self.width = 0
-            self.load_strategy(self.strategy.ticker, 'call', direction, self.width, self.quantity, analyze=False)
+            self.load_strategy(self.strategy.ticker, 'call', direction, self.width, self.quantity)
         elif selection == 2:
             d = utils.input_integer('(1) Long, or (2) short: ', 1, 2)
             direction = 'long' if d == 1 else 'short'
             self.width = 0
-            self.load_strategy(self.strategy.ticker, 'put', direction, self.width, self.quantity, analyze=False)
+            self.load_strategy(self.strategy.ticker, 'put', direction, self.width, self.quantity)
         elif selection == 3:
             p = utils.input_integer('(1) Call, or (2) Put: ', 1, 2)
             product = 'call' if p == 1 else 'put'
             d = utils.input_integer('(1) Debit, or (2) credit: ', 1, 2)
             direction = 'long' if d == 1 else 'short'
             if product == 'call':
-                self.load_strategy(self.strategy.ticker, 'vertc', direction, self.width, self.quantity, analyze=False)
+                self.load_strategy(self.strategy.ticker, 'vertc', direction, self.width, self.quantity)
             else:
-                self.load_strategy(self.strategy.ticker, 'vertp', direction, self.width, self.quantity, analyze=False)
+                self.load_strategy(self.strategy.ticker, 'vertp', direction, self.width, self.quantity)
         else:
             modified = False
 
@@ -653,9 +651,10 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--direction', help='Specify the direction', required=False, choices=['long', 'short'], default='long')
     parser.add_argument('-w', '--width', help='Specify the width (used for spreads)', required=False, default='0')
     parser.add_argument('-q', '--quantity', help='Specify the quantity', required=False, default='1')
+    parser.add_argument('-f', '--default', help='Load the default options', required=False, action='store_true')
     parser.add_argument('-a', '--analyze', help='Analyze the strategy', required=False, action='store_true')
     parser.add_argument('-x', '--exit', help='Run and exit', required=False, action='store_true')
 
     command = vars(parser.parse_args())
     Interface(ticker=command['ticker'], strategy=command['strategy'], direction=command['direction'],
-        width=int(command['width']), quantity=int(command['quantity']), analyze=command['analyze'], exit=command['exit'])
+        width=int(command['width']), quantity=int(command['quantity']), default=command['default'], analyze=command['analyze'], exit=command['exit'])

@@ -2,7 +2,7 @@ import datetime as dt
 
 import pandas as pd
 
-import strategies
+import strategies as s
 from strategies.strategy import Strategy
 from utils import utils
 
@@ -10,10 +10,10 @@ _logger = utils.get_logger()
 DEFAULT_WIDTH = 2.0
 
 class Vertical(Strategy):
-    def __init__(self, ticker:str, product:str, direction:str, width:int, quantity:int):
-        super().__init__(ticker, product, direction, width, quantity)
+    def __init__(self, ticker:str, product:str, direction:str, width:int, quantity:int, load_default:bool=False):
+        super().__init__(ticker, product, direction, width, quantity, load_default)
 
-        self.name = strategies.STRATEGIES_BROAD[2]
+        self.name = s.STRATEGIES_BROAD[2]
 
         # Default expiry to a week from Friday
         d = dt.datetime.today()
@@ -67,6 +67,9 @@ class Vertical(Strategy):
 
             # Generate profit table
             self.analysis.table = self.generate_profit_table()
+
+    def fetch_default_contracts(self, itm:bool, distance:int, weeks:int) -> str:
+        return ''
 
     def generate_profit_table(self) -> pd.DataFrame:
         if self.analysis.credit_debit == 'credit':

@@ -2,7 +2,7 @@ import datetime as dt
 
 import pandas as pd
 
-import strategies
+import strategies as s
 from strategies.strategy import Strategy
 from utils import utils
 
@@ -10,11 +10,11 @@ from utils import utils
 _logger = utils.get_logger()
 
 class Call(Strategy):
-    def __init__(self, ticker:str, product:str, direction:str, width:int, quantity:int):
+    def __init__(self, ticker:str, product:str, direction:str, width:int, quantity:int, load_default:bool=False):
         product = 'call'
-        super().__init__(ticker, product, direction, width, quantity)
+        super().__init__(ticker, product, direction, width, quantity, load_default)
 
-        self.name = strategies.STRATEGIES_BROAD[0]
+        self.name = s.STRATEGIES_BROAD[0]
 
         # Default to a week from Friday as expiry
         d = dt.datetime.today()
@@ -23,6 +23,11 @@ class Call(Strategy):
         expiry = d + dt.timedelta(days=6)
 
         self.add_leg(self.quantity, product, direction, self.initial_spot, expiry)
+
+        if load_default:
+            contract = self.fetch_default_contracts(True, s.DEFAULT_OPTION_ITM_DISTANCE, s.DEFAULT_OPTION_WEEKS)
+            if contract:
+                self.legs[0].option.load_contract(contract)
 
     def __str__(self):
         return f'{self.legs[0].direction} {self.name}'
@@ -42,10 +47,30 @@ class Call(Strategy):
             self.analysis.table = self.generate_profit_table()
 
             # Calculate min max
-            self.analysis.max_gain, self.analysis.max_loss = self.calc_max_gain_loss()
+            self.analysis.max_gain, self.analysis.max_loss = self.calculate_max_gain_loss()
 
             # Calculate breakeven
-            self.analysis.breakeven = self.calc_breakeven()
+            self.analysis.breakeven = self.calculate_breakeven()
+
+    def fetch_default_contracts(self, itm:bool, distance:int, weeks:int) -> str:
+        if distance < 0:
+            raise ValueError('Invalid distance')
+        if weeks < 0:
+            raise ValueError('Invalid weeks')
+
+        contract = ''
+        expiry = self.chain.get_expiry()
+        self.chain.expire = expiry[weeks]
+        _logger.debug(f'{__name__}: {self.chain.expire}')
+
+        options = self.chain.get_chain('call')
+        _logger.debug(f'{__name__}: {options}')
+
+        itm = self.chain.get_itm()
+        if itm >= 0:
+            contract = options.iloc[itm]['contractSymbol']
+
+        return contract
 
     def generate_profit_table(self) -> pd.DataFrame:
         profit = pd.DataFrame()

@@ -2,7 +2,7 @@ import datetime as dt
 
 import pandas as pd
 
-import strategies
+import strategies as s
 from strategies.strategy import Strategy
 from utils import utils
 
@@ -10,11 +10,11 @@ from utils import utils
 _logger = utils.get_logger()
 
 class Put(Strategy):
-    def __init__(self, ticker:str, product:str, direction:str, width:int, quantity:int):
+    def __init__(self, ticker:str, product:str, direction:str, width:int, quantity:int, load_default:bool=False):
         product = 'put'
-        super().__init__(ticker, product, direction, width, quantity)
+        super().__init__(ticker, product, direction, width, quantity, load_default)
 
-        self.name = strategies.STRATEGIES_BROAD[1]
+        self.name = s.STRATEGIES_BROAD[1]
 
         # Default to a week from Friday as expiry
         d = dt.datetime.today()
@@ -42,10 +42,13 @@ class Put(Strategy):
             self.analysis.table = self.generate_profit_table()
 
             # Calculate min max
-            self.analysis.max_gain, self.analysis.max_loss = self.calc_max_gain_loss()
+            self.analysis.max_gain, self.analysis.max_loss = self.calculate_max_gain_loss()
 
             # Calculate breakeven
-            self.analysis.breakeven = self.calc_breakeven()
+            self.analysis.breakeven = self.calculate_breakeven()
+
+    def fetch_default_contracts(self, itm:bool, distance:int, weeks:int) -> str:
+        return ''
 
     def generate_profit_table(self) -> pd.DataFrame:
         profit = pd.DataFrame()
