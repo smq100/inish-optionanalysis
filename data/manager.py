@@ -308,18 +308,18 @@ class Manager(Threaded):
                             with self.session.begin() as session:
                                 t = session.query(models.Security).filter(models.Security.ticker==ticker).one()
 
-                                for _, price in history.iterrows():
-                                    if price['date']:
+                                for price in history.itertuples():
+                                    if price.date:
                                         pri = session.query(models.Price.date).filter(and_(models.Price.security_id==t.id,
-                                            models.Price.date==price['date'])).one_or_none()
+                                            models.Price.date==price.date)).one_or_none()
                                         if pri is None:
                                             p = models.Price()
-                                            p.date = price['date']
-                                            p.open = price['open']
-                                            p.high = price['high']
-                                            p.low = price['low']
-                                            p.close = price['close']
-                                            p.volume = price['volume']
+                                            p.date = price.date
+                                            p.open = price.open
+                                            p.high = price.high
+                                            p.low = price.low
+                                            p.close = price.close
+                                            p.volume = price.volume
 
                                             t.pricing += [p]
 
@@ -615,15 +615,15 @@ class Manager(Threaded):
             if history is not None and not history.empty:
                 history.reset_index(inplace=True)
                 try:
-                    for _, price in history.iterrows():
-                        if price['date']:
+                    for price in history.itertuples():
+                        if price.date:
                             p = models.Price()
-                            p.date = price['date']
-                            p.open = price['open']
-                            p.high = price['high']
-                            p.low = price['low']
-                            p.close = price['close']
-                            p.volume = price['volume']
+                            p.date = price.date
+                            p.open = price.open
+                            p.high = price.high
+                            p.low = price.low
+                            p.close = price.close
+                            p.volume = price.volume
 
                             t.pricing += [p]
                             added = True

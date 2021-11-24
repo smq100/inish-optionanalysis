@@ -25,7 +25,8 @@ config = configparser.ConfigParser()
 config.read(CREDENTIALS)
 qd.ApiConfig.api_key = config['DEFAULT']['APIKEY']
 
-THROTTLE = 0.050 # Min secs between calls to Yahoo
+_THROTTLE = 0.050 # Min secs between calls to Yahoo
+_RETRIES = 1
 
 def is_connected(hostname:str='google.com') -> bool:
     try:
@@ -62,7 +63,7 @@ def get_company_live(ticker:str) -> pd.DataFrame:
     company = None
 
     # Throttle requests to help avoid being cut off by Yahoo
-    while time.perf_counter() - _elapsed < THROTTLE: time.sleep(THROTTLE)
+    while time.perf_counter() - _elapsed < _THROTTLE: time.sleep(_THROTTLE)
     _elapsed = time.perf_counter()
 
     try:
@@ -77,7 +78,7 @@ def get_company_live(ticker:str) -> pd.DataFrame:
 
     return company
 
-def _get_history_yfianace(ticker:str, days:int=-1) -> pd.DataFrame:
+def _get_history_yfinance(ticker:str, days:int=-1) -> pd.DataFrame:
     if not _connected: raise ConnectionError('No internet connection')
 
     history = None
@@ -92,16 +93,18 @@ def _get_history_yfianace(ticker:str, days:int=-1) -> pd.DataFrame:
             end = dt.datetime.today()
 
             # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
-            for retry in range(3):
+            for retry in range(_RETRIES):
                 try:
                     history = company.history(start=f'{start:%Y-%m-%d}', end=f'{end:%Y-%m-%d}')
                     days = history.shape[0]
 
                     if history is None:
-                        _logger.warning(f'{__name__}: {d.ACTIVE_DATASOURCE} history for {ticker} is None')
+                        _logger.warning(f'{__name__}: {d.ACTIVE_DATASOURCE} history for {ticker} is None ({retry+1})')
+                        time.sleep(0.5)
                     elif history.empty:
                         history = None
-                        _logger.warning(f'{__name__}: History information for {ticker} is empty')
+                        _logger.warning(f'{__name__}: {d.ACTIVE_DATASOURCE} history for {ticker} is empty ({retry+1})')
+                        time.sleep(0.5)
                     else:
                         history.reset_index(inplace=True)
 
@@ -111,7 +114,7 @@ def _get_history_yfianace(ticker:str, days:int=-1) -> pd.DataFrame:
                         history.sort_values('date', ascending=True, inplace=True)
 
                         _logger.info(f'{__name__}: Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
-                    break
+                        break
                 except Exception as e:
                     _logger.error(f'{__name__}: Retry {retry} to fetch history of {ticker} from {d.ACTIVE_DATASOURCE}: {e}')
                     history = None
@@ -130,7 +133,7 @@ def _get_history_quandl(ticker:str, days:int=-1) -> pd.DataFrame:
     if days > 0:
         start = dt.datetime.today() - dt.timedelta(days=days)
 
-        for retry in range(3):
+        for retry in range(_RETRIES):
             try:
                 history = qd.get_table(f'QUOTEMEDIA/PRICES', \
                     qopts={ 'columns': ['date', 'open', 'high', 'low', 'close', 'volume'] }, \
@@ -138,20 +141,22 @@ def _get_history_quandl(ticker:str, days:int=-1) -> pd.DataFrame:
                 days = history.shape[0]
 
                 if history is None:
-                    _logger.warning(f'{__name__}: {d.ACTIVE_DATASOURCE} history for {ticker} is None')
+                    _logger.warning(f'{__name__}: {d.ACTIVE_DATASOURCE} history for {ticker} is None ({retry+1})')
+                    time.sleep(0.5)
                 elif history.empty:
                     history = None
-                    _logger.warning(f'{__name__}: History information for {ticker} is empty')
+                    _logger.warning(f'{__name__}: {d.ACTIVE_DATASOURCE} history for {ticker} is empty ({retry+1})')
+                    time.sleep(0.5)
                 else:
                     history.reset_index(inplace=True)
 
-                    # Clean some things up and make colums consistent with Postgres column names
+                    # Clean some things up and make columns consistent with Postgres column names
                     history.columns = history.columns.str.lower()
                     history.drop(['none'], 1, inplace=True)
                     history.sort_values('date', ascending=True, inplace=True)
 
                     _logger.info(f'{__name__}: Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
-                break
+                    break
             except Exception as e:
                 _logger.error(f'{__name__}: Retry {retry} to fetch history of {ticker} from {d.ACTIVE_DATASOURCE}: {e}')
                 history = None
@@ -160,14 +165,15 @@ def _get_history_quandl(ticker:str, days:int=-1) -> pd.DataFrame:
     return history
 
 def get_history_live(ticker:str, days:int=-1) -> pd.DataFrame:
-    if not _connected: raise ConnectionError('No internet connection')
+    if not _connected:
+        raise ConnectionError('No internet connection')
 
     history = pd.DataFrame()
 
     _logger.info(f'{__name__}: Fetching {ticker} history from {d.ACTIVE_DATASOURCE}...')
 
     if d.ACTIVE_DATASOURCE == d.VALID_DATASOURCES[0]:
-        history = _get_history_yfianace(ticker, days=days)
+        history = _get_history_yfinance(ticker, days=days)
     elif d.ACTIVE_DATASOURCE == d.VALID_DATASOURCES[1]:
         history = _get_history_quandl(ticker, days=days)
     else:
@@ -175,7 +181,7 @@ def get_history_live(ticker:str, days:int=-1) -> pd.DataFrame:
 
     return history
 
-def get_option_expiry(ticker:str) -> dict:
+def get_option_expiry(ticker:str) -> tuple[str]:
     if not _connected: raise ConnectionError('No internet connection')
 
     company = get_company_live(ticker)

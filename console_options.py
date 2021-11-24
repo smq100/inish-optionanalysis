@@ -1,5 +1,4 @@
 import sys
-import math
 import time
 import threading
 import logging
@@ -16,7 +15,6 @@ from strategies.strategy import Strategy
 from strategies.vertical import Vertical
 from strategies.call import Call
 from strategies.put import Put
-from options.chain import Chain
 from data import store as store
 from utils import utils
 
@@ -32,7 +30,6 @@ class Interface():
         self.width = width
         self.quantity = quantity
         self.strategy:Strategy = None
-        self.chain:Chain = None
         self.dirty_analyze = True
         self.task:threading.Thread = None
 
@@ -55,7 +52,6 @@ class Interface():
         elif strategy == 'vertc' and width < 1:
             utils.print_error('Invalid width specified')
         else:
-            self.chain = Chain(self.ticker)
 
             if self.load_strategy(self.ticker, strategy, direction, self.width, self.quantity, analyze or exit):
                 if not exit:
@@ -315,7 +311,6 @@ class Interface():
             self.dirty_analyze = True
             modified = True
 
-            self.chain = Chain(ticker)
             self.load_strategy(ticker, 'call', 'long', 1, analyze=True)
             utils.print_message('The strategy has been reset to a long call', False)
 
@@ -360,7 +355,7 @@ class Interface():
         contracts = []
 
         # Go directly to get expire date if not already entered
-        if not self.chain.expire:
+        if not self.strategy.chain.expire:
             exp = self.select_chain_expiry()
             self.strategy.update_expiry(exp)
             if self.strategy.name != 'vertical':
@@ -376,7 +371,7 @@ class Interface():
         if not contracts:
             done = False
             while not done:
-                expiry = self.chain.expire if self.chain.expire else 'None selected'
+                expiry = self.strategy.chain.expire if self.strategy.chain.expire else 'None selected'
                 product = 'Call' if self.strategy.legs[0].option.product == 'call' else 'Put'
                 success = True
 
@@ -407,7 +402,7 @@ class Interface():
                 elif selection == 3:
                     self.width = utils.input_integer('Enter width (1 - 5): ', 1, 5)
                 elif selection == 4:
-                    if self.chain.expire:
+                    if self.strategy.chain.expire:
                         leg = 0
                         if self.strategy.legs[leg].option.product == 'call':
                             contracts = self.select_chain_options('call')
@@ -430,8 +425,8 @@ class Interface():
 
         return contracts
 
-    def select_chain_expiry(self) -> str:
-        expiry = self.chain.get_expiry()
+    def select_chain_expiry(self) -> dt.datetime:
+        expiry = self.strategy.chain.get_expiry()
 
         menu_items = {}
         for i, exp in enumerate(expiry):
@@ -439,8 +434,8 @@ class Interface():
 
         select = utils.menu(menu_items, 'Select expiration date, or 0 to cancel: ', 0, i+1)
         if select > 0:
-            self.chain.expire = expiry[select-1]
-            expiry = dt.datetime.strptime(self.chain.expire, '%Y-%m-%d')
+            self.strategy.chain.expire = expiry[select-1]
+            expiry = dt.datetime.strptime(self.strategy.chain.expire, '%Y-%m-%d')
 
             self.dirty_analyze = True
         else:
@@ -451,18 +446,18 @@ class Interface():
     def select_chain_options(self, product:str) -> list[str]:
         options = None
         contracts = []
-        if not self.chain.expire:
+        if not self.strategy.chain.expire:
             utils.print_error('No expiry date delected')
         elif product == 'call':
-            options = self.chain.get_chain('call')
+            options = self.strategy.chain.get_chain('call')
         elif product == 'put':
-            options = self.chain.get_chain('put')
+            options = self.strategy.chain.get_chain('put')
 
         if options is not None:
             menu_items = {}
-            for i, row in options.iterrows():
-                itm = 'ITM' if bool(row['inTheMoney']) else 'OTM'
-                menu_items[f'{i+1}'] = f'${row["strike"]:7.2f} ${row["lastPrice"]:6.2f} {itm}'
+            for i, row in enumerate(options.itertuples()):
+                itm = 'ITM' if bool(row.inTheMoney) else 'OTM'
+                menu_items[f'{i+1}'] = f'${row.strike:7.2f} ${row.lastPrice:6.2f} {itm}'
 
             prompt = 'Select long option, or 0 to cancel: ' if self.strategy.name == 'vertical' else 'Select option, or 0 to cancel: '
             select = utils.menu(menu_items, prompt, 0, i+1)

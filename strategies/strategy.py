@@ -1,7 +1,7 @@
 import sys
 import abc
 from abc import ABC
-import datetime
+import datetime as dt
 import math
 
 import pandas as pd
@@ -11,6 +11,7 @@ import pricing
 from data import store as store
 from company.company import Company
 from options.option import Option
+from options.chain import Chain
 from analysis.strategy import StrategyAnalysis
 from pricing.pricing import Pricing
 from pricing.blackscholes import BlackScholes
@@ -37,12 +38,13 @@ class Strategy(ABC):
             raise ValueError('Invalid quantity')
 
         self.name = ''
-        self.ticker = ticker
+        self.ticker = ticker.upper()
         self.product = product
         self.direction = direction
         self.quantity = quantity
         self.width = width
         self.pricing_method = 'black-scholes'
+        self.chain:Chain = Chain(self.ticker)
         self.analysis = StrategyAnalysis()
         self.legs:list[Leg] = []
         self.initial_spot = 0.0
@@ -64,23 +66,42 @@ class Strategy(ABC):
     def reset(self) -> None:
         self.analysis = StrategyAnalysis()
 
-    def update_expiry(self, date:str) -> None:
+    def update_expiry(self, date:dt.datetime) -> None:
         for leg in self.legs:
             leg.option.expiry = date
 
-    def fetch_leg(self, itm:bool, distance:int=1) -> None:
-        pass
-
-    def add_leg(self, quantity:int, product:str, direction:str, strike:float, expiry:datetime.datetime) -> int:
-        expiry += datetime.timedelta(days=1)
+    def add_leg(self, quantity:int, product:str, direction:str, strike:float, expiry:dt.datetime) -> int:
+        expiry += dt.timedelta(days=1)
 
         leg = Leg(self, self.ticker, quantity, product, direction, strike, expiry)
         self.legs += [leg]
 
         return len(self.legs)
 
+    def fetch_default_contract(self, leg:int, itm:bool, distance:int, weeks:int) -> str:
+        if leg < 0:
+            raise ValueError('Invalid distance')
+        if distance < 0:
+            raise ValueError('Invalid distance')
+        if weeks < 0:
+            raise ValueError('Invalid weeks')
+
+        contract = ''
+        expiry = self.chain.get_expiry()
+        self.chain.expire = expiry[weeks]
+        _logger.debug(f'{__name__}: {self.chain.expire}')
+
+        options = self.chain.get_chain(self.legs[leg].product)
+        _logger.debug(f'{__name__}: {options}')
+
+        itm = self.chain.get_itm()
+        if itm >= 0:
+            contract = options.iloc[itm]["contractSymbol"]
+
+        return contract
+
     def get_current_spot(self, ticker:str, roundup:bool=False) -> float:
-        expiry = datetime.datetime.today() + datetime.timedelta(days=10)
+        expiry = dt.datetime.today() + dt.timedelta(days=10)
 
         if self.pricing_method == 'black-scholes':
             pricer = BlackScholes(ticker, expiry, self.initial_spot)
@@ -161,7 +182,7 @@ class Strategy(ABC):
         return len(self.legs) > 0
 
 class Leg:
-    def __init__(self, strategy:Strategy, ticker:str, quantity:int, product:str, direction:str, strike:float, expiry:datetime.datetime):
+    def __init__(self, strategy:Strategy, ticker:str, quantity:int, product:str, direction:str, strike:float, expiry:dt.datetime):
         if product not in strategies.PRODUCTS:
             raise ValueError('Invalid product')
         if direction not in strategies.DIRECTIONS:
@@ -336,12 +357,12 @@ class Leg:
                 row_index = []
 
                 # Create list of dates to be used as the df columns
-                today = datetime.datetime.today()
+                today = dt.datetime.today()
                 today = today.replace(hour=0, minute=0, second=0, microsecond=0)
 
                 col_index += [str(today)]
                 while today < self.option.expiry:
-                    today += datetime.timedelta(days=step)
+                    today += dt.timedelta(days=step)
                     col_index += [str(today)]
 
                 # Calculate cost of option every day till expiry
@@ -350,7 +371,7 @@ class Leg:
                     spot = s / 40.0
                     row = []
                     for item in col_index:
-                        maturity_date = datetime.datetime.strptime(item, '%Y-%m-%d %H:%M:%S')
+                        maturity_date = dt.datetime.strptime(item, '%Y-%m-%d %H:%M:%S')
                         time_to_maturity = self.option.expiry - maturity_date
                         decimaldays_to_maturity = time_to_maturity.days / 365.0
 
@@ -383,7 +404,7 @@ class Leg:
 
                 # Strip the time from the datetime string
                 for index, item in enumerate(col_index):
-                    day = datetime.datetime.strptime(item, '%Y-%m-%d %H:%M:%S').date()
+                    day = dt.datetime.strptime(item, '%Y-%m-%d %H:%M:%S').date()
                     col_index[index] = f'{str(day.strftime("%b"))}-{str(day.day)}'
 
                 # Finally, create the dataframe then reverse the row order
@@ -412,3 +433,20 @@ class Leg:
             valid = True
 
         return valid
+
+if __name__ == '__main__':
+    import logging
+    from strategies.call import Call
+    from strategies.put import Put
+    from utils import utils
+
+    utils.get_logger(logging.DEBUG)
+
+    strategy = Call('AAPL', 'call', 'long', 1, 1)
+    # strategy = Put('AAPL', 'put', 'long', 1, 1)
+    # strategy.legs[0].calculate(table=False, greeks=False)
+    # output = f'${strategy.legs[0].option.calc_price:.2f}, ({strategy.legs[0].option.strike:.2f})'
+    # print(output)
+
+    contract = strategy.fetch_default_contract(0, True, 1, 4)
+    print(contract)

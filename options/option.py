@@ -8,7 +8,7 @@ _logger = utils.get_logger()
 
 
 class Option:
-    def __init__(self, ticker, product, strike, expiry):
+    def __init__(self, ticker:str, product:str, strike:str, expiry:dt.datetime):
         # Specified
         self.ticker = ticker
         self.product = product
@@ -71,7 +71,7 @@ class Option:
             f'Vega: {self.vega:.5f}\n'\
             f'Rho: {self.rho:.5f}'
 
-    def load_contract(self, contract_name):
+    def load_contract(self, contract_name:str) -> bool:
         ret = True
         parsed = _parse_contract_name(contract_name)
 
@@ -108,13 +108,12 @@ class Option:
 
         return ret
 
-def _get_contract(contract_ticker):
+def _get_contract(contract_ticker:str) -> str:
     parsed = _parse_contract_name(contract_ticker)
 
     ticker = parsed['ticker']
     product = parsed['product']
     expiry = parsed['expiry']
-    strike = parsed['strike']
 
     try:
         if product == 'call':
@@ -126,18 +125,16 @@ def _get_contract(contract_ticker):
         return contract.iloc[0]
     except Exception as e:
         print(str(e))
-        return None
+        return ''
 
-def _parse_contract_name(contract_name):
+def _parse_contract_name(contract_name:str) -> dict:
     # ex: MSFT210305C00237500
     regex = r'([\d]{6})([PC])'
     parsed = re.split(regex, contract_name)
 
     ticker = parsed[0]
     expiry = f'20{parsed[1][:2]}-{parsed[1][2:4]}-{parsed[1][4:]}'
-
     product = 'call' if 'C' in parsed[2].upper() else 'put'
-
     strike = float(parsed[3][:5]) + (float(parsed[3][5:]) / 1000.0)
 
     return {'ticker':ticker, 'expiry':expiry, 'product':product, 'strike':strike}

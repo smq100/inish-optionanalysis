@@ -60,7 +60,7 @@ class Put(Strategy):
 
         return profit
 
-    def calc_max_gain_loss(self) -> tuple[float, float]:
+    def calculate_max_gain_loss(self) -> tuple[float, float]:
         price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
         if self.legs[0].direction == 'long':
             self.analysis.sentiment = 'bearish'
@@ -73,7 +73,7 @@ class Put(Strategy):
 
         return max_gain, max_loss
 
-    def calc_breakeven(self) -> float:
+    def calculate_breakeven(self) -> float:
         if self.legs[0].direction == 'long':
             breakeven = self.legs[0].option.strike - self.analysis.amount
         else:

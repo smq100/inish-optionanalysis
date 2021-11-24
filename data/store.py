@@ -352,7 +352,7 @@ def get_index_tickers_master(index:str, type:str='google') -> list[str]:
 
     return symbols
 
-def get_option_expiry(ticker:str) -> dict:
+def get_option_expiry(ticker:str) -> tuple[str]:
     return fetcher.get_option_expiry(ticker)
 
 def get_option_chain(ticker:str) -> dict:

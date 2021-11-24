@@ -59,7 +59,7 @@ class Call(Strategy):
 
         return profit
 
-    def calc_max_gain_loss(self) -> tuple[float, float]:
+    def calculate_max_gain_loss(self) -> tuple[float, float]:
         price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
         if self.legs[0].direction == 'long':
             self.analysis.sentiment = 'bullish'
@@ -72,7 +72,7 @@ class Call(Strategy):
 
         return max_gain, max_loss
 
-    def calc_breakeven(self) -> float:
+    def calculate_breakeven(self) -> float:
         if self.legs[0].direction == 'long':
             breakeven = self.legs[0].option.strike + self.analysis.amount
         else:
@@ -85,7 +85,7 @@ if __name__ == '__main__':
     import logging
     utils.get_logger(logging.INFO)
 
-    call = Call('MSFT', 'call', 'long', 1)
+    call = Call('AAPL', 'call', 'long', 1, 1)
     call.legs[0].calculate(table=False, greeks=False)
     output = f'${call.legs[0].option.calc_price:.2f}, ({call.legs[0].option.strike:.2f})'
     print(output)
