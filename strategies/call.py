@@ -25,9 +25,9 @@ class Call(Strategy):
         self.add_leg(self.quantity, product, direction, self.initial_spot, expiry)
 
         if load_default:
-            contract = self.fetch_default_contracts(True, s.DEFAULT_OPTION_ITM_DISTANCE, s.DEFAULT_OPTION_WEEKS)
+            _, contract = self.fetch_default_contracts(s.DEFAULT_OPTION_ITM_DISTANCE, s.DEFAULT_OPTION_WEEKS)
             if contract:
-                self.legs[0].option.load_contract(contract)
+                self.legs[0].option.load_contract(contract[0])
 
     def __str__(self):
         return f'{self.legs[0].direction} {self.name}'
@@ -51,26 +51,6 @@ class Call(Strategy):
 
             # Calculate breakeven
             self.analysis.breakeven = self.calculate_breakeven()
-
-    def fetch_default_contracts(self, itm:bool, distance:int, weeks:int) -> str:
-        if distance < 0:
-            raise ValueError('Invalid distance')
-        if weeks < 0:
-            raise ValueError('Invalid weeks')
-
-        contract = ''
-        expiry = self.chain.get_expiry()
-        self.chain.expire = expiry[weeks]
-        _logger.debug(f'{__name__}: {self.chain.expire}')
-
-        options = self.chain.get_chain('call')
-        _logger.debug(f'{__name__}: {options}')
-
-        itm = self.chain.get_itm()
-        if itm >= 0:
-            contract = options.iloc[itm]['contractSymbol']
-
-        return contract
 
     def generate_profit_table(self) -> pd.DataFrame:
         profit = pd.DataFrame()

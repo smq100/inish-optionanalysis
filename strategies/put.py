@@ -24,6 +24,11 @@ class Put(Strategy):
 
         self.add_leg(self.quantity, product, direction, self.initial_spot, expiry)
 
+        if load_default:
+            _, contract = self.fetch_default_contracts(s.DEFAULT_OPTION_ITM_DISTANCE, s.DEFAULT_OPTION_WEEKS)
+            if contract:
+                self.legs[0].option.load_contract(contract[0])
+
     def __str__(self):
         return f'{self.legs[0].direction} {self.name}'
 
@@ -46,9 +51,6 @@ class Put(Strategy):
 
             # Calculate breakeven
             self.analysis.breakeven = self.calculate_breakeven()
-
-    def fetch_default_contracts(self, itm:bool, distance:int, weeks:int) -> str:
-        return ''
 
     def generate_profit_table(self) -> pd.DataFrame:
         profit = pd.DataFrame()

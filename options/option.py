@@ -28,7 +28,7 @@ class Option:
         self.rho = 0.0
 
         # Fetched online with YFinance
-        self.contract_name = ''
+        self.contract = ''
         self.last_trade_date = ''
         self.last_price = 0.0
         self.bid = 0.0
@@ -43,7 +43,7 @@ class Option:
         self.currency = ''
 
     def __str__(self):
-        name = self.contract_name if self.contract_name else 'No contract selected'
+        name = self.contract if self.contract else 'No contract selected'
         return f'Contract:{name}\n'\
             f'Ticker: {self.ticker}\n'\
             f'Product: {self.product.title()}\n'\
@@ -83,7 +83,7 @@ class Option:
         contract = _get_contract(contract_name)
 
         if contract is not None:
-            self.contract_name = contract['contractSymbol']
+            self.contract = contract['contractSymbol']
             self.last_trade_date = contract['lastTradeDate']
             self.strike = contract['strike']
             self.last_price = contract['lastPrice']

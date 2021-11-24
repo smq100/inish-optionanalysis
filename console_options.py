@@ -72,13 +72,13 @@ class Interface():
             }
 
             loaded = '' if  self.strategy.legs[0].option.last_price > 0 else '*'
-
+            expire = f'{self.strategy.legs[0].option.expiry:%Y-%m-%d}'
             if self.strategy.name == 'vertical':
-                menu_items['3'] += f's '\
-                    f'(L:${self.strategy.legs[0].option.strike:.2f}{loaded}'\
-                    f' S:${self.strategy.legs[1].option.strike:.2f}{loaded})'
+                menu_items['3'] += f's ({expire}, '\
+                    f'L:${self.strategy.legs[0].option.strike:.2f}{loaded}, '\
+                    f'S:${self.strategy.legs[1].option.strike:.2f}{loaded})'
             else:
-                menu_items['3'] += f' (${self.strategy.legs[0].option.strike:.2f}{loaded})'
+                menu_items['3'] += f' ({expire}, ${self.strategy.legs[0].option.strike:.2f}{loaded})'
 
             if self.dirty_analyze:
                 menu_items['6'] += ' *'
@@ -221,7 +221,9 @@ class Interface():
                 if style == 0:
                     style = utils.input_integer('(1) Summary, (2) Table, (3) Chart, (4) Contour, (5) Surface, or (0) Cancel: ', 0, 5)
                 if style > 0:
-                    title = f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].company}) {str(self.strategy).title()} {self.strategy.legs[0].option.contract_name}'
+                    title = f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].company}) {str(self.strategy).title()} {self.strategy.legs[0].option.contract}'
+                    if len(self.strategy.legs) > 1:
+                        title += f'/{self.strategy.legs[1].option.contract}'
 
                     rows, cols = analysis.shape
                     if rows > MAX_ROWS:

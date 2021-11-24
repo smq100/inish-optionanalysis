@@ -103,9 +103,29 @@ class Strategy(ABC):
         else:
             raise ValueError('Invalid pricing method')
 
-    @abc.abstractmethod
-    def fetch_default_contracts(self, itm:bool, distance:int, weeks:int) -> str:
-        return ''
+    def fetch_default_contracts(self, distance:int, weeks:int) -> tuple[int, list[str]]:
+        # Works for strategies with one leg. Multiple-leg strategies should be overridden
+        if distance < 0:
+            raise ValueError('Invalid distance')
+        if weeks < 0:
+            raise ValueError('Invalid weeks')
+
+        contract = ''
+        expiry = self.chain.get_expiry()
+        self.chain.expire = expiry[weeks]
+
+        options = self.chain.get_chain(self.legs[0].option.product)
+
+        index = self.chain.get_itm()
+        if index >= 0:
+            contract = options.iloc[index]['contractSymbol']
+        else:
+            _logger.error(f'{__name__}: Error fetching default contract')
+
+        _logger.debug(f'{__name__}: {options}')
+        _logger.debug(f'{__name__}: {index=}')
+
+        return index, [contract]
 
     @abc.abstractmethod
     def generate_profit_table(self) -> pd.DataFrame:
@@ -195,7 +215,7 @@ class Leg:
             f'{str(self.option.expiry)[:10]}'\
             f'=${self.option.last_price:.2f}{d3} each (${self.option.calc_price:.2f} {d1}/{d2})'
 
-            if not self.option.contract_name:
+            if not self.option.contract:
                 output += ' *option not selected'
 
             if self.option.last_price > 0.0:
@@ -420,18 +440,13 @@ if __name__ == '__main__':
     import logging
     from strategies.call import Call
     from strategies.put import Put
+    from strategies.vertical import Vertical
     from utils import utils
 
     utils.get_logger(logging.DEBUG)
 
-    strategy = Call('AAPL', 'call', 'long', 1, 1, True)
+    strategy = Vertical('AAPL', 'call', 'long', 1, 1, True)
+    # strategy = Call('AAPL', 'call', 'long', 1, 1, True)
+    # strategy = Put('AAPL', 'call', 'long', 1, 1, True)
     strategy.analyze()
     print(strategy.analysis.table)
-
-    # strategy = Put('AAPL', 'put', 'long', 1, 1)
-    # strategy.legs[0].calculate(table=False, greeks=False)
-    # output = f'${strategy.legs[0].option.calc_price:.2f}, ({strategy.legs[0].option.strike:.2f})'
-    # print(output)
-
-    # contract = strategy.fetch_default_contracts(0, True, 1, 4)
-    # print(contract)
