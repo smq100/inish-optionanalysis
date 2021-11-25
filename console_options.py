@@ -15,7 +15,7 @@ from strategies.strategy import Strategy
 from strategies.vertical import Vertical
 from strategies.call import Call
 from strategies.put import Put
-from data import store as store
+from data import store
 from utils import utils
 
 MAX_ROWS = 50

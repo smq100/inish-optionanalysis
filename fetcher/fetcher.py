@@ -33,7 +33,7 @@ def is_connected(hostname:str='google.com') -> bool:
         host = socket.gethostbyname(hostname)
         s = socket.create_connection((host, 80), 2)
         s.close()
-    except:
+    except Exception:
         return False
     else:
         return True
@@ -57,36 +57,46 @@ def validate_ticker(ticker:str) -> bool:
     return valid
 
 _elapsed = 0.0
-def get_company_live(ticker:str) -> pd.DataFrame:
+_last_company:pd.DataFrame = None
+
+def get_company_live(ticker:str, uselast:bool=False) -> pd.DataFrame:
     if not _connected:
         raise ConnectionError('No internet connection')
 
     global _elapsed
+    global _last_company
     company = None
 
     # Throttle requests to help avoid being cut off by Yahoo
     while time.perf_counter() - _elapsed < _THROTTLE: time.sleep(_THROTTLE)
     _elapsed = time.perf_counter()
 
-    try:
-        _logger.info(f'{__name__}: Fetching live company information for {ticker} from Yahoo...')
+    if uselast:
+        _logger.info(f'{__name__}: Re-using company information for {ticker}')
+        company = _last_company
+    else:
+        _logger.info(f'{__name__}: Fetching live company information for {ticker} from Yahoo')
         company = yf.Ticker(ticker)
-        if company is not None:
-            # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
-            _ = company.info
-    except Exception as e:
-        _logger.warning(f'{__name__}: No company found for {ticker}: {str(e)}')
-        company = None
+
+    if company is not None:
+        try:
+                # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
+                _ = company.info
+        except Exception as e:
+            _logger.warning(f'{__name__}: No company found for {ticker}: {str(e)}')
+            company = None
+
+    _last_company = company
 
     return company
 
-def _get_history_yfinance(ticker:str, days:int=-1) -> pd.DataFrame:
+def _get_history_yfinance(ticker:str, days:int=-1, uselast:bool=False) -> pd.DataFrame:
     if not _connected:
         raise ConnectionError('No internet connection')
 
     history = None
 
-    company = get_company_live(ticker)
+    company = get_company_live(ticker, uselast)
     if company is not None:
         if days < 0:
             days = 7300 # 20 years
@@ -184,21 +194,21 @@ def get_history_live(ticker:str, days:int=-1) -> pd.DataFrame:
 
     return history
 
-def get_option_expiry(ticker:str) -> tuple[str]:
+def get_option_expiry(ticker:str, uselast:bool=False) -> tuple[str]:
     if not _connected:
         raise ConnectionError('No internet connection')
 
-    company = get_company_live(ticker)
+    company = get_company_live(ticker, uselast)
     value = company.options
 
     return value
 
-def get_option_chain(ticker:str) -> dict:
+def get_option_chain(ticker:str, uselast:bool=False) -> dict:
     if not _connected:
         raise ConnectionError('No internet connection')
 
     chain = {}
-    company = get_company_live(ticker)
+    company = get_company_live(ticker, uselast)
     if company is not None:
         chain = company.option_chain
 

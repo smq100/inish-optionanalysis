@@ -119,9 +119,9 @@ def _get_contract(contract_name:str) -> str:
 
     try:
         if product == 'call':
-            chain = store.get_option_chain(ticker)(expiry).calls
+            chain = store.get_option_chain(ticker, uselast=True)(expiry).calls
         else:
-            chain = store.get_option_chain(ticker)(expiry).puts
+            chain = store.get_option_chain(ticker, uselast=True)(expiry).puts
 
         contract = chain.loc[chain['contractSymbol'] == contract_name]
         return contract.iloc[0]

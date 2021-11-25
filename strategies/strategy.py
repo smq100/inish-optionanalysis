@@ -19,7 +19,8 @@ from pricing.montecarlo import MonteCarlo
 from utils import utils
 
 
-IV_CUTOFF = 0.020
+_IV_CUTOFF = 0.020
+_MIN_MAX_PERCENT = 0.20
 
 _logger = utils.get_logger()
 
@@ -165,20 +166,19 @@ class Strategy(ABC):
     def _calc_price_min_max_step(self) -> tuple[float, float, float]:
         min_ = 0.0
         max_ = 0.0
-        step_ = 0.0
+        step = 0.0
 
         if len(self.legs) > 0:
-            percent = 0.20
-            min_ = self.legs[0].company.price * (1 - percent)
-            max_ = self.legs[0].company.price * (1 + percent)
+            min_ = self.legs[0].option.strike * (1.0 - _MIN_MAX_PERCENT)
+            max_ = self.legs[0].option.strike * (1.0 + _MIN_MAX_PERCENT)
 
-            step_ = (max_ - min_) / 40.0
-            step_ = utils.mround(step_, step_ / 10.0)
+            step = (max_ - min_) / 40.0
+            step = utils.mround(step, step / 10.0)
 
-            if min_ < step_:
-                min_ = step_
+            if min_ < step:
+                min_ = step
 
-        return min_, max_, step_
+        return min_, max_, step
 
     def _validate(self):
         return len(self.legs) > 0
@@ -205,8 +205,8 @@ class Leg:
     def __str__(self):
         if self.option.calc_price > 0.0:
             d1 = 'bs' if self.pricing_method == 'black-scholes' else 'mc'
-            d2 = 'cv' if self.option.implied_volatility < IV_CUTOFF else 'iv'
-            d3 = '*' if self.option.implied_volatility < IV_CUTOFF else ''
+            d2 = 'cv' if self.option.implied_volatility < _IV_CUTOFF else 'iv'
+            d3 = '*' if self.option.implied_volatility < _IV_CUTOFF else ''
             output = f'{self.quantity:2d} '\
             f'{self.company.ticker}@${self.company.price:.2f} '\
             f'{self.direction} '\
@@ -219,7 +219,7 @@ class Leg:
                 output += ' *option not selected'
 
             if self.option.last_price > 0.0:
-                if self.option.implied_volatility < IV_CUTOFF and self.option.implied_volatility > 0.0:
+                if self.option.implied_volatility < _IV_CUTOFF and self.option.implied_volatility > 0.0:
                     output += '\n    *** Warning: The iv is unsually low, perhaps due to after-hours. Using cv.'
 
                 diff = self.option.calc_price / self.option.last_price
@@ -245,7 +245,7 @@ class Leg:
             _logger.info(f'{__name__}: Calculating price using {self.pricing_method}')
 
             # Calculate prices
-            if self.option.implied_volatility < IV_CUTOFF:
+            if self.option.implied_volatility < _IV_CUTOFF:
                 self.pricer.calculate_price()
                 _logger.info(f'{__name__}: Using calculated volatility')
             else:
@@ -279,7 +279,7 @@ class Leg:
 
             # Calculate Greeks
             if greeks:
-                if self.option.implied_volatility < IV_CUTOFF:
+                if self.option.implied_volatility < _IV_CUTOFF:
                     self.pricer.calculate_greeks()
                 else:
                     self.pricer.calculate_greeks(volatility=self.option.implied_volatility)
@@ -309,7 +309,7 @@ class Leg:
 
     def recalculate(self, spot_price:float, time_to_maturity:int) -> tuple[float, float]:
         if self.pricer is not None:
-            if self.option.implied_volatility < IV_CUTOFF:
+            if self.option.implied_volatility < _IV_CUTOFF:
                 call, put = self.pricer.calculate_price(spot_price, time_to_maturity)
             else:
                 call, put = self.pricer.calculate_price(spot_price, time_to_maturity, volatility=self.option.implied_volatility)
@@ -348,7 +348,7 @@ class Leg:
         self.calculate()
 
     def generate_value_table(self) -> pd.DataFrame:
-        df = pd.DataFrame()
+        value = pd.DataFrame()
 
         if self.option.calc_price > 0.0:
             cols, step = self._calculate_date_step()
@@ -411,10 +411,10 @@ class Leg:
 
                 # Finally, create the dataframe then reverse the row order
                 col_index[-1] = 'Exp'
-                df = pd.DataFrame(table, index=row_index, columns=col_index)
-                df = df.iloc[::-1]
+                value = pd.DataFrame(table, index=row_index, columns=col_index)
+                value = value.iloc[::-1]
 
-        return df
+        return value
 
     def _calculate_date_step(self) -> tuple[int, int]:
         cols = int(math.ceil(self.option.time_to_maturity * 365))
@@ -445,8 +445,8 @@ if __name__ == '__main__':
 
     utils.get_logger(logging.DEBUG)
 
-    strategy = Vertical('AAPL', 'call', 'long', 1, 1, True)
-    # strategy = Call('AAPL', 'call', 'long', 1, 1, True)
+    # strategy = Vertical('AAPL', 'call', 'long', 1, 1, True)
+    strategy = Call('AAPL', 'call', 'long', 1, 1, True)
     # strategy = Put('AAPL', 'call', 'long', 1, 1, True)
     strategy.analyze()
     print(strategy.analysis.table)

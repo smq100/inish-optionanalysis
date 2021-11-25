@@ -230,14 +230,14 @@ def get_history(ticker:str, days:int=-1, end:int=0, live:bool=False) -> pd.DataF
 
     return history
 
-def get_company(ticker:str, live:bool=False, extra:bool=False) -> dict:
+def get_company(ticker:str, live:bool=False, extra:bool=False, uselast:bool=False, test:bool=False) -> dict:
     ticker = ticker.upper()
     results = {}
 
     if live:
-        company = fetcher.get_company_live(ticker)
+        company = fetcher.get_company_live(ticker, uselast)
         if company is not None:
-            if company.info is not None:
+            if company.info is not None and not test:
                 try:
                     results['name'] = company.info.get('shortName')[:95] if company.info.get('shortName') is not None else UNAVAILABLE
                     results['description'] = company.info.get('longBusinessSummary')[:4995] if company.info.get('longBusinessSummary') is not None else UNAVAILABLE
@@ -352,11 +352,11 @@ def get_index_tickers_master(index:str, type:str='google') -> list[str]:
 
     return symbols
 
-def get_option_expiry(ticker:str) -> tuple[str]:
-    return fetcher.get_option_expiry(ticker)
+def get_option_expiry(ticker:str, uselast:bool=False) -> tuple[str]:
+    return fetcher.get_option_expiry(ticker, uselast)
 
-def get_option_chain(ticker:str) -> dict:
-    return fetcher.get_option_chain(ticker)
+def get_option_chain(ticker:str, uselast:bool=False) -> dict:
+    return fetcher.get_option_chain(ticker, uselast)
 
 def get_treasury_rate(ticker:str='DTB3') -> float:
     # DTB3: Default to 3-Month Treasury Rate
