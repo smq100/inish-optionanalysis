@@ -7,7 +7,8 @@ from data import store as store
 from data import manager as manager
 from utils import utils
 
-_logger = utils.get_logger(logging.WARNING)#, logfile='output')
+
+_logger = utils.get_logger(logging.WARNING, logfile='output')
 
 
 class Interface:
@@ -49,8 +50,6 @@ class Interface:
             self.main_menu()
 
     def main_menu(self, selection:int=0) -> None:
-        _logger.info(f'{__name__}: Starting console...')
-
         if not self.stop:
             self.show_database_information()
 

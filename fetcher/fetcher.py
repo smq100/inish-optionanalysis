@@ -16,8 +16,12 @@ import fetcher as f
 import data as d
 from utils import utils
 
-_logger = utils.get_logger()
 
+_THROTTLE_FETCH = 0.10  # Min secs between calls to fetch pricing
+_THROTTLE_ERROR = 1.00  # Min secs between calls after error
+_RETRIES = 2            # Number of fetch retries after error
+
+_logger = utils.get_logger()
 
 # Quandl credentials
 CREDENTIALS = os.path.join(os.path.dirname(__file__), 'quandl.ini')
@@ -25,8 +29,6 @@ config = configparser.ConfigParser()
 config.read(CREDENTIALS)
 qd.ApiConfig.api_key = config['DEFAULT']['APIKEY']
 
-_THROTTLE = 0.050 # Min secs between calls to Yahoo
-_RETRIES = 1
 
 def is_connected(hostname:str='google.com') -> bool:
     try:
@@ -46,42 +48,37 @@ def validate_ticker(ticker:str) -> bool:
 
     valid = False
 
-    # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
+    # YFinance (or Pandas) throws exceptions with bad info (YFinance bug?)
     try:
         _logger.info(f'{__name__}: Fetching Yahoo ticker information for {ticker}...')
         if yf.Ticker(ticker) is not None:
             valid = True
-    except:
+    except Exception:
         valid = False
 
     return valid
 
-_elapsed = 0.0
 _last_company:pd.DataFrame = None
 
 def get_company_live(ticker:str, uselast:bool=False) -> pd.DataFrame:
     if not _connected:
         raise ConnectionError('No internet connection')
 
-    global _elapsed
     global _last_company
     company = None
-
-    # Throttle requests to help avoid being cut off by Yahoo
-    while time.perf_counter() - _elapsed < _THROTTLE: time.sleep(_THROTTLE)
-    _elapsed = time.perf_counter()
 
     if uselast:
         _logger.info(f'{__name__}: Re-using company information for {ticker}')
         company = _last_company
     else:
         _logger.info(f'{__name__}: Fetching live company information for {ticker} from Yahoo')
+
         company = yf.Ticker(ticker)
 
     if company is not None:
         try:
-                # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
-                _ = company.info
+            # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
+            _ = company.info
         except Exception as e:
             _logger.warning(f'{__name__}: No company found for {ticker}: {str(e)}')
             company = None
@@ -113,11 +110,11 @@ def _get_history_yfinance(ticker:str, days:int=-1, uselast:bool=False) -> pd.Dat
 
                     if history is None:
                         _logger.warning(f'{__name__}: {d.ACTIVE_DATASOURCE} history for {ticker} is None ({retry+1})')
-                        time.sleep(0.5)
+                        time.sleep(_THROTTLE_ERROR)
                     elif history.empty:
                         history = None
                         _logger.warning(f'{__name__}: {d.ACTIVE_DATASOURCE} history for {ticker} is empty ({retry+1})')
-                        time.sleep(0.5)
+                        time.sleep(_THROTTLE_ERROR)
                     else:
                         history.reset_index(inplace=True)
 
@@ -129,9 +126,9 @@ def _get_history_yfinance(ticker:str, days:int=-1, uselast:bool=False) -> pd.Dat
                         _logger.info(f'{__name__}: Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
                         break
                 except Exception as e:
-                    _logger.error(f'{__name__}: Retry {retry} to fetch history of {ticker} from {d.ACTIVE_DATASOURCE}: {e}')
+                    _logger.error(f'{__name__}: Exception: {e}: Retry {retry} to fetch history of {ticker} from {d.ACTIVE_DATASOURCE}')
                     history = None
-                    time.sleep(1)
+                    time.sleep(_THROTTLE_ERROR)
     else:
         _logger.warning(f'{__name__}: No company information available for {ticker}')
 
@@ -155,11 +152,11 @@ def _get_history_quandl(ticker:str, days:int=-1) -> pd.DataFrame:
 
                 if history is None:
                     _logger.warning(f'{__name__}: {d.ACTIVE_DATASOURCE} history for {ticker} is None ({retry+1})')
-                    time.sleep(0.5)
+                    time.sleep(_THROTTLE_ERROR)
                 elif history.empty:
                     history = None
                     _logger.warning(f'{__name__}: {d.ACTIVE_DATASOURCE} history for {ticker} is empty ({retry+1})')
-                    time.sleep(0.5)
+                    time.sleep(_THROTTLE_ERROR)
                 else:
                     history.reset_index(inplace=True)
 
@@ -171,15 +168,22 @@ def _get_history_quandl(ticker:str, days:int=-1) -> pd.DataFrame:
                     _logger.info(f'{__name__}: Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
                     break
             except Exception as e:
-                _logger.error(f'{__name__}: Retry {retry} to fetch history of {ticker} from {d.ACTIVE_DATASOURCE}: {e}')
+                _logger.error(f'{__name__}: Exception: {e}: Retry {retry} to fetch history of {ticker} from {d.ACTIVE_DATASOURCE}')
                 history = None
-                time.sleep(1)
+                time.sleep(_THROTTLE_ERROR)
 
     return history
+
+_elapsed = 0.0
 
 def get_history_live(ticker:str, days:int=-1) -> pd.DataFrame:
     if not _connected:
         raise ConnectionError('No internet connection')
+
+    # Throttle requests to help avoid being cut off by data provider
+    global _elapsed
+    while (time.perf_counter() - _elapsed) < _THROTTLE_FETCH: time.sleep(_THROTTLE_FETCH)
+    _elapsed = time.perf_counter()
 
     history = pd.DataFrame()
 
@@ -283,7 +287,7 @@ if __name__ == '__main__':
     '''
     Retrieves a company object that may be used to gather numerous data about the company and security.
 
-    Ticker attributes include:
+    YFinance ticker attributes include:
         .history(start="2010-01-01",  end=”2020-07-21”)
         .analysis
         .actions
