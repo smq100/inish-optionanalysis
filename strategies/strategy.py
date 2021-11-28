@@ -3,6 +3,7 @@ import abc
 from abc import ABC
 import datetime as dt
 import math
+from dataclasses import dataclass
 
 import pandas as pd
 
@@ -12,7 +13,6 @@ from data import store as store
 from company.company import Company
 from options.option import Option
 from options.chain import Chain
-from analysis.strategy import StrategyAnalysis
 from pricing.pricing import Pricing
 from pricing.blackscholes import BlackScholes
 from pricing.montecarlo import MonteCarlo
@@ -46,15 +46,12 @@ class Strategy(ABC):
         self.width = width
         self.pricing_method = 'black-scholes'
         self.chain:Chain = Chain(self.ticker)
-        self.analysis = StrategyAnalysis()
+        self.analysis = Analysis()
         self.legs:list[Leg] = []
         self.initial_spot = 0.0
         self.initial_spot = self.get_current_spot(ticker, roundup=True)
 
         self.analysis.credit_debit = 'debit' if direction == 'long' else 'credit'
-
-    def __str__(self):
-        return 'Strategy abstract base class'
 
     def calculate(self) -> None:
         for leg in self.legs:
@@ -65,7 +62,7 @@ class Strategy(ABC):
         pass
 
     def reset(self) -> None:
-        self.analysis = StrategyAnalysis()
+        self.analysis = Analysis()
 
     def update_expiry(self, date:dt.datetime) -> None:
         for leg in self.legs:
@@ -147,19 +144,18 @@ class Strategy(ABC):
     def compress_table(table:pd.DataFrame, rows:int, cols:int) -> pd.DataFrame:
         if not isinstance(table, pd.DataFrame):
             raise ValueError("'table' must be a Pandas DataFrame")
-        else:
-            srows, scols = table.shape
-            if cols > 0 and cols < scols:
-                # thin out cols
-                step = int(math.ceil(scols/cols))
-                end = table[table.columns[-2::]]        # Save the last two cols
-                table = table[table.columns[:-2:step]]  # Thin the table (less the last two cols)
-                table = pd.concat([table, end], axis=1) # Add back the last two cols
 
-            if rows > 0 and rows < srows:
-                # Thin out rows
-                step = int(math.ceil(srows/rows))
-                table = table.iloc[::step]
+        srows, scols = table.shape
+        if cols > 0 and cols < scols:
+            step = int(math.ceil(scols/cols))
+            end = table[table.columns[-2::]]        # Save the last two cols
+            table = table[table.columns[:-2:step]]  # Thin the table (less the last two cols)
+            table = pd.concat([table, end], axis=1) # Add back the last two cols
+
+        if rows > 0 and rows < srows:
+            # Thin out rows
+            step = int(math.ceil(srows/rows))
+            table = table.iloc[::step]
 
         return table
 
@@ -436,6 +432,34 @@ class Leg:
 
         return valid
 
+@dataclass
+class Analysis:
+    table:pd.DataFrame = None
+    credit_debit = ''
+    sentiment = ''
+    amount = 0.0
+    max_gain = 0.0
+    max_loss = 0.0
+    breakeven = 0.0
+
+    def __str__(self):
+        if self.table is not None:
+            gain = f'${self.max_gain:.2f}' if self.max_gain >= 0.0 else 'Unlimited'
+            loss = f'${self.max_loss:.2f}' if self.max_loss >= 0.0 else 'Unlimited'
+
+            output = \
+                f'Type:      {self.credit_debit.title()}\n'\
+                f'Sentiment: {self.sentiment.title()}\n'\
+                f'Amount:    ${abs(self.amount):.2f} {self.credit_debit}\n'\
+                f'Max Gain:  {gain}\n'\
+                f'Max Loss:  {loss}\n'\
+                f'Breakeven: ${self.breakeven:.2f} at expiry\n'
+        else:
+            output = 'Not yet analyzed'
+
+        return output
+
+
 if __name__ == '__main__':
     import logging
     from strategies.call import Call
@@ -443,10 +467,12 @@ if __name__ == '__main__':
     from strategies.vertical import Vertical
     from utils import utils
 
-    utils.get_logger(logging.DEBUG)
+    # utils.get_logger(logging.DEBUG)
 
     # strategy = Vertical('AAPL', 'call', 'long', 1, 1, True)
-    strategy = Call('AAPL', 'call', 'long', 1, 1, True)
+    strategy = Call('NVDA', 'call', 'long', 1, 1, True)
     # strategy = Put('AAPL', 'call', 'long', 1, 1, True)
     strategy.analyze()
-    print(strategy.analysis.table)
+    # print(strategy)
+    print(strategy.analysis)
+    # print(strategy.analysis.table)

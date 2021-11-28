@@ -14,14 +14,15 @@ from utils import utils
 
 _logger = utils.get_logger(logging.WARNING, logfile='')
 
-BASEPATH = os.getcwd()+'/screener/screens/'
+BASEPATH = os.getcwd() + '/screener/screens/'
 SCREEN_SUFFIX = 'screen'
-LISTTOP = 10
-LISTTOP_CORR = 3
 COOR_CUTOFF = 0.85
+LISTTOP = 10
+LISTTOP_TREND = 5
+LISTTOP_CORR = 3
 
 class Interface:
-    def __init__(self, table:str='', screen:str='', quick:bool=True, exit:bool=False):
+    def __init__(self, table:str='', screen:str='', quick:bool=False, exit:bool=False):
         self.table = table.upper()
         self.screen_base = screen
         self.quick = quick
@@ -30,7 +31,7 @@ class Interface:
         self.auto = False
         self.screen_path = ''
         self.results:list[Result] = []
-        self.results_corr:list[tuple[str,DataFrame.Series]]
+        self.results_corr:list[tuple[str,DataFrame.Series]]=[]
         self.valids = 0
         self.screener:Screener = None
         self.correlate:Correlate = None
@@ -75,9 +76,10 @@ class Interface:
                 '2': 'Select Screen',
                 '3': 'Screen',
                 '4': 'Coorelate',
-                '5': 'Analyze',
-                '6': 'Show Top',
-                '7': 'Show All',
+                '5': 'Support & Resistance',
+                '6': 'Options',
+                '7': 'Show Top',
+                '8': 'Show All',
                 '0': 'Exit'
             }
 
@@ -87,11 +89,14 @@ class Interface:
             if self.screen_base:
                 menu_items['2'] = f'Select Screen ({self.screen_base})'
 
+            if self.quick:
+                menu_items['5'] += ' (quick)'
+
             if len(self.results) > 0:
-                menu_items['7'] = f'Show All ({self.valids})'
+                menu_items['8'] = f'Show All ({self.valids})'
 
             if selection == 0:
-                selection = utils.menu(menu_items, 'Select Operation', 0, 7)
+                selection = utils.menu(menu_items, 'Select Operation', 0, 8)
 
             if selection == 1:
                 self.select_list()
@@ -105,10 +110,12 @@ class Interface:
                 if self.run_coorelate():
                     self.print_coorelations()
             elif selection == 5:
-                self.run_analyze()
+                self.run_support_resistance()
             elif selection == 6:
-                self.print_results(top=LISTTOP)
+                self.run_options()
             elif selection == 7:
+                self.print_results(top=LISTTOP)
+            elif selection == 8:
                 self.print_results()
             elif selection == 0:
                 self.exit = True
@@ -224,12 +231,12 @@ class Interface:
 
         return success
 
-    def run_analyze(self, corr:bool=False) -> None:
-        if len(self.results) > 0:
+    def run_support_resistance(self, corr:bool=False) -> None:
+        if self.valids > 0:
             if corr:
-                tickers = [result[1]['ticker'] for result in self.results_corr if result[1]["value"] > COOR_CUTOFF][:LISTTOP_CORR]
+                tickers = [result[1]['ticker'] for result in self.results_corr if result[1]['value'] > COOR_CUTOFF][:LISTTOP_CORR]
             else:
-                tickers = [str(result) for result in self.results if bool(result)][:LISTTOP]
+                tickers = [str(result) for result in self.results if bool(result)][:LISTTOP_TREND]
 
             utils.progress_bar(0, 0, prefix='Analyzing', reset=True)
 
@@ -253,7 +260,10 @@ class Interface:
                 print()
                 plt.show()
         else:
-            utils.print_error('Run screen before analyzing')
+            utils.print_error('No valid results to analyze')
+
+    def run_options(self):
+        pass
 
     def print_results(self, top:int=-1, verbose:bool=False, ticker:str='') -> None:
         if not self.table:
@@ -298,7 +308,7 @@ class Interface:
             [print(result) for result in results]
             answer = utils.input_text('\nRun analysis on top findings? (y/n): ')
             if answer.lower() == 'y':
-                self.run_analyze(True)
+                self.run_support_resistance(True)
         else:
             utils.print_message('No significant coorelations found')
 
@@ -357,20 +367,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Screener')
     parser.add_argument('-t', '--table', help='Specify a symbol or table', required=False, default='')
     parser.add_argument('-s', '--screen', help='Specify a screening script', required=False, default='')
-    parser.add_argument('-x', '--exit', help='Run the script and quit (only valid with -t and -s) then exit', action='store_true')
+    parser.add_argument('-q', '--quick', help='Run a quick analysis', action='store_true')
     parser.add_argument('-v', '--verbose', help='Show verbose output', action='store_true')
+    parser.add_argument('-x', '--exit', help='Run the script and quit (only valid with -t and -s) then exit', action='store_true')
 
     command = vars(parser.parse_args())
     table = ''
     screen = ''
 
-    if 'table' in command.keys():
-        table = command['table']
-
-    if 'screen' in command.keys():
-        screen = command['screen']
-
-    if screen and table and command['exit']:
-        Interface(table, screen, exit=True)
-    else:
-        Interface(table, screen)
+    Interface(table=command['table'], screen=command['screen'], quick=command['quick'], exit=command['exit'])

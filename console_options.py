@@ -19,7 +19,7 @@ from data import store
 from utils import utils
 
 MAX_ROWS = 50
-MAX_COLS = 18
+MAX_COLS = 11
 
 _logger = utils.get_logger(logging.WARNING, logfile='')
 
@@ -221,9 +221,7 @@ class Interface():
                 if style == 0:
                     style = utils.input_integer('(1) Summary, (2) Table, (3) Chart, (4) Contour, (5) Surface, or (0) Cancel: ', 0, 5)
                 if style > 0:
-                    title = f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].company}) {str(self.strategy).title()} {self.strategy.legs[0].option.contract}'
-                    if len(self.strategy.legs) > 1:
-                        title += f'/{self.strategy.legs[1].option.contract}'
+                    title = f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].company}) {str(self.strategy).title()}'
 
                     rows, cols = analysis.shape
                     if rows > MAX_ROWS:
@@ -240,6 +238,12 @@ class Interface():
                         analysis = self.strategy.compress_table(analysis, rows, cols)
 
                     if style == 1:
+                        title += f' ({self.strategy.legs[0].option.contract}'
+                        if len(self.strategy.legs) > 1:
+                            title += f' / {self.strategy.legs[1].option.contract})'
+                        else:
+                            title += ')'
+
                         utils.print_message(title)
                         print(self.strategy.analysis)
                     elif style == 2:
