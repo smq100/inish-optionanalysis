@@ -178,12 +178,11 @@ class Interface():
             else:
                 leg = 0
 
-            value = self.strategy.legs[leg].table
+            value = self.strategy.legs[leg].value
             if value is not None:
                 if style == 0:
                     style = utils.input_integer('(1) Table, (2) Chart, (3) Contour, (4) Surface, or (0) Cancel: ', 0, 4)
                 if style > 0:
-                        # title = f'Value: {self.strategy.legs[leg].company}'
                         title = f'{self.strategy.legs[leg]}'
                         rows, cols = value.shape
 

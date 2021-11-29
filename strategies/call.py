@@ -34,7 +34,7 @@ class Call(Strategy):
 
     def analyze(self) -> None:
         if self._validate():
-            self.legs[0].calculate()
+            self.legs[0].calculate(self.legs[0].option.strike)
 
             price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
 
@@ -57,9 +57,9 @@ class Call(Strategy):
         price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
 
         if self.legs[0].direction == 'long':
-            profit = self.legs[0].table - price
+            profit = self.legs[0].value - price
         else:
-            profit = self.legs[0].table
+            profit = self.legs[0].value
             profit = profit.applymap(lambda x: (price - x) if x < price else -(x - price))
 
         return profit
@@ -91,6 +91,6 @@ if __name__ == '__main__':
     utils.get_logger(logging.INFO)
 
     call = Call('AAPL', 'call', 'long', 1, 1)
-    call.legs[0].calculate(table=False, greeks=False)
+    call.legs[0].calculate(call.legs[0].option.strike, value_table=False, greeks=False)
     output = f'${call.legs[0].option.calc_price:.2f}, ({call.legs[0].option.strike:.2f})'
     print(output)

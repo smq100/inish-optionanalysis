@@ -55,8 +55,8 @@ class Vertical(Strategy):
         ''' Analyze the strategy (Important: Assumes the long leg is the index-0 leg)'''
 
         if self._validate():
-            self.legs[0].calculate()
-            self.legs[1].calculate()
+            self.legs[0].calculate(self.legs[0].option.strike)
+            self.legs[1].calculate(self.legs[0].option.strike)
 
             price_long = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
             price_short = self.legs[1].option.last_price if self.legs[1].option.last_price > 0.0 else self.legs[1].option.calc_price
@@ -102,9 +102,9 @@ class Vertical(Strategy):
 
     def generate_profit_table(self) -> pd.DataFrame:
         if self.analysis.credit_debit == 'credit':
-            profit = ((self.legs[0].table - self.legs[1].table) * self.quantity) + self.analysis.amount
+            profit = ((self.legs[0].value - self.legs[1].value) * self.quantity) + self.analysis.amount
         else:
-            profit = ((self.legs[0].table - self.legs[1].table) * self.quantity) - self.analysis.amount
+            profit = ((self.legs[0].value - self.legs[1].value) * self.quantity) - self.analysis.amount
 
         return profit
 
@@ -170,7 +170,7 @@ if __name__ == '__main__':
     utils.get_logger(logging.INFO)
 
     call = Vertical('MSFT', 'call', 'long', 1)
-    call.legs[0].calculate(table=False, greeks=False)
+    call.legs[0].calculate(call.legs[0].option.strike, value_table=False, greeks=False)
     output = f'${call.legs[0].option.calc_price:.2f}, ({call.legs[0].option.strike:.2f})'
     print(output)
     output = f'${call.legs[1].option.calc_price:.2f}, ({call.legs[1].option.strike:.2f})'

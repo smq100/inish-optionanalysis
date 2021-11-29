@@ -34,7 +34,7 @@ class Put(Strategy):
 
     def analyze(self) -> None:
         if self._validate():
-            self.legs[0].calculate()
+            self.legs[0].calculate(self.legs[0].option.strike)
 
             price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
 
@@ -57,10 +57,10 @@ class Put(Strategy):
         price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
 
         if self.legs[0].direction == 'long':
-            profit = self.legs[0].table - price
+            profit = self.legs[0].value - price
             profit = profit.applymap(lambda x: x if x > -price else -price)
         else:
-            profit = self.legs[0].table
+            profit = self.legs[0].value
             profit = profit.applymap(lambda x: (price - x) if x < price else -(x - price))
 
         return profit
@@ -90,7 +90,7 @@ if __name__ == '__main__':
     import logging
     utils.get_logger(logging.INFO)
 
-    call = Put('MSFT', 'call', 'long', 1)
-    call.legs[0].calculate(table=False, greeks=False)
-    output = f'${call.legs[0].option.calc_price:.2f}, ({call.legs[0].option.strike:.2f})'
+    put = Put('MSFT', 'call', 'long', 1)
+    put.legs[0].calculate(put.legs[0].option.strike, value_table=False, greeks=False)
+    output = f'${put.legs[0].option.calc_price:.2f}, ({put.legs[0].option.strike:.2f})'
     print(output)
