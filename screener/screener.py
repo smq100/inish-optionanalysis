@@ -6,12 +6,12 @@ import numpy as np
 
 from base import Threaded
 from company.company import Company
-from utils import utils
+from utils import ui
 from data import store as store
 from .interpreter import Interpreter
 
 
-_logger = utils.get_logger()
+_logger = ui.get_logger()
 
 BASEPATH = os.getcwd() + '/screener/screens/'
 SCREEN_SUFFIX = '.screen'
@@ -221,7 +221,7 @@ class Screener(Threaded):
 if __name__ == '__main__':
     import logging
 
-    utils.get_logger(logging.DEBUG)
+    ui.get_logger(logging.DEBUG)
 
     s = Screener('DOW')
     s._load('/Users/steve/Documents/Source Code/Personal/OptionAnalysis/screener/screens/test.screen')

@@ -4,10 +4,10 @@ import pandas as pd
 
 import strategies as s
 from strategies.strategy import Strategy
-from utils import utils
+from utils import ui
 
 
-_logger = utils.get_logger()
+_logger = ui.get_logger()
 
 class Call(Strategy):
     def __init__(self, ticker:str, product:str, direction:str, width:int, quantity:int, load_default:bool=False):
@@ -88,7 +88,7 @@ class Call(Strategy):
 
 if __name__ == '__main__':
     import logging
-    utils.get_logger(logging.INFO)
+    ui.get_logger(logging.INFO)
 
     call = Call('AAPL', 'call', 'long', 1, 1)
     call.legs[0].calculate(call.legs[0].option.strike, value_table=False, greeks=False)

@@ -1,9 +1,10 @@
 import time
 import logging
 from logging import Logger
+from utils import math as m
+
 
 LOG_DIR = './log'
-_MIN_MAX_PERCENT = 0.20
 
 
 def get_logger(level:int=None, logfile:str='') -> Logger:
@@ -72,7 +73,7 @@ def input_integer(message:str, min_:int, max_:int) -> int:
     val = min_ - 1
     while val < min_:
         text = input(message)
-        if not isnumeric(text):
+        if not m.isnumeric(text):
             print_error(f'Invalid value. Enter an integer between {min_} and {max_}')
             val = min_ - 1
         else:
@@ -92,7 +93,7 @@ def input_float(message:str, min_:float, max_:float) -> float:
     val = min_ - 1
     while val < min_:
         text = input(message)
-        if not isnumeric(text):
+        if not m.isnumeric(text):
             print_error(f'Invalid value. Enter an integer between {min_} and {max_}')
             val = min_ - 1
         else:
@@ -191,34 +192,6 @@ def progress_bar(iteration, total:int, prefix:str='Working', suffix:str='', tick
 
         print(f'\r{prefix} |{bar}| {suffix}             ', end='\r')
 
-def mround(n:float, precision:float) -> float:
-    val = float(round(n / precision) * precision)
-    if val < 0.01: val = 0.01
-
-    return val
-
-def isnumeric(value) -> bool:
-    try:
-        float(value)
-        return True
-    except ValueError:
-        return False
-
-def calculate_min_max_step(strike:float) -> tuple[float, float, float]:
-    min_ = 0.0
-    max_ = 0.0
-    step = 0.0
-
-    min_ = strike * (1.0 - _MIN_MAX_PERCENT)
-    max_ = strike * (1.0 + _MIN_MAX_PERCENT)
-
-    step = (max_ - min_) / 40.0
-    step = mround(step, step / 10.0)
-
-    if min_ < step:
-        min_ = step
-
-    return min_, max_, step
 
 if __name__ == '__main__':
     import time

@@ -2,10 +2,10 @@ import logging
 
 from learning.predict import Prediction
 from data import store as store
-from utils import utils
+from utils import ui
 
 
-_logger = utils.get_logger(logging.WARNING, logfile='')
+_logger = ui.get_logger(logging.WARNING, logfile='')
 
 class Interface:
     def __init__(self, ticker='', days=30, exit=False):
@@ -21,7 +21,7 @@ class Interface:
         elif store.is_ticker(self.ticker):
             self.main_menu(selection=2)
         else:
-            utils.print_error('Invalid ticker specified')
+            ui.print_error('Invalid ticker specified')
 
     def main_menu(self, selection=0):
         while True:
@@ -35,7 +35,7 @@ class Interface:
                 menu_items['1'] = f'Specify ticker ({self.ticker})'
 
             if selection == 0:
-                selection = utils.menu(menu_items, 'Select Operation', 0, 2)
+                selection = ui.menu(menu_items, 'Select Operation', 0, 2)
 
             if selection == 1:
                 self.select_ticker()
@@ -55,14 +55,14 @@ class Interface:
             predict.prepare()
             predict.model()
 
-            utils.print_message(f'Metrics for {self.ticker}')
+            ui.print_message(f'Metrics for {self.ticker}')
             print(f'Accuracy: {predict.accuracy:.3e}')
             print(f'Loss: {predict.loss:.3e}')
 
             predict.test()
             predict.plot()
         else:
-            utils.print_error('Please first specify ticker')
+            ui.print_error('Please first specify ticker')
 
     def select_ticker(self):
         valid = False
@@ -72,7 +72,7 @@ class Interface:
             if ticker != '0':
                 valid = store.is_ticker(ticker)
                 if not valid:
-                    utils.print_error('Invalid ticker. Try again or select "0" to cancel')
+                    ui.print_error('Invalid ticker. Try again or select "0" to cancel')
             else:
                 break
 

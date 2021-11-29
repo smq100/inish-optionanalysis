@@ -12,9 +12,11 @@ import trendln
 
 from base import Threaded
 from data import store as store
-from utils import utils
+from utils import ui
+from utils import math as m
 
-_logger = utils.get_logger()
+
+_logger = ui.get_logger()
 _rounding = 0.075
 
 METHOD = {
@@ -492,7 +494,7 @@ class SupportResistance(Threaded):
         values = []
         text = []
         for index, line in enumerate(resistance.itertuples()):
-            ep = utils.mround(line.end_point, _rounding)
+            ep = m.mround(line.end_point, _rounding)
             if ep not in values:
                 date = self.history['date'].iloc[-1]
                 dates += [date.strftime('%Y-%m-%d')]
@@ -503,7 +505,7 @@ class SupportResistance(Threaded):
         dates = []
         values = []
         for index, line in enumerate(support.itertuples()):
-            ep = utils.mround(line.end_point, _rounding)
+            ep = m.mround(line.end_point, _rounding)
             if ep not in values:
                 date = self.history['date'].iloc[-1]
                 dates += [date.strftime('%Y-%m-%d')]
@@ -580,7 +582,7 @@ if __name__ == '__main__':
     import sys
     import logging
 
-    utils.get_logger(logging.DEBUG)
+    ui.get_logger(logging.DEBUG)
 
     if len(sys.argv) > 1:
         methods = ['NSQUREDLOGN', 'NCUBED', 'HOUGHLINES', 'PROBHOUGH']

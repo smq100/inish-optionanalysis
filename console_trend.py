@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 
 from analysis.trend import SupportResistance
 from data import store as store
-from utils import utils
+from utils import ui
 
 
-_logger = utils.get_logger(logging.WARNING, logfile='')
+_logger = ui.get_logger(logging.WARNING, logfile='')
 
 class Interface:
     def __init__(self, tickers:list[str]=[], days:int=1000, quick:bool=False, exit:bool=False):
@@ -23,7 +23,7 @@ class Interface:
         quit = False
         for ticker in tickers:
             if not store.is_ticker(ticker.upper()):
-                utils.print_error(f'Invalid ticker: {ticker}')
+                ui.print_error(f'Invalid ticker: {ticker}')
                 quit = True
                 break
 
@@ -50,7 +50,7 @@ class Interface:
             if self.quick:
                 menu_items['4'] += ' (quick)'
 
-            selection = utils.menu(menu_items, 'Select Operation', 0, 4)
+            selection = ui.menu(menu_items, 'Select Operation', 0, 4)
 
             if selection == 1:
                 self.select_ticker()
@@ -76,7 +76,7 @@ class Interface:
                 if valid:
                     self.tickers = [ticker]
                 else:
-                    utils.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
+                    ui.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
             else:
                 break
 
@@ -90,18 +90,18 @@ class Interface:
                 if valid:
                     self.tickers += [ticker]
                 else:
-                    utils.print_error('Invalid ticker. Try again or enter 0 to cancel')
+                    ui.print_error('Invalid ticker. Try again or enter 0 to cancel')
             else:
                 break
 
     def select_days(self):
         self.days = 0
         while self.days < 30:
-            self.days = utils.input_integer('Enter number of days: ', 30, 9999)
+            self.days = ui.input_integer('Enter number of days: ', 30, 9999)
 
     def calculate_support_and_resistance(self):
         if self.tickers:
-            utils.progress_bar(0, 0, reset=True)
+            ui.progress_bar(0, 0, reset=True)
 
             for ticker in self.tickers:
                 if self.quick:
@@ -122,7 +122,7 @@ class Interface:
             print()
             plt.show()
         else:
-            utils.print_error('Enter a ticker before calculating')
+            ui.print_error('Enter a ticker before calculating')
 
     def _show_progress(self) -> None:
         while not self.trend.task_error: pass
@@ -130,16 +130,16 @@ class Interface:
         if self.trend.task_error == 'None':
             while self.trend.task_error == 'None':
                 time.sleep(0.20)
-                utils.progress_bar(0, 0, suffix=self.trend.task_message)
+                ui.progress_bar(0, 0, suffix=self.trend.task_message)
 
             if self.trend.task_error == 'Hold':
                 pass
             elif self.trend.task_error == 'Done':
-                utils.print_message(f'{self.trend.task_error}: {self.trend.task_total} lines extracted in {self.trend.task_time:.1f} seconds')
+                ui.print_message(f'{self.trend.task_error}: {self.trend.task_total} lines extracted in {self.trend.task_time:.1f} seconds')
             else:
-                utils.print_error(f'{self.trend.task_error}: Error extracting lines')
+                ui.print_error(f'{self.trend.task_error}: Error extracting lines')
         else:
-            utils.print_message(f'{self.trend.task_error}')
+            ui.print_message(f'{self.trend.task_error}')
 
 
 if __name__ == '__main__':

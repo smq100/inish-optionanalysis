@@ -3,7 +3,7 @@ from sqlalchemy import UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
-from utils import utils
+from utils import ui
 
 Base = declarative_base()
 

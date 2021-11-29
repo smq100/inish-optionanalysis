@@ -1,9 +1,9 @@
 import pandas as pd
 
-from utils import utils
+from utils import ui
 from company.company import Company
 
-_logger = utils.get_logger()
+_logger = ui.get_logger()
 
 VALID_TECHNICALS = ('high', 'low', 'close', 'volume', 'sma', 'rsi', 'beta', 'rating', 'mcap', 'value', 'true')
 VALID_CONDITIONALS = ('le', 'eq', 'ge')

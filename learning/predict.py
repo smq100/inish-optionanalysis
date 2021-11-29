@@ -7,13 +7,13 @@ from tensorflow.keras.models import Sequential
 
 from base import Threaded
 from data import store as store
-from utils import utils
+from utils import ui
 
 _models_dir = './learning/models'
 _days_train = 5000
 _days_test = 1000
 
-_logger = utils.get_logger()
+_logger = ui.get_logger()
 
 class Prediction(Threaded):
     def __init__(self, ticker:str, future:int=30):
@@ -104,7 +104,7 @@ class Prediction(Threaded):
 
 if __name__ == '__main__':
     import logging
-    _logger = utils.get_logger(logging.DEBUG)
+    _logger = ui.get_logger(logging.DEBUG)
 
     predict = Prediction('MSFT')
     predict.prepare()

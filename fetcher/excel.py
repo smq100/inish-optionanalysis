@@ -6,9 +6,9 @@ https://github.com/chronossc/openpyxl
 from openpyxl import load_workbook
 
 from .sheet import Sheet
-from utils import utils
+from utils import ui
 
-_logger = utils.get_logger()
+_logger = ui.get_logger()
 
 COLUMNS = ['','A','B','C','D','E','F']
 

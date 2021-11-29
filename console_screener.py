@@ -6,9 +6,9 @@ import logging
 import data as d
 from screener.screener import Screener, Result, INIT_NAME
 from data import store as store
-from utils import utils
+from utils import ui
 
-_logger = utils.get_logger(logging.WARNING, logfile='')
+_logger = ui.get_logger(logging.WARNING, logfile='')
 
 BASEPATH = os.getcwd()+'/screener/screens/'
 SCREEN_SUFFIX = 'screen'
@@ -35,7 +35,7 @@ class Interface:
         else:
             self.end = 0
             abort = False
-            utils.print_error("'backtest' must be an integer. Using a value of 0")
+            ui.print_error("'backtest' must be an integer. Using a value of 0")
 
         if self.table:
             if self.table == 'ALL':
@@ -49,13 +49,13 @@ class Interface:
             else:
                 self.table = ''
                 abort = True
-                utils.print_error(f'Exchange, index or ticker not found: {self.table}')
+                ui.print_error(f'Exchange, index or ticker not found: {self.table}')
 
         if self.screen_base:
             if os.path.exists(BASEPATH+screen+'.'+SCREEN_SUFFIX):
                 self.screen_path = BASEPATH + self.screen_base + '.' + SCREEN_SUFFIX
             else:
-                utils.print_error(f'File "{self.screen_base}" not foundx')
+                ui.print_error(f'File "{self.screen_base}" not foundx')
                 abort = True
                 self.screen_base = ''
 
@@ -95,7 +95,7 @@ class Interface:
                 menu_items['6'] = f'Show All ({self.valids})'
 
             if selection == 0:
-                selection = utils.menu(menu_items, 'Select Operation', 0, 8)
+                selection = ui.menu(menu_items, 'Select Operation', 0, 8)
 
             if selection == 1:
                 self.select_source()
@@ -132,14 +132,14 @@ class Interface:
             '0': 'Cancel',
         }
 
-        selection = utils.menu(menu_items, 'Select Data Source', 0, 2)
+        selection = ui.menu(menu_items, 'Select Data Source', 0, 2)
         if selection == 1:
             self.live = False
         elif selection == 2:
             self.live = True
 
     def select_list(self) -> None:
-        list = utils.input_text('Enter exchange, index, or ticker: ').upper()
+        list = ui.input_text('Enter exchange, index, or ticker: ').upper()
         if store.is_exchange(list):
             self.table = list
         elif store.is_list(list):
@@ -149,7 +149,7 @@ class Interface:
         else:
             self.table = ''
             self.screener = None
-            utils.print_error(f'List {list} is not valid')
+            ui.print_error(f'List {list} is not valid')
 
     def select_screen(self) -> None:
         self.script = []
@@ -179,22 +179,22 @@ class Interface:
                 menu_items[f'{index+1}'] = f'{item.title()}'
             menu_items['0'] = 'Cancel'
 
-            selection = utils.menu(menu_items, 'Select Screen', 0, index+1)
+            selection = ui.menu(menu_items, 'Select Screen', 0, index+1)
             if selection > 0:
                 self.screen_base = paths[selection-1]
                 self.screen_path = BASEPATH + self.screen_base + '.' + SCREEN_SUFFIX
                 self.results = []
         else:
-            utils.print_message('No screener files found')
+            ui.print_message('No screener files found')
 
     def run_screen(self, backtest:bool=False) -> bool:
         success = False
         self.auto = False
 
         if not self.table:
-            utils.print_error('No exchange, index, or ticker specified')
+            ui.print_error('No exchange, index, or ticker specified')
         elif not self.screen_path:
-            utils.print_error('No screen specified')
+            ui.print_error('No screen specified')
         else:
             if backtest:
                 self.live = False
@@ -204,7 +204,7 @@ class Interface:
             try:
                 self.screener = Screener(self.table, screen=self.screen_path, end=self.end, live=self.live)
             except ValueError as e:
-                utils.print_error(str(e))
+                ui.print_error(str(e))
             else:
                 self.results = []
                 self.task = threading.Thread(target=self.screener.run_script)
@@ -219,7 +219,7 @@ class Interface:
                         if result:
                             self.valids += 1
 
-                    utils.print_message(f'{self.valids} symbols identified in {self.screener.task_time:.1f} seconds')
+                    ui.print_message(f'{self.valids} symbols identified in {self.screener.task_time:.1f} seconds')
 
                     success = True
 
@@ -227,7 +227,7 @@ class Interface:
 
     def run_backtest(self, prompt:bool=True, bullish:bool=True) -> bool:
         if prompt:
-            input = utils.input_integer('Input number of days (10-100): ', 10, 100)
+            input = ui.input_integer('Input number of days (10-100): ', 10, 100)
             self.end = input
 
         success = self.run_screen(backtest=True)
@@ -246,11 +246,11 @@ class Interface:
 
     def print_results(self, top:int=-1, verbose:bool=False, ticker:str='') -> None:
         if not self.table:
-            utils.print_error('No table specified')
+            ui.print_error('No table specified')
         elif not self.screen_base:
-            utils.print_error('No screen specified')
+            ui.print_error('No screen specified')
         elif len(self.results) == 0:
-            utils.print_message('No results were located')
+            ui.print_message('No results were located')
         else:
             if top <= 0:
                 results = sorted(self.screener.results, key=lambda r: str(r))
@@ -262,9 +262,9 @@ class Interface:
                 results = sorted(self.screener.results, reverse=True, key=lambda r: float(r))
 
             if ticker:
-                utils.print_message(f'Screener Results for {ticker} ({self.screen_base})')
+                ui.print_message(f'Screener Results for {ticker} ({self.screen_base})')
             else:
-                utils.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen_base})')
+                ui.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen_base})')
 
             index = 1
             for result in results:
@@ -282,18 +282,18 @@ class Interface:
 
     def print_backtest(self, top:int=-1):
         if not self.table:
-            utils.print_error('No table specified')
+            ui.print_error('No table specified')
         elif not self.screen_base:
-            utils.print_error('No screen specified')
+            ui.print_error('No screen specified')
         elif len(self.results) == 0:
-            utils.print_message('No results were located')
+            ui.print_message('No results were located')
         else:
             if top <= 0:
                 top = self.screener.task_success
             elif top > self.screener.task_success:
                 top = self.screener.task_success
 
-            utils.print_message(f'Backtest Results {top} of {self.screener.task_success} ({self.screen_base})')
+            ui.print_message(f'Backtest Results {top} of {self.screener.task_success} ({self.screen_base})')
 
             index = 1
             for result in self.results:
@@ -306,7 +306,7 @@ class Interface:
                     break
 
     def print_ticker_results(self):
-        ticker = utils.input_text('Enter ticker: ')
+        ticker = ui.input_text('Enter ticker: ')
         if ticker:
             ticker = ticker.upper()
             if store.is_ticker(ticker):
@@ -317,7 +317,7 @@ class Interface:
         while not self.screener.task_error: pass
 
         if self.screener.task_error == 'None':
-            utils.progress_bar(self.screener.task_completed, self.screener.task_total, prefix=prefix, suffix=suffix, reset=True)
+            ui.progress_bar(self.screener.task_completed, self.screener.task_total, prefix=prefix, suffix=suffix, reset=True)
 
             while self.task.is_alive and self.screener.task_error == 'None':
                 time.sleep(0.20)
@@ -327,9 +327,9 @@ class Interface:
                 ticker = self.screener.task_ticker
                 tasks = len([True for future in self.screener.task_futures if future.running()])
 
-                utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, ticker=ticker, success=success, tasks=tasks)
+                ui.progress_bar(completed, total, prefix=prefix, suffix=suffix, ticker=ticker, success=success, tasks=tasks)
 
-            utils.print_message('Processed Messages')
+            ui.print_message('Processed Messages')
 
             results = [future.result() for future in self.screener.task_futures if future.result() is not None]
             if len(results) > 0:
@@ -337,7 +337,7 @@ class Interface:
             else:
                 print('None')
         else:
-            utils.print_message(f'{self.screener.task_error}')
+            ui.print_message(f'{self.screener.task_error}')
 
 if __name__ == '__main__':
     import argparse

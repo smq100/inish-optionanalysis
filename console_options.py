@@ -16,12 +16,12 @@ from strategies.vertical import Vertical
 from strategies.call import Call
 from strategies.put import Put
 from data import store
-from utils import utils
+from utils import ui
 
 MAX_ROWS = 50
 MAX_COLS = 11
 
-_logger = utils.get_logger(logging.WARNING, logfile='')
+_logger = ui.get_logger(logging.WARNING, logfile='')
 
 
 class Interface():
@@ -36,26 +36,26 @@ class Interface():
         pd.options.display.float_format = '{:,.2f}'.format
 
         if not store.is_live_connection():
-            utils.print_error('Internet connection required')
+            ui.print_error('Internet connection required')
         elif not store.is_ticker(ticker):
-            utils.print_error('Invalid ticker specified')
+            ui.print_error('Invalid ticker specified')
         elif strategy not in strategies.STRATEGIES:
-            utils.print_error('Invalid strategy specified')
+            ui.print_error('Invalid strategy specified')
         elif direction not in strategies.DIRECTIONS:
-            utils.print_error('Invalid direction specified')
+            ui.print_error('Invalid direction specified')
         elif width < 0:
-            utils.print_error('Invalid width specified')
+            ui.print_error('Invalid width specified')
         elif quantity < 1:
-            utils.print_error('Invalid quantity specified')
+            ui.print_error('Invalid quantity specified')
         elif strategy == 'vertp' and width < 1:
-            utils.print_error('Invalid width specified')
+            ui.print_error('Invalid width specified')
         elif strategy == 'vertc' and width < 1:
-            utils.print_error('Invalid width specified')
+            ui.print_error('Invalid width specified')
         elif self.load_strategy(self.ticker, strategy, direction, self.width, self.quantity, default, analyze or exit):
             if not exit:
                 self.main_menu()
         else:
-            utils.print_error('Problem loading strategy')
+            ui.print_error('Problem loading strategy')
 
     def main_menu(self) -> None:
         while True:
@@ -85,7 +85,7 @@ class Interface():
 
             self.show_legs()
 
-            selection = utils.menu(menu_items, 'Select Operation', 0, 8)
+            selection = ui.menu(menu_items, 'Select Operation', 0, 8)
 
             if selection == 1:
                 if self.select_ticker():
@@ -140,9 +140,9 @@ class Interface():
                 self.strategy = Vertical(ticker, 'put', direction, self.width, self.quantity, default)
             else:
                 modified = False
-                utils.print_error('Unknown argument')
+                ui.print_error('Unknown argument')
         except Exception as e:
-            utils.print_error(str(sys.exc_info()[1]))
+            ui.print_error(str(sys.exc_info()[1]))
             modified = False
 
         if modified:
@@ -156,7 +156,7 @@ class Interface():
     def analyze(self) -> None:
         errors = self.strategy.get_errors()
         if errors:
-            utils.print_error(errors)
+            ui.print_error(errors)
         else:
             self.task = threading.Thread(target=self.strategy.analyze)
             self.task.start()
@@ -174,14 +174,14 @@ class Interface():
     def show_value(self, style:int=0) -> None:
         if not self.dirty_analyze:
             if len(self.strategy.legs) > 1:
-                leg = utils.input_integer('Enter Leg: ', 1, 2) - 1
+                leg = ui.input_integer('Enter Leg: ', 1, 2) - 1
             else:
                 leg = 0
 
             value = self.strategy.legs[leg].value
             if value is not None:
                 if style == 0:
-                    style = utils.input_integer('(1) Table, (2) Chart, (3) Contour, (4) Surface, or (0) Cancel: ', 0, 4)
+                    style = ui.input_integer('(1) Table, (2) Chart, (3) Contour, (4) Surface, or (0) Cancel: ', 0, 4)
                 if style > 0:
                         title = f'{self.strategy.legs[leg]}'
                         rows, cols = value.shape
@@ -200,7 +200,7 @@ class Interface():
                             value = self.strategy.compress_table(value, rows, cols)
 
                         if style == 1:
-                            utils.print_message(title, 2)
+                            ui.print_message(title, 2)
                             print(value)
                         elif style == 2:
                             self._show_chart(value, title, charttype='chart')
@@ -209,16 +209,16 @@ class Interface():
                         elif style == 4:
                             self._show_chart(value, title, charttype='surface')
             else:
-                utils.print_error('No tables calculated')
+                ui.print_error('No tables calculated')
         else:
-            utils.print_error('Please first perform calculation')
+            ui.print_error('Please first perform calculation')
 
     def show_analysis(self, style:int=0) -> None:
         if not self.dirty_analyze:
             analysis = self.strategy.analysis.table
             if analysis is not None:
                 if style == 0:
-                    style = utils.input_integer('(1) Summary, (2) Table, (3) Chart, (4) Contour, (5) Surface, or (0) Cancel: ', 0, 5)
+                    style = ui.input_integer('(1) Summary, (2) Table, (3) Chart, (4) Contour, (5) Surface, or (0) Cancel: ', 0, 5)
                 if style > 0:
                     title = f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].company}) {str(self.strategy).title()}'
 
@@ -243,10 +243,10 @@ class Interface():
                         else:
                             title += ')'
 
-                        utils.print_message(title)
+                        ui.print_message(title)
                         print(self.strategy.analysis)
                     elif style == 2:
-                        utils.print_message(title)
+                        ui.print_message(title)
                         print(analysis)
                     elif style == 3:
                         self._show_chart(analysis, title, charttype='chart')
@@ -255,25 +255,25 @@ class Interface():
                     elif style == 5:
                         self._show_chart(analysis, title, charttype='surface')
             else:
-                utils.print_error('No tables calculated')
+                ui.print_error('No tables calculated')
         else:
-            utils.print_error('Please first perform analysis')
+            ui.print_error('Please first perform analysis')
 
     def show_options(self) -> None:
         if len(self.strategy.legs) > 0:
             if len(self.strategy.legs) > 1:
-                leg = utils.input_integer('Enter Leg (0=all): ', 0, 2) - 1
+                leg = ui.input_integer('Enter Leg (0=all): ', 0, 2) - 1
             else:
                 leg = 0
 
             if leg < 0:
-                utils.print_message('Leg 1 Option Metrics')
+                ui.print_message('Leg 1 Option Metrics')
             else:
-                utils.print_message(f'Leg {leg+1} Option Metrics')
+                ui.print_message(f'Leg {leg+1} Option Metrics')
 
             if leg < 0:
                 print(f'{self.strategy.legs[0].option}')
-                utils.print_message('Leg 2 Option Metrics')
+                ui.print_message('Leg 2 Option Metrics')
                 print(f'{self.strategy.legs[1].option}')
             else:
                 print(f'{self.strategy.legs[leg].option}')
@@ -282,7 +282,7 @@ class Interface():
 
     def show_legs(self, leg:int=-1, delimeter:bool=True) -> None:
         if delimeter:
-            utils.print_message('Option Leg Values')
+            ui.print_message('Option Leg Values')
 
         if len(self.strategy.legs) < 1:
             print('No legs configured')
@@ -294,7 +294,7 @@ class Interface():
             output = f'{leg+1}: {self.strategy.legs[leg]}'
             print(output)
         else:
-            utils.print_error('Invalid leg')
+            ui.print_error('Invalid leg')
 
     def select_ticker(self) -> bool:
         valid = False
@@ -305,7 +305,7 @@ class Interface():
             if ticker != '0':
                 valid = store.is_ticker(ticker)
                 if not valid:
-                    utils.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
+                    ui.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
             else:
                 break
 
@@ -315,7 +315,7 @@ class Interface():
             modified = True
 
             self.load_strategy(ticker, 'call', 'long', 1, analyze=True)
-            utils.print_message('The strategy has been reset to a long call', False)
+            ui.print_message('The strategy has been reset to a long call', False)
 
         return modified
 
@@ -328,22 +328,22 @@ class Interface():
         }
 
         modified = True
-        selection = utils.menu(menu_items, 'Select Strategy', 0, 3)
+        selection = ui.menu(menu_items, 'Select Strategy', 0, 3)
 
         if selection == 1:
-            d = utils.input_integer('(1) Long, or (2) short: ', 1, 2)
+            d = ui.input_integer('(1) Long, or (2) short: ', 1, 2)
             direction = 'long' if d == 1 else 'short'
             self.width = 0
             self.load_strategy(self.strategy.ticker, 'call', direction, self.width, self.quantity)
         elif selection == 2:
-            d = utils.input_integer('(1) Long, or (2) short: ', 1, 2)
+            d = ui.input_integer('(1) Long, or (2) short: ', 1, 2)
             direction = 'long' if d == 1 else 'short'
             self.width = 0
             self.load_strategy(self.strategy.ticker, 'put', direction, self.width, self.quantity)
         elif selection == 3:
-            p = utils.input_integer('(1) Call, or (2) Put: ', 1, 2)
+            p = ui.input_integer('(1) Call, or (2) Put: ', 1, 2)
             product = 'call' if p == 1 else 'put'
-            d = utils.input_integer('(1) Debit, or (2) credit: ', 1, 2)
+            d = ui.input_integer('(1) Debit, or (2) credit: ', 1, 2)
             direction = 'long' if d == 1 else 'short'
             if product == 'call':
                 self.load_strategy(self.strategy.ticker, 'vertc', direction, self.width, self.quantity)
@@ -395,15 +395,15 @@ class Interface():
                 else:
                     menu_items['4'] += f' (${self.strategy.legs[0].option.strike:.2f}{loaded})'
 
-                selection = utils.menu(menu_items, 'Select Operation', 0, 4)
+                selection = ui.menu(menu_items, 'Select Operation', 0, 4)
 
                 if selection == 1:
                     exp = self.select_chain_expiry()
                     self.strategy.update_expiry(exp)
                 elif selection == 2:
-                    self.quantity = utils.input_integer('Enter quantity (1 - 10): ', 1, 10)
+                    self.quantity = ui.input_integer('Enter quantity (1 - 10): ', 1, 10)
                 elif selection == 3:
-                    self.width = utils.input_integer('Enter width (1 - 5): ', 1, 5)
+                    self.width = ui.input_integer('Enter width (1 - 5): ', 1, 5)
                 elif selection == 4:
                     if self.strategy.chain.expire:
                         leg = 0
@@ -417,14 +417,14 @@ class Interface():
                                 success = self.strategy.legs[leg].option.load_contract(contract)
                             done = True
                         else:
-                            utils.print_error('Invalid option selected')
+                            ui.print_error('Invalid option selected')
                     else:
-                        utils.print_error('Please first select expiry date')
+                        ui.print_error('Please first select expiry date')
                 elif selection == 0:
                     done = True
 
                 if not success:
-                    utils.print_error('Error loading option. Please try again')
+                    ui.print_error('Error loading option. Please try again')
 
         return contracts
 
@@ -435,7 +435,7 @@ class Interface():
         for i, exp in enumerate(expiry):
             menu_items[f'{i+1}'] = f'{exp}'
 
-        select = utils.menu(menu_items, 'Select expiration date, or 0 to cancel: ', 0, i+1)
+        select = ui.menu(menu_items, 'Select expiration date, or 0 to cancel: ', 0, i+1)
         if select > 0:
             self.strategy.chain.expire = expiry[select-1]
             expiry = dt.datetime.strptime(self.strategy.chain.expire, '%Y-%m-%d')
@@ -450,7 +450,7 @@ class Interface():
         options = None
         contracts = []
         if not self.strategy.chain.expire:
-            utils.print_error('No expiry date delected')
+            ui.print_error('No expiry date delected')
         elif product == 'call':
             options = self.strategy.chain.get_chain('call')
         elif product == 'put':
@@ -463,7 +463,7 @@ class Interface():
                 menu_items[f'{i+1}'] = f'${row.strike:7.2f} ${row.lastPrice:6.2f} {itm}'
 
             prompt = 'Select long option, or 0 to cancel: ' if self.strategy.name == 'vertical' else 'Select option, or 0 to cancel: '
-            select = utils.menu(menu_items, prompt, 0, i+1)
+            select = ui.menu(menu_items, prompt, 0, i+1)
             if select > 0:
                 select -= 1
                 sel_row = options.iloc[select]
@@ -487,7 +487,7 @@ class Interface():
 
                 self.dirty_analyze = True
         else:
-            utils.print_error('Invalid selection')
+            ui.print_error('Invalid selection')
 
         return contracts
 
@@ -498,7 +498,7 @@ class Interface():
                 '0': 'Done',
             }
 
-            selection = utils.menu(menu_items, 'Select Setting', 0, 1)
+            selection = ui.menu(menu_items, 'Select Setting', 0, 1)
 
             if selection == 1:
                 self.select_method()
@@ -514,7 +514,7 @@ class Interface():
 
         modified = True
         while True:
-            selection = utils.menu(menu_items, 'Select Method', 0, 2)
+            selection = ui.menu(menu_items, 'Select Method', 0, 2)
 
             if selection == 1:
                 self.strategy.set_pricing_method('black-scholes')
@@ -529,15 +529,15 @@ class Interface():
             if selection == 0:
                 break
 
-            utils.print_error('Unknown method selected')
+            ui.print_error('Unknown method selected')
 
     def _show_progress(self) -> None:
         print()
-        utils.progress_bar(0, 0, prefix='Analyzing', suffix=self.ticker, reset=True)
+        ui.progress_bar(0, 0, prefix='Analyzing', suffix=self.ticker, reset=True)
 
         while self.task.is_alive():
             time.sleep(0.20)
-            utils.progress_bar(0, 0, prefix='Analyzing', suffix=self.ticker)
+            ui.progress_bar(0, 0, prefix='Analyzing', suffix=self.ticker)
 
         print()
 

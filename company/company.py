@@ -3,9 +3,9 @@ import pandas as pd
 
 from analysis.technical import Technical
 from data import store as store
-from utils import utils
+from utils import ui
 
-_logger = utils.get_logger()
+_logger = ui.get_logger()
 
 
 class Company:

@@ -5,10 +5,10 @@ import threading
 import data as d
 from data import store as store
 from data import manager as manager
-from utils import utils
+from utils import ui
 
 
-_logger = utils.get_logger(logging.WARNING, logfile='output')
+_logger = ui.get_logger(logging.WARNING, logfile='output')
 
 
 class Interface:
@@ -23,14 +23,14 @@ class Interface:
                 self.stop = True
             else:
                 exit = True
-                utils.print_error(f'Invalid ticker specifed: {ticker}')
+                ui.print_error(f'Invalid ticker specifed: {ticker}')
         elif update:
             if store.is_ticker(update.upper()):
                 self.ticker = update.upper()
                 self.stop = True
             else:
                 exit = True
-                utils.print_error(f'Invalid ticker specifed: {update}')
+                ui.print_error(f'Invalid ticker specifed: {update}')
 
         self.exchanges:list[str] = store.get_exchanges()
         self.indexes:list[str] = store.get_indexes()
@@ -38,7 +38,7 @@ class Interface:
         self.task:threading.Thread = None
 
         if not store.is_live_connection():
-            utils.print_error('No Internet connection')
+            ui.print_error('No Internet connection')
 
         if exit:
             pass
@@ -73,7 +73,7 @@ class Interface:
 
         while True:
             if not self.ticker:
-                selection = utils.menu(menu_items, 'Select Operation', 0, 14)
+                selection = ui.menu(menu_items, 'Select Operation', 0, 14)
 
             if selection == 1:
                 self.show_database_information()
@@ -110,35 +110,35 @@ class Interface:
                 break
 
     def show_database_information(self) -> None:
-        utils.print_message(f'Database Information ({d.ACTIVE_DB})')
+        ui.print_message(f'Database Information ({d.ACTIVE_DB})')
         info = self.manager.get_database_info()
         [print(f'{i["table"]:>16}:\t{i["count"]} records') for i in info]
 
-        utils.print_message('Exchange Information')
+        ui.print_message('Exchange Information')
         info = self.manager.get_exchange_info()
         [print(f'{i["exchange"]:>16}:\t{i["count"]} symbols') for i in info]
 
-        utils.print_message('Index Information')
+        ui.print_message('Index Information')
         info = self.manager.get_index_info()
         [print(f'{i["index"]:>16}:\t{i["count"]} symbols') for i in info]
 
     def show_symbol_information(self, ticker:str ='', prompt:bool=False, live:bool=False) -> None:
         if not ticker:
-            ticker = utils.input_text('Enter ticker: ').upper()
+            ticker = ui.input_text('Enter ticker: ').upper()
 
         if ticker:
             if store.is_ticker(ticker):
                 if prompt:
-                    end = utils.input_integer('Input number of days: ', 0, 100)
+                    end = ui.input_integer('Input number of days: ', 0, 100)
                 else:
                     end=0
 
                 company = store.get_company(ticker, live=live, extra=True)
                 if company:
                     if live:
-                        utils.print_message(f'{ticker} Company Information (live)')
+                        ui.print_message(f'{ticker} Company Information (live)')
                     else:
-                        utils.print_message(f'{ticker} Company Information')
+                        ui.print_message(f'{ticker} Company Information')
 
                     print(f'Name:\t\t{company["name"]}')
 
@@ -164,34 +164,34 @@ class Interface:
                         print(f'Price Records:\t{company["precords"]}')
                         print(f'Active:\t\t{company["active"]}')
                 else:
-                    utils.print_error(f'{ticker} has no company information')
+                    ui.print_error(f'{ticker} has no company information')
 
                 history = store.get_history(ticker, days=100, end=end, live=live).round(2)
                 if history.empty:
-                    utils.print_error(f'{ticker} has no price history')
+                    ui.print_error(f'{ticker} has no price history')
                 else:
                     if not live:
                         latest = history.iloc[-1]
                         print(f'Latest Record:\t{latest["date"]:%Y-%m-%d}, closed at ${latest["close"]:.2f}')
 
-                    utils.print_message(f'{ticker} Recent Price History')
+                    ui.print_message(f'{ticker} Recent Price History')
                     history = history.tail(10)
                     if not history.empty:
                         history.set_index('date', inplace=True)
                         print(history.round(2))
 
             else:
-                utils.print_error(f'{ticker} not found')
+                ui.print_error(f'{ticker} not found')
 
     def list_table(self) -> None:
         found = []
-        select = utils.input_text('Enter exchange, index, or ticker: ').upper()
+        select = ui.input_text('Enter exchange, index, or ticker: ').upper()
         if store.is_exchange(select):
             found = self.manager.list_exchange(select)
         elif store.is_list(select):
             found = self.manager.list_index(select)
         else:
-            utils.print_error(f'List {select} is not valid')
+            ui.print_error(f'List {select} is not valid')
 
         if found:
             print()
@@ -209,7 +209,7 @@ class Interface:
             menu_items[f'{i+1}'] = f'{exchange}'
         menu_items['0'] = 'Cancel'
 
-        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(self.exchanges))
+        select = ui.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(self.exchanges))
         if select > 0:
             exc = self.exchanges[select-1]
 
@@ -221,7 +221,7 @@ class Interface:
                 self._show_progress('Progress', '')
 
             if self.manager.task_error == 'Done':
-                utils.print_message(f'{self.manager.task_success} {exc} '\
+                ui.print_message(f'{self.manager.task_success} {exc} '\
                     f'Symbols populated in {self.manager.task_time/60.0:.1f} minutes with {len(self.manager.invalid_tickers)} invalid symbols')
 
     def populate_index(self, progressbar:bool=True) -> None:
@@ -230,7 +230,7 @@ class Interface:
             menu_items[f'{i+1}'] = f'{index}'
         menu_items['0'] = 'Cancel'
 
-        select = utils.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(self.indexes))
+        select = ui.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(self.indexes))
         if select > 0:
             self.task = threading.Thread(target=self.manager.populate_index, args=[self.indexes[select-1]])
             self.task.start()
@@ -240,9 +240,9 @@ class Interface:
                 self._show_progress('Progress', '')
 
             if self.manager.task_error == 'Done':
-                utils.print_message(f'{self.manager.task_success} {self.indexes[select-1]} Symbols populated in {self.manager.task_time:.0f} seconds')
+                ui.print_message(f'{self.manager.task_success} {self.indexes[select-1]} Symbols populated in {self.manager.task_time:.0f} seconds')
             else:
-                utils.print_error(self.manager.task_error)
+                ui.print_error(self.manager.task_error)
 
     def refresh_exchange(self, progressbar:bool=True) -> None:
         menu_items = {}
@@ -250,7 +250,7 @@ class Interface:
             menu_items[f'{i+1}'] = f'{exchange}'
         menu_items['0'] = 'Cancel'
 
-        exchange = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(self.indexes))
+        exchange = ui.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(self.indexes))
         if exchange > 0:
             exc = self.exchanges[exchange-1]
             self.task = threading.Thread(target=self.manager.refresh_exchange, args=[exc])
@@ -261,7 +261,7 @@ class Interface:
                 self._show_progress('Progress', '')
 
             print()
-            utils.print_message(f'Identified {self.manager.task_total} missing items. {self.manager.task_success} items filled')
+            ui.print_message(f'Identified {self.manager.task_total} missing items. {self.manager.task_success} items filled')
 
     def update_history(self, ticker:str='', progressbar:bool=True) -> None:
         menu_items = {}
@@ -272,7 +272,7 @@ class Interface:
         menu_items['0'] = 'Cancel'
 
         if not ticker:
-            select = utils.menu(menu_items, 'Select option, or 0 to cancel: ', 0, len(self.exchanges)+2)
+            select = ui.menu(menu_items, 'Select option, or 0 to cancel: ', 0, len(self.exchanges)+2)
         else:
             select = 5
 
@@ -283,17 +283,17 @@ class Interface:
             if ticker != '0':
                 if store.is_ticker(ticker):
                     days = self.manager.update_history_ticker(ticker)
-                    utils.print_message(f'Added {days} days pricing for {ticker}')
+                    ui.print_message(f'Added {days} days pricing for {ticker}')
                     self.show_symbol_information(ticker=ticker)
                 elif store.is_exchange(ticker):
                     exchange = store.get_ticker_exchange(ticker)
                     if self.manager.add_security_to_exchange([ticker], exchange):
-                        utils.print_message(f'Added {ticker} to {exchange}')
+                        ui.print_message(f'Added {ticker} to {exchange}')
                         self.show_symbol_information(ticker=ticker)
                     else:
-                        utils.print_error(f'Error adding {ticker} to {exchange}')
+                        ui.print_error(f'Error adding {ticker} to {exchange}')
                 else:
-                    utils.print_error('Invalid ticker. Try another ticker or select "0" to cancel')
+                    ui.print_error('Invalid ticker. Try another ticker or select "0" to cancel')
         elif select > 0:
             exc = self.exchanges[select-1] if select <= len(self.exchanges) else 'all'
             self.task = threading.Thread(target=self.manager.update_history_exchange, args=[exc])
@@ -304,7 +304,7 @@ class Interface:
                 self._show_progress('Progress', '')
 
             if self.manager.task_error == 'Done':
-                utils.print_message(f'{self.manager.task_total} {exc} '\
+                ui.print_message(f'{self.manager.task_total} {exc} '\
                     f'Ticker pricing refreshed in {self.manager.task_time:.0f} seconds')
 
     def update_company(self, ticker:str='', progressbar:bool=True) -> None:
@@ -316,7 +316,7 @@ class Interface:
         menu_items['0'] = 'Cancel'
 
         if not ticker:
-            select = utils.menu(menu_items, 'Select option, or 0 to cancel: ', 0, len(self.exchanges)+2)
+            select = ui.menu(menu_items, 'Select option, or 0 to cancel: ', 0, len(self.exchanges)+2)
         else:
             select = 5
 
@@ -327,12 +327,12 @@ class Interface:
             if ticker != '0':
                 if store.is_ticker(ticker):
                     if self.manager.update_company_ticker(ticker):
-                        utils.print_message('Success')
+                        ui.print_message('Success')
                         self.show_symbol_information(ticker)
                     else:
-                        utils.print_error('Error')
+                        ui.print_error('Error')
                 else:
-                    utils.print_error('Invalid ticker. Try another ticker or select "0" to cancel')
+                    ui.print_error('Invalid ticker. Try another ticker or select "0" to cancel')
         elif select > 0:
             exc = self.exchanges[select-1] if select <= len(self.exchanges) else 'all'
             self.task = threading.Thread(target=self.manager.update_companies_exchange, args=[exc])
@@ -343,7 +343,7 @@ class Interface:
                 self._show_progress('Progress', '')
 
             if self.manager.task_error == 'Done':
-                utils.print_message(f'{self.manager.task_total} {exc} '\
+                ui.print_message(f'{self.manager.task_total} {exc} '\
                     f'Company infomation refreshed in {self.manager.task_time:.0f} seconds')
 
     def delete_exchange(self, progressbar:bool=True) -> None:
@@ -352,7 +352,7 @@ class Interface:
             menu_items[f'{i+1}'] = f'{exchange}'
         menu_items['0'] = 'Cancel'
 
-        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(self.indexes))
+        select = ui.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(self.indexes))
         if select > 0:
             exc = self.exchanges[select-1]
 
@@ -366,7 +366,7 @@ class Interface:
             self.create_missing_tables()
 
             if self.manager.task_error == 'Done':
-                utils.print_message(f'Deleted exchange {exc} in {self.manager.task_time:.0f} seconds')
+                ui.print_message(f'Deleted exchange {exc} in {self.manager.task_time:.0f} seconds')
 
     def delete_index(self) -> None:
         menu_items = {}
@@ -374,45 +374,45 @@ class Interface:
             menu_items[f'{i+1}'] = f'{index}'
         menu_items['0'] = 'Cancel'
 
-        select = utils.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(self.indexes))
+        select = ui.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(self.indexes))
         if select > 0:
             ind = self.indexes[select-1]
             self.manager.delete_index(ind)
             self.create_missing_tables()
 
-            utils.print_message(f'Deleted exchange {ind}')
+            ui.print_message(f'Deleted exchange {ind}')
 
     def delete_ticker(self, ticker:str='') -> None:
         if not ticker:
-            ticker = utils.input_text('Enter ticker: ').upper()
+            ticker = ui.input_text('Enter ticker: ').upper()
 
         if ticker:
             if store.is_ticker(ticker):
                 self.manager.delete_ticker(ticker)
 
-                utils.print_message(f'Deleted ticker {ticker}')
+                ui.print_message(f'Deleted ticker {ticker}')
 
     def reset_database(self) -> None:
-        select = utils.input_integer('Are you sure? 1 to reset or 0 to cancel: ', 0, 1)
+        select = ui.input_integer('Are you sure? 1 to reset or 0 to cancel: ', 0, 1)
         if select == 1:
             self.manager.delete_database()
             self.manager.create_database()
             self.manager.create_exchanges()
             self.manager.create_indexes()
-            utils.print_message(f'Database is reset')
+            ui.print_message(f'Database is reset')
         else:
-            utils.print_message('Database not reset')
+            ui.print_message('Database not reset')
 
     def check_integrity(self) -> None:
-        utils.print_message('Missing Tickers')
+        ui.print_message('Missing Tickers')
         missing_tickers = {e: self.manager.identify_missing_securities(e) for e in self.exchanges}
         [print(f'{e:>16}:\t{len(missing_tickers[e])}') for e in self.exchanges]
 
-        utils.print_message('Incomplete Companies')
+        ui.print_message('Incomplete Companies')
         incomplete_companies = {e: self.manager.identify_incomplete_companies(e) for e in self.exchanges}
         [print(f'{e:>16}:\t{len(incomplete_companies[e])}') for e in self.exchanges]
 
-        utils.print_message('Incomplete Pricing')
+        ui.print_message('Incomplete Pricing')
         incomplete_pricing = {e: self.manager.identify_incomplete_pricing(e) for e in self.exchanges}
         [print(f'{e:>16}:\t{len(incomplete_pricing[e])}') for e in self.exchanges]
 
@@ -423,14 +423,14 @@ class Interface:
                 '3': 'List Incomplete Pricing',
                 '0': 'Exit',
             }
-            op = utils.menu(menu_items, 'Select Operation', 0, 3)
+            op = ui.menu(menu_items, 'Select Operation', 0, 3)
 
             if op > 0:
                 menu_items = {}
                 for i, exc in enumerate(self.exchanges):
                     menu_items[f'{i+1}'] = f'{exc}'
                 menu_items['0'] = 'Cancel'
-                exchange = utils.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(self.exchanges))
+                exchange = ui.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(self.exchanges))
 
                 if exchange > 0:
                     if op == 1:
@@ -461,7 +461,7 @@ class Interface:
         while not self.manager.task_error: pass
 
         if self.manager.task_error == 'None':
-            utils.progress_bar(self.manager.task_completed, self.manager.task_total, prefix=prefix, suffix=suffix, reset=True)
+            ui.progress_bar(self.manager.task_completed, self.manager.task_total, prefix=prefix, suffix=suffix, reset=True)
             while self.task.is_alive and self.manager.task_error == 'None':
                 time.sleep(0.20)
                 total = self.manager.task_total
@@ -471,16 +471,16 @@ class Interface:
                 tasks = len([True for future in self.manager.task_futures if future.running()])
 
                 if total > 0:
-                    utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, ticker=symbol, success=success, tasks=tasks)
+                    ui.progress_bar(completed, total, prefix=prefix, suffix=suffix, ticker=symbol, success=success, tasks=tasks)
                 else:
-                    utils.progress_bar(completed, total, prefix=prefix)
+                    ui.progress_bar(completed, total, prefix=prefix)
 
             results = [future.result() for future in self.manager.task_futures if future.result() is not None]
             if len(results) > 0:
-                utils.print_message('Processed Messages')
+                ui.print_message('Processed Messages')
                 [print(result) for result in results]
         else:
-            utils.print_message(f'{self.manager.task_error}')
+            ui.print_message(f'{self.manager.task_error}')
 
 
 if __name__ == '__main__':

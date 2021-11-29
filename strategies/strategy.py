@@ -13,10 +13,10 @@ import pricing as p
 from pricing.blackscholes import BlackScholes
 from pricing.montecarlo import MonteCarlo
 from data import store
-from utils import utils
+from utils import ui
 
 
-_logger = utils.get_logger()
+_logger = ui.get_logger()
 
 
 class Strategy(ABC):
@@ -189,9 +189,9 @@ if __name__ == '__main__':
     from strategies.call import Call
     from strategies.put import Put
     from strategies.vertical import Vertical
-    from utils import utils
+    from utils import ui
 
-    utils.get_logger(logging.DEBUG)
+    ui.get_logger(logging.DEBUG)
 
     strategy = Vertical('AAPL', 'call', 'long', 1, 1, True)
     # strategy = Call('NVDA', 'call', 'long', 1, 1, True)

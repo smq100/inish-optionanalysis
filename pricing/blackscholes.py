@@ -4,9 +4,9 @@ import scipy.stats as stats
 
 import pricing
 from .pricing import Pricing
-from utils import utils
+from utils import ui
 
-_logger = utils.get_logger()
+_logger = ui.get_logger()
 
 
 class BlackScholes(Pricing):

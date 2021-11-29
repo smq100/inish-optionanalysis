@@ -2,9 +2,9 @@ import datetime as dt
 import re
 
 from data import store as store
-from utils import utils
+from utils import ui
 
-_logger = utils.get_logger()
+_logger = ui.get_logger()
 
 
 class Option:

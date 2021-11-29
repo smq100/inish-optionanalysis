@@ -14,14 +14,14 @@ import pandas as pd
 
 import fetcher as f
 import data as d
-from utils import utils
+from utils import ui
 
 
 _THROTTLE_FETCH = 0.10  # Min secs between calls to fetch pricing
 _THROTTLE_ERROR = 1.00  # Min secs between calls after error
 _RETRIES = 2            # Number of fetch retries after error
 
-_logger = utils.get_logger()
+_logger = ui.get_logger()
 
 # Quandl credentials
 CREDENTIALS = os.path.join(os.path.dirname(__file__), 'quandl.ini')
@@ -272,7 +272,7 @@ if __name__ == '__main__':
     from logging import WARNING
     import sys
 
-    _logger = utils.get_logger(WARNING, logfile='output')
+    _logger = ui.get_logger(WARNING, logfile='output')
     if len(sys.argv) > 1:
         c = get_company_live(sys.argv[1])
     else:

@@ -5,10 +5,10 @@ import logging
 import data as d
 from analysis.correlate import Correlate
 from data import store as store
-from utils import utils
+from utils import ui
 
 
-_logger = utils.get_logger(logging.WARNING, logfile='')
+_logger = ui.get_logger(logging.WARNING, logfile='')
 
 class Interface:
     def __init__(self, coor:str=''):
@@ -23,7 +23,7 @@ class Interface:
         elif store.is_list(self.list):
             self.main_menu(selection=1)
         else:
-            utils.print_error('Invalid list specified')
+            ui.print_error('Invalid list specified')
 
     def main_menu(self, selection=0):
         while True:
@@ -36,7 +36,7 @@ class Interface:
             }
 
             if selection == 0:
-                selection = utils.menu(menu_items, 'Select Operation', 0, 4)
+                selection = ui.menu(menu_items, 'Select Operation', 0, 4)
 
             if selection == 1:
                 self.compute_coorelation()
@@ -66,44 +66,44 @@ class Interface:
                 print()
                 self._show_progress('Progress', '')
 
-            utils.print_message(f'Coorelation Among {self.list} Symbols')
+            ui.print_message(f'Coorelation Among {self.list} Symbols')
             print(self.coorelate.correlation)
 
     def get_best_coorelation(self):
         if not self.coorelate:
-            utils.print_error('Run coorelation first')
+            ui.print_error('Run coorelation first')
         elif not self.coorelate:
-            utils.print_error('Run coorelation first')
+            ui.print_error('Run coorelation first')
         else:
-            utils.print_message(f'Best Coorelations in {self.list}')
+            ui.print_message(f'Best Coorelations in {self.list}')
             best = self.coorelate.get_sorted_coorelations(20, True)
             [print(f'{item[0]}/{item[1]:<5}\t{item[2]:.4f}') for item in best]
 
     def get_least_coorelation(self):
         if not self.coorelate:
-            utils.print_error('Run coorelation first')
+            ui.print_error('Run coorelation first')
         elif not self.coorelate:
-            utils.print_error('Run coorelation first')
+            ui.print_error('Run coorelation first')
         else:
-            utils.print_message(f'Least Coorelations in {self.list}')
+            ui.print_message(f'Least Coorelations in {self.list}')
             best = self.coorelate.get_sorted_coorelations(20, False)
             [print(f'{item[0]}/{item[1]:<5}\t{item[2]:.4f}') for item in best]
 
     def get_ticker_coorelation(self):
         if not self.coorelate:
-            utils.print_error('Run coorelation first')
+            ui.print_error('Run coorelation first')
         elif not self.coorelate:
-            utils.print_error('Run coorelation first')
+            ui.print_error('Run coorelation first')
         else:
-            ticker = utils.input_text('Enter symbol: ').upper()
+            ticker = ui.input_text('Enter symbol: ').upper()
             if not store.is_ticker(ticker):
-                utils.print_error('Invalid symbol')
+                ui.print_error('Invalid symbol')
             else:
                 df = self.coorelate.get_ticker_coorelation(ticker)
-                utils.print_message(f'Highest correlations to {ticker}')
+                ui.print_message(f'Highest correlations to {ticker}')
                 [print(f'{sym:>5}: {val:.5f}') for sym, val in df[-1:-11:-1].iteritems()]
 
-                utils.print_message(f'Lowest correlations to {ticker}')
+                ui.print_message(f'Lowest correlations to {ticker}')
                 [print(f'{sym:>5}: {val:.5f}') for sym, val in df[:10].iteritems()]
 
     def _get_list(self):
@@ -115,7 +115,7 @@ class Interface:
             menu_items[f'{i+1}'] = f'{index}'
         menu_items['0'] = 'Cancel'
 
-        select = utils.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, i+1)
+        select = ui.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, i+1)
         if select > 0:
             list = menu_items[f'{select}']
 
@@ -126,13 +126,13 @@ class Interface:
 
         if self.coorelate.task_error == 'None':
             total = self.coorelate.task_total
-            utils.progress_bar(self.coorelate.task_completed, self.coorelate.task_total, prefix=prefix, suffix=suffix, reset=True)
+            ui.progress_bar(self.coorelate.task_completed, self.coorelate.task_total, prefix=prefix, suffix=suffix, reset=True)
 
             while self.task.is_alive and self.coorelate.task_error == 'None':
                 time.sleep(0.20)
                 completed = self.coorelate.task_completed
                 ticker = self.coorelate.task_ticker
-                utils.progress_bar(completed, total, prefix=prefix, suffix=suffix, ticker=ticker)
+                ui.progress_bar(completed, total, prefix=prefix, suffix=suffix, ticker=ticker)
 
 
 if __name__ == '__main__':

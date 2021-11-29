@@ -15,9 +15,9 @@ from base import Threaded
 import data as d
 from data import store as store
 from data import models as models
-from utils import utils
+from utils import ui
 
-_logger = utils.get_logger()
+_logger = ui.get_logger()
 
 
 class Manager(Threaded):
@@ -664,7 +664,7 @@ class Manager(Threaded):
 if __name__ == '__main__':
     import time
     from logging import DEBUG
-    _logger = utils.get_logger(DEBUG)
+    _logger = ui.get_logger(DEBUG)
 
     manager = Manager()
     tic = time.perf_counter()

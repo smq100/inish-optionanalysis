@@ -10,12 +10,13 @@ from options.option import Option
 from pricing.pricing import Pricing
 from pricing.blackscholes import BlackScholes
 from pricing.montecarlo import MonteCarlo
-from utils import utils
+from utils import ui
+from utils import math as m
 
 
 _IV_CUTOFF = 0.020
 
-_logger = utils.get_logger()
+_logger = ui.get_logger()
 
 
 class Leg:
@@ -178,7 +179,7 @@ class Leg:
                     col_index += [str(today)]
 
                 # Calculate cost of option every day till expiry
-                min_, max_, step_ = utils.calculate_min_max_step(strike)
+                min_, max_, step_ = m.calculate_min_max_step(strike)
                 for s in range(int(math.ceil(min_*40)), int(math.ceil(max_*40)), int(math.ceil(step_*40))):
                     spot = s / 40.0
                     row = []
@@ -202,15 +203,15 @@ class Leg:
 
                     # Create row index
                     if spot > 500.0:
-                        spot = utils.mround(spot, 10.0)
+                        spot = m.mround(spot, 10.0)
                     elif spot > 100.0:
-                        spot = utils.mround(spot, 1.00)
+                        spot = m.mround(spot, 1.00)
                     elif spot > 50.0:
-                        spot = utils.mround(spot, 0.50)
+                        spot = m.mround(spot, 0.50)
                     elif spot > 20.0:
-                        spot = utils.mround(spot, 0.10)
+                        spot = m.mround(spot, 0.10)
                     else:
-                        spot = utils.mround(spot, 0.01)
+                        spot = m.mround(spot, 0.01)
 
                     row_index += [spot]
 

@@ -4,9 +4,9 @@ import pandas as pd
 
 import strategies as s
 from strategies.strategy import Strategy
-from utils import utils
+from utils import ui
 
-_logger = utils.get_logger()
+_logger = ui.get_logger()
 DEFAULT_WIDTH = 2.0
 
 class Vertical(Strategy):
@@ -167,7 +167,7 @@ class Vertical(Strategy):
 
 if __name__ == '__main__':
     import logging
-    utils.get_logger(logging.INFO)
+    ui.get_logger(logging.INFO)
 
     call = Vertical('MSFT', 'call', 'long', 1)
     call.legs[0].calculate(call.legs[0].option.strike, value_table=False, greeks=False)

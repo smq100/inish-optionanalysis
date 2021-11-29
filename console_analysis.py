@@ -10,9 +10,9 @@ from screener.screener import Screener, Result, INIT_NAME
 from analysis.trend import SupportResistance
 from analysis.correlate import Correlate
 from data import store as store
-from utils import utils
+from utils import ui
 
-_logger = utils.get_logger(logging.WARNING, logfile='')
+_logger = ui.get_logger(logging.WARNING, logfile='')
 
 BASEPATH = os.getcwd() + '/screener/screens/'
 SCREEN_SUFFIX = 'screen'
@@ -51,13 +51,13 @@ class Interface:
             else:
                 self.table = ''
                 abort = True
-                utils.print_error('Exchange, index or ticker not found')
+                ui.print_error('Exchange, index or ticker not found')
 
         if self.screen_base:
             if os.path.exists(BASEPATH+screen+'.'+SCREEN_SUFFIX):
                 self.screen_path = BASEPATH + self.screen_base + '.' + SCREEN_SUFFIX
             else:
-                utils.print_error(f'File "{self.screen_base}" not found')
+                ui.print_error(f'File "{self.screen_base}" not found')
                 abort = True
                 self.screen_base = ''
 
@@ -96,7 +96,7 @@ class Interface:
                 menu_items['8'] = f'Show All ({self.valids})'
 
             if selection == 0:
-                selection = utils.menu(menu_items, 'Select Operation', 0, 8)
+                selection = ui.menu(menu_items, 'Select Operation', 0, 8)
 
             if selection == 1:
                 self.select_list()
@@ -126,7 +126,7 @@ class Interface:
                 break
 
     def select_list(self) -> None:
-        list = utils.input_alphanum('Enter exchange, index, or ticker: ').upper()
+        list = ui.input_alphanum('Enter exchange, index, or ticker: ').upper()
         if store.is_exchange(list):
             self.table = list
         elif store.is_list(list):
@@ -136,7 +136,7 @@ class Interface:
         else:
             self.table = ''
             self.screener = None
-            utils.print_error(f'List {list} is not valid')
+            ui.print_error(f'List {list} is not valid')
 
     def select_screen(self) -> None:
         self.script = []
@@ -166,27 +166,27 @@ class Interface:
                 menu_items[f'{index+1}'] = f'{item.title()}'
             menu_items['0'] = 'Cancel'
 
-            selection = utils.menu(menu_items, 'Select Screen', 0, index+1)
+            selection = ui.menu(menu_items, 'Select Screen', 0, index+1)
             if selection > 0:
                 self.screen_base = paths[selection-1]
                 self.screen_path = BASEPATH + self.screen_base + '.' + SCREEN_SUFFIX
                 self.results = []
         else:
-            utils.print_message('No screener files found')
+            ui.print_message('No screener files found')
 
     def run_screen(self) -> bool:
         success = False
         self.auto = False
 
         if not self.table:
-            utils.print_error('No exchange, index, or ticker specified')
+            ui.print_error('No exchange, index, or ticker specified')
         elif not self.screen_path:
-            utils.print_error('No screen specified')
+            ui.print_error('No screen specified')
         else:
             try:
                 self.screener = Screener(self.table, screen=self.screen_path)
             except ValueError as e:
-                utils.print_error(str(e))
+                ui.print_error(str(e))
             else:
                 self.results = []
                 self.task = threading.Thread(target=self.screener.run_script)
@@ -201,7 +201,7 @@ class Interface:
                         if result:
                             self.valids += 1
 
-                    utils.print_message(f'{self.valids} symbols identified in {self.screener.task_time:.1f} seconds')
+                    ui.print_message(f'{self.valids} symbols identified in {self.screener.task_time:.1f} seconds')
 
                     success = True
 
@@ -227,7 +227,7 @@ class Interface:
 
             success = True
         else:
-            utils.print_error('Please run screen before correlating')
+            ui.print_error('Please run screen before correlating')
 
         return success
 
@@ -238,7 +238,7 @@ class Interface:
             else:
                 tickers = [str(result) for result in self.results if bool(result)][:LISTTOP_TREND]
 
-            utils.progress_bar(0, 0, prefix='Analyzing', reset=True)
+            ui.progress_bar(0, 0, prefix='Analyzing', reset=True)
 
             for ticker in tickers:
                 if self.quick:
@@ -260,18 +260,18 @@ class Interface:
                 print()
                 plt.show()
         else:
-            utils.print_error('No valid results to analyze')
+            ui.print_error('No valid results to analyze')
 
     def run_options(self):
         pass
 
     def print_results(self, top:int=-1, verbose:bool=False, ticker:str='') -> None:
         if not self.table:
-            utils.print_error('No table specified')
+            ui.print_error('No table specified')
         elif not self.screen_base:
-            utils.print_error('No screen specified')
+            ui.print_error('No screen specified')
         elif len(self.results) == 0:
-            utils.print_message('No results were located')
+            ui.print_message('No results were located')
         else:
             if top <= 0:
                 top = self.screener.task_success
@@ -283,9 +283,9 @@ class Interface:
                 results = sorted(self.results, reverse=True, key=lambda r: float(r))
 
             if ticker:
-                utils.print_message(f'Screener Results for {ticker} ({self.screen_base})')
+                ui.print_message(f'Screener Results for {ticker} ({self.screen_base})')
             else:
-                utils.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen_base})')
+                ui.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen_base})')
 
             index = 1
             for result in results:
@@ -304,20 +304,20 @@ class Interface:
     def print_coorelations(self):
         results = [f'{result[0]:<5}/{result[1]["ticker"]:<5} {result[1]["value"]:.5f}' for result in self.results_corr if result[1]["value"] > COOR_CUTOFF]
         if results:
-            utils.print_message('Coorelation Results')
+            ui.print_message('Coorelation Results')
             [print(result) for result in results]
-            answer = utils.input_text('\nRun analysis on top findings? (y/n): ')
+            answer = ui.input_text('\nRun analysis on top findings? (y/n): ')
             if answer.lower() == 'y':
                 self.run_support_resistance(True)
         else:
-            utils.print_message('No significant coorelations found')
+            ui.print_message('No significant coorelations found')
 
     def _show_progress_screen(self) -> None:
         while not self.screener.task_error: pass
 
         prefix = 'Screening'
         total = self.screener.task_total
-        utils.progress_bar(self.screener.task_completed, self.screener.task_total, prefix=prefix, reset=True)
+        ui.progress_bar(self.screener.task_completed, self.screener.task_total, prefix=prefix, reset=True)
 
         while self.screener.task_error == 'None':
             time.sleep(0.20)
@@ -326,7 +326,7 @@ class Interface:
             ticker = self.screener.task_ticker
             tasks = len([True for future in self.screener.task_futures if future.running()])
 
-            utils.progress_bar(completed, total, prefix=prefix, ticker=ticker, success=success, tasks=tasks)
+            ui.progress_bar(completed, total, prefix=prefix, ticker=ticker, success=success, tasks=tasks)
 
     def _show_progress_correlate(self):
         while not self.coorelate.task_error: pass
@@ -334,14 +334,14 @@ class Interface:
         if self.coorelate.task_error == 'None':
             prefix = 'Correlating'
             total = self.coorelate.task_total
-            utils.progress_bar(self.coorelate.task_completed, self.coorelate.task_total, success=self.coorelate.task_success, prefix=prefix, reset=True)
+            ui.progress_bar(self.coorelate.task_completed, self.coorelate.task_total, success=self.coorelate.task_success, prefix=prefix, reset=True)
 
             while self.task.is_alive and self.coorelate.task_error == 'None':
                 time.sleep(0.20)
                 completed = self.coorelate.task_completed
                 success = completed
                 ticker = self.coorelate.task_ticker
-                utils.progress_bar(completed, total, prefix=prefix, ticker=ticker, success=success)
+                ui.progress_bar(completed, total, prefix=prefix, ticker=ticker, success=success)
 
     def _show_progress_analyze(self) -> None:
         while not self.trend.task_error: pass
@@ -349,16 +349,16 @@ class Interface:
         if self.trend.task_error == 'None':
             while self.trend.task_error == 'None':
                 time.sleep(0.20)
-                utils.progress_bar(0, 0, prefix='Analyzing', suffix=self.trend.task_message)
+                ui.progress_bar(0, 0, prefix='Analyzing', suffix=self.trend.task_message)
 
             if self.trend.task_error == 'Hold':
                 pass
             elif self.trend.task_error == 'Done':
-                utils.print_message(f'{self.trend.task_error}: {self.trend.task_total} lines extracted in {self.trend.task_time:.1f} seconds')
+                ui.print_message(f'{self.trend.task_error}: {self.trend.task_total} lines extracted in {self.trend.task_time:.1f} seconds')
             else:
-                utils.print_error(f'{self.trend.task_error}: Error extracting lines')
+                ui.print_error(f'{self.trend.task_error}: Error extracting lines')
         else:
-            utils.print_message(f'{self.trend.task_error}')
+            ui.print_message(f'{self.trend.task_error}')
 
 
 if __name__ == '__main__':
