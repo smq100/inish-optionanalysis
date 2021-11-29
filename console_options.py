@@ -17,6 +17,7 @@ from strategies.call import Call
 from strategies.put import Put
 from data import store
 from utils import ui
+from utils import math as m
 
 MAX_ROWS = 50
 MAX_COLS = 11
@@ -25,10 +26,10 @@ _logger = ui.get_logger(logging.WARNING, logfile='')
 
 
 class Interface():
-    def __init__(self, ticker:str, strategy:str, direction:str, width:int=0, quantity:int=1, default:bool=False, analyze:bool=False, exit:bool=False):
+    def __init__(self, ticker:str, strategy:str, direction:str, quantity:int=1, width:int=0, default:bool=False, analyze:bool=False, exit:bool=False):
         self.ticker = ticker.upper()
-        self.width = width
         self.quantity = quantity
+        self.width = width
         self.strategy:Strategy = None
         self.dirty_analyze = True
         self.task:threading.Thread = None
@@ -197,7 +198,7 @@ class Interface():
                             cols = -1
 
                         if rows > 0 or cols > 0:
-                            value = self.strategy.compress_table(value, rows, cols)
+                            value = m.compress_table(value, rows, cols)
 
                         if style == 1:
                             ui.print_message(title, 2)
@@ -234,7 +235,7 @@ class Interface():
                         cols = -1
 
                     if rows > 0 or cols > 0:
-                        analysis = self.strategy.compress_table(analysis, rows, cols)
+                        analysis = m.compress_table(analysis, rows, cols)
 
                     if style == 1:
                         title += f' ({self.strategy.legs[0].option.contract}'

@@ -6,8 +6,10 @@ import strategies as s
 from strategies.strategy import Strategy
 from utils import ui
 
+
 _logger = ui.get_logger()
 DEFAULT_WIDTH = 2.0
+
 
 class Vertical(Strategy):
     def __init__(self, ticker:str, product:str, direction:str, width:int, quantity:int, load_default:bool=False):
@@ -163,7 +165,7 @@ class Vertical(Strategy):
         return error
 
     def _validate(self) -> bool:
-        return len(self.legs) > 1
+        return len(self.legs) == 2
 
 if __name__ == '__main__':
     import logging

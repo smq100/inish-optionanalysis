@@ -134,25 +134,6 @@ class Strategy(ABC):
     def get_errors(self) -> str:
         return ''
 
-    @staticmethod
-    def compress_table(table:pd.DataFrame, rows:int, cols:int) -> pd.DataFrame:
-        if not isinstance(table, pd.DataFrame):
-            raise ValueError("'table' must be a Pandas DataFrame")
-
-        srows, scols = table.shape
-        if cols > 0 and cols < scols:
-            step = int(math.ceil(scols/cols))
-            end = table[table.columns[-2::]]        # Save the last two cols
-            table = table[table.columns[:-2:step]]  # Thin the table (less the last two cols)
-            table = pd.concat([table, end], axis=1) # Add back the last two cols
-
-        if rows > 0 and rows < srows:
-            # Thin out rows
-            step = int(math.ceil(srows/rows))
-            table = table.iloc[::step]
-
-        return table
-
     def _validate(self):
         return len(self.legs) > 0
 

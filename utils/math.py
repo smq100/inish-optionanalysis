@@ -1,3 +1,7 @@
+import math
+
+import pandas as pd
+
 _MIN_MAX_PERCENT = 0.20
 
 
@@ -29,3 +33,24 @@ def calculate_min_max_step(strike:float) -> tuple[float, float, float]:
         min_ = step
 
     return min_, max_, step
+
+def compress_table(table:pd.DataFrame, rows:int, cols:int) -> pd.DataFrame:
+    if not isinstance(table, pd.DataFrame):
+        raise ValueError("'table' must be a Pandas DataFrame")
+
+    compressed = pd.DataFrame()
+
+    # Thin out cols
+    srows, scols = table.shape
+    if cols > 0 and cols < scols:
+        step = int(math.ceil(scols/cols))
+        end = table[table.columns[-2::]] # Save the last two cols
+        compressed = table[table.columns[:-2:step]] # Thin the table, less the last two cols
+        compressed = pd.concat([compressed, end], axis=1) # Add back the last two cols
+
+    # Thin out rows
+    if rows > 0 and rows < srows:
+        step = int(math.ceil(srows/rows))
+        compressed = compressed.iloc[::step]
+
+    return compressed

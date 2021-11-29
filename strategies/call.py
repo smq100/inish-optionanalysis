@@ -9,6 +9,7 @@ from utils import ui
 
 _logger = ui.get_logger()
 
+
 class Call(Strategy):
     def __init__(self, ticker:str, product:str, direction:str, width:int, quantity:int, load_default:bool=False):
         product = 'call'
