@@ -1,10 +1,9 @@
-import datetime as dt
-
 import pandas as pd
 
 import strategies as s
 from strategies.strategy import Strategy
 from utils import ui
+from utils import math as m
 
 
 _logger = ui.get_logger()
@@ -17,11 +16,8 @@ class Put(Strategy):
 
         self.name = s.STRATEGIES_BROAD[1]
 
-        # Default to a week from Friday as expiry
-        d = dt.datetime.today()
-        while d.weekday() != 4:
-            d += dt.timedelta(1)
-        expiry = d + dt.timedelta(days=6)
+        # Default expiry to tird Friday of next month
+        expiry = m.third_friday()
 
         self.add_leg(self.quantity, product, direction, self.initial_spot, expiry)
 

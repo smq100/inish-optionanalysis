@@ -1,4 +1,5 @@
 import math
+import datetime as dt
 
 import pandas as pd
 
@@ -54,3 +55,20 @@ def compress_table(table:pd.DataFrame, rows:int, cols:int) -> pd.DataFrame:
         compressed = compressed.iloc[::step]
 
     return compressed
+
+def third_friday() -> dt.datetime:
+    today = dt.datetime.today()
+    today += dt.timedelta(days=32)
+
+    # The 15th is the first possible third day of the month
+    third = dt.datetime(today.year, today.month, 15)
+
+    w = third.weekday()
+    if w != 4:
+        third = third.replace(day=(15 + (4 - w) % 7))
+
+    return third
+
+if __name__ == '__main__':
+    friday = third_friday()
+    print(friday)

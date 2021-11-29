@@ -60,7 +60,12 @@ class Leg:
                 if diff > 1.50 or diff < 0.50:
                     output += '\n    *** Warning: The calculated price is significantly different than the last traded price.'
         else:
-            output = 'Leg not yet calculated'
+            output = f'{self.quantity:2d} '\
+            f'{self.company.ticker}@${self.company.price:.2f} '\
+            f'{self.direction} '\
+            f'{self.product} '\
+            f'${self.option.strike:.2f} for '\
+            f'{str(self.option.expiry)[:10]}'
 
         return output
 

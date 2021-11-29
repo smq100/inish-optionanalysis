@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as clrs
 import matplotlib.ticker as mticker
 
-import strategies
+import strategies as s
 from strategies.strategy import Strategy
 from strategies.vertical import Vertical
 from strategies.call import Call
@@ -40,9 +40,9 @@ class Interface():
             ui.print_error('Internet connection required')
         elif not store.is_ticker(ticker):
             ui.print_error('Invalid ticker specified')
-        elif strategy not in strategies.STRATEGIES:
+        elif strategy not in s.STRATEGIES:
             ui.print_error('Invalid strategy specified')
-        elif direction not in strategies.DIRECTIONS:
+        elif direction not in s.DIRECTIONS:
             ui.print_error('Invalid direction specified')
         elif width < 0:
             ui.print_error('Invalid width specified')
@@ -74,6 +74,7 @@ class Interface():
 
             loaded = '' if  self.strategy.legs[0].option.last_price > 0 else '*'
             expire = f'{self.strategy.legs[0].option.expiry:%Y-%m-%d}'
+
             if self.strategy.name == 'vertical':
                 menu_items['3'] += f's ({expire}, '\
                     f'L:${self.strategy.legs[0].option.strike:.2f}{loaded}, '\
@@ -113,9 +114,9 @@ class Interface():
     def load_strategy(self, ticker:str, strategy:str, direction:str, width:int, quantity:int, default:bool=False, analyze:bool=False) -> bool:
         modified = True
 
-        if strategy not in strategies.STRATEGIES:
+        if strategy not in s.STRATEGIES:
             raise ValueError('Invalid strategy')
-        if direction not in strategies.DIRECTIONS:
+        if direction not in s.DIRECTIONS:
             raise ValueError('Invalid direction')
         if quantity < 1:
             raise ValueError('Invalid quantity')
@@ -221,7 +222,8 @@ class Interface():
                 if style == 0:
                     style = ui.input_integer('(1) Summary, (2) Table, (3) Chart, (4) Contour, (5) Surface, or (0) Cancel: ', 0, 5)
                 if style > 0:
-                    title = f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].company}) {str(self.strategy).title()}'
+                    title = f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].company}) '\
+                        f'{str(self.strategy).title()}, {self.strategy.legs[0].option.expiry:%Y-%m-%d}'
 
                     rows, cols = analysis.shape
                     if rows > MAX_ROWS:
@@ -376,7 +378,6 @@ class Interface():
             done = False
             while not done:
                 expiry = self.strategy.chain.expire if self.strategy.chain.expire else 'None selected'
-                product = 'Call' if self.strategy.legs[0].option.product == 'call' else 'Put'
                 success = True
 
                 menu_items = {
@@ -430,20 +431,19 @@ class Interface():
         return contracts
 
     def select_chain_expiry(self) -> dt.datetime:
-        expiry = self.strategy.chain.get_expiry()
+        expiry = m.third_friday()
+        dates = self.strategy.chain.get_expiry()
 
         menu_items = {}
-        for i, exp in enumerate(expiry):
+        for i, exp in enumerate(dates):
             menu_items[f'{i+1}'] = f'{exp}'
 
         select = ui.menu(menu_items, 'Select expiration date, or 0 to cancel: ', 0, i+1)
         if select > 0:
-            self.strategy.chain.expire = expiry[select-1]
+            self.strategy.chain.expire = dates[select-1]
             expiry = dt.datetime.strptime(self.strategy.chain.expire, '%Y-%m-%d')
 
             self.dirty_analyze = True
-        else:
-            expiry = None
 
         return expiry
 

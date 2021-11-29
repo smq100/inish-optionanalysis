@@ -1,10 +1,9 @@
-import datetime as dt
-
 import pandas as pd
 
 import strategies as s
 from strategies.strategy import Strategy
 from utils import ui
+from utils import math as m
 
 
 _logger = ui.get_logger()
@@ -20,11 +19,8 @@ class Vertical(Strategy):
 
         self.name = s.STRATEGIES_BROAD[2]
 
-        # Default expiry to a week from Friday
-        d = dt.datetime.today()
-        while d.weekday() != 4:
-            d += dt.timedelta(1)
-        expiry = d + dt.timedelta(days=6)
+        # Default expiry to tird Friday of next month
+        expiry = m.third_friday()
 
         # Add legs. Long leg is always first!
         if product == 'call':
@@ -82,7 +78,7 @@ class Vertical(Strategy):
             self.analysis.table = self.generate_profit_table()
 
     def fetch_default_contracts(self, distance:int, weeks:int) -> tuple[int, list[str]]:
-        # super() get the long option & itm index
+        # super() fetches the long option & itm index
         index, contracts = super().fetch_default_contracts(distance, weeks)
 
         if self.product == 'call':

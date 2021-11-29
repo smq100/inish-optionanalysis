@@ -1,6 +1,7 @@
 import abc
 from abc import ABC
 import datetime as dt
+from logging import raiseExceptions
 import math
 from dataclasses import dataclass
 
@@ -14,6 +15,7 @@ from pricing.blackscholes import BlackScholes
 from pricing.montecarlo import MonteCarlo
 from data import store
 from utils import ui
+from utils import math as m
 
 
 _logger = ui.get_logger()
@@ -63,8 +65,6 @@ class Strategy(ABC):
             leg.option.expiry = date
 
     def add_leg(self, quantity:int, product:str, direction:str, strike:float, expiry:dt.datetime) -> int:
-        expiry += dt.timedelta(days=1)
-
         leg = Leg(self.ticker, quantity, product, direction, strike, expiry)
         self.legs += [leg]
 
@@ -99,12 +99,19 @@ class Strategy(ABC):
         # Works for strategies with one leg. Multiple-leg strategies should be overridden
         if distance < 0:
             raise ValueError('Invalid distance')
-        if weeks < 0:
-            raise ValueError('Invalid weeks')
 
         contract = ''
         expiry = self.chain.get_expiry()
-        self.chain.expire = expiry[weeks]
+
+        if not expiry:
+            raise KeyError('No option expiry dates')
+        elif weeks < 0:
+            third = f'{m.third_friday():%Y-%m-%d}'
+            self.chain.expire = third if third in expiry else expiry[0]
+        elif len(expiry) > weeks:
+            self.chain.expire = expiry[weeks]
+        else:
+            self.chain.expire = expiry[0]
 
         options = self.chain.get_chain(self.legs[0].option.product)
 
