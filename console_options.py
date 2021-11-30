@@ -334,19 +334,19 @@ class Interface():
         selection = ui.menu(menu_items, 'Select Strategy', 0, 3)
 
         if selection == 1:
-            d = ui.input_integer('(1) Long, or (2) short: ', 1, 2)
+            d = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
             direction = 'long' if d == 1 else 'short'
             self.width = 0
             self.load_strategy(self.strategy.ticker, 'call', direction, self.width, self.quantity)
         elif selection == 2:
-            d = ui.input_integer('(1) Long, or (2) short: ', 1, 2)
+            d = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
             direction = 'long' if d == 1 else 'short'
             self.width = 0
             self.load_strategy(self.strategy.ticker, 'put', direction, self.width, self.quantity)
         elif selection == 3:
             p = ui.input_integer('(1) Call, or (2) Put: ', 1, 2)
             product = 'call' if p == 1 else 'put'
-            d = ui.input_integer('(1) Debit, or (2) credit: ', 1, 2)
+            d = ui.input_integer('(1) Debit, or (2) Credit: ', 1, 2)
             direction = 'long' if d == 1 else 'short'
             if product == 'call':
                 self.load_strategy(self.strategy.ticker, 'vertc', direction, self.width, self.quantity)

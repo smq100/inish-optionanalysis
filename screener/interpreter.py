@@ -199,14 +199,14 @@ class Interpreter:
 
             self.score = self.score if self.enable_score else 1.0
 
-            self.result = f'{self.company.ticker:6s}{str(self.success)[:1]}: {self.score:.2f}: {self.note} ' + \
+            self.result = f'{self.company.ticker:6s}{str(self.success)[:1]}: {self.score:5.2f}: {self.note}: ' + \
                 f'{self.base_technical}({self.base_length})/{base:.2f}@{self.base_factor:.2f} ' + \
                 f'{self.conditional} ' + \
                 f'{self.criteria_technical}({self.criteria_length})/{self.criteria_start}/{self.criteria_series}/{criteria:.2f}@{self.criteria_factor:.2f}'
         else:
             _logger.warning(f'{__name__}: No technical information for {self.company}')
 
-            self.result = f'{self.company.ticker:6s}{str(self.success)[:1]}: {self.score:.2f}: {self.note} ' + \
+            self.result = f'{self.company.ticker:6s}{str(self.success)[:1]}: {self.score:5.2f}: {self.note}: ' + \
                 f'{self.base_technical}({self.base_length})/***@{self.base_factor:.2f} ' + \
                 f'{self.conditional} ' + \
                 f'{self.criteria_technical}({self.criteria_length})/{self.criteria_start}/{self.criteria_series}/***@{self.criteria_factor:.2f}'
