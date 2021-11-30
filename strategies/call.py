@@ -22,16 +22,15 @@ class Call(Strategy):
         self.add_leg(self.quantity, product, direction, self.initial_spot, expiry)
 
         if load_default:
-            _, contract = self.fetch_default_contracts(s.DEFAULT_OPTION_ITM_DISTANCE, s.DEFAULT_OPTION_WEEKS)
+            _, _, contract = self.fetch_default_contracts()
             if contract:
                 self.legs[0].option.load_contract(contract[0])
-
 
     def __str__(self):
         return f'{self.legs[0].direction} {self.name}'
 
     def analyze(self) -> None:
-        if self._validate():
+        if self.validate():
             self.legs[0].calculate(self.legs[0].option.strike)
 
             price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price

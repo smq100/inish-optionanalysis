@@ -39,7 +39,7 @@ class Vertical(Strategy):
                 self.add_leg(self.quantity, product, 'short', self.initial_spot + DEFAULT_WIDTH, expiry)
 
         if load_default:
-            _, contracts = self.fetch_default_contracts(s.DEFAULT_OPTION_ITM_DISTANCE, s.DEFAULT_OPTION_WEEKS)
+            _, _, contracts = self.fetch_default_contracts()
             if len(contracts) == 2:
                 self.legs[0].option.load_contract(contracts[0])
                 self.legs[1].option.load_contract(contracts[1])
@@ -77,9 +77,9 @@ class Vertical(Strategy):
             # Generate profit table
             self.analysis.table = self.generate_profit_table()
 
-    def fetch_default_contracts(self, distance:int, weeks:int) -> tuple[int, list[str]]:
+    def fetch_default_contracts(self, distance:int=1, weeks:int=-1) -> tuple[str, int, list[str]]:
         # super() fetches the long option & itm index
-        index, contracts = super().fetch_default_contracts(distance, weeks)
+        product, index, contracts = super().fetch_default_contracts(distance, weeks)
 
         if self.product == 'call':
             if self.direction == 'long':
@@ -91,12 +91,12 @@ class Vertical(Strategy):
         else:
             index += self.width
 
-        options = self.chain.get_chain(self.legs[0].option.product)
+        options = self.chain.get_chain(product)
 
         # Add the short option
         contracts += [options.iloc[index]['contractSymbol']]
 
-        return index, contracts
+        return product, index, contracts
 
     def generate_profit_table(self) -> pd.DataFrame:
         if self.analysis.credit_debit == 'credit':

@@ -95,7 +95,7 @@ class Strategy(ABC):
         else:
             raise ValueError('Invalid pricing method')
 
-    def fetch_default_contracts(self, distance:int, weeks:int) -> tuple[int, list[str]]:
+    def fetch_default_contracts(self, distance:int=1, weeks:int=-1) -> tuple[str, int, list[str]]:
         # Works for strategies with one leg. Multiple-leg strategies should be overridden
         if distance < 0:
             raise ValueError('Invalid distance')
@@ -106,6 +106,7 @@ class Strategy(ABC):
         if not expiry:
             raise KeyError('No option expiry dates')
         elif weeks < 0:
+            # Default to next month's option date
             third = f'{m.third_friday():%Y-%m-%d}'
             self.chain.expire = third if third in expiry else expiry[0]
         elif len(expiry) > weeks:
@@ -113,7 +114,8 @@ class Strategy(ABC):
         else:
             self.chain.expire = expiry[0]
 
-        options = self.chain.get_chain(self.legs[0].option.product)
+        product = self.legs[0].option.product
+        options = self.chain.get_chain(product)
 
         index = self.chain.get_itm()
         if index >= 0:
@@ -124,7 +126,7 @@ class Strategy(ABC):
         _logger.debug(f'{__name__}: {options}')
         _logger.debug(f'{__name__}: {index=}')
 
-        return index, [contract]
+        return product, index, [contract]
 
     @abc.abstractmethod
     def generate_profit_table(self) -> pd.DataFrame:
@@ -141,7 +143,7 @@ class Strategy(ABC):
     def get_errors(self) -> str:
         return ''
 
-    def _validate(self):
+    def validate(self):
         return len(self.legs) > 0
 
 @dataclass
