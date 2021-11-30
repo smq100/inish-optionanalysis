@@ -44,7 +44,7 @@ def menu(menu_items:dict, header:str, minvalue:int, maxvalue:int) -> int:
 
     return input_integer('Please select: ', minvalue, maxvalue)
 
-def _delimeter(message, creturn:int=0) -> str:
+def delimeter(message, creturn:int=0) -> str:
     if creturn > 0:
         output = '\n' * creturn
     else:
@@ -58,16 +58,16 @@ def _delimeter(message, creturn:int=0) -> str:
     return output
 
 def print_message(message:str, creturn:int=1) -> None:
-    print(_delimeter(f'{message}', creturn))
+    print(delimeter(f'{message}', creturn))
 
 def print_warning(message:str, creturn:int=1) -> None:
-    print(_delimeter(f'Warning: {message}', creturn))
+    print(delimeter(f'Warning: {message}', creturn))
 
 def print_error(message:str, creturn:int=1) -> None:
-    print(_delimeter(f'Error: {message}', creturn))
+    print(delimeter(f'Error: {message}', creturn))
 
 def print_line(message:str, creturn:int=1) -> None:
-    print(_delimeter(message, creturn))
+    print(delimeter(message, creturn))
 
 def input_integer(message:str, min_:int, max_:int) -> int:
     val = min_ - 1

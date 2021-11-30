@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 
+from base import Threaded
 import strategies as s
 from strategies.leg import Leg
 from options.chain import Chain
@@ -21,7 +22,7 @@ from utils import math as m
 _logger = ui.get_logger()
 
 
-class Strategy(ABC):
+class Strategy(ABC, Threaded):
     def __init__(self, ticker:str, product:str, direction:str, width:int, quantity:int, load_default:bool=False):
         if not store.is_ticker(ticker):
             raise ValueError('Invalid ticker')

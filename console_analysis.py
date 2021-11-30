@@ -6,6 +6,11 @@ import logging
 import matplotlib.pyplot as plt
 from pandas import DataFrame
 
+import strategies as s
+from strategies.strategy import Strategy
+from strategies.call import Call
+from strategies.put import Put
+from strategies.vertical import Vertical
 from screener.screener import Screener, Result, INIT_NAME
 from analysis.trend import SupportResistance
 from analysis.correlate import Correlate
@@ -31,10 +36,12 @@ class Interface:
         self.auto = False
         self.screen_path = ''
         self.results:list[Result] = []
+        self.valids:list[Result] = []
         self.results_corr:list[tuple[str,DataFrame.Series]]=[]
-        self.valids = 0
+        self.trend:SupportResistance = None
         self.screener:Screener = None
         self.correlate:Correlate = None
+        self.strategy:Strategy = None
         self.task:threading.Thread = None
 
         abort = False
@@ -93,7 +100,7 @@ class Interface:
                 menu_items['5'] += ' (quick)'
 
             if len(self.results) > 0:
-                menu_items['8'] = f'Show All ({self.valids})'
+                menu_items['8'] = f'Show All ({len(self.valids)})'
 
             if selection == 0:
                 selection = ui.menu(menu_items, 'Select Operation', 0, 8)
@@ -104,7 +111,7 @@ class Interface:
                 self.select_screen()
             elif selection == 3:
                 if self.run_screen():
-                    if self.valids > 0:
+                    if len(self.valids) > 0:
                         self.print_results(top=LISTTOP)
             elif selection == 4:
                 if self.run_coorelate():
@@ -112,7 +119,7 @@ class Interface:
             elif selection == 5:
                 self.run_support_resistance()
             elif selection == 6:
-                self.run_options()
+                self.run_options('put', 'long')
             elif selection == 7:
                 self.print_results(top=LISTTOP)
             elif selection == 8:
@@ -141,7 +148,7 @@ class Interface:
     def select_screen(self) -> None:
         self.script = []
         self.results = []
-        self.valids = 0
+        self.valids = []
         paths = []
         with os.scandir(BASEPATH) as entries:
             for entry in entries:
@@ -192,16 +199,16 @@ class Interface:
                 self.task = threading.Thread(target=self.screener.run_script)
                 self.task.start()
 
-                self._show_progress_screen()
+                self.show_progress_screen()
 
                 if self.screener.task_error == 'Done':
                     self.results = sorted(self.screener.results, reverse=True, key=lambda r: float(r))
-                    self.valids = 0
+                    self.valids = []
                     for result in self.results:
                         if result:
-                            self.valids += 1
+                            self.valids += [result]
 
-                    ui.print_message(f'{self.valids} symbols identified in {self.screener.task_time:.1f} seconds')
+                    ui.print_message(f'{len(self.valids)} symbols identified in {self.screener.task_time:.1f} seconds')
 
                     success = True
 
@@ -217,7 +224,7 @@ class Interface:
             self.task.start()
 
             print()
-            self._show_progress_correlate()
+            self.show_progress_correlate()
 
             self.results_corr = []
             tickers = [str(result) for result in self.results if bool(result)][:LISTTOP]
@@ -232,11 +239,11 @@ class Interface:
         return success
 
     def run_support_resistance(self, corr:bool=False) -> None:
-        if self.valids > 0:
+        if len(self.valids) > 0:
             if corr:
                 tickers = [result[1]['ticker'] for result in self.results_corr if result[1]['value'] > COOR_CUTOFF][:LISTTOP_CORR]
             else:
-                tickers = [str(result) for result in self.results if bool(result)][:LISTTOP_TREND]
+                tickers = [str(result) for result in self.valids[:LISTTOP_TREND]]
 
             ui.progress_bar(0, 0, prefix='Analyzing', reset=True)
 
@@ -251,7 +258,7 @@ class Interface:
                 self.task = threading.Thread(target=self.trend.calculate)
                 self.task.start()
 
-                self._show_progress_analyze()
+                self.show_progress_analyze()
 
                 figure = self.trend.plot()
                 plt.figure(figure)
@@ -262,8 +269,47 @@ class Interface:
         else:
             ui.print_error('No valid results to analyze')
 
-    def run_options(self):
-        pass
+    def run_options(self, strategy:str, direction:str) -> None:
+        if strategy not in s.STRATEGIES:
+            raise ValueError('Invalid strategy')
+        if direction not in s.DIRECTIONS:
+            raise ValueError('Invalid direction')
+
+        if len(self.valids) > 0:
+            tickers = [str(result) for result in self.valids[:LISTTOP_TREND]]
+            results = []
+
+            ui.progress_bar(0, 0, prefix='Analyzing', reset=True)
+
+            for ticker in tickers:
+                name = ''
+                if strategy == 'call':
+                    self.strategy = Call(ticker, 'call', direction, 1, 1, True)
+                    name = 'Call'
+                elif strategy == 'put':
+                    self.strategy = Put(ticker, 'call', direction, 1, 1, True)
+                    name = 'Put'
+                elif strategy == 'vertc':
+                    self.strategy = Vertical(ticker, 'call', direction, 1, 1, True)
+                    name = 'Vertical Call'
+                elif strategy == 'vertp':
+                    self.strategy = Vertical(ticker, 'put', direction, 1, 1, True)
+                    name = 'Vertical Put'
+
+                self.task = threading.Thread(target=self.strategy.analyze)
+                self.task.start()
+
+                self.show_progress_options()
+
+                results += [ui.delimeter(f'{direction.title()} {name} Options for {ticker}')]
+                results += [str(self.strategy.analysis)]
+
+            if results:
+                print()
+                print()
+                [print(result) for result in results]
+        else:
+            ui.print_error('No valid results to analyze')
 
     def print_results(self, top:int=-1, verbose:bool=False, ticker:str='') -> None:
         if not self.table:
@@ -312,7 +358,7 @@ class Interface:
         else:
             ui.print_message('No significant coorelations found')
 
-    def _show_progress_screen(self) -> None:
+    def show_progress_screen(self) -> None:
         while not self.screener.task_error: pass
 
         prefix = 'Screening'
@@ -328,7 +374,7 @@ class Interface:
 
             ui.progress_bar(completed, total, prefix=prefix, ticker=ticker, success=success, tasks=tasks)
 
-    def _show_progress_correlate(self):
+    def show_progress_correlate(self):
         while not self.coorelate.task_error: pass
 
         if self.coorelate.task_error == 'None':
@@ -343,7 +389,7 @@ class Interface:
                 ticker = self.coorelate.task_ticker
                 ui.progress_bar(completed, total, prefix=prefix, ticker=ticker, success=success)
 
-    def _show_progress_analyze(self) -> None:
+    def show_progress_analyze(self) -> None:
         while not self.trend.task_error: pass
 
         if self.trend.task_error == 'None':
@@ -359,6 +405,16 @@ class Interface:
                 ui.print_error(f'{self.trend.task_error}: Error extracting lines')
         else:
             ui.print_message(f'{self.trend.task_error}')
+
+    def show_progress_options(self) -> None:
+        while not self.strategy.task_error: pass
+
+        if self.strategy.task_error == 'None':
+            while self.strategy.task_error == 'None':
+                time.sleep(0.20)
+                ui.progress_bar(0, 0, prefix='Analyzing', suffix=self.strategy.task_message)
+        else:
+            ui.print_message(f'{self.strategy.task_error}')
 
 
 if __name__ == '__main__':

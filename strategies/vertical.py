@@ -1,5 +1,6 @@
 import pandas as pd
 
+from base import Threaded
 import strategies as s
 from strategies.strategy import Strategy
 from utils import ui
@@ -49,10 +50,15 @@ class Vertical(Strategy):
     def __str__(self):
         return f'{self.name} {self.product} {self.analysis.credit_debit} spread'
 
+    @Threaded.threaded
     def analyze(self) -> None:
         ''' Analyze the strategy (Important: Assumes the long leg is the index-0 leg)'''
 
         if self._validate():
+            self.task_error = 'None'
+
+            self.task_message = self.legs[0].option.ticker
+
             self.legs[0].calculate(self.legs[0].option.strike)
             self.legs[1].calculate(self.legs[0].option.strike)
 
@@ -76,6 +82,8 @@ class Vertical(Strategy):
 
             # Generate profit table
             self.analysis.table = self.generate_profit_table()
+
+        self.task_error = 'Done'
 
     def fetch_default_contracts(self, distance:int=1, weeks:int=-1) -> tuple[str, int, list[str]]:
         # super() fetches the long option & itm index

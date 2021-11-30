@@ -24,7 +24,7 @@ class Interface:
         self.auto = False
         self.screen_path = ''
         self.results:list[Result] = []
-        self.valids = 0
+        self.valids:list[Result] = []
         self.screener:Screener = None
         self.task:threading.Thread = None
 
@@ -92,7 +92,7 @@ class Interface:
                 menu_items['3'] = f'Select Screener ({self.screen_base})'
 
             if len(self.results) > 0:
-                menu_items['6'] = f'Show All ({self.valids})'
+                menu_items['6'] = f'Show All ({len(self.valids)})'
 
             if selection == 0:
                 selection = ui.menu(menu_items, 'Select Operation', 0, 8)
@@ -105,11 +105,11 @@ class Interface:
                 self.select_screen()
             elif selection == 4:
                 if self.run_screen():
-                    if self.valids > 0:
+                    if len(self.valids) > 0:
                         self.print_results(top=20)
             elif selection == 5:
                 if self.run_backtest(prompt=not self.auto):
-                    if self.valids > 0:
+                    if len(self.valids) > 0:
                         self.print_backtest(top=20)
             elif selection == 6:
                 self.print_results()
@@ -154,7 +154,7 @@ class Interface:
     def select_screen(self) -> None:
         self.script = []
         self.results = []
-        self.valids = 0
+        self.valids = []
         paths = []
         with os.scandir(BASEPATH) as entries:
             for entry in entries:
@@ -214,12 +214,12 @@ class Interface:
 
                 if self.screener.task_error == 'Done':
                     self.results = sorted(self.screener.results, reverse=True, key=lambda r: float(r))
-                    self.valids = 0
+                    self.valids = []
                     for result in self.results:
                         if result:
-                            self.valids += 1
+                            self.valids += [result]
 
-                    ui.print_message(f'{self.valids} symbols identified in {self.screener.task_time:.1f} seconds')
+                    ui.print_message(f'{len(self.valids)} symbols identified in {self.screener.task_time:.1f} seconds')
 
                     success = True
 

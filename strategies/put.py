@@ -1,5 +1,6 @@
 import pandas as pd
 
+from base import Threaded
 import strategies as s
 from strategies.strategy import Strategy
 from utils import ui
@@ -29,8 +30,13 @@ class Put(Strategy):
     def __str__(self):
         return f'{self.legs[0].direction} {self.name}'
 
+    @Threaded.threaded
     def analyze(self) -> None:
         if self.validate():
+            self.task_error = 'None'
+
+            self.task_message = self.legs[0].option.ticker
+
             self.legs[0].calculate(self.legs[0].option.strike)
 
             price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
@@ -48,6 +54,8 @@ class Put(Strategy):
 
             # Calculate breakeven
             self.analysis.breakeven = self.calculate_breakeven()
+
+        self.task_error = 'Done'
 
     def generate_profit_table(self) -> pd.DataFrame:
         profit = pd.DataFrame()
