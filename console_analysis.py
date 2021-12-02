@@ -253,7 +253,11 @@ class Interface:
 
     def run_coorelate(self) -> bool:
         success = False
-        if len(self.results_screen) > 0:
+        if len(self.results_screen) == 0:
+            ui.print_error('Please run screen before correlating')
+        elif not store.is_list(self.table):
+            ui.print_error('List is not valid')
+        else:
             table = store.get_tickers(self.table)
             self.coorelate = Correlate(table)
 
@@ -270,8 +274,6 @@ class Interface:
                 self.results_corr += [(ticker, df.iloc[-1])]
 
             success = True
-        else:
-            ui.print_error('Please run screen before correlating')
 
         return success
 
@@ -338,8 +340,10 @@ class Interface:
 
             self.show_progress_options()
 
+            # Build output
             results += ['\n']
             results += [ui.delimeter(f'{direction.title()} {name} Options for {ticker}')]
+            results += ['\n']
             results += [str(leg) for leg in self.strategy.legs]
             results += ['\n']
             results += [str(self.strategy.analysis)]
@@ -394,7 +398,7 @@ class Interface:
         if results:
             ui.print_message('Coorelation Results')
             [print(result) for result in results]
-            answer = ui.input_text('\nRun analysis on top findings? (y/n): ')
+            answer = ui.input_text('\nRun support & resistance analysis on top findings? (y/n): ')
             if answer.lower() == 'y':
                 self.run_support_resistance(True)
         else:
@@ -457,8 +461,6 @@ class Interface:
                 ui.progress_bar(0, 0, prefix='Analyzing Options', suffix=self.strategy.task_message)
         else:
             ui.print_message(f'{self.strategy.task_error}')
-
-        print()
 
 
 if __name__ == '__main__':

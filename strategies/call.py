@@ -51,7 +51,7 @@ class Call(Strategy):
             self.analysis.table = self.generate_profit_table()
 
             # Calculate min max
-            self.analysis.max_gain, self.analysis.max_loss = self.calculate_max_gain_loss()
+            self.analysis.max_gain, self.analysis.max_loss, self.analysis.upside, self.analysis.sentiment = self.calculate_gain_loss()
 
             # Calculate breakeven
             self.analysis.breakeven = self.calculate_breakeven()
@@ -70,18 +70,20 @@ class Call(Strategy):
 
         return profit
 
-    def calculate_max_gain_loss(self) -> tuple[float, float]:
+    def calculate_gain_loss(self) -> tuple[float, float, float, str]:
         price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
         if self.legs[0].direction == 'long':
-            self.analysis.sentiment = 'bullish'
             max_gain = -1.0
             max_loss = price * self.quantity
+            upside = 0.0
+            sentiment = 'bullish'
         else:
-            self.analysis.sentiment = 'bearish'
             max_gain = price * self.quantity
             max_loss = -1.0
+            upside = 0.0
+            sentiment = 'bearish'
 
-        return max_gain, max_loss
+        return max_gain, max_loss, upside, sentiment
 
     def calculate_breakeven(self) -> float:
         if self.legs[0].direction == 'long':

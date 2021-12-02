@@ -134,8 +134,8 @@ class Strategy(ABC, Threaded):
         return pd.DataFrame()
 
     @abc.abstractmethod
-    def calculate_max_gain_loss(self) -> tuple[float, float]:
-        return (0.0, 0.0)
+    def calculate_gain_loss(self) -> tuple[float, float, float, str]:
+        return (0.0, 0.0, 0.0, '')
 
     @abc.abstractmethod
     def calculate_breakeven(self) -> float:
@@ -156,11 +156,12 @@ class Analysis:
     max_gain = 0.0
     max_loss = 0.0
     breakeven = 0.0
+    upside = 0.0
 
     def __str__(self):
         if self.table is not None:
-            gain = f'${self.max_gain:.2f}' if self.max_gain >= 0.0 else 'Unlimited'
-            loss = f'${self.max_loss:.2f}' if self.max_loss >= 0.0 else 'Unlimited'
+            gain = 'Unlimited' if self.max_gain < 0.0 else f'${self.max_gain:.2f}'
+            loss = 'Unlimited' if self.max_loss < 0.0 else f'${self.max_loss:.2f}'
 
             output = \
                 f'Type:      {self.credit_debit.title()}\n'\
@@ -168,7 +169,8 @@ class Analysis:
                 f'Amount:    ${abs(self.amount):.2f} {self.credit_debit}\n'\
                 f'Max Gain:  {gain}\n'\
                 f'Max Loss:  {loss}\n'\
-                f'Breakeven: ${self.breakeven:.2f} at expiry\n'
+                f'Breakeven: ${self.breakeven:.2f} at expiry\n'\
+                f'Upside:    {self.upside:.2f}\n'
         else:
             output = 'Not yet analyzed'
 
