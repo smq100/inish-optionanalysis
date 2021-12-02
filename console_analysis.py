@@ -17,7 +17,7 @@ from analysis.correlate import Correlate
 from data import store as store
 from utils import ui
 
-_logger = ui.get_logger(logging.WARNING, logfile='')
+ui.get_logger(logging.WARNING, logfile='')
 
 BASEPATH = os.getcwd() + '/screener/screens/'
 SCREEN_SUFFIX = 'screen'
@@ -199,11 +199,11 @@ class Interface:
 
             if selection == 1:
                 strategy = 'call'
-                d = ui.input_integer('(1) Long, or (2) short: ', 1, 2)
+                d = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
                 direction = 'long' if d == 1 else 'short'
             elif selection == 2:
                 strategy = 'put'
-                d = ui.input_integer('(1) Long, or (2) short: ', 1, 2)
+                d = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
                 direction = 'long' if d == 1 else 'short'
             elif selection == 3:
                 p = ui.input_integer('(1) Call, or (2) Put: ', 1, 2)
@@ -338,12 +338,13 @@ class Interface:
 
             self.show_progress_options()
 
+            results += ['\n']
             results += [ui.delimeter(f'{direction.title()} {name} Options for {ticker}')]
+            results += [str(leg) for leg in self.strategy.legs]
+            results += ['\n']
             results += [str(self.strategy.analysis)]
 
         if results:
-            print()
-            print()
             [print(result) for result in results]
 
     def show_valids(self, top:int=-1, verbose:bool=False, ticker:str='') -> None:
@@ -456,6 +457,8 @@ class Interface:
                 ui.progress_bar(0, 0, prefix='Analyzing Options', suffix=self.strategy.task_message)
         else:
             ui.print_message(f'{self.strategy.task_error}')
+
+        print()
 
 
 if __name__ == '__main__':
