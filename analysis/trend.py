@@ -160,7 +160,7 @@ class SupportResistance(Threaded):
         # Create dataframe of lines then sort, round, and drop duplicates
         df = pd.DataFrame.from_records([vars(l) for l in lines])
         df.dropna(inplace=True)
-        df.drop('_score', 1, inplace=True)
+        df.drop('_score', axis=1, inplace=True)
         df.sort_values(by=['score'], ascending=False, inplace=True)
         df = df.round(6)
         df.drop_duplicates(subset=['slope', 'intercept'], inplace=True)

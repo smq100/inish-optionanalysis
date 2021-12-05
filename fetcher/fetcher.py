@@ -120,7 +120,7 @@ def _get_history_yfinance(ticker:str, days:int=-1, uselast:bool=False) -> pd.Dat
 
                         # Clean some things up and make colums consistent with Postgres column names
                         history.columns = history.columns.str.lower()
-                        history.drop(['dividends', 'stock splits'], 1, inplace=True)
+                        history.drop(['dividends', 'stock splits'], axis=1, inplace=True)
                         history.sort_values('date', ascending=True, inplace=True)
 
                         _logger.info(f'{__name__}: Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
@@ -162,7 +162,7 @@ def _get_history_quandl(ticker:str, days:int=-1) -> pd.DataFrame:
 
                     # Clean some things up and make columns consistent with Postgres column names
                     history.columns = history.columns.str.lower()
-                    history.drop(['none'], 1, inplace=True)
+                    history.drop(['none'], axis=1, inplace=True)
                     history.sort_values('date', ascending=True, inplace=True)
 
                     _logger.info(f'{__name__}: Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')

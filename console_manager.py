@@ -166,10 +166,11 @@ class Interface:
                 else:
                     ui.print_error(f'{ticker} has no company information')
 
-                history = store.get_history(ticker, days=100, end=end, live=live).round(2)
-                if history.empty:
+                history = store.get_history(ticker, days=100, end=end, live=live)
+                if history is None or history.empty:
                     ui.print_error(f'{ticker} has no price history')
                 else:
+                    history = history.round(2)
                     if not live:
                         latest = history.iloc[-1]
                         print(f'Latest Record:\t{latest["date"]:%Y-%m-%d}, closed at ${latest["close"]:.2f}')

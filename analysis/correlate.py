@@ -31,7 +31,7 @@ class Correlate(Threaded):
             if not df.empty:
                 df.set_index('date', inplace=True)
                 df.rename(columns={'close':ticker}, inplace=True)
-                df.drop(['high', 'low', 'open', 'volume'], 1, inplace=True)
+                df.drop(['high', 'low', 'open', 'volume'], axis=1, inplace=True)
 
                 if main_df.empty:
                     main_df = df

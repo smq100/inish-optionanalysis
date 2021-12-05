@@ -223,7 +223,7 @@ def get_history(ticker:str, days:int=-1, end:int=0, live:bool=False) -> pd.DataF
                     history = pd.read_sql(p.statement, _engine)
                     if not history.empty:
                         history = history[:-end] if end > 0 else history
-                        history.drop(['id', 'security_id'], 1, inplace=True)
+                        history.drop(['id', 'security_id'], axis=1, inplace=True)
                         _logger.info(f'{__name__}: Fetched {len(history)} days of price history for {ticker} from {d.ACTIVE_DB} ({end} days prior)')
             else:
                 _logger.warning(f'{__name__}: No history found for {ticker}')
