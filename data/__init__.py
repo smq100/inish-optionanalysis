@@ -3,7 +3,7 @@ import configparser
 
 # Databases
 VALID_DBS = ('Postgres', 'SQLite')
-ACTIVE_DB = VALID_DBS[1]
+ACTIVE_DB = VALID_DBS[0]
 
 # Data sources
 VALID_DATASOURCES = ('quandl', 'yfinance')
