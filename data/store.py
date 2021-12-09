@@ -27,39 +27,64 @@ _master_indexes:dict = {
 
 if d.ACTIVE_DB == 'Postgres':
     _engine = create_engine(d.ACTIVE_URI, echo=False, pool_size=10, max_overflow=20)
-else:
+    _session = sessionmaker(bind=_engine)
+elif d.ACTIVE_DB == 'SQLite':
     _engine = create_engine(d.ACTIVE_URI)
-_session = sessionmaker(bind=_engine)
+    _session = sessionmaker(bind=_engine)
+else:
+    _engine = None
+    _session = None
 
 UNAVAILABLE = 'unavailable'
 
+def is_database_connected() -> bool:
+    return bool(d.ACTIVE_URI)
 
 def is_live_connection() -> bool:
     return fetcher.is_connected()
 
 def is_ticker(ticker:str, inactive:bool=False) -> bool:
     ticker = ticker.upper()
-    with _session() as session:
-        if inactive:
-            t = session.query(models.Security).filter(models.Security.ticker==ticker).one_or_none()
-        else:
-            t = session.query(models.Security).filter(and_(models.Security.ticker==ticker, models.Security.active)).one_or_none()
 
-    return t is not None
+    if _session is not None:
+        with _session() as session:
+            if inactive:
+                t = session.query(models.Security).filter(models.Security.ticker==ticker).one_or_none()
+            else:
+                t = session.query(models.Security).filter(and_(models.Security.ticker==ticker, models.Security.active)).one_or_none()
+
+            valid = t is not None
+    else:
+        valid = fetcher.validate_ticker(ticker)
+
+    return valid
 
 def is_exchange(exchange:str) -> bool:
     exchange = exchange.upper()
-    with _session() as session:
-        e = session.query(models.Exchange).filter(models.Exchange.abbreviation==exchange).one_or_none()
 
-    return e is not None
+    if _session is not None:
+        with _session() as session:
+            e = session.query(models.Exchange).filter(models.Exchange.abbreviation==exchange).one_or_none()
+
+        valid = e is not None
+    else:
+        e = [e['abbreviation'] for e in d.EXCHANGES]
+        valid = exchange in e
+
+    return valid
 
 def is_index(index:str) -> bool:
-    ticindexker = index.upper()
-    with _session() as session:
-        i = session.query(models.Index).filter(models.Index.abbreviation==index).one_or_none()
+    index = index.upper()
 
-    return i is not None
+    if _session is not None:
+        with _session() as session:
+            i = session.query(models.Index).filter(models.Index.abbreviation==index).one_or_none()
+            valid = i is not None
+    else:
+        i = [i['abbreviation'] for i in d.INDEXES]
+        valid = index in i
+
+    return valid
 
 def is_list(list:str) -> bool:
     exist = False
@@ -108,38 +133,44 @@ def get_indexes() -> list[str]:
 def get_exchange_tickers(exchange:str, inactive:bool=False) -> list[str]:
     results = []
 
-    if is_exchange(exchange):
-        with _session() as session:
-            exc = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange.upper()).one()
-            if exc is not None:
-                if inactive:
-                    symbols = session.query(models.Security).filter(models.Security.exchange_id==exc.id).all()
-                else:
-                    symbols = session.query(models.Security).filter(and_(models.Security.exchange_id==exc.id, models.Security.active)).all()
+    if _session is not None:
+        if is_exchange(exchange):
+            with _session() as session:
+                exc = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange.upper()).one()
+                if exc is not None:
+                    if inactive:
+                        symbols = session.query(models.Security).filter(models.Security.exchange_id==exc.id).all()
+                    else:
+                        symbols = session.query(models.Security).filter(and_(models.Security.exchange_id==exc.id, models.Security.active)).all()
 
-                results = [symbol.ticker for symbol in symbols]
+                    results = [symbol.ticker for symbol in symbols]
+        else:
+            raise ValueError(f'Invalid exchange: {exchange}')
     else:
-        raise ValueError(f'Invalid exchange: {exchange}')
+        results = get_exchange_tickers_master(exchange)
 
     return results
 
 def get_index_tickers(index:str, inactive:bool=False) -> list[str]:
     results = []
 
-    if is_index(index):
-        with _session() as session:
-            ind = session.query(models.Index.id).filter(models.Index.abbreviation==index.upper()).first()
-            if ind is not None:
-                if inactive:
-                    symbols = session.query(models.Security).filter(
-                        or_(models.Security.index1_id==ind.id, models.Security.index2_id==ind.id, models.Security.index3_id==ind.id)).all()
-                else:
-                    symbols = session.query(models.Security).filter(and_(models.Security.active,
-                        or_(models.Security.index1_id==ind.id, models.Security.index2_id==ind.id, models.Security.index3_id==ind.id))).all()
+    if _session is not None:
+        if is_index(index):
+            with _session() as session:
+                ind = session.query(models.Index.id).filter(models.Index.abbreviation==index.upper()).first()
+                if ind is not None:
+                    if inactive:
+                        symbols = session.query(models.Security).filter(
+                            or_(models.Security.index1_id==ind.id, models.Security.index2_id==ind.id, models.Security.index3_id==ind.id)).all()
+                    else:
+                        symbols = session.query(models.Security).filter(and_(models.Security.active,
+                            or_(models.Security.index1_id==ind.id, models.Security.index2_id==ind.id, models.Security.index3_id==ind.id))).all()
 
-                results = [symbol.ticker for symbol in symbols]
+                    results = [symbol.ticker for symbol in symbols]
+        else:
+            raise ValueError(f'Invalid index: {index}')
     else:
-        raise ValueError(f'Invalid index: {index}')
+        results = get_index_tickers_master(index)
 
     return results
 
@@ -184,7 +215,9 @@ def get_current_price(ticker:str) -> float:
 
 def get_last_price(ticker:str) -> float:
     price = 0.0
-    history = get_history(ticker, 30)
+    live = True if _session is None else False
+
+    history = get_history(ticker, 30, live=live)
     if history is not None:
         price = history.iloc[-1]['close']
 
@@ -193,6 +226,7 @@ def get_last_price(ticker:str) -> float:
 def get_history(ticker:str, days:int=-1, end:int=0, live:bool=False) -> pd.DataFrame:
     ticker = ticker.upper()
     history = pd.DataFrame()
+    live = True if _session is None else live
 
     if end < 0:
         ValueError('Invalid value for "end"')
@@ -232,6 +266,7 @@ def get_history(ticker:str, days:int=-1, end:int=0, live:bool=False) -> pd.DataF
 
 def get_company(ticker:str, live:bool=False, extra:bool=False, uselast:bool=False, test:bool=False) -> dict:
     ticker = ticker.upper()
+    live = True if _session is None else live
     results = {}
 
     if live:
@@ -329,7 +364,7 @@ def get_exchange_tickers_master(exchange:str, type:str='google') -> list[str]:
 
 def get_index_tickers_master(index:str, type:str='google') -> list[str]:
     global _master_indexes
-    symbols = []
+    symbols = set()
 
     if is_index(index):
         if len(_master_indexes[index]) > 0:
@@ -343,8 +378,8 @@ def get_index_tickers_master(index:str, type:str='google') -> list[str]:
                 raise ValueError(f'Invalid spreadsheet type: {type}')
 
             if table.open(index):
-                symbols = table.get_column(1)
-                _master_indexes[index] = set(symbols)
+                symbols = set(table.get_column(1))
+                _master_indexes[index] = symbols
             else:
                 _logger.warning(f'{__name__}: Unable to open exchange spreadsheet {index}')
     else:

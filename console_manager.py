@@ -17,37 +17,40 @@ class Interface:
         self.ticker = ''
         self.stop = False
 
-        if ticker:
-            if store.is_ticker(ticker.upper()):
-                self.ticker = ticker.upper()
-                self.stop = True
+        if store.is_database_connected():
+            if ticker:
+                if store.is_ticker(ticker.upper()):
+                    self.ticker = ticker.upper()
+                    self.stop = True
+                else:
+                    exit = True
+                    ui.print_error(f'Invalid ticker specifed: {ticker}')
+            elif update:
+                if store.is_ticker(update.upper()):
+                    self.ticker = update.upper()
+                    self.stop = True
+                else:
+                    exit = True
+                    ui.print_error(f'Invalid ticker specifed: {update}')
+
+            self.exchanges:list[str] = store.get_exchanges()
+            self.indexes:list[str] = store.get_indexes()
+            self.manager:manager.Manager = manager.Manager()
+            self.task:threading.Thread = None
+
+            if not store.is_live_connection():
+                ui.print_error('No Internet connection')
+
+            if exit:
+                pass
+            elif ticker:
+                self.main_menu(selection=2)
+            elif update:
+                self.main_menu(selection=4)
             else:
-                exit = True
-                ui.print_error(f'Invalid ticker specifed: {ticker}')
-        elif update:
-            if store.is_ticker(update.upper()):
-                self.ticker = update.upper()
-                self.stop = True
-            else:
-                exit = True
-                ui.print_error(f'Invalid ticker specifed: {update}')
-
-        self.exchanges:list[str] = store.get_exchanges()
-        self.indexes:list[str] = store.get_indexes()
-        self.manager:manager.Manager = manager.Manager()
-        self.task:threading.Thread = None
-
-        if not store.is_live_connection():
-            ui.print_error('No Internet connection')
-
-        if exit:
-            pass
-        elif ticker:
-            self.main_menu(selection=2)
-        elif update:
-            self.main_menu(selection=4)
+                self.main_menu()
         else:
-            self.main_menu()
+            ui.print_error('No databases available')
 
     def main_menu(self, selection:int=0) -> None:
         if not self.stop:

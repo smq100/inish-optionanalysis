@@ -20,7 +20,7 @@ class Interface:
         self.screen_base = screen
         self.verbose = verbose
         self.exit = exit
-        self.live = live
+        self.live = live if store.is_database_connected() else True
         self.auto = False
         self.screen_path = ''
         self.results:list[Result] = []

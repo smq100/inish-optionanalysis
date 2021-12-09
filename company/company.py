@@ -13,7 +13,7 @@ class Company:
         self.ticker = ticker.upper()
         self.days = days
         self.end = end
-        self.live = live
+        self.live = live if store.is_database_connected() else True
         self.info = {}
         self.history:pd.DataFrame = pd.DataFrame()
         self.company = {}

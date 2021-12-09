@@ -69,7 +69,7 @@ class Screener(Threaded):
 
         self.days = days
         self.end = end
-        self.live = live
+        self.live = live if store.is_database_connected() else True
         self.scripts:list[dict] = []
         self.companies:list[Company] = []
         self.results:list[Result] = []

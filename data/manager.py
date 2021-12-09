@@ -24,14 +24,18 @@ class Manager(Threaded):
     def __init__(self):
         super().__init__()
 
-        self.engine = create_engine(d.ACTIVE_URI, echo=False)
-        self.session = sessionmaker(bind=self.engine)
         self.exchange = ''
         self.invalid_tickers = []
         self.retry = 0
 
-        # No multithreading for SQLite
-        self._concurrency = 1 if d.ACTIVE_DB == 'SQLite' else 10
+        if d.ACTIVE_URI:
+            self.engine = create_engine(d.ACTIVE_URI, echo=False)
+            self.session = sessionmaker(bind=self.engine)
+
+            # No multithreading for SQLite
+            self._concurrency = 1 if d.ACTIVE_DB == 'SQLite' else 10
+        else:
+            raise ValueError('No database specified')
 
     def create_database(self) -> None:
         models.Base.metadata.create_all(self.engine)
@@ -102,8 +106,8 @@ class Manager(Threaded):
         if store.is_exchange(exchange):
             with self.session() as session:
                 exc = session.query(models.Exchange).filter(models.Exchange.abbreviation==exchange).one()
-
                 sec = session.query(models.Security).filter(models.Security.ticker==ticker).one_or_none()
+
                 if sec is None:
                     process = False
                     company = store.get_company(ticker, live=True)
