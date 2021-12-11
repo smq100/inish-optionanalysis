@@ -25,9 +25,7 @@ class Google(Sheet):
             self.tab_name = tab
 
             scope = [
-                # 'https://spreadsheets.google.com/feeds',
                 'https://www.googleapis.com/auth/spreadsheets',
-                # "https://www.googleapis.com/auth/drive.file",
                 "https://www.googleapis.com/auth/drive"
             ]
 
@@ -39,7 +37,7 @@ class Google(Sheet):
             except gspread.exceptions.SpreadsheetNotFound:
                 _logger.error(f'{__name__}: Unable to open file {self.sheet_name}/{self.tab_name}')
             except Exception as e:
-                _logger.error(f'{__name__}: Error opening file {self.sheet_name}/{self.tab_name}')
+                _logger.error(f'{__name__}: Error opening file {self.sheet_name}/{self.tab_name}: {e}')
             else:
                 _logger.info(f'{__name__}: Opened file {self.sheet_name}/{self.tab_name}')
                 self.opened = True

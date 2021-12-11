@@ -356,7 +356,7 @@ def get_exchange_tickers_master(exchange:str, type:str='google') -> list[str]:
                 symbols = table.get_column(1)
                 _master_exchanges[exchange] = set(symbols)
             else:
-                _logger.warning(f'{__name__}: Unable to open index spreadsheet {exchange}')
+                _logger.warning(f'{__name__}: Unable to open exchange spreadsheet {exchange}')
     else:
         raise ValueError(f'Invalid exchange name: {exchange}')
 
@@ -381,7 +381,7 @@ def get_index_tickers_master(index:str, type:str='google') -> list[str]:
                 symbols = set(table.get_column(1))
                 _master_indexes[index] = symbols
             else:
-                _logger.warning(f'{__name__}: Unable to open exchange spreadsheet {index}')
+                _logger.warning(f'{__name__}: Unable to open index spreadsheet {index}')
     else:
         raise ValueError(f'Invalid index name: {index}')
 
