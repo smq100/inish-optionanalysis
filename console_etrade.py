@@ -3,6 +3,7 @@ import webbrowser
 import configparser
 import pickle
 import logging
+import datetime
 
 from requests_oauthlib import OAuth1Session
 
@@ -17,10 +18,13 @@ ui.get_logger(logging.WARNING, logfile='')
 
 class Client:
     def __init__(self):
+        self.session = None
         self.config = configparser.ConfigParser()
         self.config.read('etrade/config.ini')
         self.base_url = self.config['DEFAULT']['PROD_BASE_URL']
         self.picklefile = 'session.pickle'
+        self.accounts = None
+        self.account_index = -1
 
         # Get a new session, or use existing
         if os.path.exists(self.picklefile):
@@ -30,44 +34,256 @@ class Client:
             # Test session with a dummy call to get a quote and authorize if required
             url = f'{self.base_url}/v1/market/quote/aapl'
             if not _validate_session(self.session, url):
-                self.session = self.authorize()
-        else:
+                self.session = None
+
+        if self.session is None:
             self.session = self.authorize()
 
     def main_menu(self):
         menu_items = {
-            '1': 'Lookup Symbol',
-            '2': 'Market Quotes',
-            '3': 'Options Chain',
-            '4': 'Account List',
-            '5': 'User Alerts',
+            '1': 'Account List',
+            '2': 'User Alerts',
+            '3': 'Lookup Symbol',
+            '4': 'Market Quotes',
+            '5': 'Options Chain',
             '0': 'Exit'
         }
 
         while True:
             selection = ui.menu(menu_items, 'Select Operation', 0, 5)
             if selection == 1:
-                lookup = Lookup(self.session, self.base_url)
-                symbol = input('\nPlease enter symbol: ')
-                lookup.lookup(symbol)
+                self.list_accounts()
             elif selection == 2:
-                quotes = Quotes(self.session, self.base_url)
-                symbols = input('\nPlease enter stock symbol: ')
-                quotes.quotes(symbols)
+                self.alerts()
             elif selection == 3:
-                options = Options(self.session, self.base_url)
-                symbol = input('\nPlease enter option symbol: ')
-                options.chain(symbol, strikes=3)
+                self.lookup()
             elif selection == 4:
-                accounts = Accounts(self.session, self.base_url)
-                accounts.list()
+                self.quotes()
             elif selection == 5:
-                alerts = Alerts(self.session, self.base_url)
-                alerts.alerts()
+                self.options()
             elif selection == 0:
                 break
             else:
                 print('Unknown operation selected')
+
+    def list_accounts(self):
+        self.accounts = Accounts(self.session, self.base_url)
+        success, listing = self.accounts.list()
+
+        if success == 'success':
+            menu_items = {n+1:listing[n] for n in range (len(listing))}
+            menu_items['0'] = 'Cancel'
+
+            selection = ui.menu(menu_items, 'Select Accounts', 0, len(menu_items))
+            if selection > 0:
+                self.account_index = selection - 1
+                self.account_action()
+            else:
+                self.account_index = -1
+        else:
+            self.accounts = None
+
+    def account_action(self):
+        if self.account_index >= 0:
+            menu_items = {
+                '1': 'Balance',
+                '2': 'Portfolio',
+                '3': 'Orders',
+                '0': 'Cancel'
+                }
+
+            selection = ui.menu(menu_items, 'Select Action', 0, len(menu_items)-1)
+            if selection == 1:
+                self.account_action_balance()
+            elif selection == 2:
+                self.account_action_portfolio()
+            elif selection == 3:
+                self.account_action_orders()
+
+    def account_action_balance(self):
+        if self.account_index >= 0:
+            message, balance = self.accounts.balance(self.account_index)
+
+        if balance:
+            ui.print_message(f'Balance for {balance["accountId"]}')
+
+            if 'accountDescription' in balance:
+                print(f'Account Nickname: {balance["accountDescription"]}')
+            if 'accountType' in balance:
+                print(f'Account Type: {balance["accountType"]}')
+            if 'Computed' in balance \
+                    and 'RealTimeValues' in balance['Computed'] \
+                    and 'totalAccountValue' in balance['Computed']['RealTimeValues']:
+                print(f'Net Account Value: ${balance["Computed"]["RealTimeValues"]["totalAccountValue"]:,.2f}')
+            if 'Computed' in balance \
+                    and 'marginBuyingPower' in balance['Computed']:
+                print(f'Margin Buying Power: ${balance["Computed"]["marginBuyingPower"]:,.2f}')
+            if 'Computed' in balance \
+                    and 'cashBuyingPower' in balance['Computed']:
+                print(f'Cash Buying Power: ${balance["Computed"]["cashBuyingPower"]:,.2f}')
+            if 'accountDescription' in balance:
+                print(f'Option Level: {balance["optionLevel"]}')
+        else:
+            ui.print_error(message)
+
+    def account_action_portfolio(self):
+        if self.account_index >= 0:
+            message, portfolio = self.accounts.portfolio(self.account_index)
+
+        if portfolio:
+            ui.print_message('Portfolio')
+            for acct_portfolio in portfolio['PortfolioResponse']['AccountPortfolio']:
+                if acct_portfolio is not None and 'Position' in acct_portfolio:
+                    for position in acct_portfolio['Position']:
+                        if position is not None:
+                            print_str = ''
+                            if 'symbolDescription' in position:
+                                print_str += f'{str(position["symbolDescription"])}'
+                            if 'quantity' in position:
+                                print_str += f', Q: {position["quantity"]}'
+                            if 'Quick' in position and 'lastTrade' in position['Quick']:
+                                print_str += f', Price: {position["Quick"]["lastTrade"]:,.2f}'
+                            if 'pricePaid' in position:
+                                print_str += f', Paid: {position["pricePaid"]:,.2f}'
+                            if 'totalGain' in position:
+                                print_str += f', Gain: {position["totalGain"]:,.2f}'
+                            if 'marketValue' in position:
+                                print_str += f', Value: {position["marketValue"]:,.2f}'
+
+                            print(print_str)
+        else:
+            ui.print_error(message)
+
+    def account_action_orders(self):
+        ui.print_error('TODO')
+
+    def alerts(self):
+        alerts = Alerts(self.session, self.base_url)
+        message, alert_data = alerts.alerts()
+
+        if alert_data:
+            alert = ''
+            ui.print_message('Alerts')
+            for item in alert_data['AlertsResponse']['Alert']:
+                if item is not None and 'id' in item:
+                    alert += f'ID: {item["id"]}'
+                if item is not None and 'createTime' in item:
+                    timestamp = datetime.datetime.fromtimestamp(item['createTime']).strftime('%Y-%m-%d %H:%M:%S')
+                    alert += f', Time: {timestamp}'
+                if item is not None and 'subject' in item:
+                    alert += f', Subject: {item["subject"]}'
+                if item is not None and 'status' in item:
+                    alert += f', Status: {item["status"]}'
+
+                print(alert)
+        else:
+            ui.print_error(message)
+
+    def lookup(self):
+        symbol = ui.input_text('Please enter symbol: ').upper()
+        lookup = Lookup(self.session, self.base_url)
+        message, lookup_data = lookup.lookup(symbol)
+
+        if lookup_data is not None:
+            out = ''
+            ui.print_message(f'Security information for {symbol}')
+            for item in lookup_data['LookupResponse']['Data']:
+                if item is not None and 'symbol' in item:
+                    out += f'Symbol: {item["symbol"]}'
+                if item is not None and 'type' in item:
+                    out += f', Type: {item["type"]}'
+                if item is not None and 'description' in item:
+                    out += f', Desc: {item["description"]}'
+                print(out)
+        else:
+            ui.print_error(message)
+
+    def quotes(self):
+        symbol = ui.input_text('Please enter symbol: ').upper()
+        quotes = Quotes(self.session, self.base_url)
+        message, quote_data = quotes.quotes(symbol)
+
+        if quote_data is not None:
+            ui.print_message('Quotes')
+            for quote in quote_data['QuoteResponse']['QuoteData']:
+                if quote is not None:
+                    if 'dateTime' in quote:
+                        print(f'Date Time: {quote["dateTime"]}')
+                    if 'Product' in quote and 'symbol' in quote['Product']:
+                        print(f'Symbol: {quote["Product"]["symbol"]}')
+                    if 'Product' in quote and 'securityType' in quote['Product']:
+                        print(f'Security Type: {quote["Product"]["securityType"]}')
+                    if 'All' in quote:
+                        if 'lastTrade' in quote['All']:
+                            print(f'Last Price: {quote["All"]["lastTrade"]}')
+                        if 'changeClose' in quote['All'] and 'changeClosePercentage' in quote['All']:
+                            print(f"Today's Change: {quote['All']['changeClose']:,.3f} ({quote['All']['changeClosePercentage']}%)")
+                        if 'open' in quote['All']:
+                            print(f'Open: {quote["All"]["open"]:,.2f}')
+                        if 'previousClose' in quote['All']:
+                            print(f'Previous Close: {quote["All"]["previousClose"]:,.2f}')
+                        if 'bid' in quote['All'] and 'bidSize' in quote['All']:
+                            print(f'Bid (Size): {quote["All"]["bid"]:,.2f} x{quote["All"]["bidSize"]}')
+                        if 'ask' in quote['All'] and 'askSize' in quote['All']:
+                            print(f'Ask (Size): {quote["All"]["ask"]:,.2f} x{quote["All"]["askSize"]}')
+                        if 'low' in quote['All'] and 'high' in quote['All']:
+                            print(f"Day's Range: {quote['All']['low']} - {quote['All']['high']}")
+                        if 'totalVolume' in quote['All']:
+                            print(f'Volume: {quote["All"]["totalVolume"]:,}')
+        else:
+            ui.print_error(message)
+
+    def options(self):
+        symbol = ui.input_text('Please enter symbol: ').upper()
+        options = Options(self.session, self.base_url)
+        message, chain_data = options.chain(symbol, strikes=3)
+
+        if chain_data is not None:
+            ui.print_message('Options Chain')
+            for pair in chain_data['OptionChainResponse']['OptionPair']:
+                if pair['Call'] is not None:
+                    out = ''
+                    ask_bid = ''
+
+                    call = pair['Call']
+                    if 'displaySymbol' in call:
+                        out += f'{call["displaySymbol"]} '
+                    if 'ask' in call:
+                        ask_bid = f' ask:${call["ask"]:.2f}'
+                    if 'askSize' in call:
+                        ask_bid += f'x{call["askSize"]}'
+                        out += f'{ask_bid:15s}'
+                    if 'bid' in call:
+                        ask_bid = f' bid:${call["bid"]:.2f}'
+                    if 'bidSize' in call:
+                        ask_bid += f'x{call["bidSize"]}'
+                        out += f'{ask_bid:15s}'
+                    if 'inTheMoney' in call:
+                        out += f' ITM:{call["inTheMoney"]}'
+                    print(out)
+
+                if pair['Put'] is not None:
+                    out = ''
+                    ask_bid = ''
+
+                    put = pair['Put']
+                    if 'displaySymbol' in put:
+                        out += f'{put["displaySymbol"]}  '
+                    if 'ask' in put:
+                        ask_bid = f' ask:${put["ask"]:.2f}'
+                    if 'askSize' in put:
+                        ask_bid += f'x{put["askSize"]}'
+                        out += f'{ask_bid:15s}'
+                    if 'bid' in put:
+                        ask_bid = f' bid:${put["bid"]:.2f}'
+                    if 'bidSize' in put:
+                        ask_bid += f'x{put["bidSize"]}'
+                        out += f'{ask_bid:15s}'
+                    if 'inTheMoney' in put:
+                        out += f' ITM:{put["inTheMoney"]}'
+                    print(out)
+        else:
+            ui.print_error(message)
 
     def authorize(self):
         consumer_key = self.config['DEFAULT']['CONSUMER_KEY']
