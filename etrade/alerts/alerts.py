@@ -10,7 +10,7 @@ class Alerts:
         self.session = session
         self.base_url = base_url
 
-    def alerts(self):
+    def alerts(self) -> tuple[str, list[dict]]:
         message = 'success'
         params = {'status': ['READ', 'UNREAD']}
         url = f'{self.base_url}/v1/user/alerts.json'

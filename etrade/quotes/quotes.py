@@ -10,9 +10,9 @@ class Quotes:
         self.session = session
         self.base_url = base_url
 
-    def quotes(self, symbols):
+    def quote(self, symbol:str) -> tuple[str, dict]:
         message = 'success'
-        url = f'{self.base_url}/v1/market/quote/{symbols}.json'
+        url = f'{self.base_url}/v1/market/quote/{symbol}.json'
         quote_data = None
 
         response = self.session.get(url)

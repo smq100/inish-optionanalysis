@@ -14,7 +14,7 @@ class Accounts:
         self.base_url = base_url
         self.accounts = []
 
-    def list(self):
+    def list(self) -> tuple[str, list[str]]:
         url = self.base_url + '/v1/accounts/list.json'
         response = self.session.get(url)
         message = 'success'
@@ -67,7 +67,7 @@ class Accounts:
 
         return message, listing
 
-    def balance(self, account_index:int):
+    def balance(self, account_index:int) -> tuple[str, dict]:
         message = 'success'
         url = self.base_url + '/v1/accounts/' + self.accounts[account_index]['accountIdKey'] + '/balance.json'
         params = {'instType': self.accounts[account_index]['institutionType'], 'realTimeNAV': 'true'}
@@ -102,7 +102,7 @@ class Accounts:
 
         return message, balance_data
 
-    def portfolio(self, account_index:int):
+    def portfolio(self, account_index:int) -> tuple[str, dict]:
         message = 'success'
         url = self.base_url + '/v1/accounts/' + self.accounts[account_index]['accountIdKey'] + '/portfolio.json'
 

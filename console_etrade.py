@@ -7,6 +7,7 @@ import datetime
 
 from requests_oauthlib import OAuth1Session
 
+import etrade as et
 from etrade.accounts.accounts import Accounts
 from etrade.quotes.quotes import Quotes
 from etrade.options.options import Options
@@ -21,10 +22,15 @@ class Client:
         self.session = None
         self.config = configparser.ConfigParser()
         self.config.read('etrade/config.ini')
-        self.base_url = self.config['DEFAULT']['PROD_BASE_URL']
         self.picklefile = 'session.pickle'
         self.accounts = None
         self.account_index = -1
+        self.account_name = ''
+
+        if et.SANDBOX:
+            self.base_url = self.config['DEFAULT']['BASE_URL_SB']
+        else:
+            self.base_url = self.config['DEFAULT']['BASE_URL']
 
         # Get a new session, or use existing
         if os.path.exists(self.picklefile):
@@ -39,34 +45,48 @@ class Client:
         if self.session is None:
             self.session = self.authorize()
 
-    def main_menu(self):
-        menu_items = {
-            '1': 'Account List',
-            '2': 'User Alerts',
-            '3': 'Lookup Symbol',
-            '4': 'Market Quotes',
-            '5': 'Options Chain',
-            '0': 'Exit'
-        }
+        self.main_menu()
 
+    def main_menu(self) -> None:
         while True:
-            selection = ui.menu(menu_items, 'Select Operation', 0, 5)
+            menu_items = {
+                '1': 'Accounts',
+                '2': 'Balance',
+                '3': 'Portfolio',
+                '4': 'Orders',
+                '5': 'Alerts',
+                '6': 'Quotes',
+                '7': 'Options Chain',
+                '8': 'Lookup Symbol',
+                '0': 'Exit'
+            }
+
+            if self.account_name:
+                menu_items['1'] += f' ({self.account_name})'
+
+            selection = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
             if selection == 1:
-                self.list_accounts()
+                self.show_accounts()
             elif selection == 2:
-                self.alerts()
+                self.show_balance()
             elif selection == 3:
-                self.lookup()
+                self.show_portfolio()
             elif selection == 4:
-                self.quotes()
+                self.show_orders()
             elif selection == 5:
+                self.show_alerts()
+            elif selection == 6:
+                self.show_quotes()
+            elif selection == 7:
                 self.options()
+            elif selection == 8:
+                self.lookup()
             elif selection == 0:
                 break
             else:
                 print('Unknown operation selected')
 
-    def list_accounts(self):
+    def show_accounts(self) -> None:
         self.accounts = Accounts(self.session, self.base_url)
         success, listing = self.accounts.list()
 
@@ -74,90 +94,81 @@ class Client:
             menu_items = {n+1:listing[n] for n in range (len(listing))}
             menu_items['0'] = 'Cancel'
 
-            selection = ui.menu(menu_items, 'Select Accounts', 0, len(menu_items))
+            selection = ui.menu(menu_items, 'Select Accounts', 0, len(menu_items)-1)
             if selection > 0:
                 self.account_index = selection - 1
-                self.account_action()
+                self.account_name = listing[selection-1]
             else:
                 self.account_index = -1
+                self.account_name = ''
         else:
             self.accounts = None
 
-    def account_action(self):
-        if self.account_index >= 0:
-            menu_items = {
-                '1': 'Balance',
-                '2': 'Portfolio',
-                '3': 'Orders',
-                '0': 'Cancel'
-                }
-
-            selection = ui.menu(menu_items, 'Select Action', 0, len(menu_items)-1)
-            if selection == 1:
-                self.account_action_balance()
-            elif selection == 2:
-                self.account_action_portfolio()
-            elif selection == 3:
-                self.account_action_orders()
-
-    def account_action_balance(self):
+    def show_balance(self) -> None:
         if self.account_index >= 0:
             message, balance = self.accounts.balance(self.account_index)
 
-        if balance:
-            ui.print_message(f'Balance for {balance["accountId"]}')
+            if balance:
+                ui.print_message(f'Balance for {balance["accountId"]}')
 
-            if 'accountDescription' in balance:
-                print(f'Account Nickname: {balance["accountDescription"]}')
-            if 'accountType' in balance:
-                print(f'Account Type: {balance["accountType"]}')
-            if 'Computed' in balance \
-                    and 'RealTimeValues' in balance['Computed'] \
-                    and 'totalAccountValue' in balance['Computed']['RealTimeValues']:
-                print(f'Net Account Value: ${balance["Computed"]["RealTimeValues"]["totalAccountValue"]:,.2f}')
-            if 'Computed' in balance \
-                    and 'marginBuyingPower' in balance['Computed']:
-                print(f'Margin Buying Power: ${balance["Computed"]["marginBuyingPower"]:,.2f}')
-            if 'Computed' in balance \
-                    and 'cashBuyingPower' in balance['Computed']:
-                print(f'Cash Buying Power: ${balance["Computed"]["cashBuyingPower"]:,.2f}')
-            if 'accountDescription' in balance:
-                print(f'Option Level: {balance["optionLevel"]}')
+                if 'accountDescription' in balance:
+                    print(f'Account Nickname: {balance["accountDescription"]}')
+                if 'accountType' in balance:
+                    print(f'Account Type: {balance["accountType"]}')
+                if 'Computed' in balance \
+                        and 'RealTimeValues' in balance['Computed'] \
+                        and 'totalAccountValue' in balance['Computed']['RealTimeValues']:
+                    print(f'Net Account Value: ${balance["Computed"]["RealTimeValues"]["totalAccountValue"]:,.2f}')
+                if 'Computed' in balance \
+                        and 'marginBuyingPower' in balance['Computed']:
+                    print(f'Margin Buying Power: ${balance["Computed"]["marginBuyingPower"]:,.2f}')
+                if 'Computed' in balance \
+                        and 'cashBuyingPower' in balance['Computed']:
+                    print(f'Cash Buying Power: ${balance["Computed"]["cashBuyingPower"]:,.2f}')
+                if 'accountDescription' in balance:
+                    print(f'Option Level: {balance["optionLevel"]}')
+            else:
+                ui.print_error(message)
         else:
-            ui.print_error(message)
+            ui.print_error('Must first select an account')
 
-    def account_action_portfolio(self):
+    def show_portfolio(self) -> None:
         if self.account_index >= 0:
             message, portfolio = self.accounts.portfolio(self.account_index)
 
-        if portfolio:
-            ui.print_message('Portfolio')
-            for acct_portfolio in portfolio['PortfolioResponse']['AccountPortfolio']:
-                if acct_portfolio is not None and 'Position' in acct_portfolio:
-                    for position in acct_portfolio['Position']:
-                        if position is not None:
-                            print_str = ''
-                            if 'symbolDescription' in position:
-                                print_str += f'{str(position["symbolDescription"])}'
-                            if 'quantity' in position:
-                                print_str += f', Q: {position["quantity"]}'
-                            if 'Quick' in position and 'lastTrade' in position['Quick']:
-                                print_str += f', Price: {position["Quick"]["lastTrade"]:,.2f}'
-                            if 'pricePaid' in position:
-                                print_str += f', Paid: {position["pricePaid"]:,.2f}'
-                            if 'totalGain' in position:
-                                print_str += f', Gain: {position["totalGain"]:,.2f}'
-                            if 'marketValue' in position:
-                                print_str += f', Value: {position["marketValue"]:,.2f}'
+            if portfolio:
+                ui.print_message('Portfolio')
+                for acct_portfolio in portfolio['PortfolioResponse']['AccountPortfolio']:
+                    if acct_portfolio is not None and 'Position' in acct_portfolio:
+                        for position in acct_portfolio['Position']:
+                            if position is not None:
+                                print_str = ''
+                                if 'symbolDescription' in position:
+                                    print_str += f'{str(position["symbolDescription"])}'
+                                if 'quantity' in position:
+                                    print_str += f', Q: {position["quantity"]}'
+                                if 'Quick' in position and 'lastTrade' in position['Quick']:
+                                    print_str += f', Price: {position["Quick"]["lastTrade"]:,.2f}'
+                                if 'pricePaid' in position:
+                                    print_str += f', Paid: {position["pricePaid"]:,.2f}'
+                                if 'totalGain' in position:
+                                    print_str += f', Gain: {position["totalGain"]:,.2f}'
+                                if 'marketValue' in position:
+                                    print_str += f', Value: {position["marketValue"]:,.2f}'
 
-                            print(print_str)
+                                print(print_str)
+            else:
+                ui.print_error(message)
         else:
-            ui.print_error(message)
+            ui.print_error('Must first select an account')
 
-    def account_action_orders(self):
-        ui.print_error('TODO')
+    def show_orders(self) -> None:
+        if self.account_index >= 0:
+            ui.print_error('TODO')
+        else:
+            ui.print_error('Must first select an account')
 
-    def alerts(self):
+    def show_alerts(self):
         alerts = Alerts(self.session, self.base_url)
         message, alert_data = alerts.alerts()
 
@@ -179,7 +190,7 @@ class Client:
         else:
             ui.print_error(message)
 
-    def lookup(self):
+    def lookup(self) -> None:
         symbol = ui.input_text('Please enter symbol: ').upper()
         lookup = Lookup(self.session, self.base_url)
         message, lookup_data = lookup.lookup(symbol)
@@ -198,10 +209,10 @@ class Client:
         else:
             ui.print_error(message)
 
-    def quotes(self):
+    def show_quotes(self) -> None:
         symbol = ui.input_text('Please enter symbol: ').upper()
         quotes = Quotes(self.session, self.base_url)
-        message, quote_data = quotes.quotes(symbol)
+        message, quote_data = quotes.quote(symbol)
 
         if quote_data is not None:
             ui.print_message('Quotes')
@@ -233,7 +244,7 @@ class Client:
         else:
             ui.print_error(message)
 
-    def options(self):
+    def options(self) -> None:
         symbol = ui.input_text('Please enter symbol: ').upper()
         options = Options(self.session, self.base_url)
         message, chain_data = options.chain(symbol, strikes=3)
@@ -285,9 +296,14 @@ class Client:
         else:
             ui.print_error(message)
 
-    def authorize(self):
-        consumer_key = self.config['DEFAULT']['CONSUMER_KEY']
-        consumer_secret = self.config['DEFAULT']['CONSUMER_SECRET']
+    def authorize(self) -> OAuth1Session:
+        if et.SANDBOX:
+            consumer_key = self.config['DEFAULT']['CONSUMER_KEY_SB']
+            consumer_secret = self.config['DEFAULT']['CONSUMER_SECRET_SB']
+        else:
+            consumer_key = self.config['DEFAULT']['CONSUMER_KEY']
+            consumer_secret = self.config['DEFAULT']['CONSUMER_SECRET']
+
         request_token_url = 'https://api.etrade.com/oauth/request_token'
         access_token_url = 'https://api.etrade.com/oauth/access_token'
         authorize_url = 'https://us.etrade.com/e/t/etws/authorize'
@@ -301,8 +317,7 @@ class Client:
         token = etrade.fetch_request_token(request_token_url)
 
         # Construct callback URL and display page to retrieve verifier code
-        formated_auth_url = '%s?key=%s&token=%s' % (
-            authorize_url, consumer_key, token['oauth_token'])
+        formated_auth_url = '%s?key=%s&token=%s' % (authorize_url, consumer_key, token['oauth_token'])
         webbrowser.open(formated_auth_url)
 
         # Confirm code and get token
@@ -321,6 +336,7 @@ class Client:
         with open(self.picklefile, 'wb') as session_file:
             pickle.dump(session, session_file)
 
+        print(type(session))
         return session
 
 def _validate_session(session, url):
@@ -330,4 +346,3 @@ def _validate_session(session, url):
 
 if __name__ == '__main__':
     client = Client()
-    client.main_menu()

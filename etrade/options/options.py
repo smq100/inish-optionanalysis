@@ -11,11 +11,11 @@ class Options:
         self.base_url = base_url
 
     def chain(self,
-              symbol='',
-              otype='CALLPUT',
-              strikes=5,
-              expiry_month=2,
-              expiry_year=2022):
+              symbol:str='',
+              otype:str='CALLPUT',
+              strikes:int=5,
+              expiry_month:int=2,
+              expiry_year:int=2022) -> tuple[str, dict]:
 
         message = 'success'
         url = self.base_url + '/v1/market/optionchains.json'
