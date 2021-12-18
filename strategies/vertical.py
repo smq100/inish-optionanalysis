@@ -96,7 +96,7 @@ class Vertical(Strategy):
             self.analysis.amount = abs(price_long - price_short) * self.quantity
 
             # Calculate min-max
-            self.analysis.max_gain, self.analysis.max_loss, self.analysis.sentiment = self.calculate_gain_loss()
+            self.analysis.max_gain, self.analysis.max_loss, self.analysis.upside, self.analysis.sentiment = self.calculate_gain_loss()
 
             # Calculate breakeven
             self.analysis.breakeven = self.calculate_breakeven()

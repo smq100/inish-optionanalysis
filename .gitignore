@@ -2,6 +2,7 @@
 __pycache__
 
 # Other directories
+venv
 venvm
 venvw
 *._*
