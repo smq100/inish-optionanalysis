@@ -92,7 +92,6 @@ def _get_history_yfinance(ticker:str, days:int=-1, uselast:bool=False) -> pd.Dat
         raise ConnectionError('No internet connection')
 
     history = None
-
     company = get_company_live(ticker, uselast)
     if company is not None:
         if days < 0:
@@ -175,7 +174,6 @@ def _get_history_quandl(ticker:str, days:int=-1) -> pd.DataFrame:
     return history
 
 _elapsed = 0.0
-
 def get_history_live(ticker:str, days:int=-1) -> pd.DataFrame:
     if not _connected:
         raise ConnectionError('No internet connection')
@@ -185,13 +183,12 @@ def get_history_live(ticker:str, days:int=-1) -> pd.DataFrame:
     while (time.perf_counter() - _elapsed) < _THROTTLE_FETCH: time.sleep(_THROTTLE_FETCH)
     _elapsed = time.perf_counter()
 
-    history = pd.DataFrame()
-
     _logger.info(f'{__name__}: Fetching {ticker} history from {d.ACTIVE_DATASOURCE}...')
 
-    if d.ACTIVE_DATASOURCE == d.VALID_DATASOURCES[0]:
+    history = pd.DataFrame()
+    if d.ACTIVE_DATASOURCE == 'yfinance':
         history = _get_history_yfinance(ticker, days=days)
-    elif d.ACTIVE_DATASOURCE == d.VALID_DATASOURCES[1]:
+    elif d.ACTIVE_DATASOURCE == 'quandl':
         history = _get_history_quandl(ticker, days=days)
     else:
         raise ValueError('Invalid data source')

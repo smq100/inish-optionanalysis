@@ -59,7 +59,7 @@ class Interface:
         menu_items = {
             '1': 'Database Information',
             '2': 'Ticker Information',
-            '3': 'Ticker Information (live)',
+            '3': f'Ticker Information ({d.ACTIVE_DATASOURCE})',
             '4': 'Ticker Information (prev)',
             '5': 'List Table',
             '6': 'Update History',
