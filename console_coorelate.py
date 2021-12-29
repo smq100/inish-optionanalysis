@@ -36,7 +36,7 @@ class Interface:
             }
 
             if selection == 0:
-                selection = ui.menu(menu_items, 'Select Operation', 0, 4)
+                selection = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
 
             if selection == 1:
                 self.compute_coorelation()
@@ -77,7 +77,7 @@ class Interface:
         else:
             ui.print_message(f'Best Coorelations in {self.list}')
             best = self.coorelate.get_sorted_coorelations(20, True)
-            [print(f'{item[0]}/{item[1]:<5}\t{item[2]:.4f}') for item in best]
+            for item in best: print(f'{item[0]}/{item[1]:<5}\t{item[2]:.4f}')
 
     def get_least_coorelation(self):
         if not self.coorelate:
@@ -87,7 +87,7 @@ class Interface:
         else:
             ui.print_message(f'Least Coorelations in {self.list}')
             best = self.coorelate.get_sorted_coorelations(20, False)
-            [print(f'{item[0]}/{item[1]:<5}\t{item[2]:.4f}') for item in best]
+            for item in best: print(f'{item[0]}/{item[1]:<5}\t{item[2]:.4f}')
 
     def get_ticker_coorelation(self):
         if not self.coorelate:
@@ -101,10 +101,10 @@ class Interface:
             else:
                 df = self.coorelate.get_ticker_coorelation(ticker)
                 ui.print_message(f'Highest correlations to {ticker}')
-                [print(f'{sym:>5}: {val:.5f}') for sym, val in df[-1:-11:-1].iteritems()]
+                for sym, val in df[-1:-11:-1].iteritems(): print(f'{sym:>5}: {val:.5f}')
 
                 ui.print_message(f'Lowest correlations to {ticker}')
-                [print(f'{sym:>5}: {val:.5f}') for sym, val in df[:10].iteritems()]
+                for sym, val in df[:10].iteritems(): print(f'{sym:>5}: {val:.5f}')
 
     def _get_list(self):
         list = ''

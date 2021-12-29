@@ -50,7 +50,7 @@ class Interface:
             if self.quick:
                 menu_items['4'] += ' (quick)'
 
-            selection = ui.menu(menu_items, 'Select Operation', 0, 4)
+            selection = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
 
             if selection == 1:
                 self.select_ticker()

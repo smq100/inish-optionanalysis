@@ -87,7 +87,7 @@ class Interface():
 
             self.show_legs()
 
-            selection = ui.menu(menu_items, 'Select Operation', 0, 8)
+            selection = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
 
             if selection == 1:
                 if self.select_ticker():

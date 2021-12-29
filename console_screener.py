@@ -95,7 +95,7 @@ class Interface:
                 menu_items['6'] = f'Show All ({len(self.valids)})'
 
             if selection == 0:
-                selection = ui.menu(menu_items, 'Select Operation', 0, 8)
+                selection = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
 
             if selection == 1:
                 self.select_source()
@@ -333,7 +333,7 @@ class Interface:
 
             results = [future.result() for future in self.screener.task_futures if future.result() is not None]
             if len(results) > 0:
-                [print(result) for result in results]
+                for result in results: print(result)
             else:
                 print('None')
         else:

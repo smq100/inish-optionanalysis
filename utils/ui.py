@@ -40,7 +40,7 @@ def menu(menu_items:dict, header:str, minvalue:int, maxvalue:int) -> int:
     print(f'\n{header}')
     print('-' * 50)
 
-    [print(f'{entry:>2})\t{menu_items[entry]}') for entry in menu_items.keys()]
+    for entry in menu_items.keys(): print(f'{entry:>2})\t{menu_items[entry]}')
 
     return input_integer('Please select: ', minvalue, maxvalue)
 

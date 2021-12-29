@@ -35,7 +35,7 @@ class Interface:
                 menu_items['1'] = f'Specify ticker ({self.ticker})'
 
             if selection == 0:
-                selection = ui.menu(menu_items, 'Select Operation', 0, 2)
+                selection = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
 
             if selection == 1:
                 self.select_ticker()

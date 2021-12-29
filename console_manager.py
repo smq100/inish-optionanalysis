@@ -76,7 +76,7 @@ class Interface:
 
         while True:
             if not self.ticker:
-                selection = ui.menu(menu_items, 'Select Operation', 0, 14)
+                selection = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
 
             if selection == 1:
                 self.show_database_information()
@@ -115,15 +115,15 @@ class Interface:
     def show_database_information(self) -> None:
         ui.print_message(f'Database Information ({d.ACTIVE_DB})')
         info = self.manager.get_database_info()
-        [print(f'{i["table"]:>16}:\t{i["count"]} records') for i in info]
+        for i in info: print(f'{i["table"]:>16}:\t{i["count"]} records')
 
         ui.print_message('Exchange Information')
         info = self.manager.get_exchange_info()
-        [print(f'{i["exchange"]:>16}:\t{i["count"]} symbols') for i in info]
+        for i in info: print(f'{i["exchange"]:>16}:\t{i["count"]} symbols')
 
         ui.print_message('Index Information')
         info = self.manager.get_index_info()
-        [print(f'{i["index"]:>16}:\t{i["count"]} symbols') for i in info]
+        for i in info: print(f'{i["index"]:>16}:\t{i["count"]} symbols')
 
     def show_symbol_information(self, ticker:str ='', prompt:bool=False, live:bool=False) -> None:
         if not ticker:
@@ -254,9 +254,9 @@ class Interface:
             menu_items[f'{i+1}'] = f'{exchange}'
         menu_items['0'] = 'Cancel'
 
-        exchange = ui.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(self.indexes))
-        if exchange > 0:
-            exc = self.exchanges[exchange-1]
+        selection = ui.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(self.indexes))
+        if selection > 0:
+            exc = self.exchanges[selection-1]
             self.task = threading.Thread(target=self.manager.refresh_exchange, args=[exc])
             self.task.start()
 
@@ -291,7 +291,7 @@ class Interface:
                     self.show_symbol_information(ticker=ticker)
                 elif store.is_exchange(ticker):
                     exchange = store.get_ticker_exchange(ticker)
-                    if self.manager.add_security_to_exchange([ticker], exchange):
+                    if self.manager.add_security_to_exchange(ticker, exchange):
                         ui.print_message(f'Added {ticker} to {exchange}')
                         self.show_symbol_information(ticker=ticker)
                     else:
@@ -410,15 +410,15 @@ class Interface:
     def check_integrity(self) -> None:
         ui.print_message('Missing Tickers')
         missing_tickers = {e: self.manager.identify_missing_securities(e) for e in self.exchanges}
-        [print(f'{e:>16}:\t{len(missing_tickers[e])}') for e in self.exchanges]
+        for e in self.exchanges: print(f'{e:>16}:\t{len(missing_tickers[e])}')
 
         ui.print_message('Incomplete Companies')
         incomplete_companies = {e: self.manager.identify_incomplete_companies(e) for e in self.exchanges}
-        [print(f'{e:>16}:\t{len(incomplete_companies[e])}') for e in self.exchanges]
+        for e in self.exchanges: print(f'{e:>16}:\t{len(incomplete_companies[e])}')
 
         ui.print_message('Incomplete Pricing')
         incomplete_pricing = {e: self.manager.identify_incomplete_pricing(e) for e in self.exchanges}
-        [print(f'{e:>16}:\t{len(incomplete_pricing[e])}') for e in self.exchanges]
+        for e in self.exchanges: print(f'{e:>16}:\t{len(incomplete_pricing[e])}')
 
         while True:
             menu_items = {
@@ -482,7 +482,7 @@ class Interface:
             results = [future.result() for future in self.manager.task_futures if future.result() is not None]
             if len(results) > 0:
                 ui.print_message('Processed Messages')
-                [print(result) for result in results]
+                for result in results: print(result)
         else:
             ui.print_message(f'{self.manager.task_error}')
 

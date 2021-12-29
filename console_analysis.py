@@ -105,7 +105,7 @@ class Interface:
                 menu_items['8'] += ' (quick)'
 
             if selection == 0:
-                selection = ui.menu(menu_items, 'Select Operation', 0, 9)
+                selection = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
 
             if selection == 1:
                 self.select_list()
@@ -349,7 +349,7 @@ class Interface:
             results += [str(self.strategy.analysis)]
 
         if results:
-            [print(result) for result in results]
+            for result in results: print(result)
 
     def show_valids(self, top:int=-1, verbose:bool=False, ticker:str='') -> None:
         if not self.table:
@@ -397,7 +397,7 @@ class Interface:
         results = [f'{result[0]:<5}/{result[1]["ticker"]:<5} {result[1]["value"]:.5f}' for result in self.results_corr if result[1]["value"] > COOR_CUTOFF]
         if results:
             ui.print_message('Coorelation Results')
-            [print(result) for result in results]
+            for result in results: print(result)
             answer = ui.input_text('\nRun support & resistance analysis on top findings? (y/n): ')
             if answer.lower() == 'y':
                 self.run_support_resistance(True)
