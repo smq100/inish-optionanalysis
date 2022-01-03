@@ -540,22 +540,24 @@ class Manager(Threaded):
 
         return missing
 
-    def identify_incomplete_pricing(self, exchange:str) -> list[str]:
+    def identify_incomplete_pricing(self, exchange:str) -> dict:
         exchange = exchange.upper()
-        incomplete = []
+        incomplete = {}
 
         if store.is_exchange(exchange):
             tickers = store.get_exchange_tickers(exchange, inactive=True)
-            with self.session() as session:
-                e = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange).one()
-                for ticker in tickers:
-                    t = session.query(models.Security.active).filter(and_(models.Security.ticker==ticker, models.Security.exchange_id==e.id)).one_or_none()
-                    if t is None or not t.active:
-                        incomplete += [ticker]
+            for ticker in tickers:
+                history = store.get_history(ticker)
+                if not history.empty:
+                    date = f'{history.iloc[-1]["date"]:%Y-%m-%d}'
+                    if date in incomplete:
+                        incomplete[date] += 1
+                    else:
+                        incomplete[date] = 1
 
-            _logger.info(f'{__name__}: {len(incomplete)} incomplete pricing in {exchange}')
+            _logger.info(f'{__name__}: {len(incomplete)} tickers with incomplete pricing in {exchange}')
         else:
-            _logger.warning(f'{__name__}: {exchange} not a valid exchange')
+            _logger.warning(f'{__name__}: {exchange} is not valid exchange')
 
         return incomplete
 
@@ -575,7 +577,7 @@ class Manager(Threaded):
                         elif c.name == store.UNAVAILABLE:
                             incomplete += [ticker]
 
-            _logger.info(f'{__name__}: {len(incomplete)} incomplete pricing in {exchange}')
+            _logger.info(f'{__name__}: {len(incomplete)} incomplete companies in {exchange}')
         else:
             _logger.warning(f'{__name__}: {exchange} is not valid exchange')
 

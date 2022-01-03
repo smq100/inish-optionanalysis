@@ -115,7 +115,6 @@ class Incomplete(Base):
     def __repr__(self):
         return '<Incomplete Model>'
 
-
 # class Adjustment(Base):
 #     __tablename__ = 'adjustment'
 #     id = Column(Integer, primary_key=True)

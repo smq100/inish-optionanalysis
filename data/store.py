@@ -246,18 +246,18 @@ def get_history(ticker:str, days:int=-1, end:int=0, live:bool=False) -> pd.DataF
                 p = None
                 if days < 0:
                     p = session.query(models.Price).filter(models.Price.security_id==symbols.id).order_by(models.Price.date)
-                elif days == 0:
-                    p = None
-                    _logger.warning(f'{__name__}: Must specify history days > 1')
                 elif days > 1:
                     start = dt.datetime.today() - dt.timedelta(days=days) - dt.timedelta(days=end)
                     p = session.query(models.Price).filter(and_(models.Price.security_id==symbols.id, models.Price.date >= start)).order_by(models.Price.date)
+                else:
+                    _logger.warning(f'{__name__}: Must specify history days > 1')
 
                 if p is not None:
                     history = pd.read_sql(p.statement, _engine)
                     if not history.empty:
-                        history = history[:-end] if end > 0 else history
                         history.drop(['id', 'security_id'], axis=1, inplace=True)
+                        if end > 0: history = history[:-end]
+
                         _logger.info(f'{__name__}: Fetched {len(history)} days of price history for {ticker} from {d.ACTIVE_DB} ({end} days prior)')
             else:
                 _logger.warning(f'{__name__}: No history found for {ticker}')

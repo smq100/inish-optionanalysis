@@ -12,9 +12,10 @@ _logger = ui.get_logger(logging.WARNING, logfile='output')
 
 
 class Interface:
-    def __init__(self, ticker:str='', update:str=''):
+    def __init__(self, ticker:str='', update:str='', quick:bool=False):
         exit = False
         self.ticker = ''
+        self.quick = quick
         self.stop = False
 
         if store.is_database_connected():
@@ -53,24 +54,25 @@ class Interface:
             ui.print_error('No databases available')
 
     def main_menu(self, selection:int=0) -> None:
-        if not self.stop:
+        if not self.stop and not self.quick:
             self.show_database_information()
 
         menu_items = {
             '1': 'Database Information',
             '2': 'Ticker Information',
             '3': f'Ticker Information ({d.ACTIVE_DATASOURCE})',
-            '4': 'Ticker Information (prev)',
+            '4': 'Ticker Information (previous)',
             '5': 'List Table',
             '6': 'Update History',
             '7': 'Update Company',
             '8': 'Check Integrity',
-            '9': 'Populate Exchange',
-            '10': 'Populate Index',
-            '11': 'Delete Exchange',
-            '12': 'Delete Index',
-            '13': 'Delete Ticker',
-            '14': 'Reset Database',
+            '9': 'Check Price Dates',
+            '10': 'Populate Exchange',
+            '11': 'Populate Index',
+            '12': 'Delete Exchange',
+            '13': 'Delete Index',
+            '14': 'Delete Ticker',
+            '15': 'Reset Database',
             '0': 'Exit'
         }
 
@@ -95,16 +97,18 @@ class Interface:
             elif selection == 8:
                 self.check_integrity()
             elif selection == 9:
-                self.populate_exchange()
+                self.check_price_dates()
             elif selection == 10:
-                self.populate_index()
+                self.populate_exchange()
             elif selection == 11:
-                self.delete_exchange()
+                self.populate_index()
             elif selection == 12:
-                self.delete_index()
+                self.delete_exchange()
             elif selection == 13:
-                self.delete_ticker()
+                self.delete_index()
             elif selection == 14:
+                self.delete_ticker()
+            elif selection == 15:
                 self.reset_database()
             elif selection == 0:
                 self.stop = True
@@ -189,7 +193,7 @@ class Interface:
 
     def list_table(self) -> None:
         found = []
-        select = ui.input_text('Enter exchange, index, or ticker: ').upper()
+        select = ui.input_text('Enter exchange or index: ').upper()
         if store.is_exchange(select):
             found = self.manager.list_exchange(select)
         elif store.is_list(select):
@@ -416,15 +420,10 @@ class Interface:
         incomplete_companies = {e: self.manager.identify_incomplete_companies(e) for e in self.exchanges}
         for e in self.exchanges: print(f'{e:>16}:\t{len(incomplete_companies[e])}')
 
-        ui.print_message('Incomplete Pricing')
-        incomplete_pricing = {e: self.manager.identify_incomplete_pricing(e) for e in self.exchanges}
-        for e in self.exchanges: print(f'{e:>16}:\t{len(incomplete_pricing[e])}')
-
         while True:
             menu_items = {
-                '1': 'List Missing',
+                '1': 'List Missing Companies',
                 '2': 'List Incomplete Companies',
-                '3': 'List Incomplete Pricing',
                 '0': 'Exit',
             }
             op = ui.menu(menu_items, 'Select Operation', 0, 3)
@@ -441,10 +440,19 @@ class Interface:
                         self._list_tickers(missing_tickers[menu_items[str(exchange)]])
                     elif op == 2:
                         self._list_tickers(incomplete_companies[menu_items[str(exchange)]])
-                    elif op == 3:
-                        self._list_tickers(incomplete_pricing[menu_items[str(exchange)]])
             else:
                 break
+
+    def check_price_dates(self) -> None:
+        menu_items = {}
+        for i, exchange in enumerate(self.exchanges):
+            menu_items[f'{i+1}'] = f'{exchange}'
+        menu_items['0'] = 'Cancel'
+
+        select = ui.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(self.exchanges))
+        if select > 0:
+            incomplete = self.manager.identify_incomplete_pricing(menu_items[str(select)])
+            print(incomplete)
 
     def create_missing_tables(self) -> None:
         self.manager.create_exchanges()
@@ -493,13 +501,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Database Management')
     parser.add_argument('-t', '--ticker', help='Get ticker information', required=False)
     parser.add_argument('-u', '--update', help='Update ticker', required=False)
+    parser.add_argument('-q', '--quick', help='Start without database info', action='store_true')
 
     command = vars(parser.parse_args())
 
     if command['ticker']:
-        Interface(ticker=command['ticker'])
+        Interface(ticker=command['ticker'], quick=command['quick'])
     elif command['update']:
-        Interface(update=command['update'])
+        Interface(update=command['update'], quick=command['quick'])
     else:
-        Interface()
+        Interface(quick=command['quick'])
 
