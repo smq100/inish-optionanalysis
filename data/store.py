@@ -240,20 +240,21 @@ def get_history(ticker:str, days:int=-1, end:int=0, live:bool=False) -> pd.DataF
         if end > 0:
             _logger.warning(f'{__name__}: "end" value ignored for live queries')
     else:
+        _logger.info(f'{__name__}: Fetching {len(history)} days of price history for {ticker}...')
         with _session() as session:
             symbols = session.query(models.Security.id).filter(and_(models.Security.ticker==ticker, models.Security.active)).one_or_none()
             if symbols is not None:
-                p = None
+                q = None
                 if days < 0:
-                    p = session.query(models.Price).filter(models.Price.security_id==symbols.id).order_by(models.Price.date)
+                    q = session.query(models.Price).filter(models.Price.security_id==symbols.id).order_by(models.Price.date)
                 elif days > 1:
                     start = dt.datetime.today() - dt.timedelta(days=days) - dt.timedelta(days=end)
-                    p = session.query(models.Price).filter(and_(models.Price.security_id==symbols.id, models.Price.date >= start)).order_by(models.Price.date)
+                    q = session.query(models.Price).filter(and_(models.Price.security_id==symbols.id, models.Price.date >= start)).order_by(models.Price.date)
                 else:
                     _logger.warning(f'{__name__}: Must specify history days > 1')
 
-                if p is not None:
-                    history = pd.read_sql(p.statement, _engine)
+                if q is not None:
+                    history = pd.read_sql(q.statement, _engine)
                     if not history.empty:
                         history.drop(['id', 'security_id'], axis=1, inplace=True)
                         if end > 0: history = history[:-end]

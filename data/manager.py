@@ -343,20 +343,20 @@ class Manager(Threaded):
         self.task_total = len(tickers)
         running = self._concurrency
 
-        def append(tickers):
+        def append(tickers: list[str]) -> None:
             nonlocal running
-            for sec in tickers:
-                self.task_ticker = sec
+            for ticker in tickers:
+                self.task_ticker = ticker
                 try:
-                    days = self.update_history_ticker(sec)
+                    days = self.update_history_ticker(ticker)
                 except IntegrityError as e:
-                    _logger.warning(f'{__name__}: UniqueViolation exception occurred for {sec}: {e}')
+                    _logger.warning(f'{__name__}: UniqueViolation exception occurred for {ticker}: {e}')
 
                 self.task_completed += 1
                 if days > 0:
                     self.task_success += 1
 
-            running = running - 1
+            running -= 1
             _logger.info(f'{__name__}: Thread completed. {running} threads remaining')
 
         if self.task_total > 0:
@@ -540,33 +540,53 @@ class Manager(Threaded):
 
         return missing
 
-    def identify_incomplete_pricing(self, exchange:str) -> dict:
-        exchange = exchange.upper()
-        incomplete = {}
+    @Threaded.threaded
+    def identify_incomplete_pricing(self, table:str) -> dict:
+        tickers = store.get_tickers(table.upper())
+        self.task_total = len(tickers)
+        self.task_object = {}
+        running = self._concurrency
 
-        if store.is_exchange(exchange):
-            tickers = store.get_exchange_tickers(exchange, inactive=True)
+        def check(tickers: list[str]) -> None:
+            nonlocal running
             for ticker in tickers:
+                self.task_ticker = ticker
                 history = store.get_history(ticker)
                 if not history.empty:
                     date = f'{history.iloc[-1]["date"]:%Y-%m-%d}'
-                    if date in incomplete:
-                        incomplete[date] += 1
+                    if date in self.task_object:
+                        self.task_object[date] += 1
                     else:
-                        incomplete[date] = 1
+                        self.task_object[date] = 1
+                    self.task_success += 1
+                self.task_completed += 1
 
-            _logger.info(f'{__name__}: {len(incomplete)} tickers with incomplete pricing in {exchange}')
-        else:
-            _logger.warning(f'{__name__}: {exchange} is not valid exchange')
+        if self.task_total > 0:
+            self.task_error = 'None'
 
-        return incomplete
+            with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
+                if self._concurrency > 1:
+                    random.shuffle(tickers)
+                    lists = np.array_split(tickers, self._concurrency)
+                    self.task_futures = [executor.submit(check, item) for item in lists]
+                else:
+                    self.task_futures = [executor.submit(check, tickers)]
 
-    def identify_incomplete_companies(self, exchange:str) -> list[str]:
-        exchange = exchange.upper()
+        self.task_error = 'Done'
+
+    def identify_incomplete_companies(self, table:str) -> list[str]:
+        table = table.upper()
         incomplete = []
+        tickers = []
 
-        if store.is_exchange(exchange):
-            tickers = store.get_exchange_tickers(exchange)
+        if store.is_exchange(table):
+            tickers = store.get_exchange_tickers(table, inactive=True)
+        elif store.is_index(table):
+            tickers = store.get_index_tickers(table, inactive=True)
+        else:
+            _logger.warning(f'{__name__}: {table} is not valid exchange or index')
+
+        if tickers:
             with self.session() as session:
                 for ticker in tickers:
                     t = session.query(models.Security.id).filter(models.Security.ticker==ticker).one_or_none()
@@ -577,9 +597,7 @@ class Manager(Threaded):
                         elif c.name == store.UNAVAILABLE:
                             incomplete += [ticker]
 
-            _logger.info(f'{__name__}: {len(incomplete)} incomplete companies in {exchange}')
-        else:
-            _logger.warning(f'{__name__}: {exchange} is not valid exchange')
+        _logger.info(f'{__name__}: {len(incomplete)} incomplete companies in {table}')
 
         return incomplete
 

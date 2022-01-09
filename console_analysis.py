@@ -140,7 +140,7 @@ class Interface:
         list = ui.input_alphanum('Enter exchange, index, or ticker: ').upper()
         if store.is_exchange(list):
             self.table = list
-        elif store.is_list(list):
+        elif store.is_index(list):
             self.table = list
         elif store.is_ticker(list):
             self.table = list

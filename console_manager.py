@@ -443,16 +443,31 @@ class Interface:
             else:
                 break
 
-    def check_price_dates(self) -> None:
-        menu_items = {}
-        for i, exchange in enumerate(self.exchanges):
-            menu_items[f'{i+1}'] = f'{exchange}'
-        menu_items['0'] = 'Cancel'
+    def check_price_dates(self, progressbar:bool=True) -> None:
+        table = ui.input_alphanum('Enter exchange, index, or ticker: ').upper()
+        if store.is_exchange(table):
+            pass
+        elif store.is_index(table):
+            pass
+        elif store.is_ticker(table):
+            pass
+        else:
+            ui.print_error(f'List {table} is not valid')
+            table = ''
 
-        select = ui.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(self.exchanges))
-        if select > 0:
-            incomplete = self.manager.identify_incomplete_pricing(menu_items[str(select)])
-            print(incomplete)
+        if table:
+            self.task = threading.Thread(target=self.manager.identify_incomplete_pricing, args=[table])
+            self.task.start()
+
+            if progressbar:
+                print()
+                self._show_progress('Progress', '')
+
+            if self.manager.task_error == 'Done':
+                ui.print_message(f'{self.manager.task_total} {table} '\
+                    f'Ticker pricing checked in {self.manager.task_time:.0f} seconds')
+
+            print(self.manager.task_object)
 
     def create_missing_tables(self) -> None:
         self.manager.create_exchanges()
@@ -465,8 +480,7 @@ class Interface:
             for ticker in tickers:
                 print(f'{ticker} ', end='')
                 index += 1
-                if index % 20 == 0: # Print 20 per line
-                    print()
+                if index % 20 == 0: print() # Print 20 per line
             print()
 
     def _show_progress(self, prefix:str, suffix:str) -> None:
@@ -474,6 +488,7 @@ class Interface:
 
         if self.manager.task_error == 'None':
             ui.progress_bar(self.manager.task_completed, self.manager.task_total, prefix=prefix, suffix=suffix, reset=True)
+
             while self.task.is_alive and self.manager.task_error == 'None':
                 time.sleep(0.20)
                 total = self.manager.task_total
@@ -501,7 +516,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Database Management')
     parser.add_argument('-t', '--ticker', help='Get ticker information', required=False)
     parser.add_argument('-u', '--update', help='Update ticker', required=False)
-    parser.add_argument('-q', '--quick', help='Start without database info', action='store_true')
+    parser.add_argument('-q', '--quick', help='Start without checking database information', action='store_true')
 
     command = vars(parser.parse_args())
 
