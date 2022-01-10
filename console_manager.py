@@ -445,13 +445,7 @@ class Interface:
 
     def check_price_dates(self, progressbar:bool=True) -> None:
         table = ui.input_alphanum('Enter exchange, index, or ticker: ').upper()
-        if store.is_exchange(table):
-            pass
-        elif store.is_index(table):
-            pass
-        elif store.is_ticker(table):
-            pass
-        else:
+        if not store.is_list(table):
             ui.print_error(f'List {table} is not valid')
             table = ''
 
@@ -460,14 +454,20 @@ class Interface:
             self.task.start()
 
             if progressbar:
-                print()
                 self._show_progress('Progress', '')
 
             if self.manager.task_error == 'Done':
                 ui.print_message(f'{self.manager.task_total} {table} '\
                     f'Ticker pricing checked in {self.manager.task_time:.0f} seconds')
 
-            print(self.manager.task_object)
+            ui.print_message('Results')
+
+            if len(self.manager.task_object) > 1:
+                last = sorted(self.manager.task_object)[-1]
+                self.manager.task_object.pop(last)
+
+            for item in self.manager.task_object:
+                print(f'{item}: {self.manager.task_object[item]}')
 
     def create_missing_tables(self) -> None:
         self.manager.create_exchanges()

@@ -555,11 +555,14 @@ class Manager(Threaded):
                 if not history.empty:
                     date = f'{history.iloc[-1]["date"]:%Y-%m-%d}'
                     if date in self.task_object:
-                        self.task_object[date] += 1
+                        self.task_object[date] += [ticker]
                     else:
-                        self.task_object[date] = 1
+                        self.task_object[date] = [ticker]
                     self.task_success += 1
                 self.task_completed += 1
+
+            running -= 1
+            _logger.info(f'{__name__}: Thread completed. {running} threads remaining')
 
         if self.task_total > 0:
             self.task_error = 'None'
