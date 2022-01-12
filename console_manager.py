@@ -460,28 +460,22 @@ class Interface:
                 ui.print_message(f'{self.manager.task_total} {table} '\
                     f'Ticker pricing checked in {self.manager.task_time:.0f} seconds')
 
-            ui.print_message('Results')
-
             if len(self.manager.task_object) > 1:
                 last = sorted(self.manager.task_object)[-1]
                 self.manager.task_object.pop(last)
 
-            for item in self.manager.task_object:
-                print(f'{item}: {self.manager.task_object[item]}')
+            items = self.manager.task_object.items()
+            results = sorted(items)
+
+            ui.print_message('Results')
+            for item in results:
+                print(f'{item[0]}:')
+                self._list_tickers(item[1])
+                print()
 
     def create_missing_tables(self) -> None:
         self.manager.create_exchanges()
         self.manager.create_indexes()
-
-    def _list_tickers(self, tickers:list[str]) -> None:
-        if len(tickers) > 0:
-            index = 0
-            print()
-            for ticker in tickers:
-                print(f'{ticker} ', end='')
-                index += 1
-                if index % 20 == 0: print() # Print 20 per line
-            print()
 
     def _show_progress(self, prefix:str, suffix:str) -> None:
         while not self.manager.task_error: pass
@@ -508,6 +502,16 @@ class Interface:
                 for result in results: print(result)
         else:
             ui.print_message(f'{self.manager.task_error}')
+
+    @staticmethod
+    def _list_tickers(tickers:list[str]) -> None:
+        index = 0
+        if len(tickers) > 0:
+            for ticker in tickers:
+                print(f'{ticker} ', end='')
+                index += 1
+                if index % 20 == 0: print() # 20 per line
+            print()
 
 
 if __name__ == '__main__':

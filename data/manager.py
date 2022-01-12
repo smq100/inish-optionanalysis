@@ -61,6 +61,7 @@ class Manager(Threaded):
     @Threaded.threaded
     def populate_exchange(self, exchange:str) -> None:
         exchange = exchange.upper()
+        running = self._concurrency
 
         def add(tickers):
             nonlocal running
@@ -78,7 +79,6 @@ class Manager(Threaded):
             tickers = list(store.get_exchange_tickers_master(exchange))
             self.invalid_tickers = []
             self.retry = 0
-            running = self._concurrency
 
             if len(tickers) > 10:
                 self.task_total = len(tickers)
@@ -340,8 +340,8 @@ class Manager(Threaded):
     @Threaded.threaded
     def update_history_exchange(self, exchange:str) -> None:
         tickers = store.get_tickers(exchange)
-        self.task_total = len(tickers)
         running = self._concurrency
+        self.task_total = len(tickers)
 
         def append(tickers: list[str]) -> None:
             nonlocal running
@@ -543,15 +543,15 @@ class Manager(Threaded):
     @Threaded.threaded
     def identify_incomplete_pricing(self, table:str) -> dict:
         tickers = store.get_tickers(table.upper())
+        running = self._concurrency
         self.task_total = len(tickers)
         self.task_object = {}
-        running = self._concurrency
 
-        def check(tickers: list[str]) -> None:
+        def check(tickers:list[str]) -> None:
             nonlocal running
             for ticker in tickers:
                 self.task_ticker = ticker
-                history = store.get_history(ticker)
+                history = store.get_history(ticker, days=100)
                 if not history.empty:
                     date = f'{history.iloc[-1]["date"]:%Y-%m-%d}'
                     if date in self.task_object:
