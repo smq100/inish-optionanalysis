@@ -10,13 +10,14 @@ from utils import ui
 
 _logger = ui.get_logger()
 
-COLUMNS = ['','A','B','C','D','E','F']
+COLUMNS = ['', 'A', 'B', 'C', 'D', 'E', 'F']
+
 
 class Excel(Sheet):
     def __init__(self, sheet_name):
         super().__init__(sheet_name)
 
-    def open(self, tab:str) -> bool:
+    def open(self, tab: str) -> bool:
         self.sheet = None
         self.opened = False
         if tab:
@@ -33,7 +34,7 @@ class Excel(Sheet):
 
         return self.opened
 
-    def get_column(self, column:str) -> list[str]:
+    def get_column(self, column: str) -> list[str]:
         self.col = []
         if self.opened and column > 0:
             col = self.sheet[COLUMNS[column]]
@@ -41,6 +42,7 @@ class Excel(Sheet):
                 self.col += [cell.value]
 
         return self.col
+
 
 if __name__ == '__main__':
     xl = Excel('data/symbols/symbols.xlsx')

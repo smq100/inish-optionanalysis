@@ -36,6 +36,7 @@ EXTMETHOD = {
 MAX_SCALE = 10.0
 ACCURACY = 4
 
+
 class _Score:
     def __init__(self):
         self.fit = 0.0
@@ -48,16 +49,18 @@ class _Score:
 
     def calculate(self) -> float:
         score = (
-            (self.fit       * 0.05) +
-            (self.width     * 0.15) +
+            (self.fit * 0.05) +
+            (self.width * 0.15) +
             (self.proximity * 0.05) +
-            (self.points    * 0.20) +
-            (self.age       * 0.20) +
-            (self.slope     * 0.30))
+            (self.points * 0.20) +
+            (self.age * 0.20) +
+            (self.slope * 0.30))
 
-        if self.basis: score += 0.05
+        if self.basis:
+            score += 0.05
 
         return score
+
 
 class _Line:
     def __init__(self):
@@ -95,6 +98,7 @@ class _Line:
 
         return output
 
+
 class _Stats:
     def __init__(self):
         self.res_slope = 0.0
@@ -108,8 +112,9 @@ class _Stats:
         self.sup_weighted_std = 0.0
         self.sup_level = 0.0
 
+
 class SupportResistance(Threaded):
-    def __init__(self, ticker:str, methods:list[str]=['NSQUREDLOGN'], extmethods:list[str]=['NUMDIFF'], best:int=8, days:int=1000):
+    def __init__(self, ticker: str, methods: list[str] = ['NSQUREDLOGN'], extmethods: list[str] = ['NUMDIFF'], best: int = 8, days: int = 1000):
         if best < 1:
             raise ValueError("'best' value must be > 0")
 
@@ -171,7 +176,7 @@ class SupportResistance(Threaded):
 
         self.task_error = 'Hold'
 
-    def _extract_lines(self, method:str, extmethod:str) -> list[_Line]:
+    def _extract_lines(self, method: str, extmethod: str) -> list[_Line]:
         if not method in METHOD:
             assert ValueError(f'Invalid method {method}')
 
@@ -184,12 +189,12 @@ class SupportResistance(Threaded):
         self.stats.res_slope = pmax[0]
         self.stats.res_intercept = pmax[1]
 
-        lines:list[_Line] = []
+        lines: list[_Line] = []
         for line in maxtrend:
             newline = _Line()
             newline.support = False
             newline.end_point = 0.0
-            newline.points = [{'index':point, 'date':''} for point in line[0]]
+            newline.points = [{'index': point, 'date': ''} for point in line[0]]
             newline.slope = line[1][0]
             newline.intercept = line[1][1]
             newline.ssr = line[1][2]
@@ -209,7 +214,7 @@ class SupportResistance(Threaded):
             newline = _Line()
             newline.support = True
             newline.end_point = 0.0
-            newline.points = [{'index':point, 'date':''} for point in line[0]]
+            newline.points = [{'index': point, 'date': ''} for point in line[0]]
             newline.slope = line[1][0]
             newline.intercept = line[1][1]
             newline.ssr = line[1][2]
@@ -231,7 +236,8 @@ class SupportResistance(Threaded):
         # Calculate end point extension (y = mx + b)
         for line in lines:
             line.end_point = (line.slope * self.points) + line.intercept
-            if line.end_point < 0.0: line.end_point = 0.0
+            if line.end_point < 0.0:
+                line.end_point = 0.0
 
         # Sort lines based on mathematical fit (ssr) and set the line ranking
         lines = sorted(lines, key=lambda l: l.ssr)
@@ -243,16 +249,18 @@ class SupportResistance(Threaded):
         #    Rank
         max_ = 0.0
         for line in lines:
-            if line.fit > max_: max_ = line.fit
+            if line.fit > max_:
+                max_ = line.fit
         for line in lines:
             line._score.fit = line.fit / max_
             line._score.fit *= MAX_SCALE
-            line._score.fit = MAX_SCALE - line._score.fit # Lower is better
+            line._score.fit = MAX_SCALE - line._score.fit  # Lower is better
 
         #    Width
         max_ = 0.0
         for line in lines:
-            if line.width > max_: max_ = line.width
+            if line.width > max_:
+                max_ = line.width
         for line in lines:
             line._score.width = line.width / max_
             line._score.width *= MAX_SCALE
@@ -261,16 +269,18 @@ class SupportResistance(Threaded):
         max_ = 0.0
         for line in lines:
             line.proximity = abs(line.end_point - self.price)
-            if line.proximity > max_: max_ = line.proximity
+            if line.proximity > max_:
+                max_ = line.proximity
         for line in lines:
             line._score.proximity = line.proximity / max_
             line._score.proximity *= MAX_SCALE
-            line._score.proximity = MAX_SCALE - line._score.proximity # Lower is better
+            line._score.proximity = MAX_SCALE - line._score.proximity  # Lower is better
 
         #    Points
         max_ = 0.0
         for line in lines:
-            if len(line.points) > max_: max_ = len(line.points)
+            if len(line.points) > max_:
+                max_ = len(line.points)
         for line in lines:
             line._score.points = len(line.points) / max_
             line._score.points *= MAX_SCALE
@@ -278,20 +288,22 @@ class SupportResistance(Threaded):
         #    Age
         max_ = 0.0
         for line in lines:
-            if line.age > max_: max_ = line.age
+            if line.age > max_:
+                max_ = line.age
         for line in lines:
             line._score.age = line.age / max_
             line._score.age *= MAX_SCALE
-            line._score.age = MAX_SCALE - line._score.age # Lower is better
+            line._score.age = MAX_SCALE - line._score.age  # Lower is better
 
         #    Slope
         max_ = 0.0
         for line in lines:
-            if line.slope > max_: max_ = abs(line.slope)
+            if line.slope > max_:
+                max_ = abs(line.slope)
         for line in lines:
             line._score.slope = abs(line.slope) / max_
             line._score.slope *= MAX_SCALE
-            line._score.slope = MAX_SCALE - line._score.slope # Lower is better
+            line._score.slope = MAX_SCALE - line._score.slope  # Lower is better
 
         #   Basis (line type matches position. Ex: end point of support line is below current price, resistence end point above)
         for line in lines:
@@ -307,8 +319,9 @@ class SupportResistance(Threaded):
 
         return lines
 
-    def _get_resistance(self, method_price:bool=True, best:int=0) -> pd.DataFrame:
-        if best <= 0: best = self.best
+    def _get_resistance(self, method_price: bool = True, best: int = 0) -> pd.DataFrame:
+        if best <= 0:
+            best = self.best
 
         df = self.lines[self.lines['support'] == False].copy()
         df = df.sort_values(by=['score'], ascending=False)[:best]
@@ -323,8 +336,9 @@ class SupportResistance(Threaded):
 
         return df
 
-    def _get_support(self, method_price:bool=True, best:int=0) -> pd.DataFrame:
-        if best <= 0: best = self.best
+    def _get_support(self, method_price: bool = True, best: int = 0) -> pd.DataFrame:
+        if best <= 0:
+            best = self.best
 
         df = self.lines[self.lines['support'] == True].copy()
         df = df.sort_values(by=['score'], ascending=False)[:best]
@@ -339,10 +353,11 @@ class SupportResistance(Threaded):
 
         return df
 
-    def _calculate_stats(self, best:int=0) -> None:
-        if best <= 0: best = self.best
+    def _calculate_stats(self, best: int = 0) -> None:
+        if best <= 0:
+            best = self.best
 
-        def calculate(support:bool) -> tuple[float, float, float]:
+        def calculate(support: bool) -> tuple[float, float, float]:
             weighted_mean = 0.0
             weighted_std = 0.0
             level = 0.0
@@ -379,12 +394,12 @@ class SupportResistance(Threaded):
         self.stats.sup_weighted_mean, self.stats.sup_weighted_std, self.stats.sup_level = calculate(True)
         _logger.info(f'{__name__}: Sup: wmean={self.stats.sup_weighted_mean:.2f}, wstd={self.stats.sup_weighted_std:.2f}, level={self.stats.sup_level}')
 
-    def plot(self, show:bool=False, legend:bool=True, trendlines:bool=False, filename:str='') -> plt.Figure:
+    def plot(self, show: bool = False, legend: bool = True, trendlines: bool = False, filename: str = '') -> plt.Figure:
         resistance = self._get_resistance(method_price=False)
         support = self._get_support(method_price=False)
 
         plt.style.use('seaborn-bright')
-        figure, ax1 = plt.subplots(figsize=(17,10))
+        figure, ax1 = plt.subplots(figsize=(17, 10))
         plt.grid()
         plt.margins(x=0.1)
         plt.title(f'{self.company["name"]}')
@@ -499,7 +514,7 @@ class SupportResistance(Threaded):
                 date = self.history['date'].iloc[-1]
                 dates += [date.strftime('%Y-%m-%d')]
                 values += [ep]
-                text += [{'text':f'{line.end_point:.2f}:{index+1}', 'value':line.end_point, 'color':'red'}]
+                text += [{'text': f'{line.end_point:.2f}:{index+1}', 'value': line.end_point, 'color': 'red'}]
         ax1.plot(dates, values, '.r')
 
         dates = []
@@ -510,7 +525,7 @@ class SupportResistance(Threaded):
                 date = self.history['date'].iloc[-1]
                 dates += [date.strftime('%Y-%m-%d')]
                 values += [ep]
-                text += [{'text':f'{line.end_point:.2f}:{index+1}', 'value':line.end_point, 'color':'green'}]
+                text += [{'text': f'{line.end_point:.2f}:{index+1}', 'value': line.end_point, 'color': 'green'}]
         ax1.plot(dates, values, '.g')
 
         # End points text

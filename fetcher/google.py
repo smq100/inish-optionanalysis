@@ -13,14 +13,15 @@ _logger = ui.get_logger()
 
 CREDENTIALS = 'fetcher/google.json'
 
+
 class Google(Sheet):
-    def __init__(self, sheet_name:str):
+    def __init__(self, sheet_name: str):
         super().__init__(sheet_name)
         self.sheet = None
         self.opened = False
         self.col = []
 
-    def open(self, tab:str) -> bool:
+    def open(self, tab: str) -> bool:
         if tab:
             self.tab_name = tab
 
@@ -44,11 +45,12 @@ class Google(Sheet):
 
         return self.opened
 
-    def get_column(self, column:str) -> list[str]:
+    def get_column(self, column: str) -> list[str]:
         if self.opened and column > 0:
             self.col = self.sheet.col_values(column)
 
         return self.col
+
 
 if __name__ == '__main__':
     gs = Google('Symbols')

@@ -28,8 +28,8 @@ class Accounts:
             _logger.info(parsed)
 
             if data is not None and 'AccountListResponse' in data \
-                and 'Accounts' in data['AccountListResponse'] \
-                and 'Account' in data['AccountListResponse']['Accounts']:
+                    and 'Accounts' in data['AccountListResponse'] \
+                    and 'Account' in data['AccountListResponse']['Accounts']:
                 accounts = data['AccountListResponse']['Accounts']['Account']
 
                 self.accounts[:] = [d for d in accounts if d.get('accountStatus') != 'CLOSED']
@@ -67,7 +67,7 @@ class Accounts:
 
         return message, listing
 
-    def balance(self, account_index:int) -> tuple[str, dict]:
+    def balance(self, account_index: int) -> tuple[str, dict]:
         message = 'success'
         url = self.base_url + '/v1/accounts/' + self.accounts[account_index]['accountIdKey'] + '/balance.json'
         params = {'instType': self.accounts[account_index]['institutionType'], 'realTimeNAV': 'true'}
@@ -102,7 +102,7 @@ class Accounts:
 
         return message, balance_data
 
-    def portfolio(self, account_index:int) -> tuple[str, dict]:
+    def portfolio(self, account_index: int) -> tuple[str, dict]:
         message = 'success'
         url = self.base_url + '/v1/accounts/' + self.accounts[account_index]['accountIdKey'] + '/portfolio.json'
 

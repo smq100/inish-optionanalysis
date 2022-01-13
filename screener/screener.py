@@ -17,8 +17,9 @@ BASEPATH = os.getcwd() + '/screener/screens/'
 SCREEN_SUFFIX = '.screen'
 INIT_NAME = 'init'
 
+
 class Result:
-    def __init__(self, company:Company, success:list[bool], score:list[float], results:list[str]):
+    def __init__(self, company: Company, success: list[bool], score: list[float], results: list[str]):
         self.company = company
         self.success = success
         self.score = score
@@ -39,8 +40,9 @@ class Result:
     def __float__(self):
         return float(sum(self.score)) / len(self.score) if len(self.score) > 0 else 0.0
 
+
 class Screener(Threaded):
-    def __init__(self, table:str, screen:str, days:int=365, end:int=0, live:bool=False):
+    def __init__(self, table: str, screen: str, days: int = 365, end: int = 0, live: bool = False):
         super().__init__()
 
         self.table = table.upper()
@@ -70,9 +72,9 @@ class Screener(Threaded):
         self.days = days
         self.end = end
         self.live = live if store.is_database_connected() else True
-        self.scripts:list[dict] = []
-        self.companies:list[Company] = []
-        self.results:list[Result] = []
+        self.scripts: list[dict] = []
+        self.companies: list[Company] = []
+        self.results: list[Result] = []
         self._concurrency = 10
 
         if screen:
@@ -125,7 +127,7 @@ class Screener(Threaded):
         # Return a list of successful tickers
         return [r.company.ticker for r in self.results if r]
 
-    def _load(self, script:str, init:str='') -> bool:
+    def _load(self, script: str, init: str = '') -> bool:
         self.scripts = []
         if os.path.exists(script):
             try:
@@ -169,7 +171,7 @@ class Screener(Threaded):
 
         return len(self.companies) > 0
 
-    def _run(self, companies:list[Company]) -> None:
+    def _run(self, companies: list[Company]) -> None:
         for ticker in companies:
             success = []
             score = []
@@ -204,7 +206,7 @@ class Screener(Threaded):
                 self.results = []
                 break
 
-    def _add_init_script(self, script:str) -> bool:
+    def _add_init_script(self, script: str) -> bool:
         if os.path.exists(script):
             try:
                 with open(script) as f:

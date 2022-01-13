@@ -12,7 +12,7 @@ DEFAULT_WIDTH = 2.0
 
 
 class Vertical(Strategy):
-    def __init__(self, ticker:str, product:str, direction:str, width:int, quantity:int, load_default:bool=False):
+    def __init__(self, ticker: str, product: str, direction: str, width: int, quantity: int, load_default: bool = False):
         if width < 1:
             raise ValueError('Invalid width')
 
@@ -50,7 +50,7 @@ class Vertical(Strategy):
     def __str__(self):
         return f'{self.name} {self.product} {self.analysis.credit_debit} spread'
 
-    def fetch_default_contracts(self, distance:int=1, weeks:int=-1) -> tuple[str, int, list[str]]:
+    def fetch_default_contracts(self, distance: int = 1, weeks: int = -1) -> tuple[str, int, list[str]]:
         # super() fetches the long option & itm index
         product, index, contracts = super().fetch_default_contracts(distance, weeks)
 
@@ -174,6 +174,7 @@ class Vertical(Strategy):
 
     def _validate(self) -> bool:
         return len(self.legs) == 2
+
 
 if __name__ == '__main__':
     import logging

@@ -15,7 +15,7 @@ SCREEN_SUFFIX = 'screen'
 
 
 class Interface:
-    def __init__(self, table:str='', screen:str='', backtest:int=0, verbose:bool=False, exit:bool=False, live:bool=False):
+    def __init__(self, table: str = '', screen: str = '', backtest: int = 0, verbose: bool = False, exit: bool = False, live: bool = False):
         self.table = table.upper()
         self.screen_base = screen
         self.verbose = verbose
@@ -23,10 +23,10 @@ class Interface:
         self.live = live if store.is_database_connected() else True
         self.auto = False
         self.screen_path = ''
-        self.results:list[Result] = []
-        self.valids:list[Result] = []
-        self.screener:Screener = None
-        self.task:threading.Thread = None
+        self.results: list[Result] = []
+        self.valids: list[Result] = []
+        self.screener: Screener = None
+        self.task: threading.Thread = None
 
         abort = False
 
@@ -70,7 +70,7 @@ class Interface:
         else:
             self.main_menu()
 
-    def main_menu(self, selection:int=0) -> None:
+    def main_menu(self, selection: int = 0) -> None:
         while True:
             source = 'live' if self.live else d.ACTIVE_DB
             menu_items = {
@@ -187,7 +187,7 @@ class Interface:
         else:
             ui.print_message('No screener files found')
 
-    def run_screen(self, backtest:bool=False) -> bool:
+    def run_screen(self, backtest: bool = False) -> bool:
         success = False
         self.auto = False
 
@@ -225,7 +225,7 @@ class Interface:
 
         return success
 
-    def run_backtest(self, prompt:bool=True, bullish:bool=True) -> bool:
+    def run_backtest(self, prompt: bool = True, bullish: bool = True) -> bool:
         if prompt:
             input = ui.input_integer('Input number of days (10-100): ', 10, 100)
             self.end = input
@@ -244,7 +244,7 @@ class Interface:
 
         return success
 
-    def print_results(self, top:int=-1, verbose:bool=False, ticker:str='') -> None:
+    def print_results(self, top: int = -1, verbose: bool = False, ticker: str = '') -> None:
         if not self.table:
             ui.print_error('No table specified')
         elif not self.screen_base:
@@ -280,7 +280,7 @@ class Interface:
                     break
         print()
 
-    def print_backtest(self, top:int=-1):
+    def print_backtest(self, top: int = -1):
         if not self.table:
             ui.print_error('No table specified')
         elif not self.screen_base:
@@ -314,7 +314,8 @@ class Interface:
 
     def show_progress(self, prefix, suffix) -> None:
         # Wait for thread to initialize
-        while not self.screener.task_error: pass
+        while not self.screener.task_error:
+            pass
 
         if self.screener.task_error == 'None':
             ui.progress_bar(self.screener.task_completed, self.screener.task_total, prefix=prefix, suffix=suffix, reset=True)
@@ -333,11 +334,13 @@ class Interface:
 
             results = [future.result() for future in self.screener.task_futures if future.result() is not None]
             if len(results) > 0:
-                for result in results: print(result)
+                for result in results:
+                    print(result)
             else:
                 print('None')
         else:
             ui.print_message(f'{self.screener.task_error}')
+
 
 if __name__ == '__main__':
     import argparse

@@ -17,6 +17,7 @@ from utils import ui
 
 ui.get_logger(logging.WARNING, logfile='')
 
+
 class Client:
     def __init__(self):
         self.session = None
@@ -91,7 +92,7 @@ class Client:
         success, listing = self.accounts.list()
 
         if success == 'success':
-            menu_items = {n+1:listing[n] for n in range (len(listing))}
+            menu_items = {n+1: listing[n] for n in range(len(listing))}
             menu_items['0'] = 'Cancel'
 
             selection = ui.menu(menu_items, 'Select Accounts', 0, len(menu_items)-1)
@@ -336,8 +337,8 @@ class Client:
         with open(self.picklefile, 'wb') as session_file:
             pickle.dump(session, session_file)
 
-        print(type(session))
         return session
+
 
 def _validate_session(session, url):
     response = session.get(url)

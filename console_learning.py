@@ -7,6 +7,7 @@ from utils import ui
 
 _logger = ui.get_logger(logging.WARNING, logfile='')
 
+
 class Interface:
     def __init__(self, ticker='', days=30, exit=False):
         self.ticker = ticker.upper()

@@ -11,7 +11,7 @@ _logger = ui.get_logger()
 
 
 class Put(Strategy):
-    def __init__(self, ticker:str, product:str, direction:str, width:int, quantity:int, load_default:bool=False):
+    def __init__(self, ticker: str, product: str, direction: str, width: int, quantity: int, load_default: bool = False):
         product = 'put'
         super().__init__(ticker, product, direction, width, quantity, load_default)
 
@@ -92,6 +92,7 @@ class Put(Strategy):
             breakeven = self.legs[0].option.strike + self.analysis.amount
 
         return breakeven
+
 
 if __name__ == '__main__':
     import logging

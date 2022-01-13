@@ -7,6 +7,7 @@ from utils import ui
 
 Base = declarative_base()
 
+
 class Exchange(Base):
     __tablename__ = 'exchange'
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -24,6 +25,7 @@ class Exchange(Base):
 
     def __str__(self):
         return self.abbreviation
+
 
 class Security(Base):
     __tablename__ = 'security'
@@ -52,6 +54,7 @@ class Security(Base):
     def __str__(self):
         return self.ticker
 
+
 class Index(Base):
     __tablename__ = 'index'
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -69,6 +72,7 @@ class Index(Base):
 
     def __str__(self):
         return self.abbreviation
+
 
 class Company(Base):
     __tablename__ = 'company'
@@ -89,6 +93,7 @@ class Company(Base):
     def __str__(self):
         return self.name
 
+
 class Price(Base):
     __tablename__ = 'price'
     __table_args__ = (UniqueConstraint('date', 'security_id', name='date_id_uc'), )
@@ -106,6 +111,7 @@ class Price(Base):
 
     def __str__(self):
         return f'{self.date}: {self.security_id}'
+
 
 class Incomplete(Base):
     __tablename__ = 'incomplete'

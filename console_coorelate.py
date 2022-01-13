@@ -10,13 +10,14 @@ from utils import ui
 
 _logger = ui.get_logger(logging.WARNING, logfile='')
 
+
 class Interface:
-    def __init__(self, coor:str=''):
+    def __init__(self, coor: str = ''):
         self.list = coor.upper()
-        self.coorelate:Correlate = None
+        self.coorelate: Correlate = None
         self.exchanges = [e['abbreviation'] for e in d.EXCHANGES]
         self.indexes = [i['abbreviation'] for i in d.INDEXES]
-        self.tickers:list[str] = []
+        self.tickers: list[str] = []
 
         if not coor:
             self.main_menu()
@@ -77,7 +78,8 @@ class Interface:
         else:
             ui.print_message(f'Best Coorelations in {self.list}')
             best = self.coorelate.get_sorted_coorelations(20, True)
-            for item in best: print(f'{item[0]}/{item[1]:<5}\t{item[2]:.4f}')
+            for item in best:
+                print(f'{item[0]}/{item[1]:<5}\t{item[2]:.4f}')
 
     def get_least_coorelation(self):
         if not self.coorelate:
@@ -87,7 +89,8 @@ class Interface:
         else:
             ui.print_message(f'Least Coorelations in {self.list}')
             best = self.coorelate.get_sorted_coorelations(20, False)
-            for item in best: print(f'{item[0]}/{item[1]:<5}\t{item[2]:.4f}')
+            for item in best:
+                print(f'{item[0]}/{item[1]:<5}\t{item[2]:.4f}')
 
     def get_ticker_coorelation(self):
         if not self.coorelate:
@@ -101,10 +104,12 @@ class Interface:
             else:
                 df = self.coorelate.get_ticker_coorelation(ticker)
                 ui.print_message(f'Highest correlations to {ticker}')
-                for sym, val in df[-1:-11:-1].iteritems(): print(f'{sym:>5}: {val:.5f}')
+                for sym, val in df[-1:-11:-1].iteritems():
+                    print(f'{sym:>5}: {val:.5f}')
 
                 ui.print_message(f'Lowest correlations to {ticker}')
-                for sym, val in df[:10].iteritems(): print(f'{sym:>5}: {val:.5f}')
+                for sym, val in df[:10].iteritems():
+                    print(f'{sym:>5}: {val:.5f}')
 
     def _get_list(self):
         list = ''
@@ -122,7 +127,8 @@ class Interface:
         return list
 
     def _show_progress(self, prefix, suffix):
-        while not self.coorelate.task_error: pass
+        while not self.coorelate.task_error:
+            pass
 
         if self.coorelate.task_error == 'None':
             total = self.coorelate.task_total

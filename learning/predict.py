@@ -15,8 +15,9 @@ _days_test = 1000
 
 _logger = ui.get_logger()
 
+
 class Prediction(Threaded):
-    def __init__(self, ticker:str, future:int=30):
+    def __init__(self, ticker: str, future: int = 30):
         if store.is_ticker(ticker):
             self.ticker = ticker.upper()
             self.actual_prices = []
@@ -40,8 +41,8 @@ class Prediction(Threaded):
         self._data['returns'] = self._data.close.pct_change()
         self._data['log_returns'] = np.log(1 + self._data['returns'])
 
-        self._scaler = MinMaxScaler(feature_range=(0,1))
-        scaled_data = self._scaler.fit_transform(self._data['close'].values.reshape(-1,1))
+        self._scaler = MinMaxScaler(feature_range=(0, 1))
+        scaled_data = self._scaler.fit_transform(self._data['close'].values.reshape(-1, 1))
 
         self._x_train = [scaled_data[x-self.prediction_days:x, 0] for x in range(self.prediction_days, len(scaled_data)-self.future_days)]
         self._x_train = np.array(self._x_train)
@@ -58,7 +59,7 @@ class Prediction(Threaded):
         self._model = Sequential()
         self._model.add(LSTM(units=units, return_sequences=True, input_shape=(self._x_train.shape[1], 1)))
         self._model.add(Dropout(dropout))
-        self._model.add(LSTM(units=units , return_sequences=True))
+        self._model.add(LSTM(units=units, return_sequences=True))
         self._model.add(Dropout(dropout))
         self._model.add(LSTM(units=units))
         self._model.add(Dropout(dropout))

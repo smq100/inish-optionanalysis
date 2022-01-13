@@ -11,12 +11,11 @@ _logger = ui.get_logger()
 
 
 class Call(Strategy):
-    def __init__(self, ticker:str, product:str, direction:str, width:int, quantity:int, load_default:bool=False):
+    def __init__(self, ticker: str, product: str, direction: str, width: int, quantity: int, load_default: bool = False):
         product = 'call'
         super().__init__(ticker, product, direction, width, quantity, load_default)
 
         self.name = s.STRATEGIES_BROAD[0]
-
 
         # Default expiry to tird Friday of next month
         expiry = m.third_friday()

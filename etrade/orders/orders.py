@@ -10,6 +10,7 @@ _logger = ui.get_logger()
 config = configparser.ConfigParser()
 config.read('etrade/config.ini')
 
+
 class Orders:
     def __init__(self, session, account, base_url):
         self.session = session
@@ -208,7 +209,7 @@ class Orders:
 
                         if data is not None and 'PreviewOrderResponse' in data and 'Order' in data['PreviewOrderResponse']:
                             for orders in data['PreviewOrderResponse']['Order']:
-                                prev_orders[options_select -1]['limitPrice'] = orders['limitPrice']
+                                prev_orders[options_select - 1]['limitPrice'] = orders['limitPrice']
 
                                 if orders is not None and 'Instrument' in orders:
                                     for instruments in orders['Instrument']:

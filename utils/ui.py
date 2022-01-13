@@ -7,7 +7,7 @@ from utils import math as m
 LOG_DIR = './log'
 
 
-def get_logger(level:int=None, logfile:str='') -> Logger:
+def get_logger(level: int = None, logfile: str = '') -> Logger:
     logger = logging.getLogger('analysis')
 
     if level is None:
@@ -15,7 +15,7 @@ def get_logger(level:int=None, logfile:str='') -> Logger:
     else:
         logger.handlers = []
         logger.setLevel(logging.DEBUG)
-        logger.propagate = False # Prevent logging from propagating to the root logger
+        logger.propagate = False  # Prevent logging from propagating to the root logger
 
         # Console handler
         cformat = logging.Formatter('%(levelname)s: %(message)s')
@@ -36,15 +36,18 @@ def get_logger(level:int=None, logfile:str='') -> Logger:
 
     return logger
 
-def menu(menu_items:dict, header:str, minvalue:int, maxvalue:int) -> int:
+
+def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int) -> int:
     print(f'\n{header}')
     print('-' * 50)
 
-    for entry in menu_items.keys(): print(f'{entry:>2})\t{menu_items[entry]}')
+    for entry in menu_items.keys():
+        print(f'{entry:>2})\t{menu_items[entry]}')
 
     return input_integer('Please select: ', minvalue, maxvalue)
 
-def delimeter(message, creturn:int=0) -> str:
+
+def delimeter(message, creturn: int = 0) -> str:
     if creturn > 0:
         output = '\n' * creturn
     else:
@@ -57,19 +60,24 @@ def delimeter(message, creturn:int=0) -> str:
 
     return output
 
-def print_message(message:str, creturn:int=1) -> None:
+
+def print_message(message: str, creturn: int = 1) -> None:
     print(delimeter(f'{message}', creturn))
 
-def print_warning(message:str, creturn:int=1) -> None:
+
+def print_warning(message: str, creturn: int = 1) -> None:
     print(delimeter(f'Warning: {message}', creturn))
 
-def print_error(message:str, creturn:int=1) -> None:
+
+def print_error(message: str, creturn: int = 1) -> None:
     print(delimeter(f'Error: {message}', creturn))
 
-def print_line(message:str, creturn:int=1) -> None:
+
+def print_line(message: str, creturn: int = 1) -> None:
     print(delimeter(message, creturn))
 
-def input_integer(message:str, min_:int, max_:int) -> int:
+
+def input_integer(message: str, min_: int, max_: int) -> int:
     val = min_ - 1
     while val < min_:
         text = input(message)
@@ -89,7 +97,8 @@ def input_integer(message:str, min_:int, max_:int) -> int:
 
     return val
 
-def input_float(message:str, min_:float, max_:float) -> float:
+
+def input_float(message: str, min_: float, max_: float) -> float:
     val = min_ - 1
     while val < min_:
         text = input(message)
@@ -109,7 +118,8 @@ def input_float(message:str, min_:float, max_:float) -> float:
 
     return val
 
-def input_text(message:str) -> str:
+
+def input_text(message: str) -> str:
     val = input(message)
     if not all(char.isalpha() for char in val):
         val = ''
@@ -117,7 +127,8 @@ def input_text(message:str) -> str:
 
     return val
 
-def input_alphanum(message:str) -> str:
+
+def input_alphanum(message: str) -> str:
     val = input(message)
     if not all(char.isalnum() for char in val):
         val = ''
@@ -125,12 +136,15 @@ def input_alphanum(message:str) -> str:
 
     return val
 
+
 completed = 0
 position = 0
 forward = True
 start = 0.0
-def progress_bar(iteration, total:int, prefix:str='Working', suffix:str='', ticker:str='',
-        length:int=50, fill='█', reset:bool=False, success:int=-1, tasks:int=0) -> None:
+
+
+def progress_bar(iteration, total: int, prefix: str = 'Working', suffix: str = '', ticker: str = '',
+                 length: int = 50, fill='█', reset: bool = False, success: int = -1, tasks: int = 0) -> None:
 
     global completed
     global position
@@ -159,7 +173,7 @@ def progress_bar(iteration, total:int, prefix:str='Working', suffix:str='', tick
             seconds = 0.0
 
         if iteration == completed:
-            pass # Nothing new to draw
+            pass  # Nothing new to draw
         elif success < 0:
             print(f'\r{prefix} |{bar}| {iteration}/{total} {suffix} {ticker}     ', end='\r')
         elif tasks > 0:
@@ -172,7 +186,7 @@ def progress_bar(iteration, total:int, prefix:str='Working', suffix:str='', tick
         if completed == total:
             print()
 
-    else: # Use oscillating marker when the total is not known
+    else:  # Use oscillating marker when the total is not known
         if forward:
             if position < length:
                 position += 1

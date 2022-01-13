@@ -6,11 +6,13 @@ import pandas as pd
 _MIN_MAX_PERCENT = 0.20
 
 
-def mround(n:float, precision:float) -> float:
+def mround(n: float, precision: float) -> float:
     val = float(round(n / precision) * precision)
-    if val < 0.01: val = 0.01
+    if val < 0.01:
+        val = 0.01
 
     return val
+
 
 def isnumeric(value) -> bool:
     try:
@@ -19,7 +21,8 @@ def isnumeric(value) -> bool:
     except ValueError:
         return False
 
-def calculate_min_max_step(strike:float) -> tuple[float, float, float]:
+
+def calculate_min_max_step(strike: float) -> tuple[float, float, float]:
     min_ = 0.0
     max_ = 0.0
     step = 0.0
@@ -35,7 +38,8 @@ def calculate_min_max_step(strike:float) -> tuple[float, float, float]:
 
     return min_, max_, step
 
-def compress_table(table:pd.DataFrame, rows:int, cols:int) -> pd.DataFrame:
+
+def compress_table(table: pd.DataFrame, rows: int, cols: int) -> pd.DataFrame:
     if not isinstance(table, pd.DataFrame):
         raise ValueError("'table' must be a Pandas DataFrame")
 
@@ -45,9 +49,9 @@ def compress_table(table:pd.DataFrame, rows:int, cols:int) -> pd.DataFrame:
     srows, scols = table.shape
     if cols > 0 and cols < scols:
         step = int(math.ceil(scols/cols))
-        end = table[table.columns[-2::]] # Save the last two cols
-        compressed = table[table.columns[:-2:step]] # Thin the table, less the last two cols
-        compressed = pd.concat([compressed, end], axis=1) # Add back the last two cols
+        end = table[table.columns[-2::]]  # Save the last two cols
+        compressed = table[table.columns[:-2:step]]  # Thin the table, less the last two cols
+        compressed = pd.concat([compressed, end], axis=1)  # Add back the last two cols
 
     # Thin out rows
     if rows > 0 and rows < srows:
@@ -55,6 +59,7 @@ def compress_table(table:pd.DataFrame, rows:int, cols:int) -> pd.DataFrame:
         compressed = compressed.iloc[::step]
 
     return compressed
+
 
 def third_friday() -> dt.datetime:
     today = dt.datetime.today()
@@ -68,6 +73,7 @@ def third_friday() -> dt.datetime:
         third = third.replace(day=(15 + (4 - w) % 7))
 
     return third
+
 
 if __name__ == '__main__':
     friday = third_friday()

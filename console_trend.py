@@ -11,14 +11,15 @@ from utils import ui
 
 _logger = ui.get_logger(logging.WARNING, logfile='')
 
+
 class Interface:
-    def __init__(self, tickers:list[str]=[], days:int=1000, quick:bool=False, exit:bool=False):
+    def __init__(self, tickers: list[str] = [], days: int = 1000, quick: bool = False, exit: bool = False):
         self.tickers = [t.upper() for t in tickers]
         self.days = days
         self.quick = quick
         self.exit = exit
-        self.trend:SupportResistance = None
-        self.task:threading.Thread = None
+        self.trend: SupportResistance = None
+        self.task: threading.Thread = None
 
         quit = False
         for ticker in tickers:
@@ -125,7 +126,8 @@ class Interface:
             ui.print_error('Enter a ticker before calculating')
 
     def _show_progress(self) -> None:
-        while not self.trend.task_error: pass
+        while not self.trend.task_error:
+            pass
 
         if self.trend.task_error == 'None':
             while self.trend.task_error == 'None':

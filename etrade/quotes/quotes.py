@@ -10,7 +10,7 @@ class Quotes:
         self.session = session
         self.base_url = base_url
 
-    def quote(self, symbol:str) -> tuple[str, dict]:
+    def quote(self, symbol: str) -> tuple[str, dict]:
         message = 'success'
         url = f'{self.base_url}/v1/market/quote/{symbol}.json'
         quote_data = None
@@ -24,9 +24,9 @@ class Quotes:
             if quote_data is not None and 'QuoteResponse' in quote_data and 'QuoteData' in quote_data['QuoteResponse']:
                 pass
             elif quote_data is not None and 'QuoteResponse' in quote_data \
-                and 'Messages' in quote_data['QuoteResponse'] \
-                and 'Message' in quote_data['QuoteResponse']['Messages'] \
-                and quote_data['QuoteResponse']['Messages']['Message'] is not None:
+                    and 'Messages' in quote_data['QuoteResponse'] \
+                    and 'Message' in quote_data['QuoteResponse']['Messages'] \
+                    and quote_data['QuoteResponse']['Messages']['Message'] is not None:
 
                 for error_message in quote_data['QuoteResponse']['Messages']['Message']:
                     message += ('Error: ' + error_message['description'])

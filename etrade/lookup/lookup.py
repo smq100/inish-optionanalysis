@@ -10,7 +10,7 @@ class Lookup:
         self.session = session
         self.base_url = base_url
 
-    def lookup(self, symbol:str) -> tuple[str, dict]:
+    def lookup(self, symbol: str) -> tuple[str, dict]:
         message = 'success'
         url = f'{self.base_url}/v1/market/lookup/{symbol}.json'
         lookup_data = None

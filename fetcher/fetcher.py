@@ -30,7 +30,7 @@ config.read(CREDENTIALS)
 qd.ApiConfig.api_key = config['DEFAULT']['APIKEY']
 
 
-def is_connected(hostname:str='google.com') -> bool:
+def is_connected(hostname: str = 'google.com') -> bool:
     try:
         host = socket.gethostbyname(hostname)
         s = socket.create_connection((host, 80), 2)
@@ -40,9 +40,11 @@ def is_connected(hostname:str='google.com') -> bool:
     else:
         return True
 
+
 _connected = is_connected()
 
-def validate_ticker(ticker:str) -> bool:
+
+def validate_ticker(ticker: str) -> bool:
     if not _connected:
         raise ConnectionError('No internet connection')
 
@@ -58,9 +60,11 @@ def validate_ticker(ticker:str) -> bool:
 
     return valid
 
-_last_company:pd.DataFrame = None
 
-def get_company_live(ticker:str, uselast:bool=False) -> pd.DataFrame:
+_last_company: pd.DataFrame = None
+
+
+def get_company_live(ticker: str, uselast: bool = False) -> pd.DataFrame:
     if not _connected:
         raise ConnectionError('No internet connection')
 
@@ -87,7 +91,8 @@ def get_company_live(ticker:str, uselast:bool=False) -> pd.DataFrame:
 
     return company
 
-def _get_history_yfinance(ticker:str, days:int=-1, uselast:bool=False) -> pd.DataFrame:
+
+def _get_history_yfinance(ticker: str, days: int = -1, uselast: bool = False) -> pd.DataFrame:
     if not _connected:
         raise ConnectionError('No internet connection')
 
@@ -95,7 +100,7 @@ def _get_history_yfinance(ticker:str, days:int=-1, uselast:bool=False) -> pd.Dat
     company = get_company_live(ticker, uselast)
     if company is not None:
         if days < 0:
-            days = 7300 # 20 years
+            days = 7300  # 20 years
 
         if days > 0:
             start = dt.datetime.today() - dt.timedelta(days=days)
@@ -133,20 +138,21 @@ def _get_history_yfinance(ticker:str, days:int=-1, uselast:bool=False) -> pd.Dat
 
     return history
 
-def _get_history_quandl(ticker:str, days:int=-1) -> pd.DataFrame:
+
+def _get_history_quandl(ticker: str, days: int = -1) -> pd.DataFrame:
     history = pd.DataFrame()
 
     if days < 0:
-        days = 7300 # 20 years
+        days = 7300  # 20 years
 
     if days > 0:
         start = dt.datetime.today() - dt.timedelta(days=days)
 
         for retry in range(_RETRIES):
             try:
-                history = qd.get_table(f'QUOTEMEDIA/PRICES', \
-                    qopts={ 'columns': ['date', 'open', 'high', 'low', 'close', 'volume'] }, \
-                    ticker=ticker, paginate=True, date={'gte':f'{start:%Y-%m-%d}'})
+                history = qd.get_table(f'QUOTEMEDIA/PRICES',
+                                       qopts={'columns': ['date', 'open', 'high', 'low', 'close', 'volume']},
+                                       ticker=ticker, paginate=True, date={'gte': f'{start:%Y-%m-%d}'})
                 days = history.shape[0]
 
                 if history is None:
@@ -173,14 +179,18 @@ def _get_history_quandl(ticker:str, days:int=-1) -> pd.DataFrame:
 
     return history
 
+
 _elapsed = 0.0
-def get_history_live(ticker:str, days:int=-1) -> pd.DataFrame:
+
+
+def get_history_live(ticker: str, days: int = -1) -> pd.DataFrame:
     if not _connected:
         raise ConnectionError('No internet connection')
 
     # Throttle requests to help avoid being cut off by data provider
     global _elapsed
-    while (time.perf_counter() - _elapsed) < _THROTTLE_FETCH: time.sleep(_THROTTLE_FETCH)
+    while (time.perf_counter() - _elapsed) < _THROTTLE_FETCH:
+        time.sleep(_THROTTLE_FETCH)
     _elapsed = time.perf_counter()
 
     _logger.info(f'{__name__}: Fetching {ticker} history from {d.ACTIVE_DATASOURCE}...')
@@ -195,7 +205,8 @@ def get_history_live(ticker:str, days:int=-1) -> pd.DataFrame:
 
     return history
 
-def get_option_expiry(ticker:str, uselast:bool=False) -> tuple[str]:
+
+def get_option_expiry(ticker: str, uselast: bool = False) -> tuple[str]:
     if not _connected:
         raise ConnectionError('No internet connection')
 
@@ -204,7 +215,8 @@ def get_option_expiry(ticker:str, uselast:bool=False) -> tuple[str]:
 
     return value
 
-def get_option_chain(ticker:str, uselast:bool=False) -> dict:
+
+def get_option_chain(ticker: str, uselast: bool = False) -> dict:
     if not _connected:
         raise ConnectionError('No internet connection')
 
@@ -215,7 +227,8 @@ def get_option_chain(ticker:str, uselast:bool=False) -> dict:
 
     return chain
 
-def get_ratings(ticker:str) -> list[int]:
+
+def get_ratings(ticker: str) -> list[int]:
     if not _connected:
         raise ConnectionError('No internet connection')
 
@@ -252,7 +265,8 @@ def get_ratings(ticker:str) -> list[int]:
 
     return results
 
-def get_treasury_rate(ticker:str) -> float:
+
+def get_treasury_rate(ticker: str) -> float:
     if not _connected:
         raise ConnectionError('No internet connection')
 
@@ -279,7 +293,6 @@ if __name__ == '__main__':
     # dates = c.options
     # chain = c.option_chain(dates[0])
     # print(chain.calls)
-
 
     '''
     Retrieves a company object that may be used to gather numerous data about the company and security.

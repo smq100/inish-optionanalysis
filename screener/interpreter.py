@@ -11,7 +11,7 @@ VALID_SERIES = ('min', 'max', 'none')
 
 
 class Interpreter:
-    def __init__(self, company:Company, filter:dict):
+    def __init__(self, company: Company, filter: dict):
         self.company = company
         self.filter = filter
         self.note = ''
@@ -83,42 +83,42 @@ class Interpreter:
                 self.base = value
                 self.enable_score = True
 
-        elif self.base_technical == VALID_TECHNICALS[3]: # volume
+        elif self.base_technical == VALID_TECHNICALS[3]:  # volume
             value = self._get_base_volume()
             if not value.empty:
                 self.base = value
 
-        elif self.base_technical == VALID_TECHNICALS[4]: # sma
+        elif self.base_technical == VALID_TECHNICALS[4]:  # sma
             value = self._get_base_sma()
             if not value.empty:
                 self.base = value
                 self.enable_score = True
 
-        elif self.base_technical == VALID_TECHNICALS[5]: # rsi
+        elif self.base_technical == VALID_TECHNICALS[5]:  # rsi
             value = self._get_base_rsi()
             if not value.empty:
                 self.base = value
                 self.enable_score = True
 
-        elif self.base_technical == VALID_TECHNICALS[6]: # beta
+        elif self.base_technical == VALID_TECHNICALS[6]:  # beta
             value = self._get_base_beta()
             if not value.empty:
                 self.base = value
                 self.enable_score = True
 
-        elif self.base_technical == VALID_TECHNICALS[7]: # rating
+        elif self.base_technical == VALID_TECHNICALS[7]:  # rating
             value = self._get_base_rating()
             if not value.empty:
                 self.base = value
                 self.enable_score = True
 
-        elif self.base_technical == VALID_TECHNICALS[8]: # mcap
+        elif self.base_technical == VALID_TECHNICALS[8]:  # mcap
             value = self._get_base_mcap()
             if not value.empty:
                 self.base = value
                 self.enable_score = True
 
-        elif self.base_technical == VALID_TECHNICALS[10]: # true
+        elif self.base_technical == VALID_TECHNICALS[10]:  # true
             calculate = False
 
         else:
@@ -126,17 +126,17 @@ class Interpreter:
 
         # Criteria value
         if calculate:
-            if self.criteria_technical == VALID_TECHNICALS[9]: # value
+            if self.criteria_technical == VALID_TECHNICALS[9]:  # value
                 self.criteria = self._get_criteria()
-            elif self.criteria_technical == VALID_TECHNICALS[0]: # high
+            elif self.criteria_technical == VALID_TECHNICALS[0]:  # high
                 self.criteria = self._get_criteria_high()
-            elif self.criteria_technical == VALID_TECHNICALS[1]: # low
+            elif self.criteria_technical == VALID_TECHNICALS[1]:  # low
                 self.criteria = self._get_criteria_low()
-            elif self.criteria_technical == VALID_TECHNICALS[2]: # close
+            elif self.criteria_technical == VALID_TECHNICALS[2]:  # close
                 self.criteria = self._get_criteria_close()
-            elif self.criteria_technical == VALID_TECHNICALS[3]: # volume
+            elif self.criteria_technical == VALID_TECHNICALS[3]:  # volume
                 self.criteria = self._get_criteria_volume()
-            elif self.criteria_technical == VALID_TECHNICALS[4]: # sma
+            elif self.criteria_technical == VALID_TECHNICALS[4]:  # sma
                 self.criteria = self._get_criteria_sma()
             else:
                 raise SyntaxError('Invalid "criteria technical" specified in screen file')
@@ -151,46 +151,46 @@ class Interpreter:
             base = self.base.iloc[-1] * self.base_factor
             criteria = 0.0
 
-            if self.conditional == VALID_CONDITIONALS[0]: # le
-                if self.criteria_series == VALID_SERIES[2]: # na
+            if self.conditional == VALID_CONDITIONALS[0]:  # le
+                if self.criteria_series == VALID_SERIES[2]:  # na
                     if self.criteria.size > 0:
                         criteria = self.criteria.iloc[-1] * self.criteria_factor
                         self.score = criteria / base if base > 0 else 1.0
                         if base <= criteria:
                             self.success = True
-                elif self.criteria_series == VALID_SERIES[0]: # min
+                elif self.criteria_series == VALID_SERIES[0]:  # min
                     if self.criteria.size > 0:
                         criteria = self.criteria.min() * self.criteria_factor
                         self.score = criteria / base if base > 0 else 1.0
                         if base <= criteria:
                             self.success = True
-                elif self.criteria_series == VALID_SERIES[1]: # max
+                elif self.criteria_series == VALID_SERIES[1]:  # max
                     if self.criteria.size > 0:
                         criteria = self.criteria.max() * self.criteria_factor
                         self.score = criteria / base if base > 0 else 1.0
                         if base <= criteria:
                             self.success = True
 
-            elif self.conditional == VALID_CONDITIONALS[1]: # eq
+            elif self.conditional == VALID_CONDITIONALS[1]:  # eq
                 if self.criteria.size > 0:
                     criteria = self.criteria.min() * self.criteria_factor
                     if base == criteria:
                         self.success = True
 
-            elif self.conditional == VALID_CONDITIONALS[2]: # ge
-                if self.criteria_series == VALID_SERIES[2]: # na
+            elif self.conditional == VALID_CONDITIONALS[2]:  # ge
+                if self.criteria_series == VALID_SERIES[2]:  # na
                     if self.criteria.size > 0:
                         criteria = self.criteria.iloc[-1] * self.criteria_factor
                         self.score = base / criteria if criteria > 0 else 1.0
                         if base >= criteria:
                             self.success = True
-                elif self.criteria_series == VALID_SERIES[0]: # min
+                elif self.criteria_series == VALID_SERIES[0]:  # min
                     if self.criteria.size > 0:
                         criteria = self.criteria.min() * self.criteria_factor
                         self.score = base / criteria if criteria > 0 else 1.0
                         if base >= criteria:
                             self.success = True
-                elif self.criteria_series == VALID_SERIES[1]: # max
+                elif self.criteria_series == VALID_SERIES[1]:  # max
                     if self.criteria.size > 0:
                         criteria = self.criteria.max() * self.criteria_factor
                         self.score = base / criteria if criteria > 0 else 1.0

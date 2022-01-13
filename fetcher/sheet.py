@@ -1,6 +1,7 @@
 import abc
 from abc import ABC
 
+
 class Sheet(ABC):
     def __init__(self, sheet_name):
         self.sheet_name = sheet_name
@@ -13,9 +14,9 @@ class Sheet(ABC):
         return self.sheet_name
 
     @abc.abstractmethod
-    def open(self, tab:str) -> bool:
+    def open(self, tab: str) -> bool:
         return False
 
     @abc.abstractmethod
-    def get_column(self, column:str) -> list[str]:
+    def get_column(self, column: str) -> list[str]:
         return []

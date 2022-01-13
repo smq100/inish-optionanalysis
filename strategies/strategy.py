@@ -23,7 +23,7 @@ _logger = ui.get_logger()
 
 
 class Strategy(ABC, Threaded):
-    def __init__(self, ticker:str, product:str, direction:str, width:int, quantity:int, load_default:bool=False):
+    def __init__(self, ticker: str, product: str, direction: str, width: int, quantity: int, load_default: bool = False):
         if not store.is_ticker(ticker):
             raise ValueError('Invalid ticker')
         if product not in s.PRODUCTS:
@@ -42,9 +42,9 @@ class Strategy(ABC, Threaded):
         self.quantity = quantity
         self.width = width
         self.pricing_method = 'black-scholes'
-        self.chain:Chain = Chain(self.ticker)
+        self.chain: Chain = Chain(self.ticker)
         self.analysis = Analysis()
-        self.legs:list[Leg] = []
+        self.legs: list[Leg] = []
         self.initial_spot = 0.0
         self.initial_spot = self.get_current_spot(ticker, roundup=True)
 
@@ -61,17 +61,17 @@ class Strategy(ABC, Threaded):
     def reset(self) -> None:
         self.analysis = Analysis()
 
-    def update_expiry(self, date:dt.datetime) -> None:
+    def update_expiry(self, date: dt.datetime) -> None:
         for leg in self.legs:
             leg.option.expiry = date
 
-    def add_leg(self, quantity:int, product:str, direction:str, strike:float, expiry:dt.datetime) -> int:
+    def add_leg(self, quantity: int, product: str, direction: str, strike: float, expiry: dt.datetime) -> int:
         leg = Leg(self.ticker, quantity, product, direction, strike, expiry)
         self.legs += [leg]
 
         return len(self.legs)
 
-    def get_current_spot(self, ticker:str, roundup:bool=False) -> float:
+    def get_current_spot(self, ticker: str, roundup: bool = False) -> float:
         expiry = dt.datetime.today() + dt.timedelta(days=10)
 
         if self.pricing_method == 'black-scholes':
@@ -88,7 +88,7 @@ class Strategy(ABC, Threaded):
 
         return spot
 
-    def set_pricing_method(self, method:str):
+    def set_pricing_method(self, method: str):
         if method in p.PRICING_METHODS:
             self.pricing_method = method
             for leg in self.legs:
@@ -96,7 +96,7 @@ class Strategy(ABC, Threaded):
         else:
             raise ValueError('Invalid pricing method')
 
-    def fetch_default_contracts(self, distance:int=1, weeks:int=-1) -> tuple[str, int, list[str]]:
+    def fetch_default_contracts(self, distance: int = 1, weeks: int = -1) -> tuple[str, int, list[str]]:
         # Works for strategies with one leg. Multiple-leg strategies should be overridden
         if distance < 0:
             raise ValueError('Invalid distance')
@@ -147,9 +147,10 @@ class Strategy(ABC, Threaded):
     def validate(self):
         return len(self.legs) > 0
 
+
 @dataclass
 class Analysis:
-    table:pd.DataFrame = None
+    table: pd.DataFrame = None
     credit_debit = ''
     sentiment = ''
     amount = 0.0

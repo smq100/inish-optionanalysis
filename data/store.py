@@ -13,17 +13,17 @@ from data import models as models
 
 _logger = ui.get_logger()
 
-_master_exchanges:dict = {
+_master_exchanges: dict = {
     d.EXCHANGES[0]['abbreviation']: set(),
     d.EXCHANGES[1]['abbreviation']: set(),
     d.EXCHANGES[2]['abbreviation']: set()
-    }
+}
 
-_master_indexes:dict = {
+_master_indexes: dict = {
     d.INDEXES[0]['abbreviation']: set(),
     d.INDEXES[1]['abbreviation']: set()
     # d.INDEXES[2]['abbreviation']: set()
-    }
+}
 
 if d.ACTIVE_DB == 'Postgres':
     _engine = create_engine(d.ACTIVE_URI, echo=False, pool_size=10, max_overflow=20)
@@ -37,21 +37,24 @@ else:
 
 UNAVAILABLE = 'unavailable'
 
+
 def is_database_connected() -> bool:
     return bool(d.ACTIVE_URI)
+
 
 def is_live_connection() -> bool:
     return fetcher.is_connected()
 
-def is_ticker(ticker:str, inactive:bool=False) -> bool:
+
+def is_ticker(ticker: str, inactive: bool = False) -> bool:
     ticker = ticker.upper()
 
     if _session is not None:
         with _session() as session:
             if inactive:
-                t = session.query(models.Security).filter(models.Security.ticker==ticker).one_or_none()
+                t = session.query(models.Security).filter(models.Security.ticker == ticker).one_or_none()
             else:
-                t = session.query(models.Security).filter(and_(models.Security.ticker==ticker, models.Security.active)).one_or_none()
+                t = session.query(models.Security).filter(and_(models.Security.ticker == ticker, models.Security.active)).one_or_none()
 
             valid = t is not None
     else:
@@ -59,12 +62,13 @@ def is_ticker(ticker:str, inactive:bool=False) -> bool:
 
     return valid
 
-def is_exchange(exchange:str) -> bool:
+
+def is_exchange(exchange: str) -> bool:
     exchange = exchange.upper()
 
     if _session is not None:
         with _session() as session:
-            e = session.query(models.Exchange).filter(models.Exchange.abbreviation==exchange).one_or_none()
+            e = session.query(models.Exchange).filter(models.Exchange.abbreviation == exchange).one_or_none()
 
         valid = e is not None
     else:
@@ -73,12 +77,13 @@ def is_exchange(exchange:str) -> bool:
 
     return valid
 
-def is_index(index:str) -> bool:
+
+def is_index(index: str) -> bool:
     index = index.upper()
 
     if _session is not None:
         with _session() as session:
-            i = session.query(models.Index).filter(models.Index.abbreviation==index).one_or_none()
+            i = session.query(models.Index).filter(models.Index.abbreviation == index).one_or_none()
             valid = i is not None
     else:
         i = [i['abbreviation'] for i in d.INDEXES]
@@ -86,7 +91,8 @@ def is_index(index:str) -> bool:
 
     return valid
 
-def is_list(list:str) -> bool:
+
+def is_list(list: str) -> bool:
     exist = False
     if is_exchange(list):
         exist = True
@@ -95,7 +101,8 @@ def is_list(list:str) -> bool:
 
     return exist
 
-def get_tickers(list:str, inactive:bool=False) -> list[str]:
+
+def get_tickers(list: str, inactive: bool = False) -> list[str]:
     tickers = []
 
     if list.lower() == 'all':
@@ -112,6 +119,7 @@ def get_tickers(list:str, inactive:bool=False) -> list[str]:
 
     return tickers
 
+
 def get_exchanges() -> list[str]:
     results = []
 
@@ -120,6 +128,7 @@ def get_exchanges() -> list[str]:
         results = [exc.abbreviation for exc in exchange]
 
     return results
+
 
 def get_indexes() -> list[str]:
     results = []
@@ -130,18 +139,19 @@ def get_indexes() -> list[str]:
 
     return results
 
-def get_exchange_tickers(exchange:str, inactive:bool=False) -> list[str]:
+
+def get_exchange_tickers(exchange: str, inactive: bool = False) -> list[str]:
     results = []
 
     if _session is not None:
         if is_exchange(exchange):
             with _session() as session:
-                exc = session.query(models.Exchange.id).filter(models.Exchange.abbreviation==exchange.upper()).one()
+                exc = session.query(models.Exchange.id).filter(models.Exchange.abbreviation == exchange.upper()).one()
                 if exc is not None:
                     if inactive:
-                        symbols = session.query(models.Security).filter(models.Security.exchange_id==exc.id).all()
+                        symbols = session.query(models.Security).filter(models.Security.exchange_id == exc.id).all()
                     else:
-                        symbols = session.query(models.Security).filter(and_(models.Security.exchange_id==exc.id, models.Security.active)).all()
+                        symbols = session.query(models.Security).filter(and_(models.Security.exchange_id == exc.id, models.Security.active)).all()
 
                     results = [symbol.ticker for symbol in symbols]
         else:
@@ -151,20 +161,21 @@ def get_exchange_tickers(exchange:str, inactive:bool=False) -> list[str]:
 
     return results
 
-def get_index_tickers(index:str, inactive:bool=False) -> list[str]:
+
+def get_index_tickers(index: str, inactive: bool = False) -> list[str]:
     results = []
 
     if _session is not None:
         if is_index(index):
             with _session() as session:
-                ind = session.query(models.Index.id).filter(models.Index.abbreviation==index.upper()).first()
+                ind = session.query(models.Index.id).filter(models.Index.abbreviation == index.upper()).first()
                 if ind is not None:
                     if inactive:
                         symbols = session.query(models.Security).filter(
-                            or_(models.Security.index1_id==ind.id, models.Security.index2_id==ind.id, models.Security.index3_id==ind.id)).all()
+                            or_(models.Security.index1_id == ind.id, models.Security.index2_id == ind.id, models.Security.index3_id == ind.id)).all()
                     else:
                         symbols = session.query(models.Security).filter(and_(models.Security.active,
-                            or_(models.Security.index1_id==ind.id, models.Security.index2_id==ind.id, models.Security.index3_id==ind.id))).all()
+                                                                             or_(models.Security.index1_id == ind.id, models.Security.index2_id == ind.id, models.Security.index3_id == ind.id))).all()
 
                     results = [symbol.ticker for symbol in symbols]
         else:
@@ -174,7 +185,8 @@ def get_index_tickers(index:str, inactive:bool=False) -> list[str]:
 
     return results
 
-def get_ticker_exchange(ticker:str) -> str:
+
+def get_ticker_exchange(ticker: str) -> str:
     if ticker.upper() in get_exchange_tickers_master('NASDAQ'):
         exchange = 'NASDAQ'
     elif ticker.upper() in get_exchange_tickers_master('NYSE'):
@@ -186,14 +198,16 @@ def get_ticker_exchange(ticker:str) -> str:
 
     return exchange
 
-def get_ticker_index(ticker:str) -> str:
+
+def get_ticker_index(ticker: str) -> str:
     index = ''
 
     if ticker.upper() in get_index_tickers_master('SP500'):
         index = 'NASDAQ'
 
     if ticker.upper() in get_index_tickers_master('DOW'):
-        if index: index += ', '
+        if index:
+            index += ', '
         index += 'DOW'
 
     # if ticker.upper() in get_index_tickers_master('CUSTOM'):
@@ -205,7 +219,8 @@ def get_ticker_index(ticker:str) -> str:
 
     return index
 
-def get_current_price(ticker:str) -> float:
+
+def get_current_price(ticker: str) -> float:
     price = 0.0
     history = get_history(ticker, 5, live=True)
     if history is not None:
@@ -213,7 +228,8 @@ def get_current_price(ticker:str) -> float:
 
     return price
 
-def get_last_price(ticker:str) -> float:
+
+def get_last_price(ticker: str) -> float:
     price = 0.0
     live = True if _session is None else False
 
@@ -223,7 +239,8 @@ def get_last_price(ticker:str) -> float:
 
     return price
 
-def get_history(ticker:str, days:int=-1, end:int=0, live:bool=False) -> pd.DataFrame:
+
+def get_history(ticker: str, days: int = -1, end: int = 0, live: bool = False) -> pd.DataFrame:
     ticker = ticker.upper()
     history = pd.DataFrame()
     live = True if _session is None else live
@@ -242,14 +259,14 @@ def get_history(ticker:str, days:int=-1, end:int=0, live:bool=False) -> pd.DataF
     else:
         _logger.info(f'{__name__}: Fetching {len(history)} days of price history for {ticker}...')
         with _session() as session:
-            symbols = session.query(models.Security.id).filter(and_(models.Security.ticker==ticker, models.Security.active)).one_or_none()
+            symbols = session.query(models.Security.id).filter(and_(models.Security.ticker == ticker, models.Security.active)).one_or_none()
             if symbols is not None:
                 q = None
                 if days < 0:
-                    q = session.query(models.Price).filter(models.Price.security_id==symbols.id).order_by(models.Price.date)
+                    q = session.query(models.Price).filter(models.Price.security_id == symbols.id).order_by(models.Price.date)
                 elif days > 1:
                     start = dt.datetime.today() - dt.timedelta(days=days) - dt.timedelta(days=end)
-                    q = session.query(models.Price).filter(and_(models.Price.security_id==symbols.id, models.Price.date >= start)).order_by(models.Price.date)
+                    q = session.query(models.Price).filter(and_(models.Price.security_id == symbols.id, models.Price.date >= start)).order_by(models.Price.date)
                 else:
                     _logger.warning(f'{__name__}: Must specify history days > 1')
 
@@ -257,7 +274,8 @@ def get_history(ticker:str, days:int=-1, end:int=0, live:bool=False) -> pd.DataF
                     history = pd.read_sql(q.statement, _engine)
                     if not history.empty:
                         history.drop(['id', 'security_id'], axis=1, inplace=True)
-                        if end > 0: history = history[:-end]
+                        if end > 0:
+                            history = history[:-end]
 
                         _logger.info(f'{__name__}: Fetched {len(history)} days of price history for {ticker} from {d.ACTIVE_DB} ({end} days prior)')
             else:
@@ -265,7 +283,8 @@ def get_history(ticker:str, days:int=-1, end:int=0, live:bool=False) -> pd.DataF
 
     return history
 
-def get_company(ticker:str, live:bool=False, extra:bool=False, uselast:bool=False, test:bool=False) -> dict:
+
+def get_company(ticker: str, live: bool = False, extra: bool = False, uselast: bool = False, test: bool = False) -> dict:
     ticker = ticker.upper()
     live = True if _session is None else live
     results = {}
@@ -294,9 +313,9 @@ def get_company(ticker:str, live:bool=False, extra:bool=False, uselast:bool=Fals
                     _logger.error(f'{__name__}: Exception for ticker {ticker}: {str(e)}')
     else:
         with _session() as session:
-            symbol = session.query(models.Security).filter(models.Security.ticker==ticker).one_or_none()
+            symbol = session.query(models.Security).filter(models.Security.ticker == ticker).one_or_none()
             if symbol is not None:
-                company = session.query(models.Company).filter(models.Company.security_id==symbol.id).one_or_none()
+                company = session.query(models.Company).filter(models.Company.security_id == symbol.id).one_or_none()
                 if company is not None:
                     results['name'] = company.name
                     results['description'] = company.description
@@ -311,26 +330,26 @@ def get_company(ticker:str, live:bool=False, extra:bool=False, uselast:bool=Fals
                     results['precords'] = 0
 
                     # Exchange
-                    exc = session.query(models.Exchange.abbreviation).filter(models.Exchange.id==symbol.exchange_id).one_or_none()
+                    exc = session.query(models.Exchange.abbreviation).filter(models.Exchange.id == symbol.exchange_id).one_or_none()
                     if exc is not None:
                         results['exchange'] = exc.abbreviation
 
                     # Indexes
                     if symbol.index1_id is not None:
-                        index = session.query(models.Index).filter(models.Index.id==symbol.index1_id).one().abbreviation
+                        index = session.query(models.Index).filter(models.Index.id == symbol.index1_id).one().abbreviation
                         results['indexes'] = index
 
                         if symbol.index2_id is not None:
-                            index = session.query(models.Index).filter(models.Index.id==symbol.index2_id).one().abbreviation
+                            index = session.query(models.Index).filter(models.Index.id == symbol.index2_id).one().abbreviation
                             results['indexes'] += f', {index}'
 
                             if symbol.index3_id is not None:
-                                index = session.query(models.Index).filter(models.Index.id==symbol.index3_id).one().abbreviation
+                                index = session.query(models.Index).filter(models.Index.id == symbol.index3_id).one().abbreviation
                                 results['indexes'] += f', {index}'
 
                     # Number of price records
                     if extra:
-                        results['precords'] = session.query(models.Price.security_id).filter(models.Price.security_id==symbol.id).count()
+                        results['precords'] = session.query(models.Price.security_id).filter(models.Price.security_id == symbol.id).count()
                 else:
                     _logger.warning(f'{__name__}: No company information for {ticker}')
             else:
@@ -338,7 +357,8 @@ def get_company(ticker:str, live:bool=False, extra:bool=False, uselast:bool=Fals
 
     return results
 
-def get_exchange_tickers_master(exchange:str, type:str='google') -> list[str]:
+
+def get_exchange_tickers_master(exchange: str, type: str = 'google') -> list[str]:
     global _master_exchanges
     symbols = []
 
@@ -363,7 +383,8 @@ def get_exchange_tickers_master(exchange:str, type:str='google') -> list[str]:
 
     return symbols
 
-def get_index_tickers_master(index:str, type:str='google') -> list[str]:
+
+def get_index_tickers_master(index: str, type: str = 'google') -> list[str]:
     global _master_indexes
     symbols = set()
 
@@ -388,13 +409,16 @@ def get_index_tickers_master(index:str, type:str='google') -> list[str]:
 
     return symbols
 
-def get_option_expiry(ticker:str, uselast:bool=False) -> tuple[str]:
+
+def get_option_expiry(ticker: str, uselast: bool = False) -> tuple[str]:
     return fetcher.get_option_expiry(ticker, uselast)
 
-def get_option_chain(ticker:str, uselast:bool=False) -> dict:
+
+def get_option_chain(ticker: str, uselast: bool = False) -> dict:
     return fetcher.get_option_chain(ticker, uselast)
 
-def get_treasury_rate(ticker:str='DTB3') -> float:
+
+def get_treasury_rate(ticker: str = 'DTB3') -> float:
     # DTB3: Default to 3-Month Treasury Rate
     return fetcher.get_treasury_rate(ticker)
 

@@ -64,7 +64,7 @@ class Pricing(ABC):
             raise IOError('Problem fetching ticker information')
 
     @abc.abstractmethod
-    def calculate_price(self, spot_price:float=-1.0, time_to_maturity:float=-1.0, volatility:float=-1.0) -> tuple[float, float]:
+    def calculate_price(self, spot_price: float = -1.0, time_to_maturity: float = -1.0, volatility: float = -1.0) -> tuple[float, float]:
         pass
 
     def calculate_greeks(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0) -> None:
@@ -75,19 +75,19 @@ class Pricing(ABC):
         self.calculate_rho(spot_price=spot_price, time_to_maturity=time_to_maturity, volatility=volatility)
 
     @abc.abstractmethod
-    def calculate_delta(self, spot_price:float=-1.0, time_to_maturity:float=-1.0, volatility:float=-1.0) -> tuple[float, float]:
+    def calculate_delta(self, spot_price: float = -1.0, time_to_maturity: float = -1.0, volatility: float = -1.0) -> tuple[float, float]:
         return 0.0, 0.0
 
     @abc.abstractmethod
-    def calculate_gamma(self, spot_price:float=-1.0, time_to_maturity:float=-1.0, volatility:float=-1.0) -> tuple[float, float]:
+    def calculate_gamma(self, spot_price: float = -1.0, time_to_maturity: float = -1.0, volatility: float = -1.0) -> tuple[float, float]:
         return 0.0, 0.0
 
     @abc.abstractmethod
-    def calculate_theta(self, spot_price:float=-1.0, time_to_maturity:float=-1.0, volatility:float=-1.0) -> tuple[float, float]:
+    def calculate_theta(self, spot_price: float = -1.0, time_to_maturity: float = -1.0, volatility: float = -1.0) -> tuple[float, float]:
         return 0.0, 0.0
 
     @abc.abstractmethod
-    def calculate_vega(self, spot_price:float=-1.0, time_to_maturity:float=-1.0, volatility:float=-1.0) -> tuple[float, float]:
+    def calculate_vega(self, spot_price: float = -1.0, time_to_maturity: float = -1.0, volatility: float = -1.0) -> tuple[float, float]:
         return 0.0, 0.0
 
     def initialize_variables(self) -> None:
@@ -96,7 +96,7 @@ class Pricing(ABC):
         self._calc_volatility()
         self._calc_spot_price()
 
-    def is_call_put_parity_maintained(self, call_price:float, put_price:float) -> bool:
+    def is_call_put_parity_maintained(self, call_price: float, put_price: float) -> bool:
         ''' Verify is the Put-Call Pairty is maintained by the two option prices calculated by us.
 
         :param call_price: <float>

@@ -19,7 +19,7 @@ _logger = ui.get_logger()
 
 
 class Leg:
-    def __init__(self, ticker:str, quantity:int, product:str, direction:str, strike:float, expiry:dt.datetime):
+    def __init__(self, ticker: str, quantity: int, product: str, direction: str, strike: float, expiry: dt.datetime):
         if product not in s.PRODUCTS:
             raise ValueError('Invalid product')
         if direction not in s.DIRECTIONS:
@@ -27,14 +27,14 @@ class Leg:
         if quantity < 1:
             raise ValueError('Invalid quantity')
 
-        self.company:Company = Company(ticker, days=1)
-        self.option:Option = Option(ticker, product, strike, expiry)
-        self.quantity:int = quantity
-        self.product:str = product
-        self.direction:str = direction
-        self.pricing_method:str = 'black-scholes'
-        self.pricer:Pricing = None
-        self.value:pd.DataFrame = None
+        self.company: Company = Company(ticker, days=1)
+        self.option: Option = Option(ticker, product, strike, expiry)
+        self.quantity: int = quantity
+        self.product: str = product
+        self.direction: str = direction
+        self.pricing_method: str = 'black-scholes'
+        self.pricer: Pricing = None
+        self.value: pd.DataFrame = None
 
     def __str__(self):
         if self.option.calc_price > 0.0:
@@ -42,12 +42,12 @@ class Leg:
             d2 = 'cv' if self.option.implied_volatility < _IV_CUTOFF else 'iv'
             d3 = '*' if self.option.implied_volatility < _IV_CUTOFF else ''
             output = f'{self.quantity:2d} '\
-            f'{self.company.ticker}@${self.company.price:.2f} '\
-            f'{self.direction} '\
-            f'{self.product} '\
-            f'${self.option.strike:.2f} for '\
-            f'{str(self.option.expiry)[:10]}'\
-            f'=${self.option.last_price:.2f}{d3} each (${self.option.calc_price:.2f} {d1}/{d2})'
+                f'{self.company.ticker}@${self.company.price:.2f} '\
+                f'{self.direction} '\
+                f'{self.product} '\
+                f'${self.option.strike:.2f} for '\
+                f'{str(self.option.expiry)[:10]}'\
+                f'=${self.option.last_price:.2f}{d3} each (${self.option.calc_price:.2f} {d1}/{d2})'
 
             if not self.option.contract:
                 output += ' *option not selected'
@@ -61,15 +61,15 @@ class Leg:
                     output += '\n    *** Warning: The calculated price is significantly different than the last traded price.'
         else:
             output = f'{self.quantity:2d} '\
-            f'{self.company.ticker}@${self.company.price:.2f} '\
-            f'{self.direction} '\
-            f'{self.product} '\
-            f'${self.option.strike:.2f} for '\
-            f'{str(self.option.expiry)[:10]}'
+                f'{self.company.ticker}@${self.company.price:.2f} '\
+                f'{self.direction} '\
+                f'{self.product} '\
+                f'${self.option.strike:.2f} for '\
+                f'{str(self.option.expiry)[:10]}'
 
         return output
 
-    def calculate(self, strike:float, value_table:bool=True, greeks:bool=True) -> float:
+    def calculate(self, strike: float, value_table: bool = True, greeks: bool = True) -> float:
         price = 0.0
 
         if self._validate():
@@ -146,7 +146,7 @@ class Leg:
 
         return price
 
-    def recalculate(self, spot_price:float, time_to_maturity:int) -> tuple[float, float]:
+    def recalculate(self, spot_price: float, time_to_maturity: int) -> tuple[float, float]:
         if self.pricer is not None:
             if self.option.implied_volatility < _IV_CUTOFF:
                 call, put = self.pricer.calculate_price(spot_price, time_to_maturity)
@@ -162,7 +162,7 @@ class Leg:
         self.pricer = None
         self.calculate()
 
-    def generate_value_table(self, strike:float) -> pd.DataFrame:
+    def generate_value_table(self, strike: float) -> pd.DataFrame:
         value = pd.DataFrame()
 
         if self.option.calc_price > 0.0:

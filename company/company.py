@@ -9,13 +9,13 @@ _logger = ui.get_logger()
 
 
 class Company:
-    def __init__(self, ticker:str, days:int, end:int=0, lazy:bool=True, live:bool=False):
+    def __init__(self, ticker: str, days: int, end: int = 0, lazy: bool = True, live: bool = False):
         self.ticker = ticker.upper()
         self.days = days
         self.end = end
         self.live = live if store.is_database_connected() else True
         self.info = {}
-        self.history:pd.DataFrame = pd.DataFrame()
+        self.history: pd.DataFrame = pd.DataFrame()
         self.company = {}
         self.price = 0.0
         self.volatility = 0.0
@@ -122,8 +122,8 @@ class Company:
             self.ta = Technical(self.ticker, self.history, self.days, end=self.end, live=self.live)
             success = True
 
-            _logger.info(f'{__name__}: Fetched {len(self.history)} items from {self.ticker}. '\
-                f'{self.days} days from {self.history.iloc[0]["date"]} to {self.history.iloc[-1]["date"]} (end={self.end})')
+            _logger.info(f'{__name__}: Fetched {len(self.history)} items from {self.ticker}. '
+                         f'{self.days} days from {self.history.iloc[0]["date"]} to {self.history.iloc[-1]["date"]} (end={self.end})')
 
         return success
 

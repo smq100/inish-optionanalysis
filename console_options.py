@@ -26,13 +26,13 @@ _logger = ui.get_logger(logging.WARNING, logfile='')
 
 
 class Interface():
-    def __init__(self, ticker:str, strategy:str, direction:str, quantity:int=1, width:int=0, default:bool=False, analyze:bool=False, exit:bool=False):
+    def __init__(self, ticker: str, strategy: str, direction: str, quantity: int = 1, width: int = 0, default: bool = False, analyze: bool = False, exit: bool = False):
         self.ticker = ticker.upper()
         self.quantity = quantity
         self.width = width
-        self.strategy:Strategy = None
+        self.strategy: Strategy = None
         self.dirty_analyze = True
-        self.task:threading.Thread = None
+        self.task: threading.Thread = None
 
         pd.options.display.float_format = '{:,.2f}'.format
 
@@ -72,7 +72,7 @@ class Interface():
                 '0': 'Exit'
             }
 
-            loaded = '' if  self.strategy.legs[0].option.last_price > 0 else '*'
+            loaded = '' if self.strategy.legs[0].option.last_price > 0 else '*'
             expire = f'{self.strategy.legs[0].option.expiry:%Y-%m-%d}'
 
             if self.strategy.name == 'vertical':
@@ -111,7 +111,7 @@ class Interface():
             elif selection == 0:
                 break
 
-    def load_strategy(self, ticker:str, strategy:str, direction:str, width:int, quantity:int, default:bool=False, analyze:bool=False) -> bool:
+    def load_strategy(self, ticker: str, strategy: str, direction: str, width: int, quantity: int, default: bool = False, analyze: bool = False) -> bool:
         modified = True
 
         if strategy not in s.STRATEGIES:
@@ -173,7 +173,7 @@ class Interface():
     def reset(self) -> None:
         self.strategy.reset()
 
-    def show_value(self, style:int=0) -> None:
+    def show_value(self, style: int = 0) -> None:
         if not self.dirty_analyze:
             if len(self.strategy.legs) > 1:
                 leg = ui.input_integer('Enter Leg: ', 1, 2) - 1
@@ -185,37 +185,37 @@ class Interface():
                 if style == 0:
                     style = ui.input_integer('(1) Table, (2) Chart, (3) Contour, (4) Surface, or (0) Cancel: ', 0, 4)
                 if style > 0:
-                        title = f'{self.strategy.legs[leg]}'
-                        rows, cols = value.shape
+                    title = f'{self.strategy.legs[leg]}'
+                    rows, cols = value.shape
 
-                        if rows > MAX_ROWS:
-                            rows = MAX_ROWS
-                        else:
-                            rows = -1
+                    if rows > MAX_ROWS:
+                        rows = MAX_ROWS
+                    else:
+                        rows = -1
 
-                        if cols > MAX_COLS:
-                            cols = MAX_COLS
-                        else:
-                            cols = -1
+                    if cols > MAX_COLS:
+                        cols = MAX_COLS
+                    else:
+                        cols = -1
 
-                        if rows > 0 or cols > 0:
-                            value = m.compress_table(value, rows, cols)
+                    if rows > 0 or cols > 0:
+                        value = m.compress_table(value, rows, cols)
 
-                        if style == 1:
-                            ui.print_message(title, 2)
-                            print(value)
-                        elif style == 2:
-                            self._show_chart(value, title, charttype='chart')
-                        elif style == 3:
-                            self._show_chart(value, title, charttype='contour')
-                        elif style == 4:
-                            self._show_chart(value, title, charttype='surface')
+                    if style == 1:
+                        ui.print_message(title, 2)
+                        print(value)
+                    elif style == 2:
+                        self._show_chart(value, title, charttype='chart')
+                    elif style == 3:
+                        self._show_chart(value, title, charttype='contour')
+                    elif style == 4:
+                        self._show_chart(value, title, charttype='surface')
             else:
                 ui.print_error('No tables calculated')
         else:
             ui.print_error('Please first perform calculation')
 
-    def show_analysis(self, style:int=0) -> None:
+    def show_analysis(self, style: int = 0) -> None:
         if not self.dirty_analyze:
             analysis = self.strategy.analysis.table
             if analysis is not None:
@@ -283,7 +283,7 @@ class Interface():
         else:
             print('No option legs configured')
 
-    def show_legs(self, leg:int=-1, delimeter:bool=True) -> None:
+    def show_legs(self, leg: int = -1, delimeter: bool = True) -> None:
         if delimeter:
             ui.print_message('Option Leg Values')
 
@@ -388,7 +388,7 @@ class Interface():
                     '0': 'Done'
                 }
 
-                loaded = '' if  self.strategy.legs[0].option.last_price > 0 else '*'
+                loaded = '' if self.strategy.legs[0].option.last_price > 0 else '*'
 
                 if self.strategy.name == 'vertical':
                     menu_items['4'] += f's '\
@@ -447,7 +447,7 @@ class Interface():
 
         return expiry
 
-    def select_chain_options(self, product:str) -> list[str]:
+    def select_chain_options(self, product: str) -> list[str]:
         options = None
         contracts = []
         if not self.strategy.chain.expire:
@@ -468,7 +468,7 @@ class Interface():
             if select > 0:
                 select -= 1
                 sel_row = options.iloc[select]
-                contracts = [sel_row['contractSymbol']] # First contract
+                contracts = [sel_row['contractSymbol']]  # First contract
 
                 if self.width > 0:
                     if product == 'call':
@@ -482,7 +482,7 @@ class Interface():
                         sel_row = options.iloc[select+self.width] if (select+self.width) < options.shape[0] else None
 
                     if sel_row is not None:
-                        contracts += [sel_row['contractSymbol']] # Second contract
+                        contracts += [sel_row['contractSymbol']]  # Second contract
                     else:
                         contracts = []
 
@@ -542,7 +542,7 @@ class Interface():
 
         print()
 
-    def _show_chart(self, table:str, title:str, charttype:str) -> None:
+    def _show_chart(self, table: str, title: str, charttype: str) -> None:
         if not isinstance(table, pd.DataFrame):
             raise ValueError("'table' must be a Pandas DataFrame")
 
@@ -588,10 +588,10 @@ class Interface():
         max_ = max(table.max())
         if min_ < 0.0:
             norm = clrs.TwoSlopeNorm(0.0, vmin=min_, vmax=max_)
-            cmap = clrs.LinearSegmentedColormap.from_list(name='analysis', colors =['red', 'lightgray', 'green'], N=15)
+            cmap = clrs.LinearSegmentedColormap.from_list(name='analysis', colors=['red', 'lightgray', 'green'], N=15)
         else:
-            norm=None
-            cmap = clrs.LinearSegmentedColormap.from_list(name='value', colors =['lightgray', 'green'], N=15)
+            norm = None
+            cmap = clrs.LinearSegmentedColormap.from_list(name='value', colors=['lightgray', 'green'], N=15)
 
         # Data
         table.columns = range(len(table.columns))
@@ -616,7 +616,7 @@ class Interface():
         plt.show()
 
     @staticmethod
-    def _calculate_major_minor_ticks(width:int) -> tuple[float, float]:
+    def _calculate_major_minor_ticks(width: int) -> tuple[float, float]:
         if width <= 0.0:
             major = 0.0
             minor = 0.0
@@ -663,4 +663,4 @@ if __name__ == '__main__':
 
     command = vars(parser.parse_args())
     Interface(ticker=command['ticker'], strategy=command['strategy'], direction=command['direction'],
-        width=int(command['width']), quantity=int(command['quantity']), default=command['default'], analyze=command['analyze'], exit=command['exit'])
+              width=int(command['width']), quantity=int(command['quantity']), default=command['default'], analyze=command['analyze'], exit=command['exit'])

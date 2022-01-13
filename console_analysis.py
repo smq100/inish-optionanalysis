@@ -26,8 +26,9 @@ LISTTOP = 10
 LISTTOP_TREND = 5
 LISTTOP_CORR = 3
 
+
 class Interface:
-    def __init__(self, table:str='', screen:str='', quick:bool=False, exit:bool=False):
+    def __init__(self, table: str = '', screen: str = '', quick: bool = False, exit: bool = False):
         self.table = table.upper()
         self.screen_base = screen
         self.quick = quick
@@ -35,14 +36,14 @@ class Interface:
         self.days = 1000
         self.auto = False
         self.path_screen = ''
-        self.results_screen:list[Result] = []
-        self.valids_screen:list[Result] = []
-        self.results_corr:list[tuple[str,DataFrame.Series]]=[]
-        self.trend:SupportResistance = None
-        self.screener:Screener = None
-        self.correlate:Correlate = None
-        self.strategy:Strategy = None
-        self.task:threading.Thread = None
+        self.results_screen: list[Result] = []
+        self.valids_screen: list[Result] = []
+        self.results_corr: list[tuple[str, DataFrame.Series]] = []
+        self.trend: SupportResistance = None
+        self.screener: Screener = None
+        self.correlate: Correlate = None
+        self.strategy: Strategy = None
+        self.task: threading.Thread = None
 
         abort = False
 
@@ -76,7 +77,7 @@ class Interface:
         else:
             self.main_menu()
 
-    def main_menu(self, selection:int=0) -> None:
+    def main_menu(self, selection: int = 0) -> None:
         while True:
             menu_items = {
                 '1': 'Select Table or Ticker',
@@ -277,7 +278,7 @@ class Interface:
 
         return success
 
-    def run_support_resistance(self, corr:bool=False) -> None:
+    def run_support_resistance(self, corr: bool = False) -> None:
         if len(self.valids_screen) > 0:
             if corr:
                 tickers = [result[1]['ticker'] for result in self.results_corr if result[1]['value'] > COOR_CUTOFF][:LISTTOP_CORR]
@@ -308,7 +309,7 @@ class Interface:
         else:
             ui.print_error('No valid results to analyze')
 
-    def run_options(self, strategy:str, direction:str) -> None:
+    def run_options(self, strategy: str, direction: str) -> None:
         if strategy not in s.STRATEGIES:
             raise ValueError('Invalid strategy')
         if direction not in s.DIRECTIONS:
@@ -349,9 +350,10 @@ class Interface:
             results += [str(self.strategy.analysis)]
 
         if results:
-            for result in results: print(result)
+            for result in results:
+                print(result)
 
-    def show_valids(self, top:int=-1, verbose:bool=False, ticker:str='') -> None:
+    def show_valids(self, top: int = -1, verbose: bool = False, ticker: str = '') -> None:
         if not self.table:
             ui.print_error('No table specified')
         elif not self.screen_base:
@@ -397,7 +399,8 @@ class Interface:
         results = [f'{result[0]:<5}/{result[1]["ticker"]:<5} {result[1]["value"]:.5f}' for result in self.results_corr if result[1]["value"] > COOR_CUTOFF]
         if results:
             ui.print_message('Coorelation Results')
-            for result in results: print(result)
+            for result in results:
+                print(result)
             answer = ui.input_text('\nRun support & resistance analysis on top findings? (y/n): ')
             if answer.lower() == 'y':
                 self.run_support_resistance(True)
@@ -405,7 +408,8 @@ class Interface:
             ui.print_message('No significant coorelations found')
 
     def show_progress_screen(self) -> None:
-        while not self.screener.task_error: pass
+        while not self.screener.task_error:
+            pass
 
         prefix = 'Screening'
         total = self.screener.task_total
@@ -421,7 +425,8 @@ class Interface:
             ui.progress_bar(completed, total, prefix=prefix, ticker=ticker, success=success, tasks=tasks)
 
     def show_progress_correlate(self):
-        while not self.coorelate.task_error: pass
+        while not self.coorelate.task_error:
+            pass
 
         if self.coorelate.task_error == 'None':
             prefix = 'Correlating'
@@ -436,7 +441,8 @@ class Interface:
                 ui.progress_bar(completed, total, prefix=prefix, ticker=ticker, success=success)
 
     def show_progress_analyze(self) -> None:
-        while not self.trend.task_error: pass
+        while not self.trend.task_error:
+            pass
 
         if self.trend.task_error == 'None':
             while self.trend.task_error == 'None':
@@ -453,7 +459,8 @@ class Interface:
             ui.print_message(f'{self.trend.task_error}')
 
     def show_progress_options(self) -> None:
-        while not self.strategy.task_error: pass
+        while not self.strategy.task_error:
+            pass
 
         if self.strategy.task_error == 'None':
             while self.strategy.task_error == 'None':

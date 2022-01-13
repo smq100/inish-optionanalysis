@@ -12,7 +12,7 @@ _logger = ui.get_logger(logging.WARNING, logfile='output')
 
 
 class Interface:
-    def __init__(self, ticker:str='', update:str='', quick:bool=False):
+    def __init__(self, ticker: str = '', update: str = '', quick: bool = False):
         exit = False
         self.ticker = ''
         self.quick = quick
@@ -34,10 +34,10 @@ class Interface:
                     exit = True
                     ui.print_error(f'Invalid ticker specifed: {update}')
 
-            self.exchanges:list[str] = store.get_exchanges()
-            self.indexes:list[str] = store.get_indexes()
-            self.manager:manager.Manager = manager.Manager()
-            self.task:threading.Thread = None
+            self.exchanges: list[str] = store.get_exchanges()
+            self.indexes: list[str] = store.get_indexes()
+            self.manager: manager.Manager = manager.Manager()
+            self.task: threading.Thread = None
 
             if not store.is_live_connection():
                 ui.print_error('No Internet connection')
@@ -53,7 +53,7 @@ class Interface:
         else:
             ui.print_error('No databases available')
 
-    def main_menu(self, selection:int=0) -> None:
+    def main_menu(self, selection: int = 0) -> None:
         if not self.stop and not self.quick:
             self.show_database_information()
 
@@ -119,17 +119,20 @@ class Interface:
     def show_database_information(self) -> None:
         ui.print_message(f'Database Information ({d.ACTIVE_DB})')
         info = self.manager.get_database_info()
-        for i in info: print(f'{i["table"]:>16}:\t{i["count"]} records')
+        for i in info:
+            print(f'{i["table"]:>16}:\t{i["count"]} records')
 
         ui.print_message('Exchange Information')
         info = self.manager.get_exchange_info()
-        for i in info: print(f'{i["exchange"]:>16}:\t{i["count"]} symbols')
+        for i in info:
+            print(f'{i["exchange"]:>16}:\t{i["count"]} symbols')
 
         ui.print_message('Index Information')
         info = self.manager.get_index_info()
-        for i in info: print(f'{i["index"]:>16}:\t{i["count"]} symbols')
+        for i in info:
+            print(f'{i["index"]:>16}:\t{i["count"]} symbols')
 
-    def show_symbol_information(self, ticker:str ='', prompt:bool=False, live:bool=False) -> None:
+    def show_symbol_information(self, ticker: str = '', prompt: bool = False, live: bool = False) -> None:
         if not ticker:
             ticker = ui.input_text('Enter ticker: ').upper()
 
@@ -138,7 +141,7 @@ class Interface:
                 if prompt:
                     end = ui.input_integer('Input number of days: ', 0, 100)
                 else:
-                    end=0
+                    end = 0
 
                 company = store.get_company(ticker, live=live, extra=True)
                 if company:
@@ -207,11 +210,11 @@ class Interface:
             for ticker in found:
                 print(f'{ticker} ', end='')
                 index += 1
-                if index % 20 == 0: # Print 20 per line
+                if index % 20 == 0:  # Print 20 per line
                     print()
             print()
 
-    def populate_exchange(self, progressbar:bool=True) -> None:
+    def populate_exchange(self, progressbar: bool = True) -> None:
         menu_items = {}
         for i, exchange in enumerate(self.exchanges):
             menu_items[f'{i+1}'] = f'{exchange}'
@@ -229,10 +232,10 @@ class Interface:
                 self._show_progress('Progress', '')
 
             if self.manager.task_error == 'Done':
-                ui.print_message(f'{self.manager.task_success} {exc} '\
-                    f'Symbols populated in {self.manager.task_time/60.0:.1f} minutes with {len(self.manager.invalid_tickers)} invalid symbols')
+                ui.print_message(f'{self.manager.task_success} {exc} '
+                                 f'Symbols populated in {self.manager.task_time/60.0:.1f} minutes with {len(self.manager.invalid_tickers)} invalid symbols')
 
-    def populate_index(self, progressbar:bool=True) -> None:
+    def populate_index(self, progressbar: bool = True) -> None:
         menu_items = {}
         for i, index in enumerate(self.indexes):
             menu_items[f'{i+1}'] = f'{index}'
@@ -252,7 +255,7 @@ class Interface:
             else:
                 ui.print_error(self.manager.task_error)
 
-    def refresh_exchange(self, progressbar:bool=True) -> None:
+    def refresh_exchange(self, progressbar: bool = True) -> None:
         menu_items = {}
         for i, exchange in enumerate(self.exchanges):
             menu_items[f'{i+1}'] = f'{exchange}'
@@ -271,7 +274,7 @@ class Interface:
             print()
             ui.print_message(f'Identified {self.manager.task_total} missing items. {self.manager.task_success} items filled')
 
-    def update_history(self, ticker:str='', progressbar:bool=True) -> None:
+    def update_history(self, ticker: str = '', progressbar: bool = True) -> None:
         menu_items = {}
         for i, exchange in enumerate(self.exchanges):
             menu_items[f'{i+1}'] = f'{exchange}'
@@ -284,7 +287,7 @@ class Interface:
         else:
             select = 5
 
-        if select == 5: # Update/add single ticker
+        if select == 5:  # Update/add single ticker
             if not ticker:
                 ticker = input('Please enter symbol, or 0 to cancel: ').upper()
 
@@ -312,10 +315,10 @@ class Interface:
                 self._show_progress('Progress', '')
 
             if self.manager.task_error == 'Done':
-                ui.print_message(f'{self.manager.task_total} {exc} '\
-                    f'Ticker pricing refreshed in {self.manager.task_time:.0f} seconds')
+                ui.print_message(f'{self.manager.task_total} {exc} '
+                                 f'Ticker pricing refreshed in {self.manager.task_time:.0f} seconds')
 
-    def update_company(self, ticker:str='', progressbar:bool=True) -> None:
+    def update_company(self, ticker: str = '', progressbar: bool = True) -> None:
         menu_items = {}
         for i, exchange in enumerate(self.exchanges):
             menu_items[f'{i+1}'] = f'{exchange}'
@@ -328,7 +331,7 @@ class Interface:
         else:
             select = 5
 
-        if select == 5: # Update/add single ticker
+        if select == 5:  # Update/add single ticker
             if not ticker:
                 ticker = input('Please enter symbol, or 0 to cancel: ').upper()
 
@@ -351,10 +354,10 @@ class Interface:
                 self._show_progress('Progress', '')
 
             if self.manager.task_error == 'Done':
-                ui.print_message(f'{self.manager.task_total} {exc} '\
-                    f'Company infomation refreshed in {self.manager.task_time:.0f} seconds')
+                ui.print_message(f'{self.manager.task_total} {exc} '
+                                 f'Company infomation refreshed in {self.manager.task_time:.0f} seconds')
 
-    def delete_exchange(self, progressbar:bool=True) -> None:
+    def delete_exchange(self, progressbar: bool = True) -> None:
         menu_items = {}
         for i, exchange in enumerate(self.exchanges):
             menu_items[f'{i+1}'] = f'{exchange}'
@@ -390,7 +393,7 @@ class Interface:
 
             ui.print_message(f'Deleted exchange {ind}')
 
-    def delete_ticker(self, ticker:str='') -> None:
+    def delete_ticker(self, ticker: str = '') -> None:
         if not ticker:
             ticker = ui.input_text('Enter ticker: ').upper()
 
@@ -414,11 +417,13 @@ class Interface:
     def check_integrity(self) -> None:
         ui.print_message('Missing Tickers')
         missing_tickers = {e: self.manager.identify_missing_securities(e) for e in self.exchanges}
-        for e in self.exchanges: print(f'{e:>16}:\t{len(missing_tickers[e])}')
+        for e in self.exchanges:
+            print(f'{e:>16}:\t{len(missing_tickers[e])}')
 
         ui.print_message('Incomplete Companies')
         incomplete_companies = {e: self.manager.identify_incomplete_companies(e) for e in self.exchanges}
-        for e in self.exchanges: print(f'{e:>16}:\t{len(incomplete_companies[e])}')
+        for e in self.exchanges:
+            print(f'{e:>16}:\t{len(incomplete_companies[e])}')
 
         while True:
             menu_items = {
@@ -443,7 +448,7 @@ class Interface:
             else:
                 break
 
-    def check_price_dates(self, progressbar:bool=True) -> None:
+    def check_price_dates(self, progressbar: bool = True) -> None:
         table = ui.input_alphanum('Enter exchange, index, or ticker: ').upper()
         if not store.is_list(table):
             ui.print_error(f'List {table} is not valid')
@@ -457,8 +462,8 @@ class Interface:
                 self._show_progress('Progress', '')
 
             if self.manager.task_error == 'Done':
-                ui.print_message(f'{self.manager.task_total} {table} '\
-                    f'Ticker pricing checked in {self.manager.task_time:.0f} seconds')
+                ui.print_message(f'{self.manager.task_total} {table} '
+                                 f'Ticker pricing checked in {self.manager.task_time:.0f} seconds')
 
             if len(self.manager.task_object) > 1:
                 last = sorted(self.manager.task_object)[-1]
@@ -477,8 +482,9 @@ class Interface:
         self.manager.create_exchanges()
         self.manager.create_indexes()
 
-    def _show_progress(self, prefix:str, suffix:str) -> None:
-        while not self.manager.task_error: pass
+    def _show_progress(self, prefix: str, suffix: str) -> None:
+        while not self.manager.task_error:
+            pass
 
         if self.manager.task_error == 'None':
             ui.progress_bar(self.manager.task_completed, self.manager.task_total, prefix=prefix, suffix=suffix, reset=True)
@@ -499,18 +505,20 @@ class Interface:
             results = [future.result() for future in self.manager.task_futures if future.result() is not None]
             if len(results) > 0:
                 ui.print_message('Processed Messages')
-                for result in results: print(result)
+                for result in results:
+                    print(result)
         else:
             ui.print_message(f'{self.manager.task_error}')
 
     @staticmethod
-    def _list_tickers(tickers:list[str]) -> None:
+    def _list_tickers(tickers: list[str]) -> None:
         index = 0
         if len(tickers) > 0:
             for ticker in tickers:
                 print(f'{ticker} ', end='')
                 index += 1
-                if index % 20 == 0: print() # 20 per line
+                if index % 20 == 0:
+                    print()  # 20 per line
             print()
 
 
@@ -530,4 +538,3 @@ if __name__ == '__main__':
         Interface(update=command['update'], quick=command['quick'])
     else:
         Interface(quick=command['quick'])
-

@@ -12,7 +12,7 @@ _logger = ui.get_logger()
 
 
 class Technical:
-    def __init__(self, ticker:str, history:pd.DataFrame, days:int, end:int=0, live:bool=False):
+    def __init__(self, ticker: str, history: pd.DataFrame, days: int, end: int = 0, live: bool = False):
         if store.is_ticker(ticker):
             self.ticker = ticker.upper()
             self.days = days
@@ -31,7 +31,7 @@ class Technical:
     def __str__(self):
         return f'{len(self.history)} items for {self.ticker}'
 
-    def calc_sma(self, interval:int) -> pd.Series:
+    def calc_sma(self, interval: int) -> pd.Series:
         df = pd.Series(dtype=float)
         if interval > 5 and interval < self.days:
             df = trend.sma_indicator(self.history['close'], window=interval, fillna=True)
@@ -40,7 +40,7 @@ class Technical:
 
         return df
 
-    def calc_ema(self, interval:int) -> pd.Series:
+    def calc_ema(self, interval: int) -> pd.Series:
         df = pd.Series(dtype=float)
         if interval > 5 and interval < self.days:
             df = trend.ema_indicator(self.history['close'], window=interval, fillna=True)
@@ -49,7 +49,7 @@ class Technical:
 
         return df
 
-    def calc_rsi(self, interval:int=14) -> pd.Series:
+    def calc_rsi(self, interval: int = 14) -> pd.Series:
         df = pd.Series(dtype=float)
         if interval > 5 and interval < self.days:
             df = momentum.rsi(self.history['close'], window=interval, fillna=True)
@@ -65,7 +65,7 @@ class Technical:
 
         return df
 
-    def calc_macd(self, slow:int=26, fast:int=12, signal:int=9) -> pd.DataFrame:
+    def calc_macd(self, slow: int = 26, fast: int = 12, signal: int = 9) -> pd.DataFrame:
         df = pd.DataFrame()
         macd = trend.MACD(self.history['close'], window_slow=slow, window_fast=fast, window_sign=signal, fillna=True)
         diff = macd.macd_diff()
@@ -77,7 +77,7 @@ class Technical:
 
         return df
 
-    def calc_bb(self, interval:int=14, std:int=2) -> pd.DataFrame:
+    def calc_bb(self, interval: int = 14, std: int = 2) -> pd.DataFrame:
         df = pd.DataFrame()
         if interval > 5 and interval < self.days:
             bb = volatility.BollingerBands(self.history['close'], window=interval, window_dev=std, fillna=True)
@@ -91,6 +91,7 @@ class Technical:
             _logger.warning(f'{__name__}: Invalid interval for BB')
 
         return df
+
 
 if __name__ == '__main__':
     ta = Technical('HLT', None, 365)
