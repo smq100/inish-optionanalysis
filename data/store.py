@@ -31,9 +31,6 @@ if d.ACTIVE_DB == 'Postgres':
 elif d.ACTIVE_DB == 'SQLite':
     _engine = create_engine(d.ACTIVE_URI)
     _session = sessionmaker(bind=_engine)
-else:
-    _engine = None
-    _session = None
 
 UNAVAILABLE = 'unavailable'
 
@@ -240,7 +237,7 @@ def get_last_price(ticker: str) -> float:
     return price
 
 
-def get_history(ticker: str, days: int = -1, end: int = 0, live: bool = False) -> pd.DataFrame:
+def get_history(ticker: str, days: int = -1, end: int = 0, use_last: bool = False, live: bool = False) -> pd.DataFrame:
     ticker = ticker.upper()
     history = pd.DataFrame()
     live = True if _session is None else live
@@ -266,7 +263,10 @@ def get_history(ticker: str, days: int = -1, end: int = 0, live: bool = False) -
                     q = session.query(models.Price).filter(models.Price.security_id == symbols.id).order_by(models.Price.date)
                 elif days > 1:
                     start = dt.datetime.today() - dt.timedelta(days=days) - dt.timedelta(days=end)
-                    q = session.query(models.Price).filter(and_(models.Price.security_id == symbols.id, models.Price.date >= start)).order_by(models.Price.date)
+                    if use_last:
+                        q = session.query(models.Price).filter(models.Price.security_id == symbols.id).order_by(models.Price.date).limit(days)
+                    else:
+                        q = session.query(models.Price).filter(and_(models.Price.security_id == symbols.id, models.Price.date >= start)).order_by(models.Price.date)
                 else:
                     _logger.warning(f'{__name__}: Must specify history days > 1')
 
@@ -386,7 +386,7 @@ def get_exchange_tickers_master(exchange: str, type: str = 'google') -> list[str
 
 def get_index_tickers_master(index: str, type: str = 'google') -> list[str]:
     global _master_indexes
-    symbols = set()
+    symbols = []
 
     if is_index(index):
         if len(_master_indexes[index]) > 0:
@@ -400,7 +400,7 @@ def get_index_tickers_master(index: str, type: str = 'google') -> list[str]:
                 raise ValueError(f'Invalid spreadsheet type: {type}')
 
             if table.open(index):
-                symbols = set(table.get_column(1))
+                symbols = set(table.get_column('1'))
                 _master_indexes[index] = symbols
             else:
                 _logger.warning(f'{__name__}: Unable to open index spreadsheet {index}')

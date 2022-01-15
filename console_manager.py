@@ -37,7 +37,7 @@ class Interface:
             self.exchanges: list[str] = store.get_exchanges()
             self.indexes: list[str] = store.get_indexes()
             self.manager: manager.Manager = manager.Manager()
-            self.task: threading.Thread = None
+            self.task: threading.Thread
 
             if not store.is_live_connection():
                 ui.print_error('No Internet connection')
@@ -255,27 +255,9 @@ class Interface:
             else:
                 ui.print_error(self.manager.task_error)
 
-    def refresh_exchange(self, progressbar: bool = True) -> None:
-        menu_items = {}
-        for i, exchange in enumerate(self.exchanges):
-            menu_items[f'{i+1}'] = f'{exchange}'
-        menu_items['0'] = 'Cancel'
-
-        selection = ui.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, len(self.indexes))
-        if selection > 0:
-            exc = self.exchanges[selection-1]
-            self.task = threading.Thread(target=self.manager.refresh_exchange, args=[exc])
-            self.task.start()
-
-            if progressbar:
-                print()
-                self._show_progress('Progress', '')
-
-            print()
-            ui.print_message(f'Identified {self.manager.task_total} missing items. {self.manager.task_success} items filled')
-
     def update_history(self, ticker: str = '', progressbar: bool = True) -> None:
         menu_items = {}
+        i = 0
         for i, exchange in enumerate(self.exchanges):
             menu_items[f'{i+1}'] = f'{exchange}'
         menu_items[f'{i+2}'] = 'All'
@@ -320,6 +302,7 @@ class Interface:
 
     def update_company(self, ticker: str = '', progressbar: bool = True) -> None:
         menu_items = {}
+        i = 0
         for i, exchange in enumerate(self.exchanges):
             menu_items[f'{i+1}'] = f'{exchange}'
         menu_items[f'{i+2}'] = 'All'
@@ -465,15 +448,8 @@ class Interface:
                 ui.print_message(f'{self.manager.task_total} {table} '
                                  f'Ticker pricing checked in {self.manager.task_time:.0f} seconds')
 
-            if len(self.manager.task_object) > 1:
-                last = sorted(self.manager.task_object)[-1]
-                self.manager.task_object.pop(last)
-
-            items = self.manager.task_object.items()
-            results = sorted(items)
-
             ui.print_message('Results')
-            for item in results:
+            for item in self.manager.task_results:
                 print(f'{item[0]}:')
                 self._list_tickers(item[1])
                 print()

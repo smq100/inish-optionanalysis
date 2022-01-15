@@ -551,7 +551,7 @@ class Manager(Threaded):
             nonlocal running
             for ticker in tickers:
                 self.task_ticker = ticker
-                history = store.get_history(ticker, days=30)
+                history = store.get_history(ticker, days=60)
                 if not history.empty:
                     date = f'{history.iloc[-1]["date"]:%Y-%m-%d}'
                     if date in self.task_object:
@@ -574,6 +574,13 @@ class Manager(Threaded):
                     self.task_futures = [executor.submit(check, item) for item in lists]
                 else:
                     self.task_futures = [executor.submit(check, tickers)]
+
+            if len(self.task_object) > 1:
+                last = sorted(self.task_object)[-1]
+                self.task_object.pop(last)
+
+            items = self.task_object.items()
+            self.task_results = sorted(items)
 
         self.task_error = 'Done'
 
