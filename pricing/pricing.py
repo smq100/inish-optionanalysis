@@ -12,10 +12,10 @@ import numpy as np
 import pandas as pd
 
 from data import store as store
-from utils import ui
+from utils import ui, logger
 
 
-_logger = ui.get_logger()
+_logger = logger.get_logger()
 
 
 class Pricing(ABC):

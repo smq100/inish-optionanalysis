@@ -1,8 +1,8 @@
 import sys
 import time
 import threading
-import logging
 import datetime as dt
+import logging
 
 import numpy as np
 import pandas as pd
@@ -16,13 +16,14 @@ from strategies.vertical import Vertical
 from strategies.call import Call
 from strategies.put import Put
 from data import store
-from utils import ui
 from utils import math as m
+from utils import ui, logger
 
 MAX_ROWS = 50
 MAX_COLS = 11
 
-_logger = ui.get_logger(logging.WARNING, logfile='')
+
+logger.get_logger(logging.WARNING, logfile='')
 
 
 class Interface():

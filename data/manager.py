@@ -15,9 +15,9 @@ from base import Threaded
 import data as d
 from data import store as store
 from data import models as models
-from utils import ui
+from utils import ui, logger
 
-_logger = ui.get_logger()
+_logger = logger.get_logger()
 
 
 class Manager(Threaded):
@@ -417,7 +417,7 @@ class Manager(Threaded):
         else:
             _logger.warning(f'{__name__}: Index {index} does not exist')
 
-    def delete_ticker(self, ticker: str):
+    def delete_ticker(self, ticker: str) -> None:
         ticker = ticker.upper()
 
         if store.is_ticker(ticker):
@@ -431,6 +431,21 @@ class Manager(Threaded):
                     _logger.warning(f'{__name__}: Ticker {ticker} not in database')
         else:
             _logger.warning(f'{__name__}: Ticker {ticker} does not exist')
+
+    def change_active(self, tickers: list[str], active: bool) -> None:
+        if tickers:
+            for ticker in tickers:
+                ticker = ticker.upper()
+                if store.is_ticker(ticker, inactive=True):
+                    with self.session.begin() as session:
+                        sec = session.query(models.Security).filter(models.Security.ticker == ticker).one_or_none()
+                        if sec is not None:
+                            sec.active = active
+                            _logger.info(f'{__name__}: Set {ticker} active = {active}')
+                        else:
+                            _logger.warning(f'{__name__}: Ticker {ticker} not in database')
+                else:
+                    _logger.warning(f'{__name__}: Ticker {ticker} does not exist')
 
     def get_database_info(self) -> list[dict]:
         info = []
@@ -539,6 +554,32 @@ class Manager(Threaded):
             _logger.warning(f'{__name__}: {exchange} not valid')
 
         return missing
+
+    def identify_inactive_securities(self, exchange: str) -> list[str]:
+        exchange = exchange.upper()
+        inactive = []
+
+        tickers = store.get_tickers(exchange, inactive=True)
+
+        if len(tickers) > 0:
+            with self.session() as session:
+                if exchange == 'ALL':
+                    for sec in tickers:
+                        t = session.query(models.Security.ticker).filter(and_(models.Security.ticker == sec, models.Security.active == False)).one_or_none()
+                        if t is not None:
+                            inactive += [sec]
+                else:
+                    e = session.query(models.Exchange.id).filter(models.Exchange.abbreviation == exchange).one()
+                    for sec in tickers:
+                        t = session.query(models.Security.ticker).filter(and_(models.Security.ticker == sec, models.Security.active == False, models.Security.exchange_id == e.id)).one_or_none()
+                        if t is not None:
+                            inactive += [sec]
+
+            _logger.info(f'{__name__}: {len(inactive)} inactive tickers in {exchange}')
+        else:
+            _logger.warning(f'{__name__}: {exchange} not valid')
+
+        return inactive
 
     @Threaded.threaded
     def identify_incomplete_pricing(self, table: str) -> dict:

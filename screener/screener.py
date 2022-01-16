@@ -6,12 +6,12 @@ import numpy as np
 
 from base import Threaded
 from company.company import Company
-from utils import ui
 from data import store as store
 from .interpreter import Interpreter
+from utils import ui, logger
 
 
-_logger = ui.get_logger()
+_logger = logger.get_logger()
 
 BASEPATH = os.getcwd() + '/screener/screens/'
 SCREEN_SUFFIX = '.screen'

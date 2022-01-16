@@ -1,40 +1,6 @@
 import time
-import logging
-from logging import Logger
 from utils import math as m
 
-
-LOG_DIR = './log'
-
-
-def get_logger(level: int = None, logfile: str = '') -> Logger:
-    logger = logging.getLogger('analysis')
-
-    if level is None:
-        logger.info(f'{__name__}: Returning existing logger')
-    else:
-        logger.handlers = []
-        logger.setLevel(logging.DEBUG)
-        logger.propagate = False  # Prevent logging from propagating to the root logger
-
-        # Console handler
-        cformat = logging.Formatter('%(levelname)s: %(message)s')
-        ch = logging.StreamHandler()
-        ch.setFormatter(cformat)
-        ch.setLevel(level)
-        logger.addHandler(ch)
-
-        # File handler
-        if logfile:
-            fformat = logging.Formatter('%(asctime)s: %(levelname)s: %(message)s', datefmt='%H:%M:%S')
-            fh = logging.FileHandler(f'{LOG_DIR}/{logfile}.log', 'w+')
-            fh.setFormatter(fformat)
-            fh.setLevel(logging.DEBUG)
-            logger.addHandler(fh)
-
-        logger.info(f'{__name__}: Created new logger')
-
-    return logger
 
 
 def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int) -> int:
@@ -75,6 +41,20 @@ def print_error(message: str, creturn: int = 1) -> None:
 
 def print_line(message: str, creturn: int = 1) -> None:
     print(delimeter(message, creturn))
+
+
+def print_tickers(tickers: list[str], group: int) -> None:
+    if group < 2:
+        raise ValueError('Invalid grouping value')
+
+    index = 0
+    if len(tickers) > 0:
+        for ticker in tickers:
+            print(f'{ticker} ', end='')
+            index += 1
+            if index % group == 0:
+                print()
+        print()
 
 
 def input_integer(message: str, min_: int, max_: int) -> int:
@@ -122,6 +102,15 @@ def input_float(message: str, min_: float, max_: float) -> float:
 def input_text(message: str) -> str:
     val = input(message)
     if not all(char.isalpha() for char in val):
+        val = ''
+        print_error('Symbol value must be all letters')
+
+    return val
+
+
+def input_list(message: str, separator: str = ',') -> str:
+    val = input(message).replace(' ', '')
+    if not all(char.isalpha() or char == separator for char in val):
         val = ''
         print_error('Symbol value must be all letters')
 

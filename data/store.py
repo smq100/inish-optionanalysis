@@ -8,10 +8,12 @@ import data as d
 from fetcher import fetcher as fetcher
 from fetcher.google import Google
 from fetcher.excel import Excel
-from utils import ui
 from data import models as models
+from utils import ui, logger
 
-_logger = ui.get_logger()
+
+_logger = logger.get_logger()
+
 
 _master_exchanges: dict = {
     d.EXCHANGES[0]['abbreviation']: set(),

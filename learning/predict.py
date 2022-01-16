@@ -7,13 +7,13 @@ from tensorflow.keras.models import Sequential
 
 from base import Threaded
 from data import store as store
-from utils import ui
+from utils import ui, logger
 
 _models_dir = './learning/models'
 _days_train = 5000
 _days_test = 1000
 
-_logger = ui.get_logger()
+_logger = logger.get_logger()
 
 
 class Prediction(Threaded):

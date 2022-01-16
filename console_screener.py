@@ -6,9 +6,10 @@ import logging
 import data as d
 from screener.screener import Screener, Result, INIT_NAME
 from data import store as store
-from utils import ui
+from utils import ui, logger
 
-_logger = ui.get_logger(logging.WARNING, logfile='')
+
+logger.get_logger(logging.WARNING, logfile='')
 
 BASEPATH = os.getcwd()+'/screener/screens/'
 SCREEN_SUFFIX = 'screen'

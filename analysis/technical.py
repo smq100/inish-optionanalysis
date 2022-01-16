@@ -6,9 +6,9 @@ import pandas as pd
 from ta import trend, momentum, volatility, volume
 
 from data import store as store
-from utils import ui
+from utils import ui, logger
 
-_logger = ui.get_logger()
+_logger = logger.get_logger()
 
 
 class Technical:

@@ -3,11 +3,11 @@ import pandas as pd
 from base import Threaded
 import strategies as s
 from strategies.strategy import Strategy
-from utils import ui
 from utils import math as m
+from utils import ui, logger
 
 
-_logger = ui.get_logger()
+_logger = logger.get_logger()
 
 
 class Put(Strategy):

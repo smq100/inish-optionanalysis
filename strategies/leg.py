@@ -9,13 +9,13 @@ from options.option import Option
 from pricing.pricing import Pricing
 from pricing.blackscholes import BlackScholes
 from pricing.montecarlo import MonteCarlo
-from utils import ui
+from utils import ui, logger
 from utils import math as m
 
 
 _IV_CUTOFF = 0.020
 
-_logger = ui.get_logger()
+_logger = logger.get_logger()
 
 
 class Leg:

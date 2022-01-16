@@ -14,14 +14,14 @@ import pandas as pd
 
 import fetcher as f
 import data as d
-from utils import ui
+from utils import ui, logger
 
 
 _THROTTLE_FETCH = 0.10  # Min secs between calls to fetch pricing
 _THROTTLE_ERROR = 1.00  # Min secs between calls after error
 _RETRIES = 2            # Number of fetch retries after error
 
-_logger = ui.get_logger()
+_logger = logger.get_logger()
 
 # Quandl credentials
 CREDENTIALS = os.path.join(os.path.dirname(__file__), 'quandl.ini')

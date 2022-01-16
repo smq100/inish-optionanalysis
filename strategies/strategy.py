@@ -15,11 +15,11 @@ import pricing as p
 from pricing.blackscholes import BlackScholes
 from pricing.montecarlo import MonteCarlo
 from data import store
-from utils import ui
 from utils import math as m
+from utils import ui, logger
 
 
-_logger = ui.get_logger()
+_logger = logger.get_logger()
 
 
 class Strategy(ABC, Threaded):
@@ -183,7 +183,6 @@ if __name__ == '__main__':
     from strategies.call import Call
     from strategies.put import Put
     from strategies.vertical import Vertical
-    from utils import ui
 
     ui.get_logger(logging.DEBUG)
 

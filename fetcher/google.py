@@ -6,10 +6,10 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 from .sheet import Sheet
-from utils import ui
+from utils import ui, logger
 
 
-_logger = ui.get_logger()
+_logger = logger.get_logger()
 
 CREDENTIALS = 'fetcher/google.json'
 

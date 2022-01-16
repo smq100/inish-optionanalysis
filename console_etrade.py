@@ -2,10 +2,11 @@ import os.path
 import webbrowser
 import configparser
 import pickle
-import logging
 import datetime
+import logging
 
 from requests_oauthlib import OAuth1Session
+from requests_oauthlib.oauth1_session import TokenRequestDenied
 
 import etrade as et
 from etrade.accounts.accounts import Accounts
@@ -13,9 +14,10 @@ from etrade.quotes.quotes import Quotes
 from etrade.options.options import Options
 from etrade.lookup.lookup import Lookup
 from etrade.alerts.alerts import Alerts
-from utils import ui
+from utils import ui, logger
 
-ui.get_logger(logging.WARNING, logfile='')
+
+logger.get_logger(logging.WARNING, logfile='')
 
 
 class Client:
@@ -46,7 +48,10 @@ class Client:
         if self.session is None:
             self.session = self.authorize()
 
-        self.main_menu()
+        if self.session is not None:
+            self.main_menu()
+        else:
+            ui.print_error('Invalid authorizaton text')
 
     def main_menu(self) -> None:
         while True:
@@ -323,22 +328,25 @@ class Client:
 
         # Confirm code and get token
         code = input('Please accept agreement and enter text code from browser: ')
-        token = etrade.fetch_access_token(access_token_url, verifier=code)
 
-        # Create authorized session
-        session = OAuth1Session(
-            consumer_key,
-            consumer_secret,
-            token['oauth_token'],
-            token['oauth_token_secret'],
-            signature_type="AUTH_HEADER")
+        try:
+            token = etrade.fetch_access_token(access_token_url, verifier=code)
 
-        # Store session for later use
-        with open(self.picklefile, 'wb') as session_file:
-            pickle.dump(session, session_file)
+            # Create authorized session
+            session = OAuth1Session(
+                consumer_key,
+                consumer_secret,
+                token['oauth_token'],
+                token['oauth_token_secret'],
+                signature_type="AUTH_HEADER")
+
+            # Store session for later use
+            with open(self.picklefile, 'wb') as session_file:
+                pickle.dump(session, session_file)
+        except TokenRequestDenied:
+            session = None
 
         return session
-
 
 def _validate_session(session, url):
     response = session.get(url)

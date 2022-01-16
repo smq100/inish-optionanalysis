@@ -1,14 +1,14 @@
-import logging
 import time
 import threading
+import logging
 
 import data as d
 from data import store as store
 from data import manager as manager
-from utils import ui
+from utils import ui, logger
 
 
-_logger = ui.get_logger(logging.WARNING, logfile='output')
+logger.get_logger(logging.WARNING, logfile='output')
 
 
 class Interface:
@@ -67,12 +67,14 @@ class Interface:
             '7': 'Update Company',
             '8': 'Check Integrity',
             '9': 'Check Price Dates',
-            '10': 'Populate Exchange',
-            '11': 'Populate Index',
-            '12': 'Delete Exchange',
-            '13': 'Delete Index',
-            '14': 'Delete Ticker',
-            '15': 'Reset Database',
+            '10': 'List Inactive',
+            '11': 'Make Active/Inactive',
+            '12': 'Populate Exchange',
+            '13': 'Populate Index',
+            '14': 'Delete Exchange',
+            '15': 'Delete Index',
+            '16': 'Delete Ticker',
+            '17': 'Reset Database',
             '0': 'Exit'
         }
 
@@ -99,16 +101,20 @@ class Interface:
             elif selection == 9:
                 self.check_price_dates()
             elif selection == 10:
-                self.populate_exchange()
+                self.list_inactive()
             elif selection == 11:
-                self.populate_index()
+                self.change_active()
             elif selection == 12:
-                self.delete_exchange()
+                self.populate_exchange()
             elif selection == 13:
-                self.delete_index()
+                self.populate_index()
             elif selection == 14:
-                self.delete_ticker()
+                self.delete_exchange()
             elif selection == 15:
+                self.delete_index()
+            elif selection == 16:
+                self.delete_ticker()
+            elif selection == 17:
                 self.reset_database()
             elif selection == 0:
                 self.stop = True
@@ -121,6 +127,9 @@ class Interface:
         info = self.manager.get_database_info()
         for i in info:
             print(f'{i["table"]:>16}:\t{i["count"]} records')
+
+        inactive = self.manager.identify_inactive_securities('all')
+        print(f'        inactive:\t{len(inactive)} tickers')
 
         ui.print_message('Exchange Information')
         info = self.manager.get_exchange_info()
@@ -425,9 +434,9 @@ class Interface:
 
                 if exchange > 0:
                     if op == 1:
-                        self._list_tickers(missing_tickers[menu_items[str(exchange)]])
+                        ui.print_tickers(missing_tickers[menu_items[str(exchange)]], 20)
                     elif op == 2:
-                        self._list_tickers(incomplete_companies[menu_items[str(exchange)]])
+                        ui.print_tickers(incomplete_companies[menu_items[str(exchange)]], 20)
             else:
                 break
 
@@ -445,14 +454,26 @@ class Interface:
                 self._show_progress('Progress', '')
 
             if self.manager.task_error == 'Done':
-                ui.print_message(f'{self.manager.task_total} {table} '
-                                 f'Ticker pricing checked in {self.manager.task_time:.0f} seconds')
+                ui.print_message(f'{self.manager.task_total} {table} Ticker pricing checked in {self.manager.task_time:.0f} seconds')
 
             ui.print_message('Results')
             for item in self.manager.task_results:
                 print(f'{item[0]}:')
-                self._list_tickers(item[1])
+                ui.print_tickers(item[1], 20)
                 print()
+
+    def list_inactive(self) -> None:
+        tickers = self.manager.identify_inactive_securities('all')
+        ui.print_tickers(tickers, 20)
+
+    def change_active(self) -> None:
+        input = ui.input_list('Enter tickers (comma separated): ').upper()
+        if input:
+            tickers = input.split(',')
+            select = ui.input_integer('(1) Active, (2) Inactive: ', min_=1, max_=2)
+            if select > 0:
+                active = (select == 1)
+                self.manager.change_active(tickers, active)
 
     def create_missing_tables(self) -> None:
         self.manager.create_exchanges()
@@ -485,17 +506,6 @@ class Interface:
                     print(result)
         else:
             ui.print_message(f'{self.manager.task_error}')
-
-    @staticmethod
-    def _list_tickers(tickers: list[str]) -> None:
-        index = 0
-        if len(tickers) > 0:
-            for ticker in tickers:
-                print(f'{ticker} ', end='')
-                index += 1
-                if index % 20 == 0:
-                    print()  # 20 per line
-            print()
 
 
 if __name__ == '__main__':

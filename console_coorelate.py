@@ -5,10 +5,10 @@ import logging
 import data as d
 from analysis.correlate import Correlate
 from data import store as store
-from utils import ui
+from utils import ui, logger
 
 
-_logger = ui.get_logger(logging.WARNING, logfile='')
+logger.get_logger(logging.WARNING, logfile='')
 
 
 class Interface:
