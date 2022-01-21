@@ -67,7 +67,7 @@ class Manager(Threaded):
             nonlocal running
             for ticker in tickers:
                 self.task_ticker = ticker
-                if self.add_security_to_exchange(ticker):
+                if self.add_ticker_to_exchange(ticker):
                     self.task_success += 1
 
                 self.task_completed += 1
@@ -96,7 +96,7 @@ class Manager(Threaded):
 
         self.task_error = 'Done'
 
-    def add_security_to_exchange(self, ticker: str, exchange: str) -> bool:
+    def add_ticker_to_exchange(self, ticker: str, exchange: str) -> bool:
         exchange = exchange.upper()
         exit = False
         process = False
@@ -130,8 +130,8 @@ class Manager(Threaded):
 
                             _logger.info(f'{__name__}: Added {ticker} to exchange {exchange}')
 
-                            self._add_history_to_security(ticker, history=history)
-                            self._add_company_to_security(ticker, company=company)
+                            self._add_history_to_ticker(ticker, history=history)
+                            self._add_company_to_ticker(ticker, company=company)
                         except (ValueError, KeyError, IndexError) as e:
                             self.invalid_tickers += [ticker]
                             _logger.warning(f'{__name__}: Company info invalid for {ticker}: {str(e)}')
@@ -271,16 +271,16 @@ class Manager(Threaded):
 
     def update_history_ticker(self, ticker: str) -> int:
         ticker = ticker.upper()
-        days = 0
+        days = -1
 
         if store.is_ticker(ticker):
             today = date.today()
 
             history = store.get_history(ticker)
             if history.empty:
-                if self._add_history_to_security(ticker):
+                if self._add_history_to_ticker(ticker):
                     _logger.info(f'{__name__}: Added full price history for {ticker}')
-                    if self._add_company_to_security(ticker):
+                    if self._add_company_to_ticker(ticker):
                         _logger.info(f'{__name__}: Added company information for {ticker}')
                 else:
                     _logger.warning(f'{__name__}: No price history for {ticker}')
@@ -329,6 +329,7 @@ class Manager(Threaded):
 
                             _logger.info(f'{__name__}: Updated {days} days pricing for {ticker} to {date_cloud:%Y-%m-%d}')
                         else:
+                            days = 0
                             _logger.info(f'{__name__}: {ticker} already up to date with cloud data')
                 else:
                     _logger.info(f'{__name__}: {ticker} already up to date')
@@ -342,6 +343,7 @@ class Manager(Threaded):
         tickers = store.get_tickers(exchange)
         running = self._concurrency
         self.task_total = len(tickers)
+        self.invalid_tickers = []
 
         def append(tickers: list[str]) -> None:
             nonlocal running
@@ -353,8 +355,11 @@ class Manager(Threaded):
                     _logger.warning(f'{__name__}: UniqueViolation exception occurred for {ticker}: {e}')
 
                 self.task_completed += 1
+
                 if days > 0:
                     self.task_success += 1
+                elif days < 0:
+                    self.invalid_tickers += [ticker]
 
             running -= 1
             _logger.info(f'{__name__}: Thread completed. {running} threads remaining')
@@ -534,7 +539,7 @@ class Manager(Threaded):
 
         return found
 
-    def identify_missing_securities(self, exchange: str) -> list[str]:
+    def identify_missing_ticker(self, exchange: str) -> list[str]:
         exchange = exchange.upper()
         missing = []
 
@@ -555,7 +560,7 @@ class Manager(Threaded):
 
         return missing
 
-    def identify_inactive_securities(self, exchange: str) -> list[str]:
+    def identify_inactive_tickers(self, exchange: str) -> list[str]:
         exchange = exchange.upper()
         inactive = []
 
@@ -592,7 +597,7 @@ class Manager(Threaded):
             nonlocal running
             for ticker in tickers:
                 self.task_ticker = ticker
-                history = store.get_history(ticker, days=60)
+                history = store.get_history(ticker, days=90)
                 if not history.empty:
                     date = f'{history.iloc[-1]["date"]:%Y-%m-%d}'
                     if date in self.task_object:
@@ -652,7 +657,7 @@ class Manager(Threaded):
 
         return incomplete
 
-    def _add_company_to_security(self, ticker: str, company: dict = None) -> bool:
+    def _add_company_to_ticker(self, ticker: str, company: dict = None) -> bool:
         cmp = None
 
         with self.session.begin() as session:
@@ -678,7 +683,7 @@ class Manager(Threaded):
 
         return cmp is not None
 
-    def _add_history_to_security(self, ticker: str, history: pd.DataFrame = None) -> bool:
+    def _add_history_to_ticker(self, ticker: str, history: pd.DataFrame = None) -> bool:
         added = False
 
         with self.session.begin() as session:

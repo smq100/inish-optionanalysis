@@ -396,7 +396,7 @@ class Interface:
                 [print(r) for r in result.results if ticker.ljust(6, ' ') == r[:6]]
 
     def show_coorelations(self):
-        results = [f'{result[0]:<5}/{result[1]["ticker"]:<5} {result[1]["value"]:.5f}' for result in self.results_corr if result[1]["value"] > COOR_CUTOFF]
+        results = [f'{result[0]:<5}/ {result[1]["ticker"]:<5} {result[1]["value"]:.5f}' for result in self.results_corr if result[1]["value"] > COOR_CUTOFF]
         if results:
             ui.print_message('Coorelation Results')
             for result in results:

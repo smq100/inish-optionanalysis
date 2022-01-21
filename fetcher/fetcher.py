@@ -113,11 +113,11 @@ def _get_history_yfinance(ticker: str, days: int = -1, uselast: bool = False) ->
                     days = history.shape[0]
 
                     if history is None:
-                        _logger.warning(f'{__name__}: {d.ACTIVE_DATASOURCE} history for {ticker} is None ({retry+1})')
+                        _logger.warning(f'{__name__}: {d.ACTIVE_CLOUDDATASOURCE} history for {ticker} is None ({retry+1})')
                         time.sleep(_THROTTLE_ERROR)
                     elif history.empty:
                         history = None
-                        _logger.warning(f'{__name__}: {d.ACTIVE_DATASOURCE} history for {ticker} is empty ({retry+1})')
+                        _logger.warning(f'{__name__}: {d.ACTIVE_CLOUDDATASOURCE} history for {ticker} is empty ({retry+1})')
                         time.sleep(_THROTTLE_ERROR)
                     else:
                         history.reset_index(inplace=True)
@@ -130,7 +130,7 @@ def _get_history_yfinance(ticker: str, days: int = -1, uselast: bool = False) ->
                         _logger.info(f'{__name__}: Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
                         break
                 except Exception as e:
-                    _logger.error(f'{__name__}: Exception: {e}: Retry {retry} to fetch history of {ticker} from {d.ACTIVE_DATASOURCE}')
+                    _logger.error(f'{__name__}: Exception: {e}: Retry {retry} to fetch history of {ticker} from {d.ACTIVE_CLOUDDATASOURCE}')
                     history = None
                     time.sleep(_THROTTLE_ERROR)
     else:
@@ -156,11 +156,11 @@ def _get_history_quandl(ticker: str, days: int = -1) -> pd.DataFrame:
                 days = history.shape[0]
 
                 if history is None:
-                    _logger.warning(f'{__name__}: {d.ACTIVE_DATASOURCE} history for {ticker} is None ({retry+1})')
+                    _logger.warning(f'{__name__}: {d.ACTIVE_CLOUDDATASOURCE} history for {ticker} is None ({retry+1})')
                     time.sleep(_THROTTLE_ERROR)
                 elif history.empty:
                     history = None
-                    _logger.warning(f'{__name__}: {d.ACTIVE_DATASOURCE} history for {ticker} is empty ({retry+1})')
+                    _logger.warning(f'{__name__}: {d.ACTIVE_CLOUDDATASOURCE} history for {ticker} is empty ({retry+1})')
                     time.sleep(_THROTTLE_ERROR)
                 else:
                     history.reset_index(inplace=True)
@@ -173,7 +173,7 @@ def _get_history_quandl(ticker: str, days: int = -1) -> pd.DataFrame:
                     _logger.info(f'{__name__}: Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
                     break
             except Exception as e:
-                _logger.error(f'{__name__}: Exception: {e}: Retry {retry} to fetch history of {ticker} from {d.ACTIVE_DATASOURCE}')
+                _logger.error(f'{__name__}: Exception: {e}: Retry {retry} to fetch history of {ticker} from {d.ACTIVE_CLOUDDATASOURCE}')
                 history = None
                 time.sleep(_THROTTLE_ERROR)
 
@@ -193,12 +193,12 @@ def get_history_live(ticker: str, days: int = -1) -> pd.DataFrame:
         time.sleep(_THROTTLE_FETCH)
     _elapsed = time.perf_counter()
 
-    _logger.info(f'{__name__}: Fetching {ticker} history from {d.ACTIVE_DATASOURCE}...')
+    _logger.info(f'{__name__}: Fetching {ticker} history from {d.ACTIVE_CLOUDDATASOURCE}...')
 
     history = pd.DataFrame()
-    if d.ACTIVE_DATASOURCE == 'yfinance':
+    if d.ACTIVE_CLOUDDATASOURCE == 'yfinance':
         history = _get_history_yfinance(ticker, days=days)
-    elif d.ACTIVE_DATASOURCE == 'quandl':
+    elif d.ACTIVE_CLOUDDATASOURCE == 'quandl':
         history = _get_history_quandl(ticker, days=days)
     else:
         raise ValueError('Invalid data source')

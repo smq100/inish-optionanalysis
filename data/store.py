@@ -173,8 +173,8 @@ def get_index_tickers(index: str, inactive: bool = False) -> list[str]:
                         symbols = session.query(models.Security).filter(
                             or_(models.Security.index1_id == ind.id, models.Security.index2_id == ind.id, models.Security.index3_id == ind.id)).all()
                     else:
-                        symbols = session.query(models.Security).filter(and_(models.Security.active,
-                                                                             or_(models.Security.index1_id == ind.id, models.Security.index2_id == ind.id, models.Security.index3_id == ind.id))).all()
+                        symbols = session.query(models.Security).filter(
+                            and_(models.Security.active, or_(models.Security.index1_id == ind.id, models.Security.index2_id == ind.id, models.Security.index3_id == ind.id))).all()
 
                     results = [symbol.ticker for symbol in symbols]
         else:
@@ -251,7 +251,7 @@ def get_history(ticker: str, days: int = -1, end: int = 0, use_last: bool = Fals
         if history is not None:
             _logger.info(f'{__name__}: Fetched {len(history)} days of live price history for {ticker}')
         else:
-            _logger.warning(f'{__name__}: Unable to fetch live price history for {ticker} from {d.ACTIVE_DATASOURCE}')
+            _logger.warning(f'{__name__}: Unable to fetch live price history for {ticker} from {d.ACTIVE_CLOUDDATASOURCE}')
 
         if end > 0:
             _logger.warning(f'{__name__}: "end" value ignored for live queries')

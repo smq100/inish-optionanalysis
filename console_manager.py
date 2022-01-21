@@ -59,8 +59,8 @@ class Interface:
 
         menu_items = {
             '1': 'Database Information',
-            '2': 'Ticker Information',
-            '3': f'Ticker Information ({d.ACTIVE_DATASOURCE})',
+            '2': f'Ticker Information ({d.ACTIVE_DB})',
+            '3': f'Ticker Information ({d.ACTIVE_CLOUDDATASOURCE})',
             '4': 'Ticker Information (previous)',
             '5': 'List Table',
             '6': 'Update History',
@@ -128,7 +128,7 @@ class Interface:
         for i in info:
             print(f'{i["table"]:>16}:\t{i["count"]} records')
 
-        inactive = self.manager.identify_inactive_securities('all')
+        inactive = self.manager.identify_inactive_tickers('all')
         print(f'        inactive:\t{len(inactive)} tickers')
 
         ui.print_message('Exchange Information')
@@ -205,7 +205,8 @@ class Interface:
 
     def list_table(self) -> None:
         found = []
-        select = ui.input_text('Enter exchange or index: ').upper()
+        select = ui.input_alphanum('Enter exchange or index: ').upper()
+
         if store.is_exchange(select):
             found = self.manager.list_exchange(select)
         elif store.is_list(select):
@@ -214,14 +215,7 @@ class Interface:
             ui.print_error(f'List {select} is not valid')
 
         if found:
-            print()
-            index = 0
-            for ticker in found:
-                print(f'{ticker} ', end='')
-                index += 1
-                if index % 20 == 0:  # Print 20 per line
-                    print()
-            print()
+            ui.print_tickers(found, 20)
 
     def populate_exchange(self, progressbar: bool = True) -> None:
         menu_items = {}
@@ -289,7 +283,7 @@ class Interface:
                     self.show_symbol_information(ticker=ticker)
                 elif store.is_exchange(ticker):
                     exchange = store.get_ticker_exchange(ticker)
-                    if self.manager.add_security_to_exchange(ticker, exchange):
+                    if self.manager.add_ticker_to_exchange(ticker, exchange):
                         ui.print_message(f'Added {ticker} to {exchange}')
                         self.show_symbol_information(ticker=ticker)
                     else:
@@ -306,8 +300,13 @@ class Interface:
                 self._show_progress('Progress', '')
 
             if self.manager.task_error == 'Done':
-                ui.print_message(f'{self.manager.task_total} {exc} '
-                                 f'Ticker pricing refreshed in {self.manager.task_time:.0f} seconds')
+                ui.print_message(f'{self.manager.task_total} {exc} Ticker pricing refreshed in {self.manager.task_time:.0f} seconds')
+
+                if len(self.manager.invalid_tickers) > 0:
+                    select = ui.input_text('Show unsuccessful tickers? (y/n): ')
+                    if select.lower() == 'y':
+                        ui.print_message('Unsuccessful tickers')
+                        ui.print_tickers(self.manager.invalid_tickers, 20)
 
     def update_company(self, ticker: str = '', progressbar: bool = True) -> None:
         menu_items = {}
@@ -408,7 +407,7 @@ class Interface:
 
     def check_integrity(self) -> None:
         ui.print_message('Missing Tickers')
-        missing_tickers = {e: self.manager.identify_missing_securities(e) for e in self.exchanges}
+        missing_tickers = {e: self.manager.identify_missing_ticker(e) for e in self.exchanges}
         for e in self.exchanges:
             print(f'{e:>16}:\t{len(missing_tickers[e])}')
 
@@ -456,15 +455,28 @@ class Interface:
             if self.manager.task_error == 'Done':
                 ui.print_message(f'{self.manager.task_total} {table} Ticker pricing checked in {self.manager.task_time:.0f} seconds')
 
-            ui.print_message('Results')
-            for item in self.manager.task_results:
-                print(f'{item[0]}:')
-                ui.print_tickers(item[1], 20)
-                print()
+            if len(self.manager.task_results) > 0:
+                total = []
+                ui.print_message('Results')
+                for item in self.manager.task_results:
+                    total += item[1]
+                    print(f'{item[0]}:')
+                    ui.print_tickers(item[1], 20)
+                    print()
+
+                select = ui.input_text('Mark tickers as inactive? (y/n): ')
+                if select.lower() == 'y':
+                    self.manager.change_active(total, False)
+            else:
+                ui.print_message('No results found')
 
     def list_inactive(self) -> None:
-        tickers = self.manager.identify_inactive_securities('all')
-        ui.print_tickers(tickers, 20)
+        tickers = self.manager.identify_inactive_tickers('all')
+        if tickers:
+            ui.print_message('Inactive tickers')
+            ui.print_tickers(tickers, 20)
+        else:
+            ui.print_message('No inactive tickers')
 
     def change_active(self) -> None:
         input = ui.input_list('Enter tickers (comma separated): ').upper()
