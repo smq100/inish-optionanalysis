@@ -1,6 +1,8 @@
 import os
 import time
 import random
+import json
+from datetime import datetime as dt
 from datetime import date
 from concurrent import futures
 from urllib.error import HTTPError
@@ -18,6 +20,9 @@ from data import models as models
 from utils import ui, logger
 
 _logger = logger.get_logger()
+
+LOG_DIR = './log'
+LOG_SUFFIX = 'log'
 
 
 class Manager(Threaded):
@@ -339,7 +344,7 @@ class Manager(Threaded):
         return days
 
     @Threaded.threaded
-    def update_history_exchange(self, exchange: str) -> None:
+    def update_history_exchange(self, exchange: str, log: bool = True) -> None:
         tickers = store.get_tickers(exchange)
         running = self._concurrency
         self.task_total = len(tickers)
@@ -374,6 +379,9 @@ class Manager(Threaded):
                     self.task_futures = [executor.submit(append, list) for list in lists]
                 else:
                     self.task_futures = [executor.submit(append, tickers)]
+
+        if log:
+            _write_tickers_log(self.invalid_tickers)
 
         self.task_error = 'Done'
 
@@ -538,6 +546,26 @@ class Manager(Threaded):
             _logger.warning(f'{__name__}: {index} not valid')
 
         return found
+
+    def get_latest_errors(self) -> list[str]:
+        errors = []
+        files = []
+        with os.scandir(LOG_DIR) as entries:
+            for entry in entries:
+                if entry.is_file():
+                    head, sep, tail = entry.name.partition('.')
+                    if tail != LOG_SUFFIX:
+                        pass
+                    elif head[:2] != '20':
+                        pass # Not a log file. Does not start with year 20**
+                    else:
+                        files += [f'{LOG_DIR}/{entry.name}']
+        if files:
+            files.sort()
+
+        errors = _read_tickers_log(files[-1])
+
+        return errors
 
     def identify_missing_ticker(self, exchange: str) -> list[str]:
         exchange = exchange.upper()
@@ -741,15 +769,42 @@ class Manager(Threaded):
                 _logger.info(f'{__name__}: Added {t} to index {index}')
 
 
+def _write_tickers_log(tickers: list[str]) -> str:
+    if tickers:
+        date_time = dt.now().strftime('%Y%m%d-%H%M%S')
+        filename = f'{LOG_DIR}/{date_time}.{LOG_SUFFIX}'
+
+        with open(filename, 'w') as f:
+            for ticker in tickers:
+                f.write(ticker + '\n')
+    else:
+        filename = ''
+
+    return filename
+
+
+def _read_tickers_log(filename: str) -> list[str]:
+    tickers = ['error']
+    if os.path.exists(filename):
+        try:
+            with open(filename) as f:
+                tickers = f.readlines()
+
+            tickers = [s.replace('\n', '') for s in tickers]
+        except:
+            _logger.error(f'{__name__}: File format error')
+    else:
+        _logger.error(f'{__name__}: File "{filename}" not found')
+
+    return tickers
+
+
 if __name__ == '__main__':
-    import time
-    from logging import DEBUG
-    _logger = ui.get_logger(DEBUG)
+    # import time
+    # from logging import DEBUG
+    # _logger = ui.get_logger(DEBUG)
 
-    manager = Manager()
-    tic = time.perf_counter()
-    missing = manager.identify_incomplete_pricing('AMEX')
-    toc = time.perf_counter()
-    timed = toc - tic
-
-    print(f'Found {missing} in {timed:.2f} seconds')
+    tickers = ['IBM', 'AAPL', 'MSFT']
+    filename = _write_tickers_log(tickers)
+    new_tickers = _read_tickers_log(filename)
+    print(new_tickers)

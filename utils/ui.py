@@ -8,7 +8,10 @@ def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int) -> int:
     print('-' * 50)
 
     for entry in menu_items.keys():
-        print(f'{entry:>2})\t{menu_items[entry]}')
+        if entry.isnumeric():
+            print(f'{entry:>2})\t{menu_items[entry]}')
+        else:
+            print(f'\t{menu_items[entry]}')
 
     return input_integer('Please select: ', minvalue, maxvalue)
 

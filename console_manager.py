@@ -58,24 +58,24 @@ class Interface:
             self.show_database_information()
 
         menu_items = {
-            '1': 'Database Information',
-            '2': f'Ticker Information ({d.ACTIVE_DB})',
-            '3': f'Ticker Information ({d.ACTIVE_CLOUDDATASOURCE})',
-            '4': 'Ticker Information (previous)',
-            '5': 'List Table',
-            '6': 'Update History',
-            '7': 'Update Company',
-            '8': 'Check Integrity',
-            '9': 'Check Price Dates',
-            '10': 'List Inactive',
-            '11': 'Make Active/Inactive',
+            '1':  'Database Information',
+            '2':  f'Ticker Information ({d.ACTIVE_DB})',
+            '3':  f'Ticker Information ({d.ACTIVE_CLOUDDATASOURCE})',
+            '4':  'Ticker Information (previous)',
+            '5':  'Update History',
+            '6':  'Update Company',
+            '7':  'Check Integrity',
+            '8':  'Check Price Dates',
+            '9':  'List Inactive',
+            '10': 'List Update Errors',
+            '11': 'Mark Active/Inactive',
             '12': 'Populate Exchange',
             '13': 'Populate Index',
             '14': 'Delete Exchange',
             '15': 'Delete Index',
             '16': 'Delete Ticker',
             '17': 'Reset Database',
-            '0': 'Exit'
+            '0':  'Exit'
         }
 
         while True:
@@ -91,17 +91,17 @@ class Interface:
             elif selection == 4:
                 self.show_symbol_information(self.ticker, prompt=True)
             elif selection == 5:
-                self.list_table()
-            elif selection == 6:
                 self.update_history(self.ticker)
-            elif selection == 7:
+            elif selection == 6:
                 self.update_company()
-            elif selection == 8:
+            elif selection == 7:
                 self.check_integrity()
-            elif selection == 9:
+            elif selection == 8:
                 self.check_price_dates()
-            elif selection == 10:
+            elif selection == 9:
                 self.list_inactive()
+            elif selection == 10:
+                self.list_errors()
             elif selection == 11:
                 self.change_active()
             elif selection == 12:
@@ -263,6 +263,7 @@ class Interface:
         i = 0
         for i, exchange in enumerate(self.exchanges):
             menu_items[f'{i+1}'] = f'{exchange}'
+
         menu_items[f'{i+2}'] = 'All'
         menu_items[f'{i+3}'] = 'Ticker'
         menu_items['0'] = 'Cancel'
@@ -422,19 +423,19 @@ class Interface:
                 '2': 'List Incomplete Companies',
                 '0': 'Exit',
             }
-            op = ui.menu(menu_items, 'Select Operation', 0, 3)
 
-            if op > 0:
+            select = ui.menu(menu_items, 'Select Operation', 0, 3)
+            if select > 0:
                 menu_items = {}
                 for i, exc in enumerate(self.exchanges):
                     menu_items[f'{i+1}'] = f'{exc}'
                 menu_items['0'] = 'Cancel'
-                exchange = ui.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(self.exchanges))
 
+                exchange = ui.menu(menu_items, 'Select index, or 0 to cancel: ', 0, len(self.exchanges))
                 if exchange > 0:
-                    if op == 1:
+                    if select == 1:
                         ui.print_tickers(missing_tickers[menu_items[str(exchange)]], 20)
-                    elif op == 2:
+                    elif select == 2:
                         ui.print_tickers(incomplete_companies[menu_items[str(exchange)]], 20)
             else:
                 break
@@ -470,22 +471,52 @@ class Interface:
             else:
                 ui.print_message('No results found')
 
+    def list_errors(self) -> None:
+        tickers = self.manager.get_latest_errors()
+        if tickers:
+            ui.print_message('Tickers with errors')
+            ui.print_tickers(tickers, 15)
+
+            select = ui.input_alphanum('Mark list as inactive (y/n)? ')
+            if select.lower() == 'y':
+                self.manager.change_active(tickers, False)
+        else:
+            ui.print_message('No ticker errors')
+
     def list_inactive(self) -> None:
         tickers = self.manager.identify_inactive_tickers('all')
         if tickers:
             ui.print_message('Inactive tickers')
-            ui.print_tickers(tickers, 20)
+            ui.print_tickers(tickers, 15)
         else:
             ui.print_message('No inactive tickers')
 
     def change_active(self) -> None:
-        input = ui.input_list('Enter tickers (comma separated): ').upper()
-        if input:
-            tickers = input.split(',')
-            select = ui.input_integer('(1) Active, (2) Inactive: ', min_=1, max_=2)
-            if select > 0:
-                active = (select == 1)
-                self.manager.change_active(tickers, active)
+        menu_items = {
+            '1': 'Change Individual Ticker',
+            '2': 'Mark Errors as Inactive',
+            '3': 'Mark all as Active',
+            '0': 'Exit',
+        }
+
+        while True:
+            select = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
+            if select == 1:
+                input = ui.input_list('Enter tickers (comma separated): ').upper()
+                if input:
+                    tickers = input.split(',')
+                    select = ui.input_integer('(1) Active, (2) Inactive: ', min_=1, max_=2)
+                    if select > 0:
+                        active = (select == 1)
+                        self.manager.change_active(tickers, active)
+            elif select == 2:
+                tickers = self.manager.get_latest_errors()
+                self.manager.change_active(tickers, False)
+            elif select == 3:
+                tickers = self.manager.identify_inactive_tickers('all')
+                self.manager.change_active(tickers, True)
+            else:
+                break
 
     def create_missing_tables(self) -> None:
         self.manager.create_exchanges()
