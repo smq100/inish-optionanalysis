@@ -1,6 +1,7 @@
 import time
 from utils import math as m
 
+from data import store as store
 
 
 def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int) -> int:
@@ -46,7 +47,7 @@ def print_line(message: str, creturn: int = 1) -> None:
     print(delimeter(message, creturn))
 
 
-def print_tickers(tickers: list[str], group: int) -> None:
+def print_tickers(tickers: list[str], group: int = 15) -> None:
     if group < 2:
         raise ValueError('Invalid grouping value')
 
@@ -129,6 +130,49 @@ def input_alphanum(message: str) -> str:
     return val
 
 
+def input_yesno(message: str) -> bool:
+    return input(f'{message}: (y/n)').lower() == 'y'
+
+
+def get_valid_table(exchange: bool = False, index: bool = False, ticker: bool = False, all: bool = False) -> str:
+    if exchange and index and ticker:
+        prompt = 'Enter an exchange, an index or a ticker'
+    elif exchange and index and not ticker:
+        prompt = 'Enter an exchange or an index'
+    elif exchange and not index and ticker:
+        prompt = 'Enter an exchange or a ticker'
+    elif not exchange and index and ticker:
+        prompt = 'Enter an index or a ticker'
+    elif exchange and not index and not ticker:
+        prompt = 'Enter an exchange'
+    elif not exchange and index and not ticker:
+        prompt = 'Enter an index'
+    elif not exchange and not index and ticker:
+        prompt = 'Enter a ticker'
+    else:
+        assert ValueError('Invalid options')
+
+    prompt += ' (or all): ' if all else ': '
+
+    while True:
+        table = input_alphanum(prompt).upper()
+
+        if not table:
+            break
+        elif all and table == 'ALL':
+            break
+        elif exchange and store.is_exchange(table):
+            break
+        elif index and store.is_index(table):
+            break
+        elif ticker and store.is_ticker(table):
+            break
+        else:
+            print_error('Table not found. Enter a valid table, or return to exit')
+
+    return table
+
+
 completed = 0
 position = 0
 forward = True
@@ -200,8 +244,4 @@ def progress_bar(iteration, total: int, prefix: str = 'Working', suffix: str = '
 
 
 if __name__ == '__main__':
-    import time
-
-    while(True):
-        time.sleep(0.05)
-        progress_bar(0, -1, 'Progress', 'Completed')
+    print(get_valid_table(exchange=False, index=False, ticker=False))

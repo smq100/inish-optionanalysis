@@ -54,7 +54,7 @@ class Interface:
 
     def compute_coorelation(self, progressbar=True):
         if not self.list:
-            self.list = self._get_list()
+            self.list = ui.get_valid_table(exchange=True, index=True)
 
         if self.list:
             self.tickers = store.get_tickers(self.list)
@@ -110,21 +110,6 @@ class Interface:
                 ui.print_message(f'Lowest correlations to {ticker}')
                 for sym, val in df[:10].iteritems():
                     print(f'{sym:>5}: {val:.5f}')
-
-    def _get_list(self):
-        list = ''
-        menu_items = {}
-        for i, exchange in enumerate(self.exchanges):
-            menu_items[f'{i+1}'] = f'{exchange}'
-        for i, index in enumerate(self.indexes, i):
-            menu_items[f'{i+1}'] = f'{index}'
-        menu_items['0'] = 'Cancel'
-
-        select = ui.menu(menu_items, 'Select exchange, or 0 to cancel: ', 0, i+1)
-        if select > 0:
-            list = menu_items[f'{select}']
-
-        return list
 
     def _show_progress(self, prefix, suffix):
         while not self.coorelate.task_error:

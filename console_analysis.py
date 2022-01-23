@@ -401,8 +401,7 @@ class Interface:
             ui.print_message('Coorelation Results')
             for result in results:
                 print(result)
-            answer = ui.input_text('\nRun support & resistance analysis on top findings? (y/n): ')
-            if answer.lower() == 'y':
+            if ui.input_yesno('Run support & resistance analysis on top findings?'):
                 self.run_support_resistance(True)
         else:
             ui.print_message('No significant coorelations found')
