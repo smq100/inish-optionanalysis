@@ -42,18 +42,11 @@ class Put(Strategy):
             price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
 
             self.analysis.credit_debit = 'debit' if self.legs[0].direction == 'long' else 'credit'
-
-            # Calculate net debit or credit
             self.analysis.amount = price * self.quantity
-
-            # Generate profit table
             self.analysis.table = self.generate_profit_table()
-
-            # Calculate min max
             self.analysis.max_gain, self.analysis.max_loss, self.analysis.upside, self.analysis.sentiment = self.calculate_gain_loss()
-
-            # Calculate breakeven
             self.analysis.breakeven = self.calculate_breakeven()
+            self.analysis.summarize()
 
         self.task_error = 'Done'
 

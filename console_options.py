@@ -332,7 +332,7 @@ class Interface():
         }
 
         modified = True
-        selection = ui.menu(menu_items, 'Select Strategy', 0, 3)
+        selection = ui.menu(menu_items, 'Select Strategy', 0, len(menu_items)-1)
 
         if selection == 1:
             d = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
@@ -398,7 +398,7 @@ class Interface():
                 else:
                     menu_items['4'] += f' (${self.strategy.legs[0].option.strike:.2f}{loaded})'
 
-                selection = ui.menu(menu_items, 'Select Operation', 0, 4)
+                selection = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
 
                 if selection == 1:
                     exp = self.select_chain_expiry()
@@ -500,7 +500,7 @@ class Interface():
                 '0': 'Done',
             }
 
-            selection = ui.menu(menu_items, 'Select Setting', 0, 1)
+            selection = ui.menu(menu_items, 'Select Setting', 0, len(menu_items)-1)
 
             if selection == 1:
                 self.select_method()
@@ -516,7 +516,7 @@ class Interface():
 
         modified = True
         while True:
-            selection = ui.menu(menu_items, 'Select Method', 0, 2)
+            selection = ui.menu(menu_items, 'Select Method', 0, len(menu_items)-1)
 
             if selection == 1:
                 self.strategy.set_pricing_method('black-scholes')

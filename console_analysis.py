@@ -4,7 +4,7 @@ import threading
 import logging
 
 import matplotlib.pyplot as plt
-from pandas import DataFrame
+import pandas as pd
 
 import strategies as s
 from strategies.strategy import Strategy
@@ -38,7 +38,7 @@ class Interface:
         self.path_screen = ''
         self.results_screen: list[Result] = []
         self.valids_screen: list[Result] = []
-        self.results_corr: list[tuple[str, DataFrame.Series]] = []
+        self.results_corr: list[tuple[str, pd.DataFrame.Series]] = []
         self.trend: SupportResistance = None
         self.screener: Screener = None
         self.correlate: Correlate = None
@@ -196,8 +196,7 @@ class Interface:
             }
 
             modified = True
-            selection = ui.menu(menu_items, 'Select Strategy', 0, 3)
-
+            selection = ui.menu(menu_items, 'Select Strategy', 0, len(menu_items))
             if selection == 1:
                 strategy = 'call'
                 d = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
@@ -316,6 +315,7 @@ class Interface:
             raise ValueError('Invalid direction')
 
         tickers = [str(result) for result in self.valids_screen[:LISTTOP_TREND]]
+        summary = pd.DataFrame()
         results = []
 
         print()
@@ -341,17 +341,14 @@ class Interface:
 
             self.show_progress_options()
 
-            # Build output
-            results += ['\n']
-            results += [ui.delimeter(f'{direction.title()} {name} Options for {ticker}')]
-            results += ['\n']
-            results += [str(leg) for leg in self.strategy.legs]
-            results += ['\n']
-            results += [str(self.strategy.analysis)]
+            summary = summary.append(self.strategy.analysis.summary)
+            results += [f'{str(leg)}' for leg in self.strategy.legs]
 
         if results:
             for result in results:
                 print(result)
+            print()
+            print(summary)
 
     def show_valids(self, top: int = -1, verbose: bool = False, ticker: str = '') -> None:
         if not self.table:

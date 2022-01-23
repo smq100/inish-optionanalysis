@@ -349,7 +349,7 @@ class Interface:
                 '0': 'Exit',
             }
 
-            select = ui.menu(menu_items, 'Select Operation', 0, 3)
+            select = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
             if select > 0:
                 table = ui.get_valid_table(exchange=True)
                 if table:

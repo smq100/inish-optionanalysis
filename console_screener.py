@@ -133,7 +133,7 @@ class Interface:
             '0': 'Cancel',
         }
 
-        selection = ui.menu(menu_items, 'Select Data Source', 0, 2)
+        selection = ui.menu(menu_items, 'Select Data Source', 0, len(menu_items)-1)
         if selection == 1:
             self.live = False
         elif selection == 2:

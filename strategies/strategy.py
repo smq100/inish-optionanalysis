@@ -1,22 +1,21 @@
 import abc
 from abc import ABC
 import datetime as dt
-from logging import raiseExceptions
 import math
-from dataclasses import dataclass
 
 import pandas as pd
 
 from base import Threaded
 import strategies as s
 from strategies.leg import Leg
+from strategies.analysis import Analysis
 from options.chain import Chain
 import pricing as p
 from pricing.blackscholes import BlackScholes
 from pricing.montecarlo import MonteCarlo
 from data import store
 from utils import math as m
-from utils import ui, logger
+from utils import logger
 
 
 _logger = logger.get_logger()
@@ -43,7 +42,7 @@ class Strategy(ABC, Threaded):
         self.width = width
         self.pricing_method = 'black-scholes'
         self.chain: Chain = Chain(self.ticker)
-        self.analysis = Analysis()
+        self.analysis = Analysis(self.ticker)
         self.legs: list[Leg] = []
         self.initial_spot = 0.0
         self.initial_spot = self.get_current_spot(ticker, roundup=True)
@@ -147,52 +146,23 @@ class Strategy(ABC, Threaded):
     def validate(self):
         return len(self.legs) > 0
 
-
-@dataclass
-class Analysis:
-    table: pd.DataFrame = None
-    credit_debit = ''
-    sentiment = ''
-    amount = 0.0
-    max_gain = 0.0
-    max_loss = 0.0
-    breakeven = 0.0
-    upside = 0.0
-
-    def __str__(self):
-        if self.table is not None:
-            gain = 'Unlimited' if self.max_gain < 0.0 else f'${self.max_gain:.2f}'
-            loss = 'Unlimited' if self.max_loss < 0.0 else f'${self.max_loss:.2f}'
-
-            output = \
-                f'Type:      {self.credit_debit.title()}\n'\
-                f'Sentiment: {self.sentiment.title()}\n'\
-                f'Amount:    ${abs(self.amount):.2f} {self.credit_debit}\n'\
-                f'Max Gain:  {gain}\n'\
-                f'Max Loss:  {loss}\n'\
-                f'Breakeven: ${self.breakeven:.2f} at expiry\n'\
-                f'Upside:    {self.upside:.2f}\n'
-        else:
-            output = 'Not yet analyzed'
-
-        return output
-
-
 if __name__ == '__main__':
     import logging
     from strategies.call import Call
     from strategies.put import Put
     from strategies.vertical import Vertical
+    from utils import logger
 
-    ui.get_logger(logging.DEBUG)
+    # logger.get_logger(logging.DEBUG)
 
-    strategy = Vertical('AAPL', 'call', 'long', 1, 1, True)
-    # strategy = Call('NVDA', 'call', 'long', 1, 1, True)
-    # strategy = Put('AAPL', 'call', 'long', 1, 1, True)
+    # strategy = Vertical('AAPL', 'call', 'long', 1, 1, True)
+    strategy = Call('NVDA', 'call', 'long', 1, 1, True)
+    # strategy = Put('IBM', 'call', 'long', 1, 1, True)
     strategy.analyze()
 
     # print(strategy)
-    print(strategy.analysis)
-    print(strategy.legs[0].value)
+    # print(strategy.analysis)
+    # print(strategy.legs[0].value)
     # print(strategy.legs[1].value)
     print(strategy.analysis.table)
+    print(strategy.analysis.summary)

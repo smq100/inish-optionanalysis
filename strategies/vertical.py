@@ -92,17 +92,12 @@ class Vertical(Strategy):
             else:
                 self.analysis.credit_debit = 'credit'
 
-            # Calculate net debit or credit
             self.analysis.amount = abs(price_long - price_short) * self.quantity
-
-            # Calculate min-max
             self.analysis.max_gain, self.analysis.max_loss, self.analysis.upside, self.analysis.sentiment = self.calculate_gain_loss()
-
-            # Calculate breakeven
             self.analysis.breakeven = self.calculate_breakeven()
-
-            # Generate profit table
             self.analysis.table = self.generate_profit_table()
+            self.analysis.summarize()
+
 
         self.task_error = 'Done'
 
