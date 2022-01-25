@@ -7,7 +7,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 import strategies as s
+import strategies.strategy as st
 from strategies.strategy import Strategy
+# from strategies.strategy import analyze
 from strategies.call import Call
 from strategies.put import Put
 from strategies.vertical import Vertical
@@ -315,6 +317,7 @@ class Interface:
             raise ValueError('Invalid direction')
 
         tickers = [str(result) for result in self.valids_screen[:LISTTOP_TREND]]
+        strategies = []
         summary = pd.DataFrame()
         results = []
 
@@ -322,33 +325,27 @@ class Interface:
         ui.progress_bar(0, 0, prefix='Analyzing Options', reset=True)
 
         for ticker in tickers:
-            name = ''
             if strategy == 'call':
                 self.strategy = Call(ticker, 'call', direction, 1, 1, True)
-                name = 'Call'
             elif strategy == 'put':
-                self.strategy = Put(ticker, 'call', direction, 1, 1, True)
-                name = 'Put'
+                self.strategy = Put(ticker, 'put', direction, 1, 1, True)
             elif strategy == 'vertc':
                 self.strategy = Vertical(ticker, 'call', direction, 1, 1, True)
-                name = 'Vertical Call'
             elif strategy == 'vertp':
                 self.strategy = Vertical(ticker, 'put', direction, 1, 1, True)
-                name = 'Vertical Put'
 
-            self.task = threading.Thread(target=self.strategy.analyze)
-            self.task.start()
+            strategies += [self.strategy]
 
-            self.show_progress_options()
+        self.task = threading.Thread(target=st.analyze_list, args=[strategies])
+        self.task.start()
 
-            summary = summary.append(self.strategy.analysis.summary)
-            results += [f'{str(leg)}' for leg in self.strategy.legs]
+        self.show_progress_options()
 
-        if results:
-            for result in results:
-                print(result)
-            print()
-            print(summary)
+        ui.print_message('Strategy Analysis')
+        for result in st.strategy_legs:
+            print(result)
+        print()
+        print(st.strategy_results)
 
     def show_valids(self, top: int = -1, verbose: bool = False, ticker: str = '') -> None:
         if not self.table:
@@ -455,15 +452,16 @@ class Interface:
             ui.print_message(f'{self.trend.task_error}')
 
     def show_progress_options(self) -> None:
-        while not self.strategy.task_error:
+        while not st.strategy_error:
             pass
 
-        if self.strategy.task_error == 'None':
-            while self.strategy.task_error == 'None':
+        if st.strategy_error == 'None':
+            ui.progress_bar(0, 0, prefix='Analyzing Options', suffix=st.strategy_msg, reset=True)
+            while st.strategy_error == 'None':
                 time.sleep(0.20)
-                ui.progress_bar(0, 0, prefix='Analyzing Options', suffix=self.strategy.task_message)
+                ui.progress_bar(0, 0, prefix='Analyzing Options', suffix=st.strategy_msg)
         else:
-            ui.print_message(f'{self.strategy.task_error}')
+            ui.print_message(f'{st.strategy_error}')
 
 
 if __name__ == '__main__':

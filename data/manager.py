@@ -1,7 +1,6 @@
 import os
 import time
 import random
-import json
 from datetime import datetime as dt
 from datetime import date
 from concurrent import futures
@@ -17,7 +16,7 @@ from base import Threaded
 import data as d
 from data import store as store
 from data import models as models
-from utils import ui, logger
+from utils import logger
 
 _logger = logger.get_logger()
 

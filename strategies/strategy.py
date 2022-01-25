@@ -2,6 +2,7 @@ import abc
 from abc import ABC
 import datetime as dt
 import math
+from concurrent import futures
 
 import pandas as pd
 
@@ -146,6 +147,31 @@ class Strategy(ABC, Threaded):
     def validate(self):
         return len(self.legs) > 0
 
+
+strategy_error = ''
+strategy_msg = ''
+strategy_results = pd.DataFrame()
+strategy_legs = []
+def analyze_list(strategies: list[Strategy]) -> None:
+    global strategy_error
+
+    def analyze(strategy: Strategy):
+        global strategy_results, strategy_legs, strategy_msg
+
+        strategy_msg = strategy.ticker
+
+        strategy.analyze()
+        strategy_results = strategy_results.append(strategy.analysis.summary)
+        strategy_legs += [f'{str(leg)}' for leg in strategy.legs]
+
+    strategy_error = 'None'
+    if len(strategies) > 0:
+        with futures.ThreadPoolExecutor(max_workers=len(strategies)) as executor:
+            f = [executor.submit(analyze, item) for item in strategies]
+
+    strategy_error = 'Done'
+
+
 if __name__ == '__main__':
     import logging
     from strategies.call import Call
@@ -157,7 +183,7 @@ if __name__ == '__main__':
 
     # strategy = Vertical('AAPL', 'call', 'long', 1, 1, True)
     strategy = Call('NVDA', 'call', 'long', 1, 1, True)
-    # strategy = Put('IBM', 'call', 'long', 1, 1, True)
+    # strategy = Put('IBM', 'put', 'long', 1, 1, True)
     strategy.analyze()
 
     # print(strategy)
