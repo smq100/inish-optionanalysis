@@ -67,14 +67,13 @@ class Call(Strategy):
         if self.legs[0].direction == 'long':
             max_gain = -1.0
             max_loss = price * self.quantity
-            upside = 0.0
             sentiment = 'bullish'
         else:
             max_gain = price * self.quantity
             max_loss = -1.0
-            upside = 0.0
             sentiment = 'bearish'
 
+        upside = -1.0
         return max_gain, max_loss, upside, sentiment
 
     def calculate_breakeven(self) -> float:

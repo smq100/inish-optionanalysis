@@ -152,22 +152,44 @@ strategy_error = ''
 strategy_msg = ''
 strategy_results = pd.DataFrame()
 strategy_legs = []
+strategy_total = 0
+strategy_completed = 0
+strategy_futures = []
+
+
 def analyze_list(strategies: list[Strategy]) -> None:
     global strategy_error
+    global strategy_msg
+    global strategy_results
+    global strategy_legs
+    global strategy_total
+    global strategy_completed
+    global strategy_futures
+
+    strategy_error = ''
+    strategy_msg = ''
+    strategy_results = pd.DataFrame()
+    strategy_legs = []
+    strategy_total = 0
+    strategy_completed = 0
+    strategy_futures = []
 
     def analyze(strategy: Strategy):
-        global strategy_results, strategy_legs, strategy_msg
-
+        global strategy_results, strategy_legs, strategy_msg, strategy_completed
         strategy_msg = strategy.ticker
 
         strategy.analyze()
         strategy_results = strategy_results.append(strategy.analysis.summary)
         strategy_legs += [f'{str(leg)}' for leg in strategy.legs]
+        strategy_completed += 1
 
-    strategy_error = 'None'
+    strategy_total = len(strategies)
     if len(strategies) > 0:
-        with futures.ThreadPoolExecutor(max_workers=len(strategies)) as executor:
-            f = [executor.submit(analyze, item) for item in strategies]
+        strategy_error = 'None'
+        with futures.ThreadPoolExecutor(max_workers=strategy_total) as executor:
+            strategy_futures = [executor.submit(analyze, item) for item in strategies]
+    else:
+        strategy_error = 'No tickers'
 
     strategy_error = 'Done'
 

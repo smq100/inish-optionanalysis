@@ -182,10 +182,7 @@ start = 0.0
 def progress_bar(iteration, total: int, prefix: str = 'Working', suffix: str = '', ticker: str = '',
                  length: int = 50, fill='█', reset: bool = False, success: int = -1, tasks: int = 0) -> None:
 
-    global completed
-    global position
-    global forward
-    global start
+    global completed, position, forward, start
 
     if reset:
         completed = 0

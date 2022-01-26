@@ -2,9 +2,7 @@
 __pycache__
 
 # Other directories
-venv
-venvm
-venvw
+venv*
 *._*
 .ipynb_checkpoints
 models

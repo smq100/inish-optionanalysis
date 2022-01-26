@@ -98,7 +98,6 @@ class Vertical(Strategy):
             self.analysis.table = self.generate_profit_table()
             self.analysis.summarize()
 
-
         self.task_error = 'Done'
 
     def generate_profit_table(self) -> pd.DataFrame:
@@ -115,30 +114,35 @@ class Vertical(Strategy):
         price_long = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
         price_short = self.legs[1].option.last_price if self.legs[1].option.last_price > 0.0 else self.legs[1].option.calc_price
 
-        debit = (price_long > price_short)
+        debit = price_long > price_short
         if self.product == 'call':
             if debit:
                 max_loss = self.analysis.amount
                 max_gain = (self.quantity * (self.legs[1].option.strike - self.legs[0].option.strike)) - max_loss
-                upside = 0.0
+                if max_gain < 0.0:
+                    max_gain = 0.0 # Debit is more than possible gain!
                 sentiment = 'bullish'
             else:
                 max_gain = self.analysis.amount
                 max_loss = (self.quantity * (self.legs[0].option.strike - self.legs[1].option.strike)) - max_gain
-                upside = 0.0
+                if max_loss < 0.0:
+                    max_loss = 0.0 # Credit is more than possible loss!
                 sentiment = 'bearish'
         else:
             if debit:
                 max_loss = self.analysis.amount
                 max_gain = (self.quantity * (self.legs[0].option.strike - self.legs[1].option.strike)) - max_loss
-                upside = 0.0
+                if max_gain < 0.0:
+                    max_gain = 0.0 # Debit is more than possible gain!
                 sentiment = 'bearish'
             else:
                 max_gain = self.analysis.amount
                 max_loss = (self.quantity * (self.legs[1].option.strike - self.legs[0].option.strike)) - max_gain
-                upside = 0.0
+                if max_loss < 0.0:
+                    max_loss = 0.0 # Credit is more than possible loss!
                 sentiment = 'bullish'
 
+        upside = max_gain - max_loss
         return max_gain, max_loss, upside, sentiment
 
     def calculate_breakeven(self) -> float:

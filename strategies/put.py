@@ -68,14 +68,13 @@ class Put(Strategy):
         if self.legs[0].direction == 'long':
             max_gain = (self.legs[0].option.strike - price) * self.quantity
             max_loss = price * self.quantity
-            upside = 0.0
             sentiment = 'bearish'
         else:
             max_gain = price * self.quantity
             max_loss = (self.legs[0].option.strike - price) * self.quantity
-            upside = 0.0
             sentiment = 'bullish'
 
+        upside = -1.0
         return max_gain, max_loss, upside, sentiment
 
     def calculate_breakeven(self) -> float:

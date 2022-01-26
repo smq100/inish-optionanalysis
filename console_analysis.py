@@ -316,7 +316,7 @@ class Interface:
         if direction not in s.DIRECTIONS:
             raise ValueError('Invalid direction')
 
-        tickers = [str(result) for result in self.valids_screen[:LISTTOP_TREND]]
+        tickers = [str(result) for result in self.valids_screen[:LISTTOP]]
         strategies = []
         summary = pd.DataFrame()
         results = []
@@ -456,10 +456,13 @@ class Interface:
             pass
 
         if st.strategy_error == 'None':
-            ui.progress_bar(0, 0, prefix='Analyzing Options', suffix=st.strategy_msg, reset=True)
+            tasks = len([True for future in st.strategy_futures if future.running()])
+            print(tasks)
+            ui.progress_bar(st.strategy_completed, st.strategy_total, prefix='Analyzing Options', suffix=st.strategy_msg, tasks=tasks, reset=True)
             while st.strategy_error == 'None':
                 time.sleep(0.20)
-                ui.progress_bar(0, 0, prefix='Analyzing Options', suffix=st.strategy_msg)
+                tasks = len([True for future in st.strategy_futures if future.running()])
+                ui.progress_bar(st.strategy_completed, st.strategy_total, prefix='Analyzing Options', suffix=st.strategy_msg, tasks=tasks)
         else:
             ui.print_message(f'{st.strategy_error}')
 
