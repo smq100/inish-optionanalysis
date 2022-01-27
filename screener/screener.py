@@ -75,6 +75,7 @@ class Screener(Threaded):
         self.scripts: list[dict] = []
         self.companies: list[Company] = []
         self.results: list[Result] = []
+        self.valids: list[Result] = []
         self._concurrency = 10
 
         if screen:
@@ -90,18 +91,17 @@ class Screener(Threaded):
         return f'{self.table}/{self.screen}'
 
     @Threaded.threaded
-    def run_script(self) -> list[str]:
+    def run_script(self) -> None:
         self.results = []
+        self.valids = []
         self.task_total = len(self.companies)
 
         if self.task_total == 0:
             self.task_completed = self.task_total
-            self.results = []
             self.task_error = 'No symbols'
             _logger.warning(f'{__name__}: {self.task_error}')
         elif len(self.scripts) == 0:
             self.task_completed = self.task_total
-            self.results = []
             self.task_error = 'Illegal script'
             _logger.warning(f'{__name__}: {self.task_error}')
         else:
@@ -122,10 +122,9 @@ class Screener(Threaded):
             with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
                 self.task_futures = [executor.submit(self._run, list) for list in companies]
 
+            self.valids = [result for result in self.results if result]
+            self.valids = sorted(self.valids, reverse=True, key=lambda r: float(r))
             self.task_error = 'Done'
-
-        # Return a list of successful tickers
-        return [r.company.ticker for r in self.results if r]
 
     def _load(self, script: str, init: str = '') -> bool:
         self.scripts = []
@@ -204,6 +203,7 @@ class Screener(Threaded):
             else:
                 self.task_completed = self.task_total
                 self.results = []
+                self.valids = []
                 break
 
     def _add_init_script(self, script: str) -> bool:

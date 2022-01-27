@@ -34,10 +34,9 @@ class Put(Strategy):
     def analyze(self) -> None:
         if self.validate():
             self.task_error = 'None'
-
             self.task_message = self.legs[0].option.ticker
 
-            self.legs[0].calculate(self.legs[0].option.strike)
+            self.legs[0].calculate()
 
             price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
 

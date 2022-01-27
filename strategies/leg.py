@@ -69,7 +69,7 @@ class Leg:
 
         return output
 
-    def calculate(self, strike: float, value_table: bool = True, greeks: bool = True) -> float:
+    def calculate(self, value_table: bool = True, greeks: bool = True) -> float:
         price = 0.0
 
         if self._validate():
@@ -105,7 +105,7 @@ class Leg:
 
             # Generate the values table
             if value_table:
-                self.value = self.generate_value_table(strike)
+                self.value = self.generate_value_table()
 
             _logger.info(f'{__name__}: Strike {self.option.strike:.2f}')
             _logger.info(f'{__name__}: Expiry {self.option.expiry}')
@@ -162,7 +162,7 @@ class Leg:
         self.pricer = None
         self.calculate()
 
-    def generate_value_table(self, strike: float) -> pd.DataFrame:
+    def generate_value_table(self) -> pd.DataFrame:
         value = pd.DataFrame()
 
         if self.option.calc_price > 0.0:
@@ -183,7 +183,7 @@ class Leg:
                     col_index += [str(today)]
 
                 # Calculate cost of option every day till expiry
-                min_, max_, step_ = m.calculate_min_max_step(strike)
+                min_, max_, step_ = m.calculate_min_max_step(self.option.strike)
                 for s in range(int(math.ceil(min_*40)), int(math.ceil(max_*40)), int(math.ceil(step_*40))):
                     spot = s / 40.0
                     row = []

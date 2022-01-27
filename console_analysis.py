@@ -9,7 +9,6 @@ import pandas as pd
 import strategies as s
 import strategies.strategy as st
 from strategies.strategy import Strategy
-# from strategies.strategy import analyze
 from strategies.call import Call
 from strategies.put import Put
 from strategies.vertical import Vertical
@@ -24,7 +23,7 @@ logger.get_logger(logging.WARNING, logfile='')
 BASEPATH = os.getcwd() + '/screener/screens/'
 SCREEN_SUFFIX = 'screen'
 COOR_CUTOFF = 0.85
-LISTTOP = 10
+LISTTOP_SCREEN = 10
 LISTTOP_TREND = 5
 LISTTOP_CORR = 3
 
@@ -39,7 +38,6 @@ class Interface:
         self.auto = False
         self.path_screen = ''
         self.results_screen: list[Result] = []
-        self.valids_screen: list[Result] = []
         self.results_corr: list[tuple[str, pd.DataFrame.Series]] = []
         self.trend: SupportResistance = None
         self.screener: Screener = None
@@ -101,8 +99,10 @@ class Interface:
                 menu_items['2'] += f' ({self.screen_base})'
 
             if len(self.results_screen) > 0:
-                menu_items['5'] += f' ({len(self.valids_screen)})'
-                menu_items['6'] += f' ({len(self.results_screen)})'
+                menu_items['4'] += f' ({LISTTOP_SCREEN})'
+
+            if len(self.results_screen) > 0:
+                menu_items['5'] += f' ({len(self.results_screen)})'
 
             if self.quick:
                 menu_items['8'] += ' (quick)'
@@ -115,17 +115,18 @@ class Interface:
             elif selection == 2:
                 self.select_screen()
             elif selection == 3:
-                if self.run_screen():
-                    if len(self.valids_screen) > 0:
-                        self.show_valids(top=LISTTOP)
+                self.run_screen()
+                if len(self.results_screen) > 0:
+                    self.show_valids(top=LISTTOP_SCREEN)
             elif selection == 4:
-                self.show_valids(top=LISTTOP)
+                self.show_valids(top=LISTTOP_SCREEN)
             elif selection == 5:
                 self.show_valids()
             elif selection == 6:
                 self.show_ticker_results()
             elif selection == 7:
-                if self.run_coorelate():
+                self.run_coorelate()
+                if len(self.results_corr) > 0:
                     self.show_coorelations()
             elif selection == 8:
                 self.run_support_resistance()
@@ -155,7 +156,6 @@ class Interface:
     def select_screen(self) -> None:
         self.script = []
         self.results_screen = []
-        self.valids_screen = []
         paths = []
         with os.scandir(BASEPATH) as entries:
             for entry in entries:
@@ -184,12 +184,11 @@ class Interface:
             if selection > 0:
                 self.screen_base = paths[selection-1]
                 self.path_screen = BASEPATH + self.screen_base + '.' + SCREEN_SUFFIX
-                self.results_screen = []
         else:
             ui.print_message('No screener files found')
 
     def select_strategy(self) -> None:
-        if len(self.valids_screen) > 0:
+        if len(self.results_screen) > 0:
             menu_items = {
                 '1': 'Call',
                 '2': 'Put',
@@ -229,32 +228,27 @@ class Interface:
         elif not self.path_screen:
             ui.print_error('No screen specified')
         else:
+            self.results_screen = []
+
             try:
                 self.screener = Screener(self.table, screen=self.path_screen)
             except ValueError as e:
                 ui.print_error(str(e))
             else:
-                self.results_screen = []
                 self.task = threading.Thread(target=self.screener.run_script)
                 self.task.start()
 
                 self.show_progress_screen()
 
                 if self.screener.task_error == 'Done':
-                    self.results_screen = sorted(self.screener.results, reverse=True, key=lambda r: float(r))
-                    self.valids_screen = []
-                    for result in self.results_screen:
-                        if result:
-                            self.valids_screen += [result]
-
-                    ui.print_message(f'{len(self.valids_screen)} symbols identified in {self.screener.task_time:.1f} seconds')
-
+                    self.results_screen = self.screener.valids
                     success = True
+
+                    ui.print_message(f'{len(self.results_screen)} symbols identified in {self.screener.task_time:.1f} seconds')
 
         return success
 
-    def run_coorelate(self) -> bool:
-        success = False
+    def run_coorelate(self) -> None:
         if len(self.results_screen) == 0:
             ui.print_error('Please run screen before correlating')
         elif not store.is_list(self.table):
@@ -270,21 +264,17 @@ class Interface:
             self.show_progress_correlate()
 
             self.results_corr = []
-            tickers = [str(result) for result in self.results_screen if bool(result)][:LISTTOP]
-            for ticker in tickers:
+            for valid in self.results_screen:
+                ticker = valid.company.ticker
                 df = self.coorelate.get_ticker_coorelation(ticker)
                 self.results_corr += [(ticker, df.iloc[-1])]
 
-            success = True
-
-        return success
-
     def run_support_resistance(self, corr: bool = False) -> None:
-        if len(self.valids_screen) > 0:
+        if len(self.results_screen) > 0:
             if corr:
                 tickers = [result[1]['ticker'] for result in self.results_corr if result[1]['value'] > COOR_CUTOFF][:LISTTOP_CORR]
             else:
-                tickers = [str(result) for result in self.valids_screen[:LISTTOP_TREND]]
+                tickers = [str(result) for result in self.results_screen[:LISTTOP_TREND]]
 
             ui.progress_bar(0, 0, prefix='Analyzing', reset=True)
 
@@ -316,7 +306,7 @@ class Interface:
         if direction not in s.DIRECTIONS:
             raise ValueError('Invalid direction')
 
-        tickers = [str(result) for result in self.valids_screen[:LISTTOP]]
+        tickers = [str(result) for result in self.results_screen[:LISTTOP_SCREEN]]
         strategies = []
         summary = pd.DataFrame()
         results = []
@@ -357,20 +347,16 @@ class Interface:
         else:
             if top <= 0:
                 top = self.screener.task_success
-                results = sorted(self.results_screen, key=lambda r: str(r))
             elif top > self.screener.task_success:
                 top = self.screener.task_success
-                results = sorted(self.results_screen, reverse=True, key=lambda r: float(r))
-            else:
-                results = sorted(self.results_screen, reverse=True, key=lambda r: float(r))
 
             if ticker:
                 ui.print_message(f'Screener Results for {ticker} ({self.screen_base})')
             else:
-                ui.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen_base})')
+                ui.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen_base}/{self.table})')
 
             index = 1
-            for result in results:
+            for result in self.results_screen:
                 if ticker:
                     [print(r) for r in result.results if ticker.upper().ljust(6, ' ') == r[:6]]
                 elif verbose:

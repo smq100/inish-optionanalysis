@@ -77,21 +77,15 @@ class Vertical(Strategy):
 
         if self._validate():
             self.task_error = 'None'
-
             self.task_message = self.legs[0].option.ticker
 
-            self.legs[0].calculate(self.legs[0].option.strike)
-            self.legs[1].calculate(self.legs[0].option.strike)
+            self.legs[0].calculate()
+            self.legs[1].calculate()
 
             price_long = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
             price_short = self.legs[1].option.last_price if self.legs[1].option.last_price > 0.0 else self.legs[1].option.calc_price
 
-            dlong = (price_long > price_short)
-            if dlong:
-                self.analysis.credit_debit = 'debit'
-            else:
-                self.analysis.credit_debit = 'credit'
-
+            self.analysis.credit_debit = 'debit' if price_long > price_short else 'credit'
             self.analysis.amount = abs(price_long - price_short) * self.quantity
             self.analysis.max_gain, self.analysis.max_loss, self.analysis.upside, self.analysis.sentiment = self.calculate_gain_loss()
             self.analysis.breakeven = self.calculate_breakeven()

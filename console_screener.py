@@ -24,7 +24,6 @@ class Interface:
         self.live = live if store.is_database_connected() else True
         self.auto = False
         self.screen_path = ''
-        self.results: list[Result] = []
         self.valids: list[Result] = []
         self.screener: Screener = None
         self.task: threading.Thread = None
@@ -92,7 +91,7 @@ class Interface:
             if self.screen_base:
                 menu_items['3'] = f'Select Screener ({self.screen_base})'
 
-            if len(self.results) > 0:
+            if len(self.valids) > 0:
                 menu_items['6'] = f'Show All ({len(self.valids)})'
 
             if selection == 0:
@@ -154,7 +153,6 @@ class Interface:
 
     def select_screen(self) -> None:
         self.script = []
-        self.results = []
         self.valids = []
         paths = []
         with os.scandir(BASEPATH) as entries:
@@ -184,7 +182,7 @@ class Interface:
             if selection > 0:
                 self.screen_base = paths[selection-1]
                 self.screen_path = BASEPATH + self.screen_base + '.' + SCREEN_SUFFIX
-                self.results = []
+                self.valids = []
         else:
             ui.print_message('No screener files found')
 
@@ -207,18 +205,14 @@ class Interface:
             except ValueError as e:
                 ui.print_error(str(e))
             else:
-                self.results = []
+                self.valids = []
                 self.task = threading.Thread(target=self.screener.run_script)
                 self.task.start()
 
                 self.show_progress('Progress', '')
 
                 if self.screener.task_error == 'Done':
-                    self.results = sorted(self.screener.results, reverse=True, key=lambda r: float(r))
-                    self.valids = []
-                    for result in self.results:
-                        if result:
-                            self.valids += [result]
+                    self.valids = self.screener.valids
 
                     ui.print_message(f'{len(self.valids)} symbols identified in {self.screener.task_time:.1f} seconds')
 
@@ -233,7 +227,7 @@ class Interface:
 
         success = self.run_screen(backtest=True)
         if success:
-            for result in self.results:
+            for result in self.valids:
                 if result:
                     result.price_last = result.company.get_last_price()
                     result.price_current = store.get_last_price(result.company.ticker)
@@ -250,17 +244,17 @@ class Interface:
             ui.print_error('No table specified')
         elif not self.screen_base:
             ui.print_error('No screen specified')
-        elif len(self.results) == 0:
+        elif len(self.valids) == 0:
             ui.print_message('No results were located')
         else:
             if top <= 0:
-                results = sorted(self.screener.results, key=lambda r: str(r))
+                results = sorted(self.valids, key=lambda r: str(r))
                 top = self.screener.task_success
             elif top > self.screener.task_success:
-                results = sorted(self.screener.results, reverse=True, key=lambda r: float(r))
+                results = sorted(self.valids, reverse=True, key=lambda r: float(r))
                 top = self.screener.task_success
             else:
-                results = sorted(self.screener.results, reverse=True, key=lambda r: float(r))
+                results = sorted(self.valids, reverse=True, key=lambda r: float(r))
 
             if ticker:
                 ui.print_message(f'Screener Results for {ticker} ({self.screen_base})')
@@ -286,7 +280,7 @@ class Interface:
             ui.print_error('No table specified')
         elif not self.screen_base:
             ui.print_error('No screen specified')
-        elif len(self.results) == 0:
+        elif len(self.valids) == 0:
             ui.print_message('No results were located')
         else:
             if top <= 0:
@@ -297,7 +291,7 @@ class Interface:
             ui.print_message(f'Backtest Results {top} of {self.screener.task_success} ({self.screen_base})')
 
             index = 1
-            for result in self.results:
+            for result in self.valids:
                 if result:
                     mark = '*' if result.backtest_success else ' '
                     print(f'{index:>3}: {mark} {result} ({float(result):.2f}) ${result.price_last:.2f}/${result.price_current:.2f}')
