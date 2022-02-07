@@ -315,7 +315,7 @@ class Interface:
         if self.screener.task_error == 'None':
             ui.progress_bar(self.screener.task_completed, self.screener.task_total, prefix=prefix, suffix=suffix, reset=True)
 
-            while self.task.is_alive and self.screener.task_error == 'None':
+            while self.task.is_alive() and self.screener.task_error == 'None':
                 time.sleep(0.20)
                 total = self.screener.task_total
                 completed = self.screener.task_completed

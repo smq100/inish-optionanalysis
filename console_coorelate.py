@@ -119,7 +119,7 @@ class Interface:
             total = self.coorelate.task_total
             ui.progress_bar(self.coorelate.task_completed, self.coorelate.task_total, prefix=prefix, suffix=suffix, reset=True)
 
-            while self.task.is_alive and self.coorelate.task_error == 'None':
+            while self.task.is_alive() and self.coorelate.task_error == 'None':
                 time.sleep(0.20)
                 completed = self.coorelate.task_completed
                 ticker = self.coorelate.task_ticker

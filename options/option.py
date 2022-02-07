@@ -1,8 +1,10 @@
 import datetime as dt
 import re
 
+import pandas as pd
+
 from data import store as store
-from utils import ui, logger
+from utils import logger
 
 _logger = logger.get_logger()
 
@@ -82,7 +84,7 @@ class Option:
 
         contract = _get_contract(contract_name)
 
-        if contract is not None:
+        if not contract.empty:
             self.contract = contract['contractSymbol']
             self.last_trade_date = contract['lastTradeDate']
             self.strike = contract['strike']
@@ -111,7 +113,7 @@ class Option:
         return ret
 
 
-def _get_contract(contract_name: str) -> str:
+def _get_contract(contract_name: str) -> pd.Series:
     parsed = _parse_contract_name(contract_name)
 
     ticker = parsed['ticker']
@@ -128,7 +130,7 @@ def _get_contract(contract_name: str) -> str:
         return contract.iloc[0]
     except Exception as e:
         print(str(e))
-        return ''
+        return pd.Series(dtype=float)
 
 
 def _parse_contract_name(contract_name: str) -> dict:

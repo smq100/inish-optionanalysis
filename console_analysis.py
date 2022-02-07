@@ -412,7 +412,7 @@ class Interface:
             total = self.coorelate.task_total
             ui.progress_bar(self.coorelate.task_completed, self.coorelate.task_total, success=self.coorelate.task_success, prefix=prefix, reset=True)
 
-            while self.task.is_alive and self.coorelate.task_error == 'None':
+            while self.task.is_alive() and self.coorelate.task_error == 'None':
                 time.sleep(0.20)
                 completed = self.coorelate.task_completed
                 success = completed
@@ -443,7 +443,6 @@ class Interface:
 
         if st.strategy_error == 'None':
             tasks = len([True for future in st.strategy_futures if future.running()])
-            print(tasks)
             ui.progress_bar(st.strategy_completed, st.strategy_total, prefix='Analyzing Options', suffix=st.strategy_msg, tasks=tasks, reset=True)
             while st.strategy_error == 'None':
                 time.sleep(0.20)

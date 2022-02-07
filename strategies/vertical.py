@@ -45,7 +45,7 @@ class Vertical(Strategy):
                 self.legs[0].option.load_contract(contracts[0])
                 self.legs[1].option.load_contract(contracts[1])
             else:
-                _logger.error(f'{__name__}: Error fetching default contracts')
+                _logger.error(f'{__name__}: Error fetching contracts for {self.ticker}. Using calculated values')
 
     def __str__(self):
         return f'{self.name} {self.product} {self.analysis.credit_debit} spread'
@@ -54,20 +54,27 @@ class Vertical(Strategy):
         # super() fetches the long option & itm index
         product, index, contracts = super().fetch_default_contracts(distance, weeks)
 
-        if self.product == 'call':
-            if self.direction == 'long':
-                index += self.width
-            else:
+        if index >= 0:
+            if self.product == 'call':
+                if self.direction == 'long':
+                    index += self.width
+                else:
+                    index -= self.width
+            elif self.direction == 'long':
                 index -= self.width
-        elif self.direction == 'long':
-            index -= self.width
-        else:
-            index += self.width
-
-        options = self.chain.get_chain(product)
+            else:
+                index += self.width
 
         # Add the short option
-        contracts += [options.iloc[index]['contractSymbol']]
+        if index >= 0:
+            options = self.chain.get_chain(product)
+            if index < len(options):
+                contracts += [options.iloc[index]['contractSymbol']]
+        else:
+            _logger.error(f'{__name__}: Bad index value for {self.ticker}: {index=}')
+            product = ''
+            index = 0
+            contracts = []
 
         return product, index, contracts
 

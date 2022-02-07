@@ -7,8 +7,8 @@ class Analysis:
             raise ValueError('Invalid ticker')
 
         self.ticker = ticker.upper()
-        self.table: pd.DataFrame = None
-        self.summary: pd.DataFrame = None
+        self.table = pd.DataFrame()
+        self.summary = pd.DataFrame()
         self.credit_debit = ''
         self.sentiment = ''
         self.amount = 0.0
@@ -20,7 +20,7 @@ class Analysis:
         self.breakeven = 0.0
 
     def __str__(self):
-        if self.table is not None:
+        if not self.table.empty:
             output = \
                 f'Type:      {self.credit_debit.title()}\n'\
                 f'Sentiment: {self.sentiment.title()}\n'\
@@ -35,7 +35,7 @@ class Analysis:
         return output
 
     def summarize(self):
-        if self.table is not None:
+        if not self.table.empty:
             self.gain = 'Unlimited' if self.max_gain < 0.0 else f'${self.max_gain:.2f}'
             self.loss = 'Unlimited' if self.max_loss < 0.0 else f'${self.max_loss:.2f}'
 
@@ -45,8 +45,6 @@ class Analysis:
                 'amount': self.amount,
                 'max_gain': self.max_gain,
                 'max_loss': self.max_loss,
-                # 'max_gain': self.gain,
-                # 'max_loss': self.loss,
                 'upside': self.upside,
                 'breakeven': self.breakeven,
             }

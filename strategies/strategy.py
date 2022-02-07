@@ -117,7 +117,6 @@ class Strategy(ABC, Threaded):
 
         product = self.legs[0].option.product
         options = self.chain.get_chain(product)
-
         index = self.chain.get_itm()
         if index >= 0:
             contract = options.iloc[index]['contractSymbol']
@@ -179,7 +178,9 @@ def analyze_list(strategies: list[Strategy]) -> None:
         strategy_msg = strategy.ticker
 
         strategy.analyze()
-        strategy_results = strategy_results.append(strategy.analysis.summary)
+        print(f'{strategy.analysis.summary=}')
+        strategy_results = pd.concat([strategy_results, strategy.analysis.summary])
+        print(f'{strategy_results=}')
         strategy_legs += [f'{str(leg)}' for leg in strategy.legs]
         strategy_completed += 1
 
@@ -188,6 +189,9 @@ def analyze_list(strategies: list[Strategy]) -> None:
         strategy_error = 'None'
         with futures.ThreadPoolExecutor(max_workers=strategy_total) as executor:
             strategy_futures = [executor.submit(analyze, item) for item in strategies]
+
+        for future in futures.as_completed(strategy_futures):
+            _logger.info(f'{__name__}: Thread completed: {future.result()}')
     else:
         strategy_error = 'No tickers'
 

@@ -76,9 +76,6 @@ class Manager(Threaded):
 
                 self.task_completed += 1
 
-            running -= 1
-            _logger.info(f'{__name__}: Thread completed. {running} threads remaining')
-
         if store.is_exchange(exchange):
             tickers = list(store.get_exchange_tickers_master(exchange))
             self.invalid_tickers = []
@@ -95,6 +92,10 @@ class Manager(Threaded):
                         self.task_futures = [executor.submit(add, list, exchange) for list in lists]
                     else:
                         self.task_futures = [executor.submit(add, tickers, exchange)]
+
+                for future in futures.as_completed(self.task_futures):
+                    running -= 1
+                    _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
             else:
                 _logger.warning(f'{__name__}: No symbols for {exchange}')
 
@@ -248,9 +249,6 @@ class Manager(Threaded):
 
                 self.task_completed += 1
 
-            running -= 1
-            _logger.info(f'{__name__}: Thread completed. {running} threads remaining')
-
         if store.is_exchange(exchange):
             self.task_error = 'None'
             if replace:
@@ -270,6 +268,10 @@ class Manager(Threaded):
                         self.task_futures = [executor.submit(update, list) for list in lists]
                     else:
                         self.task_futures = [executor.submit(update, tickers)]
+
+                for future in futures.as_completed(self.task_futures):
+                    running -= 1
+                    _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
 
         self.task_error = 'Done'
 
@@ -298,7 +300,7 @@ class Manager(Threaded):
 
                 delta = (today - date_db).days
                 if delta > 0:
-                    history = store.get_history(ticker, 365, live=True)
+                    history = store.get_history(ticker, 60, live=True)
                     if history is None:
                         _logger.info(f'{__name__}: No pricing dataframe for {ticker}')
                     elif history.empty:
@@ -318,9 +320,8 @@ class Manager(Threaded):
 
                                 for price in history.itertuples():
                                     if price.date:
-                                        pri = session.query(models.Price.date).filter(and_(models.Price.security_id == t.id,
-                                                                                           models.Price.date == price.date)).one_or_none()
-                                        if pri is None:
+                                        q = session.query(models.Price.date).filter(and_(models.Price.security_id == t.id, models.Price.date == price.date)).one_or_none()
+                                        if q is None:
                                             p = models.Price()
                                             p.date = price.date
                                             p.open = price.open
@@ -345,11 +346,11 @@ class Manager(Threaded):
     @Threaded.threaded
     def update_history_exchange(self, exchange: str, log: bool = True) -> None:
         tickers = store.get_tickers(exchange)
-        running = self._concurrency
         self.task_total = len(tickers)
         self.invalid_tickers = []
+        running = self._concurrency
 
-        def append(tickers: list[str]) -> None:
+        def update(tickers: list[str]) -> None:
             nonlocal running
             for ticker in tickers:
                 self.task_ticker = ticker
@@ -365,9 +366,6 @@ class Manager(Threaded):
                 elif days < 0:
                     self.invalid_tickers += [ticker]
 
-            running -= 1
-            _logger.info(f'{__name__}: Thread completed. {running} threads remaining')
-
         if self.task_total > 0:
             self.task_error = 'None'
 
@@ -375,10 +373,13 @@ class Manager(Threaded):
                 if self._concurrency > 1:
                     random.shuffle(tickers)
                     lists = np.array_split(tickers, self._concurrency)
-                    self.task_futures = [executor.submit(append, list) for list in lists]
+                    self.task_futures = [executor.submit(update, list) for list in lists]
                 else:
-                    self.task_futures = [executor.submit(append, tickers)]
+                    self.task_futures = [executor.submit(update, tickers)]
 
+            for future in futures.as_completed(self.task_futures):
+                running -= 1
+                _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
         if log:
             _write_tickers_log(self.invalid_tickers)
 
@@ -634,9 +635,6 @@ class Manager(Threaded):
                     self.task_success += 1
                 self.task_completed += 1
 
-            running -= 1
-            _logger.info(f'{__name__}: Thread completed. {running} threads remaining')
-
         if self.task_total > 0:
             self.task_error = 'None'
 
@@ -647,6 +645,10 @@ class Manager(Threaded):
                     self.task_futures = [executor.submit(check, item) for item in lists]
                 else:
                     self.task_futures = [executor.submit(check, tickers)]
+
+            for future in futures.as_completed(self.task_futures):
+                running -= 1
+                _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
 
             if len(self.task_object) > 1:
                 last = sorted(self.task_object)[-1]

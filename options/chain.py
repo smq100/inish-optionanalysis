@@ -42,11 +42,17 @@ class Chain:
         index = -1
 
         if isinstance(self.chain, pd.DataFrame):
-            itm = self.chain.iloc[0]['inTheMoney']
-            for index, option in enumerate(self.chain.itertuples()):
-                if option.inTheMoney != itm:
-                    if itm:
-                        index = index - 1 if index > 0 else 0
-                    break
+            if not self.chain.empty:
+                itm = self.chain.iloc[0]['inTheMoney']
+                for index, option in enumerate(self.chain.itertuples()):
+                    if option.inTheMoney != itm:
+                        if itm:
+                            index = index - 1 if index > 0 else 0
+                        break
+            else:
+                _logger.error(f'{__name__}: Empty option chain for {self.ticker}')
+        else:
+            _logger.error(f'{__name__}: No option chain for {self.ticker}')
+
 
         return index

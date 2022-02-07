@@ -443,7 +443,7 @@ class Interface:
         if self.manager.task_error == 'None':
             ui.progress_bar(self.manager.task_completed, self.manager.task_total, prefix=prefix, suffix=suffix, reset=True)
 
-            while self.task.is_alive and self.manager.task_error == 'None':
+            while self.task.is_alive() and self.manager.task_error == 'None':
                 time.sleep(0.20)
                 total = self.manager.task_total
                 completed = self.manager.task_completed
