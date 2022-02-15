@@ -113,11 +113,11 @@ def _get_history_yfinance(ticker: str, days: int = -1, uselast: bool = False) ->
                     days = history.shape[0]
 
                     if history is None:
-                        _logger.warning(f'{__name__}: {d.ACTIVE_CLOUDDATASOURCE} history for {ticker} is None ({retry+1})')
+                        _logger.info(f'{__name__}: {d.ACTIVE_CLOUDDATASOURCE} history for {ticker} is None ({retry+1})')
                         time.sleep(_THROTTLE_ERROR)
                     elif history.empty:
                         history = None
-                        _logger.warning(f'{__name__}: {d.ACTIVE_CLOUDDATASOURCE} history for {ticker} is empty ({retry+1})')
+                        _logger.info(f'{__name__}: {d.ACTIVE_CLOUDDATASOURCE} history for {ticker} is empty ({retry+1})')
                         time.sleep(_THROTTLE_ERROR)
                     else:
                         history.reset_index(inplace=True)
@@ -134,7 +134,7 @@ def _get_history_yfinance(ticker: str, days: int = -1, uselast: bool = False) ->
                     history = None
                     time.sleep(_THROTTLE_ERROR)
     else:
-        _logger.warning(f'{__name__}: No company information available for {ticker}')
+        _logger.info(f'{__name__}: No company information available for {ticker}')
 
     return history
 
@@ -156,11 +156,11 @@ def _get_history_quandl(ticker: str, days: int = -1) -> pd.DataFrame:
                 days = history.shape[0]
 
                 if history is None:
-                    _logger.warning(f'{__name__}: {d.ACTIVE_CLOUDDATASOURCE} history for {ticker} is None ({retry+1})')
+                    _logger.info(f'{__name__}: {d.ACTIVE_CLOUDDATASOURCE} history for {ticker} is None ({retry+1})')
                     time.sleep(_THROTTLE_ERROR)
                 elif history.empty:
                     history = None
-                    _logger.warning(f'{__name__}: {d.ACTIVE_CLOUDDATASOURCE} history for {ticker} is empty ({retry+1})')
+                    _logger.info(f'{__name__}: {d.ACTIVE_CLOUDDATASOURCE} history for {ticker} is empty ({retry+1})')
                     time.sleep(_THROTTLE_ERROR)
                 else:
                     history.reset_index(inplace=True)
@@ -259,7 +259,7 @@ def get_ratings(ticker: str) -> list[int]:
             else:
                 _logger.info(f'{__name__}: No ratings for {ticker}')
         else:
-            _logger.warning(f'{__name__}: Unable to get ratings for {ticker}. No company info')
+            _logger.info(f'{__name__}: Unable to get ratings for {ticker}. No company info')
     except Exception as e:
         _logger.error(f'{__name__}: Unable to get ratings for {ticker}: {str(e)}')
 

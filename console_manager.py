@@ -64,17 +64,18 @@ class Interface:
             '4':  'Ticker Information (previous)',
             '5':  'Update History',
             '6':  'Update Company',
-            '7':  'Check Integrity',
-            '8':  'Check Price Dates',
+            '7':  'List Update Errors',
+            '8':  'Re-Check Update Errors',
             '9':  'List Inactive',
-            '10': 'List Update Errors',
-            '11': 'Mark Active/Inactive',
-            '12': 'Populate Exchange',
-            '13': 'Populate Index',
-            '14': 'Delete Exchange',
-            '15': 'Delete Index',
-            '16': 'Delete Ticker',
-            '17': 'Reset Database',
+            '10':  'Mark Active/Inactive',
+            '11': 'Check Integrity',
+            '12': 'Check Price Dates',
+            '13': 'Populate Exchange',
+            '14': 'Populate Index',
+            '15': 'Delete Exchange',
+            '16': 'Delete Index',
+            '17': 'Delete Ticker',
+            '18': 'Reset Database',
             '0':  'Exit'
         }
 
@@ -95,26 +96,28 @@ class Interface:
             elif selection == 6:
                 self.update_company()
             elif selection == 7:
-                self.check_integrity()
+                self.list_errors()
             elif selection == 8:
-                self.check_price_dates()
+                self.recheck_inactive()
             elif selection == 9:
                 self.list_inactive()
             elif selection == 10:
-                self.list_errors()
-            elif selection == 11:
                 self.change_active()
+            elif selection == 11:
+                self.check_integrity()
             elif selection == 12:
-                self.populate_exchange()
+                self.check_price_dates()
             elif selection == 13:
-                self.populate_index()
+                self.populate_exchange()
             elif selection == 14:
-                self.delete_exchange()
+                self.populate_index()
             elif selection == 15:
-                self.delete_index()
+                self.delete_exchange()
             elif selection == 16:
-                self.delete_ticker()
+                self.delete_index()
             elif selection == 17:
+                self.delete_ticker()
+            elif selection == 18:
                 self.reset_database()
             elif selection == 0:
                 self.stop = True
@@ -259,7 +262,6 @@ class Interface:
             self.task.start()
 
             if progressbar:
-                print()
                 self._show_progress('Progress', '')
 
             if self.manager.task_error == 'Done':
@@ -397,10 +399,26 @@ class Interface:
         else:
             ui.print_message('No ticker errors')
 
+    def recheck_inactive(self, progressbar: bool = True) -> None:
+        tickers = self.manager.identify_inactive_tickers('all')
+        if tickers:
+            self.task = threading.Thread(target=self.manager.recheck_inactive, args=[tickers])
+            self.task.start()
+
+            if progressbar:
+                self._show_progress('Progress', '')
+
+            if self.manager.task_error == 'Done':
+                # if self.manager.task_results:
+                #     self.manager.change_active(self.manager.task_results)
+                ui.print_message(f'{self.manager.task_success} Inactive tickers updated in {self.manager.task_time:.0f} seconds')
+        else:
+            ui.print_message('No tickers to update')
+
     def list_inactive(self) -> None:
         tickers = self.manager.identify_inactive_tickers('all')
         if tickers:
-            ui.print_message('Inactive tickers')
+            ui.print_message(f'{len(tickers)} inactive tickers')
             ui.print_tickers(tickers)
         else:
             ui.print_message('No inactive tickers')
@@ -444,7 +462,7 @@ class Interface:
             ui.progress_bar(self.manager.task_completed, self.manager.task_total, prefix=prefix, suffix=suffix, reset=True)
 
             while self.task.is_alive() and self.manager.task_error == 'None':
-                time.sleep(0.20)
+                time.sleep(0.5)
                 total = self.manager.task_total
                 completed = self.manager.task_completed
                 success = self.manager.task_success

@@ -176,7 +176,6 @@ class Manager(Threaded):
 
         return success
 
-    @Threaded.threaded
     def populate_index(self, index: str) -> None:
         index = index.upper()
 
@@ -275,11 +274,11 @@ class Manager(Threaded):
 
         self.task_error = 'Done'
 
-    def update_history_ticker(self, ticker: str) -> int:
+    def update_history_ticker(self, ticker: str, inactive: bool = False) -> int:
         ticker = ticker.upper()
         days = -1
 
-        if store.is_ticker(ticker):
+        if store.is_ticker(ticker, inactive):
             today = date.today()
 
             history = store.get_history(ticker)
@@ -289,7 +288,7 @@ class Manager(Threaded):
                     if self._add_company_to_ticker(ticker):
                         _logger.info(f'{__name__}: Added company information for {ticker}')
                 else:
-                    _logger.warning(f'{__name__}: No price history for {ticker}')
+                    _logger.info(f'{__name__}: No price history for {ticker}')
             else:
                 date_db = history.iloc[-1]['date']
                 if date_db is not None:
@@ -398,7 +397,6 @@ class Manager(Threaded):
         if recreate:
             self.create_database()
 
-    @Threaded.threaded
     def delete_exchange(self, exchange: str) -> None:
         exchange = exchange.upper()
         self.task_error = 'None'
@@ -566,6 +564,52 @@ class Manager(Threaded):
         errors = _read_tickers_log(files[-1])
 
         return errors
+
+    @Threaded.threaded
+    def recheck_inactive(self, tickers : list[str]) -> None:
+        self.task_total = len(tickers)
+        running = self._concurrency
+
+        def recheck(tickers: list[str]) -> None:
+            nonlocal running
+
+            for ticker in tickers:
+                self.task_ticker = ticker
+                try:
+                    days = self.update_history_ticker(ticker, inactive=True)
+                except IntegrityError as e:
+                    _logger.warning(f'{__name__}: UniqueViolation exception occurred for {ticker}: {e}')
+
+                if days > 0:
+                    self.task_results += [ticker]
+                    self.task_success += 1
+                elif days < 0:
+                    self.invalid_tickers += [ticker]
+
+                self.task_completed += 1
+
+        if self.task_total > 0:
+            self.task_error = 'None'
+
+            random.shuffle(tickers)
+            lists = np.array_split(tickers, self._concurrency)
+            lists = [list for list in lists if list.size > 0] # Remove empties
+            running = len(lists)
+            if running < self._concurrency:
+                self._concurrency = running
+
+            with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
+                if self._concurrency > 1:
+                    self.task_futures = [executor.submit(recheck, list) for list in lists]
+                else:
+                    running = 1
+                    self.task_futures = [executor.submit(recheck, tickers)]
+
+            for future in futures.as_completed(self.task_futures):
+                running -= 1
+                _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
+
+        self.task_error = 'Done'
 
     def identify_missing_ticker(self, exchange: str) -> list[str]:
         exchange = exchange.upper()
@@ -744,7 +788,7 @@ class Manager(Threaded):
                     _logger.info(f'{__name__}: Added pricing information for {ticker}')
             else:
                 t.active = False
-                _logger.warning(f'{__name__}: No pricing information for {ticker}')
+                _logger.info(f'{__name__}: No pricing information for {ticker}')
 
         return added
 

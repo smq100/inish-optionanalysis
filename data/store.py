@@ -251,10 +251,10 @@ def get_history(ticker: str, days: int = -1, end: int = 0, use_last: bool = Fals
         if history is not None:
             _logger.info(f'{__name__}: Fetched {len(history)} days of live price history for {ticker}')
         else:
-            _logger.warning(f'{__name__}: Unable to fetch live price history for {ticker} from {d.ACTIVE_CLOUDDATASOURCE}')
+            _logger.info(f'{__name__}: Unable to fetch live price history for {ticker} from {d.ACTIVE_CLOUDDATASOURCE}')
 
         if end > 0:
-            _logger.warning(f'{__name__}: "end" value ignored for live queries')
+            _logger.info(f'{__name__}: "end" value ignored for live queries')
     else:
         _logger.info(f'{__name__}: Fetching {len(history)} days of price history for {ticker}...')
         with _session() as session:
@@ -281,7 +281,7 @@ def get_history(ticker: str, days: int = -1, end: int = 0, use_last: bool = Fals
 
                         _logger.info(f'{__name__}: Fetched {len(history)} days of price history for {ticker} from {d.ACTIVE_DB} ({end} days prior)')
             else:
-                _logger.warning(f'{__name__}: No history found for {ticker}')
+                _logger.info(f'{__name__}: No history found for {ticker}')
 
     return history
 
