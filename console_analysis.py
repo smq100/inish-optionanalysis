@@ -5,6 +5,7 @@ import logging
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from tabulate import tabulate
 
 import strategies as s
 import strategies.strategy as st
@@ -335,7 +336,7 @@ class Interface:
         for result in st.strategy_legs:
             print(result)
         print()
-        print(st.strategy_results)
+        print(tabulate(st.strategy_results, headers=st.strategy_results.columns, tablefmt='simple', floatfmt='.2f'))
 
     def show_valids(self, top: int = -1, verbose: bool = False, ticker: str = '') -> None:
         if not self.table:

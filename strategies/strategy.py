@@ -178,9 +178,7 @@ def analyze_list(strategies: list[Strategy]) -> None:
         strategy_msg = strategy.ticker
 
         strategy.analyze()
-        print(f'{strategy.analysis.summary=}')
         strategy_results = pd.concat([strategy_results, strategy.analysis.summary])
-        print(f'{strategy_results=}')
         strategy_legs += [f'{str(leg)}' for leg in strategy.legs]
         strategy_completed += 1
 

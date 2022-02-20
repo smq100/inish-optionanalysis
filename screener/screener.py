@@ -91,7 +91,7 @@ class Screener(Threaded):
         return f'{self.table}/{self.screen}'
 
     @Threaded.threaded
-    def run_script(self) -> None:
+    def run_script(self, log_results: bool = False) -> None:
         self.results = []
         self.valids = []
         self.task_total = len(self.companies)
@@ -127,6 +127,10 @@ class Screener(Threaded):
 
             self.valids = [result for result in self.results if result]
             self.valids = sorted(self.valids, reverse=True, key=lambda r: float(r))
+
+            if log_results:
+                pass
+
             self.task_error = 'Done'
 
     def _load(self, script: str, init: str = '') -> bool:
@@ -187,11 +191,11 @@ class Screener(Threaded):
                     result += [interpreter.result]
                 except SyntaxError as e:
                     self.task_error = str(e)
-                    _logger.error(f'{__name__}: Exception: {self.task_error}')
+                    _logger.error(f'{__name__}: SyntaxError: {self.task_error}')
                     break
                 except RuntimeError as e:
                     self.task_error = str(e)
-                    _logger.error(f'{__name__}: Exception: {self.task_error}')
+                    _logger.error(f'{__name__}: RuntimeError: {self.task_error}')
                     break
                 except Exception as e:
                     self.task_error = str(e)

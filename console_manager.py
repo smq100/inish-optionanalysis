@@ -72,10 +72,7 @@ class Interface:
             '12': 'Check Price Dates',
             '13': 'Populate Exchange',
             '14': 'Populate Index',
-            '15': 'Delete Exchange',
-            '16': 'Delete Index',
-            '17': 'Delete Ticker',
-            '18': 'Reset Database',
+            '15': 'Reset Database',
             '0':  'Exit'
         }
 
@@ -112,12 +109,6 @@ class Interface:
             elif selection == 14:
                 self.populate_index()
             elif selection == 15:
-                self.delete_exchange()
-            elif selection == 16:
-                self.delete_index()
-            elif selection == 17:
-                self.delete_ticker()
-            elif selection == 18:
                 self.reset_database()
             elif selection == 0:
                 self.stop = True

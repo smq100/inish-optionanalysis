@@ -9,6 +9,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.colors as clrs
 import matplotlib.ticker as mticker
+from tabulate import tabulate
 
 import strategies as s
 from strategies.strategy import Strategy
@@ -251,7 +252,7 @@ class Interface():
                         print(self.strategy.analysis)
                     elif style == 2:
                         ui.print_message(title)
-                        print(analysis)
+                        print(tabulate(analysis, headers=analysis.columns, tablefmt='simple', floatfmt='.2f'))
                     elif style == 3:
                         self._show_chart(analysis, title, charttype='chart')
                     elif style == 4:
