@@ -365,6 +365,9 @@ class Manager(Threaded):
                 elif days < 0:
                     self.invalid_tickers += [ticker]
 
+                if len(self.invalid_tickers) % 10 == 0:
+                    _write_tickers_log(self.invalid_tickers)
+
         if self.task_total > 0:
             self.task_error = 'None'
 
@@ -379,6 +382,7 @@ class Manager(Threaded):
             for future in futures.as_completed(self.task_futures):
                 running -= 1
                 _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
+
         if log:
             _write_tickers_log(self.invalid_tickers)
 
@@ -449,7 +453,7 @@ class Manager(Threaded):
                 ticker = ticker.upper()
                 if store.is_ticker(ticker, inactive=True):
                     with self.session.begin() as session:
-                        sec = session.query(models.Security.active).filter(models.Security.ticker == ticker).one_or_none()
+                        sec = session.query(models.Security).filter(models.Security.ticker == ticker).one_or_none()
                         if sec is not None:
                             sec.active = active
                             _logger.info(f'{__name__}: Set {ticker} active = {active}')
@@ -832,16 +836,14 @@ class Manager(Threaded):
                 _logger.info(f'{__name__}: Added {t} to index {index}')
 
 
-def _write_tickers_log(tickers: list[str]) -> str:
+def _write_tickers_log(tickers: list[str], filename: str = '') -> str:
     if tickers:
-        date_time = dt.now().strftime('%Y%m%d-%H%M%S')
+        date_time = dt.now().strftime('%Y-%m-%d')
         filename = f'{LOG_DIR}/{date_time}.{LOG_SUFFIX}'
 
         with open(filename, 'w') as f:
             for ticker in tickers:
                 f.write(ticker + '\n')
-    else:
-        filename = ''
 
     return filename
 
