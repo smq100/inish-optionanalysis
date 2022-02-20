@@ -135,7 +135,7 @@ class Manager(Threaded):
 
                             _logger.info(f'{__name__}: Added {ticker} to exchange {exchange}')
 
-                            self._add_history_to_ticker(ticker, history=history)
+                            self._add_live_history_to_ticker(ticker, history=history)
                             self._add_company_to_ticker(ticker, company=company)
                         except (ValueError, KeyError, IndexError) as e:
                             self.invalid_tickers += [ticker]
@@ -281,12 +281,12 @@ class Manager(Threaded):
         if store.is_ticker(ticker, inactive):
             today = date.today()
 
-            history = store.get_history(ticker)
+            history = store.get_history(ticker, inactive=inactive)
             if history.empty:
-                if self._add_history_to_ticker(ticker):
+                if self._add_live_history_to_ticker(ticker):
                     _logger.info(f'{__name__}: Added full price history for {ticker}')
-                    if self._add_company_to_ticker(ticker):
-                        _logger.info(f'{__name__}: Added company information for {ticker}')
+
+                    self._add_company_to_ticker(ticker)
                 else:
                     _logger.info(f'{__name__}: No price history for {ticker}')
             else:
@@ -299,7 +299,7 @@ class Manager(Threaded):
 
                 delta = (today - date_db).days
                 if delta > 0:
-                    history = store.get_history(ticker, 60, live=True)
+                    history = store.get_history(ticker, 60, live=True) # Change days value if severely out of data
                     if history is None:
                         _logger.info(f'{__name__}: No pricing dataframe for {ticker}')
                     elif history.empty:
@@ -356,7 +356,7 @@ class Manager(Threaded):
                 try:
                     days = self.update_history_ticker(ticker)
                 except IntegrityError as e:
-                    _logger.warning(f'{__name__}: UniqueViolation exception occurred for {ticker}: {e}')
+                    _logger.error(f'{__name__}: IntegrityError exception occurred for {ticker} (1): {e.__cause__}')
 
                 self.task_completed += 1
 
@@ -449,7 +449,7 @@ class Manager(Threaded):
                 ticker = ticker.upper()
                 if store.is_ticker(ticker, inactive=True):
                     with self.session.begin() as session:
-                        sec = session.query(models.Security).filter(models.Security.ticker == ticker).one_or_none()
+                        sec = session.query(models.Security.active).filter(models.Security.ticker == ticker).one_or_none()
                         if sec is not None:
                             sec.active = active
                             _logger.info(f'{__name__}: Set {ticker} active = {active}')
@@ -457,6 +457,16 @@ class Manager(Threaded):
                             _logger.warning(f'{__name__}: Ticker {ticker} not in database')
                 else:
                     _logger.warning(f'{__name__}: Ticker {ticker} does not exist')
+
+    def is_active(self, ticker: str) -> bool:
+        active = False
+        if ticker:
+            if store.is_ticker(ticker, inactive=True):
+                with self.session() as session:
+                    sec = session.query(models.Security.active).filter(models.Security.ticker == ticker).one_or_none()
+                    active = sec.active
+
+        return active
 
     def get_database_info(self) -> list[dict]:
         info = []
@@ -555,7 +565,7 @@ class Manager(Threaded):
                     if tail != LOG_SUFFIX:
                         pass
                     elif head[:2] != '20':
-                        pass # Not a log file. Does not start with year 20**
+                        pass  # Not a log file. Does not start with year 20**
                     else:
                         files += [f'{LOG_DIR}/{entry.name}']
         if files:
@@ -566,25 +576,24 @@ class Manager(Threaded):
         return errors
 
     @Threaded.threaded
-    def recheck_inactive(self, tickers : list[str]) -> None:
+    def recheck_inactive(self, tickers: list[str]) -> None:
         self.task_total = len(tickers)
         running = self._concurrency
 
         def recheck(tickers: list[str]) -> None:
-            nonlocal running
-
             for ticker in tickers:
-                self.task_ticker = ticker
-                try:
-                    days = self.update_history_ticker(ticker, inactive=True)
-                except IntegrityError as e:
-                    _logger.warning(f'{__name__}: UniqueViolation exception occurred for {ticker}: {e}')
-
-                if days > 0:
-                    self.task_results += [ticker]
-                    self.task_success += 1
-                elif days < 0:
-                    self.invalid_tickers += [ticker]
+                if not self.is_active(ticker):
+                    self.task_ticker = ticker
+                    try:
+                        days = self.update_history_ticker(ticker, inactive=True)
+                    except IntegrityError as e:
+                        _logger.error(f'{__name__}: IntegrityError exception occurred for {ticker} (2): {e.__cause__}')
+                    else:
+                        if days > 0:
+                            self.task_results += [ticker]
+                            self.task_success += 1
+                        elif days < 0:
+                            self.invalid_tickers += [ticker]
 
                 self.task_completed += 1
 
@@ -593,7 +602,7 @@ class Manager(Threaded):
 
             random.shuffle(tickers)
             lists = np.array_split(tickers, self._concurrency)
-            lists = [list for list in lists if list.size > 0] # Remove empties
+            lists = [list for list in lists if list.size > 0]  # Remove empties
             running = len(lists)
             if running < self._concurrency:
                 self._concurrency = running
@@ -731,64 +740,73 @@ class Manager(Threaded):
         return incomplete
 
     def _add_company_to_ticker(self, ticker: str, company: dict = None) -> bool:
-        cmp = None
+        c = None
 
-        with self.session.begin() as session:
-            t = session.query(models.Security).filter(models.Security.ticker == ticker).one()
-            if company is None:
-                company = store.get_company(ticker, live=True)
+        try:
+            with self.session.begin() as session:
+                t = session.query(models.Security).filter(models.Security.ticker == ticker).one()
+                if company is None:
+                    company = store.get_company(ticker, live=True)
 
-            if company:
-                cmp = models.Company()
-                cmp.name = company['name']
-                cmp.description = company['description']
-                cmp.url = company['url']
-                cmp.sector = company['sector']
-                cmp.industry = company['industry']
-                cmp.beta = company['beta']
-                cmp.marketcap = company['marketcap']
-                cmp.rating = company['rating']
+                    if company:
+                        c = models.Company()
+                        c.name = company['name']
+                        c.description = company['description']
+                        c.url = company['url']
+                        c.sector = company['sector']
+                        c.industry = company['industry']
+                        c.beta = company['beta']
+                        c.marketcap = company['marketcap']
+                        c.rating = company['rating']
 
-                t.company = [cmp]
-                _logger.info(f'{__name__}: Added company information for {ticker}')
-            else:
-                _logger.warning(f'{__name__}: No company info for {ticker}')
+                        t.company = [c]
+                    else:
+                        _logger.warning(f'{__name__}: No company info for {ticker}')
+                else:
+                    _logger.info(f'{__name__}: Added company information for {ticker}')
+        except IntegrityError as e:
+            c = None
+            _logger.error(f'{__name__}: IntegrityError exception occurred for {ticker} (3): {e.__cause__}')
 
-        return cmp is not None
+        return c is not None
 
-    def _add_history_to_ticker(self, ticker: str, history: pd.DataFrame = None) -> bool:
+    def _add_live_history_to_ticker(self, ticker: str, history: pd.DataFrame = None) -> bool:
         added = False
 
-        with self.session.begin() as session:
-            t = session.query(models.Security).filter(models.Security.ticker == ticker).one()
+        try:
+            with self.session.begin() as session:
+                t = session.query(models.Security).filter(models.Security.ticker == ticker).one_or_none()
 
-            if history is None or history.empty:
-                history = store.get_history(ticker, live=True)
+                if t is not None:
+                    if history is None or history.empty:
+                        history = store.get_history(ticker, live=True)
 
-            if history is not None and not history.empty:
-                history.reset_index(inplace=True)
-                try:
-                    for price in history.itertuples():
-                        if price.date:
-                            p = models.Price()
-                            p.date = price.date
-                            p.open = price.open
-                            p.high = price.high
-                            p.low = price.low
-                            p.close = price.close
-                            p.volume = price.volume
+                    if history is not None and not history.empty:
+                        history.reset_index(inplace=True)
+                        for price in history.itertuples():
+                            if price.date:
+                                p = models.Price()
+                                p.date = price.date
+                                p.open = price.open
+                                p.high = price.high
+                                p.low = price.low
+                                p.close = price.close
+                                p.volume = price.volume
 
-                            t.pricing += [p]
-                            added = True
+                                t.pricing += [p]
+                            else:
+                                t.active = False
                         else:
-                            t.active = False
-                except IntegrityError as e:
-                    _logger.info(f'{__name__}: {ticker} UniqueViolation exception occurred for {ticker}: {e}')
+                            _logger.info(f'{__name__}: Added pricing information for {ticker}')
+                    else:
+                        t.active = False
+                        _logger.info(f'{__name__}: No pricing information for {ticker}')
                 else:
-                    _logger.info(f'{__name__}: Added pricing information for {ticker}')
-            else:
-                t.active = False
-                _logger.info(f'{__name__}: No pricing information for {ticker}')
+                    _logger.warning(f'{__name__}: {ticker} is not a valid ticker')
+        except IntegrityError as e:
+            _logger.error(f'{__name__}: IntegrityError exception occurred for {ticker} (4): {e.__cause__}')
+        else:
+            added = True
 
         return added
 

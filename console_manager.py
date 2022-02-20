@@ -65,9 +65,9 @@ class Interface:
             '5':  'Update History',
             '6':  'Update Company',
             '7':  'List Update Errors',
-            '8':  'Re-Check Update Errors',
+            '8':  'Re-Check Inactive',
             '9':  'List Inactive',
-            '10':  'Mark Active/Inactive',
+            '10': 'Mark Active/Inactive',
             '11': 'Check Integrity',
             '12': 'Check Price Dates',
             '13': 'Populate Exchange',
@@ -86,11 +86,11 @@ class Interface:
             if selection == 1:
                 self.show_database_information()
             elif selection == 2:
-                self.show_symbol_information(self.ticker)
+                self.show_ticker_information(self.ticker)
             elif selection == 3:
-                self.show_symbol_information(self.ticker, live=True)
+                self.show_ticker_information(self.ticker, live=True)
             elif selection == 4:
-                self.show_symbol_information(self.ticker, prompt=True)
+                self.show_ticker_information(self.ticker, prompt=True)
             elif selection == 5:
                 self.update_history(self.ticker)
             elif selection == 6:
@@ -144,12 +144,12 @@ class Interface:
         for i in info:
             print(f'{i["index"]:>16}:\t{i["count"]} symbols')
 
-    def show_symbol_information(self, ticker: str = '', prompt: bool = False, live: bool = False) -> None:
+    def show_ticker_information(self, ticker: str = '', prompt: bool = False, live: bool = False) -> None:
         if not ticker:
             ticker = ui.input_text('Enter ticker: ').upper()
 
         if ticker:
-            if store.is_ticker(ticker):
+            if store.is_ticker(ticker, inactive=True):
                 if prompt:
                     end = ui.input_integer('Input number of days: ', 0, 100)
                 else:
@@ -256,7 +256,7 @@ class Interface:
         elif store.is_ticker(ticker):
             days = self.manager.update_history_ticker(ticker)
             ui.print_message(f'Added {days} days pricing for {ticker}')
-            self.show_symbol_information(ticker=ticker)
+            self.show_ticker_information(ticker=ticker)
         else:
             self.task = threading.Thread(target=self.manager.update_history_exchange, args=[table])
             self.task.start()
@@ -279,7 +279,7 @@ class Interface:
         elif store.is_ticker(ticker):
             if self.manager.update_company_ticker(ticker):
                 ui.print_message('Success')
-                self.show_symbol_information(ticker)
+                self.show_ticker_information(ticker)
             else:
                 ui.print_error('Error')
         else:
@@ -400,7 +400,8 @@ class Interface:
             ui.print_message('No ticker errors')
 
     def recheck_inactive(self, progressbar: bool = True) -> None:
-        tickers = self.manager.identify_inactive_tickers('all')
+        ticker = ui.input_text('Enter ticker or RETURN for all: ').upper()
+        tickers = [ticker] if ticker else self.manager.identify_inactive_tickers('all')
         if tickers:
             self.task = threading.Thread(target=self.manager.recheck_inactive, args=[tickers])
             self.task.start()
@@ -409,9 +410,10 @@ class Interface:
                 self._show_progress('Progress', '')
 
             if self.manager.task_error == 'Done':
-                # if self.manager.task_results:
-                #     self.manager.change_active(self.manager.task_results)
                 ui.print_message(f'{self.manager.task_success} Inactive tickers updated in {self.manager.task_time:.0f} seconds')
+                if self.manager.task_results:
+                    self.manager.change_active(self.manager.task_results, True)
+                    ui.print_tickers(self.manager.task_results)
         else:
             ui.print_message('No tickers to update')
 
