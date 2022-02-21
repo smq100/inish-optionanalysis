@@ -1,7 +1,10 @@
 import os
 import json
+import pickle
 import random
+from datetime import datetime as dt
 from concurrent import futures
+
 import numpy as np
 
 from base import Threaded
@@ -13,9 +16,12 @@ from utils import ui, logger
 
 _logger = logger.get_logger()
 
-BASEPATH = os.getcwd() + '/screener/screens/'
+SCREEN_BASEPATH = './screener/screens/'
 SCREEN_SUFFIX = '.screen'
-INIT_NAME = 'init'
+SCREEN_INIT_NAME = 'init'
+
+CACHE_DIR = './screener/cache/'
+CACHE_SUFFIX = 'pickle'
 
 
 class Result:
@@ -47,7 +53,9 @@ class Screener(Threaded):
 
         self.table = table.upper()
         self.screen = screen
-        self.screen_init = BASEPATH + INIT_NAME + SCREEN_SUFFIX
+        self.screen_init = SCREEN_BASEPATH + SCREEN_INIT_NAME + SCREEN_SUFFIX
+        self.cache_available = False
+        self.cache_used = False
 
         if self.table == 'ALL':
             self.type = 'all'
@@ -66,6 +74,7 @@ class Screener(Threaded):
 
         if days < 30:
             raise ValueError('Invalid number of days')
+
         if end < 0:
             raise ValueError('Invalid "end" days')
 
@@ -78,11 +87,11 @@ class Screener(Threaded):
         self.valids: list[Result] = []
         self._concurrency = 10
 
-        if screen:
-            if self._load(screen, init=self.screen_init):
-                self._open()
-            else:
-                raise ValueError(f'Script not found or invalid format: {screen}')
+        if self._load(screen, init=self.screen_init):
+            self._open()
+            self.cache_available = self._load_cache()
+        else:
+            raise ValueError(f'Script not found or invalid format: {screen}')
 
     def __repr__(self):
         return f'<Screener ({self.table})>'
@@ -91,22 +100,35 @@ class Screener(Threaded):
         return f'{self.table}/{self.screen}'
 
     @Threaded.threaded
-    def run_script(self, log_results: bool = False) -> None:
-        self.results = []
-        self.valids = []
+    def run_script(self, dump_cache: bool = True) -> None:
         self.task_total = len(self.companies)
 
-        if self.task_total == 0:
+        if self.cache_available:
+            self.valids = [result for result in self.results if result]
+            self.valids = sorted(self.valids, reverse=True, key=lambda r: float(r))
+
+            self.task_completed = self.task_total
+            self.task_success = len(self.valids)
+            self.task_error = 'Done'
+            self.cache_used = True
+
+            _logger.info(f'{__name__}: Using cached results')
+        elif self.task_total == 0:
+            self.results = []
+            self.valids = []
             self.task_completed = self.task_total
             self.task_error = 'No symbols'
             _logger.warning(f'{__name__}: {self.task_error}')
         elif len(self.scripts) == 0:
+            self.results = []
+            self.valids = []
             self.task_completed = self.task_total
             self.task_error = 'Illegal script'
             _logger.warning(f'{__name__}: {self.task_error}')
         else:
+            self.results = []
+            self.valids = []
             self.task_error = 'None'
-
             self._concurrency = 10 if len(self.companies) > 10 else 1
 
             if self.task_total > 1:
@@ -128,8 +150,8 @@ class Screener(Threaded):
             self.valids = [result for result in self.results if result]
             self.valids = sorted(self.valids, reverse=True, key=lambda r: float(r))
 
-            if log_results:
-                pass
+            if dump_cache:
+                self._dump_cache()
 
             self.task_error = 'Done'
 
@@ -225,6 +247,34 @@ class Screener(Threaded):
             _logger.error(f'{__name__}: File "{script}" not found')
 
         return bool(self.scripts)
+
+    def _dump_cache(self) -> None:
+        if self.results:
+            filename = self._build_cache_filename()
+
+            with open(filename, 'wb') as f:
+                pickle.dump(self.results, f)
+
+            self.cache_available = True
+
+    def _load_cache(self) -> bool:
+        filename = self._build_cache_filename()
+
+        cached = False
+        if os.path.exists(filename):
+            with open(filename, 'rb') as f:
+                self.results = pickle.load(f)
+                cached = True
+
+        return cached
+
+    def _build_cache_filename(self) -> str:
+        date_time = dt.now().strftime('%Y-%m-%d')
+        head_tail = os.path.split(self.screen)
+        head, sep, tail = head_tail[1].partition('.')
+        filename = f'{CACHE_DIR}/{date_time}_{self.table}_{head.upper()}.{CACHE_SUFFIX}'
+
+        return filename
 
 
 if __name__ == '__main__':

@@ -13,7 +13,7 @@ from strategies.strategy import Strategy
 from strategies.call import Call
 from strategies.put import Put
 from strategies.vertical import Vertical
-from screener.screener import Screener, Result, INIT_NAME
+from screener.screener import Screener, Result, SCREEN_INIT_NAME
 from analysis.trend import SupportResistance
 from analysis.correlate import Correlate
 from data import store as store
@@ -100,7 +100,8 @@ class Interface:
                 menu_items['2'] += f' ({self.screen_base})'
 
             if len(self.results_screen) > 0:
-                menu_items['4'] += f' ({LISTTOP_SCREEN})'
+                top = len(self.results_screen) if len(self.results_screen) < LISTTOP_SCREEN else LISTTOP_SCREEN
+                menu_items['4'] += f' ({top})'
 
             if len(self.results_screen) > 0:
                 menu_items['5'] += f' ({len(self.results_screen)})'
@@ -164,7 +165,7 @@ class Interface:
                     head, sep, tail = entry.name.partition('.')
                     if tail != SCREEN_SUFFIX:
                         pass
-                    elif head == INIT_NAME:
+                    elif head == SCREEN_INIT_NAME:
                         pass
                     elif head == 'test':
                         pass
@@ -246,6 +247,9 @@ class Interface:
                     success = True
 
                     ui.print_message(f'{len(self.results_screen)} symbols identified in {self.screener.task_time:.1f} seconds')
+
+                    if self.screener.cache_used:
+                        ui.print_message('Previous results used')
 
         return success
 
@@ -391,18 +395,19 @@ class Interface:
         while not self.screener.task_error:
             pass
 
-        prefix = 'Screening'
-        total = self.screener.task_total
-        ui.progress_bar(self.screener.task_completed, self.screener.task_total, prefix=prefix, reset=True)
+        if self.screener.task_error == 'None':
+            prefix = 'Screening'
+            total = self.screener.task_total
+            ui.progress_bar(self.screener.task_completed, self.screener.task_total, prefix=prefix, reset=True)
 
-        while self.screener.task_error == 'None':
-            time.sleep(0.20)
-            completed = self.screener.task_completed
-            success = self.screener.task_success
-            ticker = self.screener.task_ticker
-            tasks = len([True for future in self.screener.task_futures if future.running()])
+            while self.screener.task_error == 'None':
+                time.sleep(0.20)
+                completed = self.screener.task_completed
+                success = self.screener.task_success
+                ticker = self.screener.task_ticker
+                tasks = len([True for future in self.screener.task_futures if future.running()])
 
-            ui.progress_bar(completed, total, prefix=prefix, ticker=ticker, success=success, tasks=tasks)
+                ui.progress_bar(completed, total, prefix=prefix, ticker=ticker, success=success, tasks=tasks)
 
     def show_progress_correlate(self):
         while not self.coorelate.task_error:
@@ -425,9 +430,10 @@ class Interface:
             pass
 
         if self.trend.task_error == 'None':
+            prefix = 'Analyzing S & R'
             while self.trend.task_error == 'None':
                 time.sleep(0.20)
-                ui.progress_bar(0, 0, prefix='Analyzing', suffix=self.trend.task_message)
+                ui.progress_bar(0, 0, prefix=prefix, suffix=self.trend.task_message)
 
             if self.trend.task_error == 'Hold':
                 pass
@@ -443,12 +449,13 @@ class Interface:
             pass
 
         if st.strategy_error == 'None':
+            prefix = 'Analyzing Options'
             tasks = len([True for future in st.strategy_futures if future.running()])
-            ui.progress_bar(st.strategy_completed, st.strategy_total, prefix='Analyzing Options', suffix=st.strategy_msg, tasks=tasks, reset=True)
+            ui.progress_bar(st.strategy_completed, st.strategy_total, prefix=prefix, suffix=st.strategy_msg, tasks=tasks, reset=True)
             while st.strategy_error == 'None':
                 time.sleep(0.20)
                 tasks = len([True for future in st.strategy_futures if future.running()])
-                ui.progress_bar(st.strategy_completed, st.strategy_total, prefix='Analyzing Options', suffix=st.strategy_msg, tasks=tasks)
+                ui.progress_bar(st.strategy_completed, st.strategy_total, prefix=prefix, suffix=st.strategy_msg, tasks=tasks)
         else:
             ui.print_message(f'{st.strategy_error}')
 

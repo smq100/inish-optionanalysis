@@ -4,7 +4,7 @@ import threading
 import logging
 
 import data as d
-from screener.screener import Screener, Result, INIT_NAME
+from screener.screener import Screener, Result, SCREEN_INIT_NAME
 from data import store as store
 from utils import ui, logger
 
@@ -161,7 +161,7 @@ class Interface:
                     head, sep, tail = entry.name.partition('.')
                     if tail != SCREEN_SUFFIX:
                         pass
-                    elif head == INIT_NAME:
+                    elif head == SCREEN_INIT_NAME:
                         pass
                     elif head == 'test':
                         pass
