@@ -17,10 +17,10 @@ from utils import ui, logger
 _logger = logger.get_logger()
 
 SCREEN_BASEPATH = './screener/screens/'
-SCREEN_SUFFIX = '.screen'
+SCREEN_SUFFIX = 'screen'
 SCREEN_INIT_NAME = 'init'
 
-CACHE_DIR = './screener/cache/'
+CACHE_BASEPATH = './screener/cache/'
 CACHE_SUFFIX = 'pickle'
 
 
@@ -53,7 +53,7 @@ class Screener(Threaded):
 
         self.table = table.upper()
         self.screen = screen
-        self.screen_init = SCREEN_BASEPATH + SCREEN_INIT_NAME + SCREEN_SUFFIX
+        self.screen_init = f'{SCREEN_BASEPATH}{SCREEN_INIT_NAME}.{SCREEN_SUFFIX}'
         self.cache_available = False
         self.cache_used = False
 
@@ -272,7 +272,7 @@ class Screener(Threaded):
         date_time = dt.now().strftime('%Y-%m-%d')
         head_tail = os.path.split(self.screen)
         head, sep, tail = head_tail[1].partition('.')
-        filename = f'{CACHE_DIR}/{date_time}_{self.table}_{head.upper()}.{CACHE_SUFFIX}'
+        filename = f'{CACHE_BASEPATH}/{date_time}_{self.table}_{head.upper()}.{CACHE_SUFFIX}'
 
         return filename
 

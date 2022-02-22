@@ -13,7 +13,7 @@ from strategies.strategy import Strategy
 from strategies.call import Call
 from strategies.put import Put
 from strategies.vertical import Vertical
-from screener.screener import Screener, Result, SCREEN_INIT_NAME
+from screener.screener import Screener, Result, SCREEN_INIT_NAME, SCREEN_BASEPATH, SCREEN_SUFFIX, CACHE_BASEPATH, CACHE_SUFFIX
 from analysis.trend import SupportResistance
 from analysis.correlate import Correlate
 from data import store as store
@@ -21,8 +21,6 @@ from utils import ui, logger
 
 logger.get_logger(logging.WARNING, logfile='')
 
-BASEPATH = os.getcwd() + '/screener/screens/'
-SCREEN_SUFFIX = 'screen'
 COOR_CUTOFF = 0.85
 LISTTOP_SCREEN = 10
 LISTTOP_TREND = 5
@@ -63,8 +61,8 @@ class Interface:
                 ui.print_error('Exchange, index or ticker not found')
 
         if self.screen_base:
-            if os.path.exists(BASEPATH+screen+'.'+SCREEN_SUFFIX):
-                self.path_screen = BASEPATH + self.screen_base + '.' + SCREEN_SUFFIX
+            if os.path.exists(SCREEN_BASEPATH+screen+'.'+SCREEN_SUFFIX):
+                self.path_screen = f'{SCREEN_BASEPATH}{self.screen_base}.{SCREEN_SUFFIX}'
             else:
                 ui.print_error(f'File "{self.screen_base}" not found')
                 abort = True
@@ -81,16 +79,17 @@ class Interface:
     def main_menu(self, selection: int = 0) -> None:
         while True:
             menu_items = {
-                '1': 'Select Table or Ticker',
-                '2': 'Select Screen',
-                '3': 'Run Screen',
-                '4': 'Show Top Screen Results',
-                '5': 'Show All Screen Results',
-                '6': 'Show Ticker Screen Summary',
-                '7': 'Run Coorelation',
-                '8': 'Run Support & Resistance Analysis',
-                '9': 'Run Option Strategy',
-                '0': 'Exit'
+                '1':  'Select Table or Ticker',
+                '2':  'Select Screen',
+                '3':  'Run Screen',
+                '4':  'Run Coorelation',
+                '5':  'Run Support & Resistance Analysis',
+                '6':  'Run Option Strategy',
+                '7':  'Show Top Screen Results',
+                '8':  'Show All Screen Results',
+                '9':  'Show Ticker Screen Summary',
+                '10': 'Manage cache files',
+                '0':  'Exit'
             }
 
             if self.table:
@@ -99,15 +98,15 @@ class Interface:
             if self.screen_base:
                 menu_items['2'] += f' ({self.screen_base})'
 
+            if self.quick:
+                menu_items['5'] += ' (quick)'
+
             if len(self.results_screen) > 0:
                 top = len(self.results_screen) if len(self.results_screen) < LISTTOP_SCREEN else LISTTOP_SCREEN
-                menu_items['4'] += f' ({top})'
+                menu_items['7'] += f' ({top})'
 
             if len(self.results_screen) > 0:
-                menu_items['5'] += f' ({len(self.results_screen)})'
-
-            if self.quick:
-                menu_items['8'] += ' (quick)'
+                menu_items['8'] += f' ({len(self.results_screen)})'
 
             if selection == 0:
                 selection = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
@@ -121,19 +120,21 @@ class Interface:
                 if len(self.results_screen) > 0:
                     self.show_valids(top=LISTTOP_SCREEN)
             elif selection == 4:
-                self.show_valids(top=LISTTOP_SCREEN)
-            elif selection == 5:
-                self.show_valids()
-            elif selection == 6:
-                self.show_ticker_results()
-            elif selection == 7:
                 self.run_coorelate()
                 if len(self.results_corr) > 0:
                     self.show_coorelations()
-            elif selection == 8:
+            elif selection == 5:
                 self.run_support_resistance()
+            elif selection == 6:
+                self.run_strategy()
+            elif selection == 7:
+                self.show_valids(top=LISTTOP_SCREEN)
+            elif selection == 8:
+                self.show_valids()
             elif selection == 9:
-                self.select_strategy()
+                self.show_ticker_results()
+            elif selection == 10:
+                self.manage_cache_files()
             elif selection == 0:
                 self.exit = True
 
@@ -159,7 +160,7 @@ class Interface:
         self.script = []
         self.results_screen = []
         paths = []
-        with os.scandir(BASEPATH) as entries:
+        with os.scandir(SCREEN_BASEPATH) as entries:
             for entry in entries:
                 if entry.is_file():
                     head, sep, tail = entry.name.partition('.')
@@ -185,11 +186,11 @@ class Interface:
             selection = ui.menu(menu_items, 'Select Screen', 0, index+1)
             if selection > 0:
                 self.screen_base = paths[selection-1]
-                self.path_screen = BASEPATH + self.screen_base + '.' + SCREEN_SUFFIX
+                self.path_screen = f'{SCREEN_BASEPATH}{self.screen_base}.{SCREEN_SUFFIX}'
         else:
             ui.print_message('No screener files found')
 
-    def select_strategy(self) -> None:
+    def run_strategy(self) -> None:
         if len(self.results_screen) > 0:
             menu_items = {
                 '1': 'Call',
@@ -313,8 +314,6 @@ class Interface:
 
         tickers = [str(result) for result in self.results_screen[:LISTTOP_SCREEN]]
         strategies = []
-        summary = pd.DataFrame()
-        results = []
 
         print()
         ui.progress_bar(0, 0, prefix='Analyzing Options', reset=True)
@@ -458,6 +457,42 @@ class Interface:
                 ui.progress_bar(st.strategy_completed, st.strategy_total, prefix=prefix, suffix=st.strategy_msg, tasks=tasks)
         else:
             ui.print_message(f'{st.strategy_error}')
+
+    def manage_cache_files(self) -> None:
+        paths = []
+        with os.scandir(CACHE_BASEPATH) as entries:
+            for entry in entries:
+                if entry.is_file():
+                    head, sep, tail = entry.name.partition('.')
+                    if tail != CACHE_SUFFIX:
+                        pass
+                    elif head == SCREEN_INIT_NAME:
+                        pass
+                    else:
+                        paths += [head]
+
+        if paths:
+            paths.sort()
+
+            menu_items = {}
+            for index, item in enumerate(paths):
+                menu_items[f'{index+1}'] = f'{item}'
+            menu_items['0'] = 'Cancel'
+
+            selection = ui.menu(menu_items, 'Select cache file', 0, index+1)
+            if selection > 0:
+                screen = paths[selection-1]
+                selection = ui.input_integer(f"Select operation for '{screen}': (1) Delete, (0) Cancel: ", 0, 1)
+                if selection > 0:
+                    file = f'{CACHE_BASEPATH}{screen}.{CACHE_SUFFIX}'
+                    try:
+                        os.remove(file)
+                    except OSError as e:
+                        ui.print_error(f'File error: {e}')
+                    else:
+                        ui.print_message(f'Cache {screen} deleted')
+        else:
+            ui.print_message('No cache files found')
 
 
 if __name__ == '__main__':
