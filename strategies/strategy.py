@@ -190,6 +190,8 @@ def analyze_list(strategies: list[Strategy]) -> None:
 
         for future in futures.as_completed(strategy_futures):
             _logger.info(f'{__name__}: Thread completed: {future.result()}')
+
+        strategy_results.sort_values('upside', ascending=False, inplace=True)
     else:
         strategy_error = 'No tickers'
 
