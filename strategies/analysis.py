@@ -11,7 +11,7 @@ class Analysis:
         self.summary = pd.DataFrame()
         self.credit_debit = ''
         self.sentiment = ''
-        self.amount = 0.0
+        self.total = 0.0
         self.max_gain = 0.0
         self.max_loss = 0.0
         self.gain = ''
@@ -24,7 +24,7 @@ class Analysis:
             output = \
                 f'Type:      {self.credit_debit.title()}\n'\
                 f'Sentiment: {self.sentiment.title()}\n'\
-                f'Amount:    ${abs(self.amount):.2f} {self.credit_debit}\n'\
+                f'Total:     ${abs(self.total):.2f} {self.credit_debit}\n'\
                 f'Max Gain:  {self.gain}\n'\
                 f'Max Loss:  {self.loss}\n'\
                 f'Upside:    {self.upside:.2f}\n'\
@@ -42,7 +42,7 @@ class Analysis:
             data = {
                 'credit_debit': self.credit_debit,
                 'sentiment': self.sentiment,
-                'amount': self.amount,
+                'total': self.total,
                 'max_gain': self.max_gain,
                 'max_loss': self.max_loss,
                 'upside': self.upside,

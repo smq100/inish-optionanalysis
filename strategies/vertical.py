@@ -80,7 +80,6 @@ class Vertical(Strategy):
 
     @Threaded.threaded
     def analyze(self) -> None:
-        ''' Analyze the strategy (Important: Assumes the long leg is the index-0 leg)'''
 
         if self._validate():
             self.task_error = 'None'
@@ -89,55 +88,57 @@ class Vertical(Strategy):
             self.legs[0].calculate()
             self.legs[1].calculate()
 
-            price_long = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
-            price_short = self.legs[1].option.last_price if self.legs[1].option.last_price > 0.0 else self.legs[1].option.calc_price
+            # Important: Assumes the long leg is the index-0 leg)
+            self.legs[0].option.eff_price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
+            self.legs[1].option.eff_price = self.legs[1].option.last_price if self.legs[1].option.last_price > 0.0 else self.legs[1].option.calc_price
 
-            self.analysis.credit_debit = 'debit' if price_long > price_short else 'credit'
-            self.analysis.amount = abs(price_long - price_short) * self.quantity
+            self.analysis.credit_debit = 'debit' if self.legs[0].option.eff_price > self.legs[1].option.eff_price else 'credit'
+            self.analysis.total = abs(self.legs[0].option.eff_price - self.legs[1].option.eff_price) * self.quantity
             self.analysis.max_gain, self.analysis.max_loss, self.analysis.upside, self.analysis.sentiment = self.calculate_gain_loss()
             self.analysis.breakeven = self.calculate_breakeven()
             self.analysis.table = self.generate_profit_table()
             self.analysis.summarize()
 
+            _logger.info(f'{__name__}: {self.ticker}: g={self.analysis.max_gain:.2f}, l={self.analysis.max_loss:.2f} b={self.analysis.breakeven :.2f}')
         self.task_error = 'Done'
 
     def generate_profit_table(self) -> pd.DataFrame:
         if self.analysis.credit_debit == 'credit':
-            profit = ((self.legs[0].value - self.legs[1].value) * self.quantity) + self.analysis.amount
+            profit = ((self.legs[0].value - self.legs[1].value) * self.quantity) + self.analysis.total
         else:
-            profit = ((self.legs[0].value - self.legs[1].value) * self.quantity) - self.analysis.amount
+            profit = ((self.legs[0].value - self.legs[1].value) * self.quantity) - self.analysis.total
 
         return profit
 
     def calculate_gain_loss(self) -> tuple[float, float, float, str]:
         max_gain = max_loss = 0.0
 
-        price_long = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
-        price_short = self.legs[1].option.last_price if self.legs[1].option.last_price > 0.0 else self.legs[1].option.calc_price
+        self.legs[0].option.eff_price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
+        self.legs[1].option.eff_price = self.legs[1].option.last_price if self.legs[1].option.last_price > 0.0 else self.legs[1].option.calc_price
 
-        debit = price_long > price_short
+        debit = self.legs[0].option.eff_price > self.legs[1].option.eff_price
         if self.product == 'call':
             if debit:
-                max_loss = self.analysis.amount
+                max_loss = self.analysis.total
                 max_gain = (self.quantity * (self.legs[1].option.strike - self.legs[0].option.strike)) - max_loss
                 if max_gain < 0.0:
                     max_gain = 0.0 # Debit is more than possible gain!
                 sentiment = 'bullish'
             else:
-                max_gain = self.analysis.amount
+                max_gain = self.analysis.total
                 max_loss = (self.quantity * (self.legs[0].option.strike - self.legs[1].option.strike)) - max_gain
                 if max_loss < 0.0:
                     max_loss = 0.0 # Credit is more than possible loss!
                 sentiment = 'bearish'
         else:
             if debit:
-                max_loss = self.analysis.amount
+                max_loss = self.analysis.total
                 max_gain = (self.quantity * (self.legs[0].option.strike - self.legs[1].option.strike)) - max_loss
                 if max_gain < 0.0:
                     max_gain = 0.0 # Debit is more than possible gain!
                 sentiment = 'bearish'
             else:
-                max_gain = self.analysis.amount
+                max_gain = self.analysis.total
                 max_loss = (self.quantity * (self.legs[1].option.strike - self.legs[0].option.strike)) - max_gain
                 if max_loss < 0.0:
                     max_loss = 0.0 # Credit is more than possible loss!
@@ -148,9 +149,9 @@ class Vertical(Strategy):
 
     def calculate_breakeven(self) -> float:
         if self.analysis.credit_debit == 'debit':
-            breakeven = self.legs[1].option.strike + self.analysis.amount
+            breakeven = self.legs[1].option.strike + self.analysis.total
         else:
-            breakeven = self.legs[1].option.strike - self.analysis.amount
+            breakeven = self.legs[1].option.strike - self.analysis.total
 
         return breakeven
 

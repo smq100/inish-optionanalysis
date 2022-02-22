@@ -1,10 +1,11 @@
 '''European Pricing Class'''
+
 import numpy as np
 import scipy.stats as stats
 
 import pricing
 from .pricing import Pricing
-from utils import ui, logger
+from utils import logger
 
 _logger = logger.get_logger()
 
@@ -24,8 +25,8 @@ class BlackScholes(Pricing):
         ''' Calculate Call and Put option prices based on the below equations from Black-Scholes.
         If dividend is not zero, then it is subtracted from the risk free rate in the below calculations.
 
-            CallOptionPrice = SpotPrice*N(d1) − Strike*exp(−r(T−t))*N(d2))
-            PutOptionPrice  = Strike*exp(−r(T−t)) *N(−d2) − SpotPrice*N(−d1)
+            CallOptionPrice = SpotPrice*N(d1) - Strike*exp(-r(T-t))*N(d2))
+            PutOptionPrice  = Strike*exp(-r(T-t)) *N(-d2) - SpotPrice*N(-d1)
         :return: <float>, <float> Calculated price of Call & Put options
         '''
 

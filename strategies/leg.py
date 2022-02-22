@@ -96,11 +96,11 @@ class Leg:
             else:
                 self.option.calc_price = price = self.pricer.price_put
 
-            self.option.spot = self.pricer.spot_price
             self.company.price = self.pricer.spot_price
+            self.company.volatility = self.pricer.volatility
+            self.option.spot = self.pricer.spot_price
             self.option.rate = self.pricer.risk_free_rate
             self.option.calc_volatility = self.pricer.volatility
-            self.company.volatility = self.pricer.volatility
             self.option.time_to_maturity = self.pricer.time_to_maturity
 
             # Generate the values table

@@ -20,6 +20,7 @@ class Option:
 
         # Calculated
         self.calc_price = 0.0
+        self.eff_price = 0.0
         self.calc_volatility = 0.0
         self.time_to_maturity = 0.0
         self.rate = 0.0
@@ -56,6 +57,7 @@ class Option:
             f'Last Trade: {self.last_trade_date}\n'\
             f'Calc Price: {self.calc_price:.2f}\n'\
             f'Last Price: {self.last_price:.2f}\n'\
+            f'Eff Price: {self.eff_price:.2f}\n'\
             f'Bid: {self.bid:.2f}\n'\
             f'Ask: {self.ask:.2f}\n'\
             f'Change: {self.change}\n'\
