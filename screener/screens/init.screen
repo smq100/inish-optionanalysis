@@ -43,6 +43,7 @@
    },
    {
       "note":"Volume > 2M",
+      "weight": 0.25,
       "base":{
          "technical":"volume",
          "length":0,
@@ -64,6 +65,7 @@
    },
    {
       "note":"MCap > 5B",
+      "weight": 0.25,
       "base":{
          "technical":"mcap",
          "length":0,

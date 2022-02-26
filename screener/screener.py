@@ -100,18 +100,16 @@ class Screener(Threaded):
         return f'{self.table}/{self.screen}'
 
     @Threaded.threaded
-    def run_script(self, dump_cache: bool = True) -> None:
+    def run_script(self, ignore_cache: bool = False, dump_cache: bool = True) -> None:
         self.task_total = len(self.companies)
 
-        if self.cache_available:
+        if self.cache_available and not ignore_cache:
             self.valids = [result for result in self.results if result]
             self.valids = sorted(self.valids, reverse=True, key=lambda r: float(r))
-
             self.task_completed = self.task_total
             self.task_success = len(self.valids)
             self.task_error = 'Done'
             self.cache_used = True
-
             _logger.info(f'{__name__}: Using cached results')
         elif self.task_total == 0:
             self.results = []
@@ -154,6 +152,42 @@ class Screener(Threaded):
                 self._dump_cache()
 
             self.task_error = 'Done'
+
+    def _run(self, companies: list[Company]) -> None:
+        for ticker in companies:
+            success = []
+            score = []
+            result = []
+            self.task_ticker = str(ticker)
+            for filter in self.scripts:
+                try:
+                    interpreter = Interpreter(ticker, filter)
+                    success += [interpreter.run()]
+                    score += [interpreter.score]
+                    result += [interpreter.result]
+                except SyntaxError as e:
+                    self.task_error = str(e)
+                    _logger.error(f'{__name__}: SyntaxError: {self.task_error}')
+                    break
+                except RuntimeError as e:
+                    self.task_error = str(e)
+                    _logger.error(f'{__name__}: RuntimeError: {self.task_error}')
+                    break
+                except Exception as e:
+                    self.task_error = str(e)
+                    _logger.error(f'{__name__}: Exception: {self.task_error} for {ticker}')
+                    break
+
+            if self.task_error == 'None':
+                self.task_completed += 1
+                self.results += [Result(ticker, success, score, result)]
+                if (bool(self.results[-1])):
+                    self.task_success += 1
+            else:
+                self.task_completed = self.task_total
+                self.results = []
+                self.valids = []
+                break
 
     def _load(self, script: str, init: str = '') -> bool:
         self.scripts = []
@@ -198,42 +232,6 @@ class Screener(Threaded):
             _logger.warning(f'{__name__}: No symbols available')
 
         return len(self.companies) > 0
-
-    def _run(self, companies: list[Company]) -> None:
-        for ticker in companies:
-            success = []
-            score = []
-            result = []
-            self.task_ticker = str(ticker)
-            for filter in self.scripts:
-                try:
-                    interpreter = Interpreter(ticker, filter)
-                    success += [interpreter.run()]
-                    score += [interpreter.score]
-                    result += [interpreter.result]
-                except SyntaxError as e:
-                    self.task_error = str(e)
-                    _logger.error(f'{__name__}: SyntaxError: {self.task_error}')
-                    break
-                except RuntimeError as e:
-                    self.task_error = str(e)
-                    _logger.error(f'{__name__}: RuntimeError: {self.task_error}')
-                    break
-                except Exception as e:
-                    self.task_error = str(e)
-                    _logger.error(f'{__name__}: Exception: {self.task_error} for {ticker}')
-                    break
-
-            if self.task_error == 'None':
-                self.task_completed += 1
-                self.results += [Result(ticker, success, score, result)]
-                if (bool(self.results[-1])):
-                    self.task_success += 1
-            else:
-                self.task_completed = self.task_total
-                self.results = []
-                self.valids = []
-                break
 
     def _add_init_script(self, script: str) -> bool:
         if os.path.exists(script):

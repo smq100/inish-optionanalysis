@@ -2,6 +2,7 @@ import os
 import time
 import threading
 import logging
+from datetime import datetime as dt
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -30,7 +31,7 @@ LISTTOP_CORR = 3
 class Interface:
     def __init__(self, table: str = '', screen: str = '', quick: bool = False, exit: bool = False):
         self.table = table.upper()
-        self.screen_base = screen
+        self.screen = screen
         self.quick = quick
         self.exit = exit
         self.days = 1000
@@ -43,6 +44,7 @@ class Interface:
         self.correlate: Correlate = None
         self.strategy: Strategy = None
         self.task: threading.Thread = None
+        self.ignore_cache = False
 
         abort = False
 
@@ -60,13 +62,13 @@ class Interface:
                 abort = True
                 ui.print_error('Exchange, index or ticker not found')
 
-        if self.screen_base:
+        if self.screen:
             if os.path.exists(SCREEN_BASEPATH+screen+'.'+SCREEN_SUFFIX):
-                self.path_screen = f'{SCREEN_BASEPATH}{self.screen_base}.{SCREEN_SUFFIX}'
+                self.path_screen = f'{SCREEN_BASEPATH}{self.screen}.{SCREEN_SUFFIX}'
             else:
-                ui.print_error(f'File "{self.screen_base}" not found')
+                ui.print_error(f'File "{self.screen}" not found')
                 abort = True
-                self.screen_base = ''
+                self.screen = ''
 
         if abort:
             pass
@@ -82,9 +84,9 @@ class Interface:
                 '1':  'Select Table or Ticker',
                 '2':  'Select Screen',
                 '3':  'Run Screen',
-                '4':  'Run Coorelation',
+                '4':  'Run Option Strategy',
                 '5':  'Run Support & Resistance Analysis',
-                '6':  'Run Option Strategy',
+                '6':  'Run Coorelation',
                 '7':  'Show Top Screen Results',
                 '8':  'Show All Screen Results',
                 '9':  'Show Ticker Screen Summary',
@@ -95,8 +97,8 @@ class Interface:
             if self.table:
                 menu_items['1'] += f' ({self.table})'
 
-            if self.screen_base:
-                menu_items['2'] += f' ({self.screen_base})'
+            if self.screen:
+                menu_items['2'] += f' ({self.screen})'
 
             if self.quick:
                 menu_items['5'] += ' (quick)'
@@ -109,6 +111,7 @@ class Interface:
                 menu_items['8'] += f' ({len(self.results_screen)})'
 
             if selection == 0:
+                self.ignore_cache = True
                 selection = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
 
             if selection == 1:
@@ -120,13 +123,13 @@ class Interface:
                 if len(self.results_screen) > 0:
                     self.show_valids(top=LISTTOP_SCREEN)
             elif selection == 4:
-                self.run_coorelate()
-                if len(self.results_corr) > 0:
-                    self.show_coorelations()
+                self.run_option_strategy()
             elif selection == 5:
                 self.run_support_resistance()
             elif selection == 6:
-                self.run_strategy()
+                self.run_coorelate()
+                if len(self.results_corr) > 0:
+                    self.show_coorelations()
             elif selection == 7:
                 self.show_valids(top=LISTTOP_SCREEN)
             elif selection == 8:
@@ -185,12 +188,12 @@ class Interface:
 
             selection = ui.menu(menu_items, 'Select Screen', 0, index+1)
             if selection > 0:
-                self.screen_base = paths[selection-1]
-                self.path_screen = f'{SCREEN_BASEPATH}{self.screen_base}.{SCREEN_SUFFIX}'
+                self.screen = paths[selection-1]
+                self.path_screen = f'{SCREEN_BASEPATH}{self.screen}.{SCREEN_SUFFIX}'
         else:
             ui.print_message('No screener files found')
 
-    def run_strategy(self) -> None:
+    def run_option_strategy(self) -> None:
         if len(self.results_screen) > 0:
             menu_items = {
                 '1': 'Call',
@@ -238,7 +241,7 @@ class Interface:
             except ValueError as e:
                 ui.print_error(str(e))
             else:
-                self.task = threading.Thread(target=self.screener.run_script)
+                self.task = threading.Thread(target=self.screener.run_script, kwargs={'ignore_cache': self.ignore_cache})
                 self.task.start()
 
                 self.show_progress_screen()
@@ -344,7 +347,7 @@ class Interface:
     def show_valids(self, top: int = -1, verbose: bool = False, ticker: str = '') -> None:
         if not self.table:
             ui.print_error('No table specified')
-        elif not self.screen_base:
+        elif not self.screen:
             ui.print_error('No screen specified')
         elif len(self.results_screen) == 0:
             ui.print_message('No results were located')
@@ -355,9 +358,9 @@ class Interface:
                 top = self.screener.task_success
 
             if ticker:
-                ui.print_message(f'Screener Results for {ticker} ({self.screen_base})')
+                ui.print_message(f'Screener Results for {ticker} ({self.screen})')
             else:
-                ui.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen_base}/{self.table})')
+                ui.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen}/{self.table})')
 
             index = 1
             for result in self.results_screen:
@@ -482,15 +485,26 @@ class Interface:
             selection = ui.menu(menu_items, 'Select cache file', 0, index+1)
             if selection > 0:
                 screen = paths[selection-1]
-                selection = ui.input_integer(f"Select operation for '{screen}': (1) Delete, (0) Cancel: ", 0, 1)
-                if selection > 0:
-                    file = f'{CACHE_BASEPATH}{screen}.{CACHE_SUFFIX}'
+                file = f'{CACHE_BASEPATH}{screen}.{CACHE_SUFFIX}'
+                selection = ui.input_integer(f"Select operation for '{screen}': (1) Delete, (2) Rename, (0) Cancel: ", 0, 2)
+                if selection == 1:
                     try:
                         os.remove(file)
                     except OSError as e:
-                        ui.print_error(f'File error: {e}')
+                        ui.print_error(f'File error for {e.filename}: {e.strerror}')
                     else:
                         ui.print_message(f'Cache {screen} deleted')
+                elif selection == 2:
+                    date_time = dt.now().strftime('%Y-%m-%d')
+                    new_screen = f'{date_time}{screen[10:]}'
+                    new_file = f'{CACHE_BASEPATH}{new_screen}.{CACHE_SUFFIX}'
+                    try:
+                        os.replace(file, new_file)
+                    except OSError as e:
+                        ui.print_error(f'File error for {e.filename}: {e.strerror}')
+                    else:
+                        ui.print_message(f'Renamed {screen} to {new_screen}')
+
         else:
             ui.print_message('No cache files found')
 
