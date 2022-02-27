@@ -145,7 +145,7 @@ class Interface:
             elif selection == 4:
                 self.run_option_strategy()
             elif selection == 5:
-                self.run_support_resistance()
+                self.get_support_resistance()
             elif selection == 6:
                 self.run_coorelate()
                 if len(self.results_corr) > 0:
@@ -300,15 +300,24 @@ class Interface:
                 df = self.coorelate.get_ticker_coorelation(ticker)
                 self.results_corr += [(ticker, df.iloc[-1])]
 
-    def run_support_resistance(self, corr: bool = False) -> None:
-        if len(self.results_valids) > 0:
-            if corr:
-                tickers = [result[1]['ticker'] for result in self.results_corr if result[1]['value'] > COOR_CUTOFF][:LISTTOP_CORR]
-            else:
-                tickers = [str(result) for result in self.results_valids[:LISTTOP_TREND]]
+    def get_support_resistance(self) -> list[str]:
+        tickers = []
+        ticker = ui.input_text("Enter ticker or 'valids': ").upper()
+        if store.is_ticker(ticker):
+            tickers = [ticker]
+        elif ticker != 'VALIDS':
+            pass
+        elif len(self.results_valids) > 0:
+            tickers = [str(result) for result in self.results_valids[:LISTTOP_TREND]]
+        else:
+            ui.print_error('Not a valid ticker')
 
-            ui.progress_bar(0, 0, prefix='Analyzing', reset=True)
+        if tickers:
+            self.run_support_resistance(tickers)
 
+    def run_support_resistance(self, tickers: list[str]) -> None:
+        if tickers:
+            ui.progress_bar(0, 0, prefix='Analyzing S & R', reset=True)
             for ticker in tickers:
                 if self.quick:
                     self.trend = SupportResistance(ticker, days=self.days)
@@ -450,6 +459,7 @@ class Interface:
                 ui.progress_bar(completed, total, prefix=prefix, ticker=ticker, success=success)
 
     def show_progress_analyze(self) -> None:
+
         while not self.trend.task_error:
             pass
 
@@ -459,7 +469,7 @@ class Interface:
                 time.sleep(0.20)
                 ui.progress_bar(0, 0, prefix=prefix, suffix=self.trend.task_message)
 
-            if self.trend.task_error == 'Hold':
+            if self.trend.task_error == 'Next':
                 pass
             elif self.trend.task_error == 'Done':
                 ui.print_message(f'{self.trend.task_error}: {self.trend.task_total} lines extracted in {self.trend.task_time:.1f} seconds')

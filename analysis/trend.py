@@ -174,7 +174,7 @@ class SupportResistance(Threaded):
 
         self._calculate_stats()
 
-        self.task_error = 'Hold'
+        self.task_error = 'Next'
 
     def _extract_lines(self, method: str, extmethod: str) -> list[_Line]:
         if not method in METHOD:
