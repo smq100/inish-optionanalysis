@@ -1,6 +1,8 @@
 import time
-from utils import math as m
 
+from colorama import Fore, Style
+
+from utils import math as m
 from data import store as store
 
 
@@ -17,7 +19,7 @@ def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int) -> int:
     return input_integer('Please select: ', minvalue, maxvalue)
 
 
-def delimeter(message, creturn: int = 0) -> str:
+def delimeter(message, creturn: int = 0, attr: int = 0) -> str:
     if creturn > 0:
         output = '\n' * creturn
     else:
@@ -36,11 +38,15 @@ def print_message(message: str, creturn: int = 1) -> None:
 
 
 def print_warning(message: str, creturn: int = 1) -> None:
+    print(Fore.RED, end='')
     print(delimeter(f'Warning: {message}', creturn))
+    print(Style.RESET_ALL)
 
 
 def print_error(message: str, creturn: int = 1) -> None:
+    print(Fore.RED, end='')
     print(delimeter(f'Error: {message}', creturn))
+    print(Style.RESET_ALL)
 
 
 def print_line(message: str, creturn: int = 1) -> None:

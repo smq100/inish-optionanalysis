@@ -28,6 +28,25 @@ LISTTOP_TREND = 5
 LISTTOP_CORR = 3
 
 
+def _get_cache_files() -> list[str]:
+    paths = []
+    with os.scandir(CACHE_BASEPATH) as entries:
+        for entry in entries:
+            if entry.is_file():
+                head, sep, tail = entry.name.partition('.')
+                if tail != CACHE_SUFFIX:
+                    pass
+                elif head == SCREEN_INIT_NAME:
+                    pass
+                else:
+                    paths += [head]
+
+    if paths:
+        paths.sort()
+
+    return paths
+
+
 class Interface:
     def __init__(self, table: str = '', screen: str = '', quick: bool = False, exit: bool = False):
         self.table = table.upper()
@@ -90,7 +109,8 @@ class Interface:
                 '7':  'Show Top Results',
                 '8':  'Show All Results',
                 '9':  'Show Ticker Summary',
-                '10': 'Manage cache files',
+                '10': 'Manage Cache Files',
+                '11': 'Clear Old Cache Files',
                 '0':  'Exit'
             }
 
@@ -138,6 +158,8 @@ class Interface:
                 self.show_ticker_results()
             elif selection == 10:
                 self.manage_cache_files()
+            elif selection == 11:
+                self.clear_old_cache_files()
             elif selection == 0:
                 self.exit = True
 
@@ -462,21 +484,8 @@ class Interface:
             ui.print_message(f'{st.strategy_error}')
 
     def manage_cache_files(self) -> None:
-        paths = []
-        with os.scandir(CACHE_BASEPATH) as entries:
-            for entry in entries:
-                if entry.is_file():
-                    head, sep, tail = entry.name.partition('.')
-                    if tail != CACHE_SUFFIX:
-                        pass
-                    elif head == SCREEN_INIT_NAME:
-                        pass
-                    else:
-                        paths += [head]
-
+        paths = _get_cache_files()
         if paths:
-            paths.sort()
-
             menu_items = {}
             for index, item in enumerate(paths):
                 menu_items[f'{index+1}'] = f'{item}'
@@ -507,6 +516,36 @@ class Interface:
 
         else:
             ui.print_message('No cache files found')
+
+    def clear_old_cache_files(self):
+        files = _get_cache_files()
+        if files:
+            old_paths = []
+            date_time = dt.now().strftime('%Y-%m-%d')
+            for path in files:
+                file_time = f'{path[:10]}'
+                if file_time != date_time:
+                    file = f'{CACHE_BASEPATH}{path}.{CACHE_SUFFIX}'
+                    old_paths += [file]
+
+            if old_paths:
+                deleted = 0
+                select = ui.input_text(f'Delete {len(old_paths)} files? (y/n): ').lower()
+                if select == 'y':
+                    for path in old_paths:
+                        try:
+                            os.remove(path)
+                        except OSError as e:
+                            ui.print_error(f'File error for {e.filename}: {e.strerror}')
+                        else:
+                            deleted += 1
+                    ui.print_message(f'Deleted {deleted} files')
+                else:
+                    ui.print_message('No files deleted')
+            else:
+                ui.print_message('All files up to date')
+        else:
+            ui.print_message('No files to delete')
 
 
 if __name__ == '__main__':
