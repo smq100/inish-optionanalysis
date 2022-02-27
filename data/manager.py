@@ -93,9 +93,9 @@ class Manager(Threaded):
                     else:
                         self.task_futures = [executor.submit(add, tickers, exchange)]
 
-                for future in futures.as_completed(self.task_futures):
-                    running -= 1
-                    _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
+                    for future in futures.as_completed(self.task_futures):
+                        running -= 1
+                        _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
             else:
                 _logger.warning(f'{__name__}: No symbols for {exchange}')
 
@@ -268,9 +268,9 @@ class Manager(Threaded):
                     else:
                         self.task_futures = [executor.submit(update, tickers)]
 
-                for future in futures.as_completed(self.task_futures):
-                    running -= 1
-                    _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
+                    for future in futures.as_completed(self.task_futures):
+                        running -= 1
+                        _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
 
         self.task_error = 'Done'
 
@@ -379,9 +379,9 @@ class Manager(Threaded):
                 else:
                     self.task_futures = [executor.submit(update, tickers)]
 
-            for future in futures.as_completed(self.task_futures):
-                running -= 1
-                _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
+                for future in futures.as_completed(self.task_futures):
+                    running -= 1
+                    _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
 
         if log:
             _write_tickers_log(self.invalid_tickers)
@@ -618,9 +618,9 @@ class Manager(Threaded):
                     running = 1
                     self.task_futures = [executor.submit(recheck, tickers)]
 
-            for future in futures.as_completed(self.task_futures):
-                running -= 1
-                _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
+                for future in futures.as_completed(self.task_futures):
+                    running -= 1
+                    _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
 
         self.task_error = 'Done'
 
@@ -703,9 +703,9 @@ class Manager(Threaded):
                 else:
                     self.task_futures = [executor.submit(check, tickers)]
 
-            for future in futures.as_completed(self.task_futures):
-                running -= 1
-                _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
+                for future in futures.as_completed(self.task_futures):
+                    running -= 1
+                    _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
 
             if len(self.task_object) > 1:
                 last = sorted(self.task_object)[-1]

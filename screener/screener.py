@@ -142,8 +142,8 @@ class Screener(Threaded):
             with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
                 self.task_futures = [executor.submit(self._run, list) for list in companies]
 
-            for future in futures.as_completed(self.task_futures):
-                _logger.info(f'{__name__}: Thread completed: {future.result()}.')
+                for future in futures.as_completed(self.task_futures):
+                    _logger.info(f'{__name__}: Thread completed: {future.result()}.')
 
             self.valids = [result for result in self.results if result]
             self.valids = sorted(self.valids, reverse=True, key=lambda r: float(r))

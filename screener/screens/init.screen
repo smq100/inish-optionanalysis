@@ -1,6 +1,7 @@
 [
    {
       "note":"Price > 8",
+      "weight": 0.25,
       "base":{
          "technical":"close",
          "length":0,
@@ -22,6 +23,7 @@
    },
    {
       "note":"Price < 300",
+      "weight": 0.25,
       "base":{
          "technical":"close",
          "length":0,

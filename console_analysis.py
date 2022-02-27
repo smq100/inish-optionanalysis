@@ -37,7 +37,7 @@ class Interface:
         self.days = 1000
         self.auto = False
         self.path_screen = ''
-        self.results_screen: list[Result] = []
+        self.results_valids: list[Result] = []
         self.results_corr: list[tuple[str, pd.DataFrame.Series]] = []
         self.trend: SupportResistance = None
         self.screener: Screener = None
@@ -87,9 +87,9 @@ class Interface:
                 '4':  'Run Option Strategy',
                 '5':  'Run Support & Resistance Analysis',
                 '6':  'Run Coorelation',
-                '7':  'Show Top Screen Results',
-                '8':  'Show All Screen Results',
-                '9':  'Show Ticker Screen Summary',
+                '7':  'Show Top Results',
+                '8':  'Show All Results',
+                '9':  'Show Ticker Summary',
                 '10': 'Manage cache files',
                 '0':  'Exit'
             }
@@ -103,12 +103,12 @@ class Interface:
             if self.quick:
                 menu_items['5'] += ' (quick)'
 
-            if len(self.results_screen) > 0:
-                top = len(self.results_screen) if len(self.results_screen) < LISTTOP_SCREEN else LISTTOP_SCREEN
+            if len(self.results_valids) > 0:
+                top = len(self.results_valids) if len(self.results_valids) < LISTTOP_SCREEN else LISTTOP_SCREEN
                 menu_items['7'] += f' ({top})'
 
-            if len(self.results_screen) > 0:
-                menu_items['8'] += f' ({len(self.results_screen)})'
+            if len(self.results_valids) > 0:
+                menu_items['8'] += f' ({len(self.results_valids)})'
 
             if selection == 0:
                 self.ignore_cache = True
@@ -120,7 +120,7 @@ class Interface:
                 self.select_screen()
             elif selection == 3:
                 self.run_screen()
-                if len(self.results_screen) > 0:
+                if len(self.results_valids) > 0:
                     self.show_valids(top=LISTTOP_SCREEN)
             elif selection == 4:
                 self.run_option_strategy()
@@ -161,7 +161,7 @@ class Interface:
 
     def select_screen(self) -> None:
         self.script = []
-        self.results_screen = []
+        self.results_valids = []
         paths = []
         with os.scandir(SCREEN_BASEPATH) as entries:
             for entry in entries:
@@ -194,7 +194,7 @@ class Interface:
             ui.print_message('No screener files found')
 
     def run_option_strategy(self) -> None:
-        if len(self.results_screen) > 0:
+        if len(self.results_valids) > 0:
             menu_items = {
                 '1': 'Call',
                 '2': 'Put',
@@ -234,7 +234,7 @@ class Interface:
         elif not self.path_screen:
             ui.print_error('No screen specified')
         else:
-            self.results_screen = []
+            self.results_valids = []
 
             try:
                 self.screener = Screener(self.table, screen=self.path_screen)
@@ -247,10 +247,10 @@ class Interface:
                 self.show_progress_screen()
 
                 if self.screener.task_error == 'Done':
-                    self.results_screen = self.screener.valids
+                    self.results_valids = self.screener.valids
                     success = True
 
-                    ui.print_message(f'{len(self.results_screen)} symbols identified in {self.screener.task_time:.1f} seconds')
+                    ui.print_message(f'{len(self.results_valids)} symbols identified in {self.screener.task_time:.1f} seconds')
 
                     if self.screener.cache_used:
                         ui.print_message('Previous results used')
@@ -258,7 +258,7 @@ class Interface:
         return success
 
     def run_coorelate(self) -> None:
-        if len(self.results_screen) == 0:
+        if len(self.results_valids) == 0:
             ui.print_error('Please run screen before correlating')
         elif not store.is_list(self.table):
             ui.print_error('List is not valid')
@@ -273,17 +273,17 @@ class Interface:
             self.show_progress_correlate()
 
             self.results_corr = []
-            for valid in self.results_screen:
+            for valid in self.results_valids:
                 ticker = valid.company.ticker
                 df = self.coorelate.get_ticker_coorelation(ticker)
                 self.results_corr += [(ticker, df.iloc[-1])]
 
     def run_support_resistance(self, corr: bool = False) -> None:
-        if len(self.results_screen) > 0:
+        if len(self.results_valids) > 0:
             if corr:
                 tickers = [result[1]['ticker'] for result in self.results_corr if result[1]['value'] > COOR_CUTOFF][:LISTTOP_CORR]
             else:
-                tickers = [str(result) for result in self.results_screen[:LISTTOP_TREND]]
+                tickers = [str(result) for result in self.results_valids[:LISTTOP_TREND]]
 
             ui.progress_bar(0, 0, prefix='Analyzing', reset=True)
 
@@ -315,7 +315,7 @@ class Interface:
         if direction not in s.DIRECTIONS:
             raise ValueError('Invalid direction')
 
-        tickers = [str(result) for result in self.results_screen[:LISTTOP_SCREEN]]
+        tickers = [str(result) for result in self.results_valids[:LISTTOP_SCREEN]]
         strategies = []
 
         print()
@@ -349,7 +349,7 @@ class Interface:
             ui.print_error('No table specified')
         elif not self.screen:
             ui.print_error('No screen specified')
-        elif len(self.results_screen) == 0:
+        elif len(self.results_valids) == 0:
             ui.print_message('No results were located')
         else:
             if top <= 0:
@@ -363,7 +363,7 @@ class Interface:
                 ui.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen}/{self.table})')
 
             index = 1
-            for result in self.results_screen:
+            for result in self.results_valids:
                 if ticker:
                     [print(r) for r in result.results if ticker.upper().ljust(6, ' ') == r[:6]]
                 elif verbose:
@@ -379,7 +379,7 @@ class Interface:
     def show_ticker_results(self):
         ticker = ui.input_text('Enter ticker: ').upper()
         if ticker:
-            for result in self.results_screen:
+            for result in self.screener.results:
                 [print(r) for r in result.results if ticker.ljust(6, ' ') == r[:6]]
 
     def show_coorelations(self):

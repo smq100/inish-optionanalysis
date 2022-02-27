@@ -188,8 +188,8 @@ def analyze_list(strategies: list[Strategy]) -> None:
         with futures.ThreadPoolExecutor(max_workers=strategy_total) as executor:
             strategy_futures = [executor.submit(analyze, item) for item in strategies]
 
-        for future in futures.as_completed(strategy_futures):
-            _logger.info(f'{__name__}: Thread completed: {future.result()}')
+            for future in futures.as_completed(strategy_futures):
+                _logger.info(f'{__name__}: Thread completed: {future.result()}')
 
         strategy_results.sort_values('upside', ascending=False, inplace=True)
     else:

@@ -52,7 +52,7 @@ class Interpreter:
         if self.filter['criteria']['series'] not in VALID_SERIES:
             raise SyntaxError('Invalid "criteria series" specified in script')
 
-        self.note = self.filter.get('note', '<none>')
+        self.note = self.filter['note']
         self.weight = self.filter.get('weight', 1.0)
         self.base_technical = self.filter['base']['technical']
         self.base_length = self.filter['base']['length']
@@ -201,7 +201,7 @@ class Interpreter:
 
             self.score = self.score * self.weight if self.enable_score else 1.0
 
-            self.result = f'{self.company.ticker:6s}{str(self.success)[:1]}: {self.score:5.2f}: {self.note}: ' + \
+            self.result = f'{self.company.ticker:6s}: {str(self.success)[:1]}: {self.score:5.2f}: {self.note:15s}: ' + \
                 f'{self.base_technical}({self.base_length})/{base:.2f}@{self.base_factor:.2f} ' + \
                 f'{self.conditional} ' + \
                 f'{self.criteria_technical}({self.criteria_length})/{self.criteria_start}/{self.criteria_series}/{criteria:.2f}@{self.criteria_factor:.2f}' + \
@@ -209,7 +209,7 @@ class Interpreter:
         else:
             _logger.warning(f'{__name__}: No technical information for {self.company}')
 
-            self.result = f'{self.company.ticker:6s}{str(self.success)[:1]}: {self.score:5.2f}: {self.note}: ' + \
+            self.result = f'{self.company.ticker:6s}: {str(self.success)[:1]}: {self.score:5.2f}: {self.note:15s}: ' + \
                 f'{self.base_technical}({self.base_length})/***@{self.base_factor:.2f} ' + \
                 f'{self.conditional} ' + \
                 f'{self.criteria_technical}({self.criteria_length})/{self.criteria_start}/{self.criteria_series}/***@{self.criteria_factor:.2f}' + \
