@@ -183,7 +183,7 @@ def analyze_list(strategies: list[Strategy]) -> None:
         strategy_completed += 1
 
     strategy_total = len(strategies)
-    if len(strategies) > 0:
+    if strategy_total > 0:
         strategy_error = 'None'
         with futures.ThreadPoolExecutor(max_workers=strategy_total) as executor:
             strategy_futures = [executor.submit(analyze, item) for item in strategies]
@@ -192,10 +192,10 @@ def analyze_list(strategies: list[Strategy]) -> None:
                 _logger.info(f'{__name__}: Thread completed: {future.result()}')
 
         strategy_results.sort_values('upside', ascending=False, inplace=True)
+        strategy_error = 'Done'
     else:
         strategy_error = 'No tickers'
 
-    strategy_error = 'Done'
 
 
 if __name__ == '__main__':

@@ -1,5 +1,7 @@
 import logging
 
+import argparse
+
 from learning.predict import Prediction
 from data import store as store
 from utils import ui, logger
@@ -81,9 +83,7 @@ class Interface:
             self.ticker = ticker
 
 
-if __name__ == '__main__':
-    import argparse
-
+def main():
     parser = argparse.ArgumentParser(description='Learning')
     parser.add_argument('-t', '--ticker', help='Run using ticker')
     parser.add_argument('-f', '--future', help='Future days', default=30)
@@ -97,3 +97,6 @@ if __name__ == '__main__':
             Interface(ticker=command['ticker'], days=int(command['future']))
     else:
         Interface()
+
+if __name__ == '__main__':
+    main()

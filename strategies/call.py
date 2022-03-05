@@ -26,6 +26,8 @@ class Call(Strategy):
             _, _, contract = self.fetch_default_contracts()
             if contract:
                 self.legs[0].option.load_contract(contract[0])
+            else:
+                _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}. Using calculated values')
 
     def __str__(self):
         return f'{self.legs[0].direction} {self.name}'

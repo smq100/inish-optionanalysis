@@ -4,6 +4,7 @@ import threading
 import datetime as dt
 import logging
 
+import argparse
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -650,9 +651,7 @@ class Interface():
         return major, minor
 
 
-if __name__ == '__main__':
-    import argparse
-
+def main():
     parser = argparse.ArgumentParser(description='Option Strategy Analyzer')
     parser.add_argument('-t', '--ticker', help='Specify the ticker symbol', required=False, default='AAPL')
     parser.add_argument('-s', '--strategy', help='Load and analyze strategy', required=False, choices=['call', 'put', 'vertc', 'vertp'], default='call')
@@ -666,3 +665,7 @@ if __name__ == '__main__':
     command = vars(parser.parse_args())
     Interface(ticker=command['ticker'], strategy=command['strategy'], direction=command['direction'],
               width=int(command['width']), quantity=int(command['quantity']), default=command['default'], analyze=command['analyze'], exit=command['exit'])
+
+
+if __name__ == '__main__':
+    main()

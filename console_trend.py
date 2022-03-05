@@ -2,6 +2,7 @@ import time
 import threading
 import logging
 
+import argparse
 import matplotlib.pyplot as plt
 
 from analysis.trend import SupportResistance
@@ -144,9 +145,7 @@ class Interface:
             ui.print_message(f'{self.trend.task_error}')
 
 
-if __name__ == '__main__':
-    import argparse
-
+def main():
     parser = argparse.ArgumentParser(description='Technical Analysis')
     parser.add_argument('-t', '--tickers', nargs='+', help='Run using tickers')
     parser.add_argument('-d', '--days', help='Days to run analysis', default=1000)
@@ -158,3 +157,7 @@ if __name__ == '__main__':
         Interface(tickers=command['tickers'], days=int(command['days']), quick=command['quick'], exit=command['exit'])
     else:
         Interface(days=int(command['days']), quick=command['quick'])
+
+
+if __name__ == '__main__':
+    main()

@@ -4,6 +4,7 @@ import threading
 import logging
 from datetime import datetime as dt
 
+import argparse
 import matplotlib.pyplot as plt
 import pandas as pd
 from tabulate import tabulate
@@ -272,10 +273,10 @@ class Interface:
                     self.results_valids = self.screener.valids
                     success = True
 
-                    ui.print_message(f'{len(self.results_valids)} symbols identified in {self.screener.task_time:.1f} seconds')
-
                     if self.screener.cache_used:
-                        ui.print_message('Previous results used')
+                        ui.print_message(f'{len(self.results_valids)} symbols identified. Cached results used')
+                    else:
+                        ui.print_message(f'{len(self.results_valids)} symbols identified in {self.screener.task_time:.1f} seconds')
 
         return success
 
@@ -370,10 +371,8 @@ class Interface:
         self.show_progress_options()
 
         ui.print_message('Strategy Analysis')
-        for result in st.strategy_legs:
-            print(result)
-        print()
-        print(tabulate(st.strategy_results, headers=st.strategy_results.columns, tablefmt='simple', floatfmt='.2f'))
+        headers = [header.replace('_', ' ').title() for header in st.strategy_results.columns]
+        print(tabulate(st.strategy_results, headers=headers, tablefmt='simple', floatfmt='.2f'))
 
     def show_valids(self, top: int = -1, verbose: bool = False, ticker: str = '') -> None:
         if not self.table:
@@ -499,7 +498,7 @@ class Interface:
             menu_items = {}
             for index, item in enumerate(paths):
                 menu_items[f'{index+1}'] = f'{item}'
-            menu_items['0'] = 'Cancel'
+            menu_items['0'] = 'Done'
 
             selection = ui.menu(menu_items, 'Select cache file', 0, index+1)
             if selection > 0:
@@ -558,9 +557,7 @@ class Interface:
             ui.print_message('No files to delete')
 
 
-if __name__ == '__main__':
-    import argparse
-
+def main():
     parser = argparse.ArgumentParser(description='Screener')
     parser.add_argument('-t', '--table', help='Specify a symbol or table', required=False, default='')
     parser.add_argument('-s', '--screen', help='Specify a screening script', required=False, default='')
@@ -573,3 +570,7 @@ if __name__ == '__main__':
     screen = ''
 
     Interface(table=command['table'], screen=command['screen'], quick=command['quick'], exit=command['exit'])
+
+
+if __name__ == '__main__':
+    main()

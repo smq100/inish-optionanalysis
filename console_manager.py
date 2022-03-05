@@ -2,13 +2,15 @@ import time
 import threading
 import logging
 
+import argparse
+
 import data as d
 from data import store as store
 from data import manager as manager
 from utils import ui, logger
 
 
-logger.get_logger(logging.WARNING, logfile='output')
+logger.get_logger(logging.WARNING)#, logfile='output')
 
 
 class Interface:
@@ -476,9 +478,7 @@ class Interface:
             ui.print_message(f'{self.manager.task_error}')
 
 
-if __name__ == '__main__':
-    import argparse
-
+def main():
     parser = argparse.ArgumentParser(description='Database Management')
     parser.add_argument('-t', '--ticker', help='Get ticker information', required=False)
     parser.add_argument('-u', '--update', help='Update ticker', required=False)
@@ -492,3 +492,7 @@ if __name__ == '__main__':
         Interface(update=command['update'], quick=command['quick'])
     else:
         Interface(quick=command['quick'])
+
+
+if __name__ == '__main__':
+    main()

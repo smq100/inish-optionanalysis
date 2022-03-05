@@ -3,6 +3,8 @@ import time
 import threading
 import logging
 
+import argparse
+
 import data as d
 from screener.screener import Screener, Result, SCREEN_INIT_NAME
 from data import store as store
@@ -337,9 +339,7 @@ class Interface:
             ui.print_message(f'{self.screener.task_error}')
 
 
-if __name__ == '__main__':
-    import argparse
-
+def main():
     parser = argparse.ArgumentParser(description='Screener')
     parser.add_argument('-t', '--table', help='Specify a symbol or table', required=False, default='')
     parser.add_argument('-s', '--screen', help='Specify a screening script', required=False, default='')
@@ -361,3 +361,6 @@ if __name__ == '__main__':
         Interface(table, screen, backtest=int(command['backtest']), verbose=command['verbose'], exit=True)
     else:
         Interface(table, screen, backtest=int(command['backtest']), verbose=command['verbose'])
+
+if __name__ == '__main__':
+    main()

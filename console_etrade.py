@@ -353,5 +353,8 @@ def _validate_session(session, url):
     return response is not None and response.status_code == 200
 
 
-if __name__ == '__main__':
+def main():
     client = Client()
+
+if __name__ == '__main__':
+    main()

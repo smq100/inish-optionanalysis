@@ -45,7 +45,7 @@ class Vertical(Strategy):
                 self.legs[0].option.load_contract(contracts[0])
                 self.legs[1].option.load_contract(contracts[1])
             else:
-                _logger.error(f'{__name__}: Error fetching contracts for {self.ticker}. Using calculated values')
+                _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}. Using calculated values')
 
     def __str__(self):
         return f'{self.name} {self.product} {self.analysis.credit_debit} spread'
