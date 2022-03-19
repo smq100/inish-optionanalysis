@@ -14,6 +14,11 @@ class BlackScholes(Pricing):
     '''
     This class uses the classic Black-Scholes method to calculate prices for European Call and Put options
 
+    :param ticker: Ticker of the Underlying Stock asset, ex. 'AAPL', 'TSLA', 'GOOGL', etc.
+    :param expiry_date: <datetime.date> ExpiryDate for the option -must be in the future
+    :param strike: <float> Strike price of the option. This is the price option holder plans to
+    buy underlying asset (for call option) or sell underlying asset (for put option).
+    :param dividend: <float> If the underlying asset is paying dividend to stock-holders.
     '''
 
     def __init__(self, ticker, expiry, strike, dividend=0.0):

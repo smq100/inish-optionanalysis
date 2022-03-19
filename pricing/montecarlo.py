@@ -6,11 +6,20 @@ import numpy as np
 
 import pricing
 from .pricing import Pricing
+from utils import logger
+
+_logger = logger.get_logger()
 
 
 class MonteCarlo(Pricing):
     '''
     This class uses Monte-Carlo simulation to calculate prices for American Call and Put Options.
+
+    :param ticker: Ticker of the Underlying Stock asset, ex. 'AAPL', 'TSLA', 'GOOGL', etc.
+    :param expiry_date: <datetime.date> ExpiryDate for the option -must be in the future
+    :param strike: <float> Strike price of the option. This is the price option holder plans to
+    buy underlying asset (for call option) or sell underlying asset (for put option).
+    :param dividend: <float> If the underlying asset is paying dividend to stock-holders.
 
     TODO: Create a separate class to calculate prices using Binomial Trees
     '''

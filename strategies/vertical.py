@@ -86,6 +86,12 @@ class Vertical(Strategy):
             self.task_message = self.legs[0].option.ticker
 
             self.legs[0].calculate()
+
+            # Ensure both legs use the same min, max, step
+            self.legs[1].min = self.legs[0].min
+            self.legs[1].max = self.legs[0].max
+            self.legs[1].step = self.legs[0].step
+
             self.legs[1].calculate()
 
             # Important: Assumes the long leg is the index-0 leg)
@@ -103,10 +109,16 @@ class Vertical(Strategy):
         self.task_error = 'Done'
 
     def generate_profit_table(self) -> pd.DataFrame:
+        print(self.legs[0].value)
+        print(self.legs[1].value)
+
+        profit = self.legs[0].value.sub(self.legs[1].value)
+        profit *= self.quantity
+
         if self.analysis.credit_debit == 'credit':
-            profit = ((self.legs[0].value - self.legs[1].value) * self.quantity) + self.analysis.total
+            profit += self.analysis.total
         else:
-            profit = ((self.legs[0].value - self.legs[1].value) * self.quantity) - self.analysis.total
+            profit -= self.analysis.total
 
         return profit
 

@@ -35,6 +35,9 @@ class Leg:
         self.pricing_method: str = 'black-scholes'
         self.pricer: Pricing = None
         self.value: pd.DataFrame = None
+        self.min = 0.0
+        self.max = 0.0
+        self.step = 0.0
 
     def __str__(self):
         if self.option.calc_price > 0.0:
@@ -182,9 +185,11 @@ class Leg:
                     today += dt.timedelta(days=step)
                     col_index += [str(today)]
 
+                if self.min <= 0.0 or self.max <= 0.0 or self.step <= 0.0:
+                    self.min, self.max, self.step = m.calculate_min_max_step(self.option.strike)
+
                 # Calculate cost of option every day till expiry
-                min_, max_, step_ = m.calculate_min_max_step(self.option.strike)
-                for s in range(int(math.ceil(min_*40)), int(math.ceil(max_*40)), int(math.ceil(step_*40))):
+                for s in range(int(math.ceil(self.min*40)), int(math.ceil(self.max*40)), int(math.ceil(self.step*40))):
                     spot = s / 40.0
                     row = []
                     for item in col_index:

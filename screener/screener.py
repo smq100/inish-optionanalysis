@@ -89,7 +89,7 @@ class Screener(Threaded):
 
         if self._load(screen, init=self.screen_init):
             self._open()
-            self.cache_available = self._load_cache()
+            self.cache_available = self._load_results()
         else:
             raise ValueError(f'Script not found or invalid format: {screen}')
 
@@ -149,7 +149,7 @@ class Screener(Threaded):
             self.valids = sorted(self.valids, reverse=True, key=lambda r: float(r))
 
             if dump_cache:
-                self._dump_cache()
+                self._dump_results()
 
             self.task_error = 'Done'
 
@@ -246,7 +246,7 @@ class Screener(Threaded):
 
         return bool(self.scripts)
 
-    def _dump_cache(self) -> None:
+    def _dump_results(self) -> None:
         if self.results:
             filename = self._build_cache_filename()
 
@@ -255,7 +255,7 @@ class Screener(Threaded):
 
             self.cache_available = True
 
-    def _load_cache(self) -> bool:
+    def _load_results(self) -> bool:
         filename = self._build_cache_filename()
 
         cached = False

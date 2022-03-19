@@ -46,7 +46,7 @@ class Strategy(ABC, Threaded):
         self.analysis = Analysis(self.ticker)
         self.legs: list[Leg] = []
         self.initial_spot = 0.0
-        self.initial_spot = self.get_current_spot(ticker, roundup=True)
+        self.initial_spot = self.get_current_spot(roundup=True)
 
         self.analysis.credit_debit = 'debit' if direction == 'long' else 'credit'
 
@@ -71,20 +71,12 @@ class Strategy(ABC, Threaded):
 
         return len(self.legs)
 
-    def get_current_spot(self, ticker: str, roundup: bool = False) -> float:
-        expiry = dt.datetime.today() + dt.timedelta(days=10)
-
-        if self.pricing_method == 'black-scholes':
-            pricer = BlackScholes(ticker, expiry, self.initial_spot)
-        elif self.pricing_method == 'monte-carlo':
-            pricer = MonteCarlo(ticker, expiry, self.initial_spot)
-        else:
-            raise ValueError('Unknown pricing model')
+    def get_current_spot(self, roundup: bool = False) -> float:
+        history = store.get_history(self.ticker, days=365)
+        spot = history.iloc[-1]['close']
 
         if roundup:
-            spot = math.ceil(pricer.spot_price)
-        else:
-            spot = pricer.spot_price
+            spot = math.ceil(spot)
 
         return spot
 

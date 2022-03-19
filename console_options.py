@@ -225,7 +225,7 @@ class Interface():
                 if style == 0:
                     style = ui.input_integer('(1) Summary, (2) Table, (3) Chart, (4) Contour, (5) Surface, or (0) Cancel: ', 0, 5)
                 if style > 0:
-                    title = f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].company}) '\
+                    title = f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].company}) ' \
                         f'{str(self.strategy).title()}, {self.strategy.legs[0].option.expiry:%Y-%m-%d}'
 
                     rows, cols = analysis.shape
@@ -243,11 +243,12 @@ class Interface():
                         analysis = m.compress_table(analysis, rows, cols)
 
                     if style == 1:
-                        title += f' ({self.strategy.legs[0].option.contract}'
-                        if len(self.strategy.legs) > 1:
-                            title += f' / {self.strategy.legs[1].option.contract})'
-                        else:
-                            title += ')'
+                        if self.strategy.legs[0].option.contract:
+                            title += f' ({self.strategy.legs[0].option.contract}'
+                            if len(self.strategy.legs) > 1:
+                                title += f' / {self.strategy.legs[1].option.contract})'
+                            else:
+                                title += ')'
 
                         ui.print_message(title)
                         print(self.strategy.analysis)
@@ -351,6 +352,7 @@ class Interface():
             product = 'call' if p == 1 else 'put'
             d = ui.input_integer('(1) Debit, or (2) Credit: ', 1, 2)
             direction = 'long' if d == 1 else 'short'
+            self.width = 1 if self.width == 0 else self.width
             if product == 'call':
                 self.load_strategy(self.strategy.ticker, 'vertc', direction, self.width, self.quantity)
             else:

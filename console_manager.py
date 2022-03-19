@@ -127,15 +127,15 @@ class Interface:
         inactive = self.manager.identify_inactive_tickers('all')
         print(f'        inactive:\t{len(inactive)} tickers')
 
-        ui.print_message('Exchange Information')
-        info = self.manager.get_exchange_info()
-        for i in info:
-            print(f'{i["exchange"]:>16}:\t{i["count"]} symbols')
+        # ui.print_message('Exchange Information')
+        # info = self.manager.get_exchange_info()
+        # for i in info:
+        #     print(f'{i["exchange"]:>16}:\t{i["count"]} symbols')
 
-        ui.print_message('Index Information')
-        info = self.manager.get_index_info()
-        for i in info:
-            print(f'{i["index"]:>16}:\t{i["count"]} symbols')
+        # ui.print_message('Index Information')
+        # info = self.manager.get_index_info()
+        # for i in info:
+        #     print(f'{i["index"]:>16}:\t{i["count"]} symbols')
 
     def show_ticker_information(self, ticker: str = '', prompt: bool = False, live: bool = False) -> None:
         if not ticker:
@@ -262,7 +262,7 @@ class Interface:
 
                 if len(self.manager.invalid_tickers) > 0:
                     if ui.input_yesno('Show unsuccessful tickers?'):
-                        ui.print_message('Unsuccessful tickers')
+                        ui.print_message(f'{len(self.manager.invalid_tickers)} unsuccessful tickers')
                         ui.print_tickers(self.manager.invalid_tickers)
 
     def update_company(self, ticker: str = '', progressbar: bool = True) -> None:

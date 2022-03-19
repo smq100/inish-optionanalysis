@@ -458,7 +458,6 @@ class Interface:
                 ui.progress_bar(completed, total, prefix=prefix, ticker=ticker, success=success)
 
     def show_progress_analyze(self) -> None:
-
         while not self.trend.task_error:
             pass
 
