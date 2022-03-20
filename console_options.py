@@ -21,9 +21,6 @@ from data import store
 from utils import math as m
 from utils import ui, logger
 
-MAX_ROWS = 50
-MAX_COLS = 11
-
 
 logger.get_logger(logging.WARNING, logfile='')
 
@@ -191,13 +188,13 @@ class Interface():
                     title = f'{self.strategy.legs[leg]}'
                     rows, cols = value.shape
 
-                    if rows > MAX_ROWS:
-                        rows = MAX_ROWS
+                    if rows > m.VALUETABLE_ROWS:
+                        rows = m.VALUETABLE_ROWS
                     else:
                         rows = -1
 
-                    if cols > MAX_COLS:
-                        cols = MAX_COLS
+                    if cols > m.VALUETABLE_COLS:
+                        cols = m.VALUETABLE_COLS
                     else:
                         cols = -1
 
@@ -229,13 +226,13 @@ class Interface():
                         f'{str(self.strategy).title()}, {self.strategy.legs[0].option.expiry:%Y-%m-%d}'
 
                     rows, cols = analysis.shape
-                    if rows > MAX_ROWS:
-                        rows = MAX_ROWS
+                    if rows > m.VALUETABLE_ROWS:
+                        rows = m.VALUETABLE_ROWS
                     else:
                         rows = -1
 
-                    if cols > MAX_COLS:
-                        cols = MAX_COLS
+                    if cols > m.VALUETABLE_COLS:
+                        cols = m.VALUETABLE_COLS
                     else:
                         cols = -1
 

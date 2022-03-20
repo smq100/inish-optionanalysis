@@ -94,7 +94,7 @@ class Vertical(Strategy):
 
             self.legs[1].calculate()
 
-            # Important: Assumes the long leg is the index-0 leg)
+            # Important: Assumes the long leg is the index-0 leg
             self.legs[0].option.eff_price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
             self.legs[1].option.eff_price = self.legs[1].option.last_price if self.legs[1].option.last_price > 0.0 else self.legs[1].option.calc_price
 
@@ -109,9 +109,6 @@ class Vertical(Strategy):
         self.task_error = 'Done'
 
     def generate_profit_table(self) -> pd.DataFrame:
-        print(self.legs[0].value)
-        print(self.legs[1].value)
-
         profit = self.legs[0].value.sub(self.legs[1].value)
         profit *= self.quantity
 

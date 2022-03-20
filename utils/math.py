@@ -3,7 +3,10 @@ import datetime as dt
 
 import pandas as pd
 
-_MIN_MAX_PERCENT = 0.20
+
+MIN_MAX_PERCENT = 0.20
+VALUETABLE_ROWS = 60
+VALUETABLE_COLS = 11
 
 
 def mround(n: float, precision: float) -> float:
@@ -27,11 +30,19 @@ def calculate_min_max_step(strike: float) -> tuple[float, float, float]:
     max_ = 0.0
     step = 0.0
 
-    min_ = strike * (1.0 - _MIN_MAX_PERCENT)
-    max_ = strike * (1.0 + _MIN_MAX_PERCENT)
+    if strike > 500.0:
+        step = 10.0
+    elif strike > 100.0:
+        step = 1.0
+    elif strike > 50.0:
+        step = 0.50
+    elif strike > 20.0:
+        step = 0.10
+    else:
+        step = 0.05
 
-    step = (max_ - min_) / 40.0
-    step = mround(step, step / 10.0)
+    min_ = strike - ((VALUETABLE_ROWS / 2.0) * step)
+    max_ = strike + ((VALUETABLE_ROWS / 2.0) * step)
 
     if min_ < step:
         min_ = step

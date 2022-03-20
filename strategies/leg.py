@@ -2,6 +2,7 @@ import datetime as dt
 import math
 
 import pandas as pd
+import numpy as np
 
 import strategies as s
 from company.company import Company
@@ -188,9 +189,8 @@ class Leg:
                 if self.min <= 0.0 or self.max <= 0.0 or self.step <= 0.0:
                     self.min, self.max, self.step = m.calculate_min_max_step(self.option.strike)
 
-                # Calculate cost of option every day till expiry
-                for s in range(int(math.ceil(self.min*40)), int(math.ceil(self.max*40)), int(math.ceil(self.step*40))):
-                    spot = s / 40.0
+                # Calculate option price every day till expiry
+                for spot in np.arange(self.min, self.max, self.step):
                     row = []
                     for item in col_index:
                         maturity_date = dt.datetime.strptime(item, '%Y-%m-%d %H:%M:%S')
@@ -211,17 +211,6 @@ class Leg:
                     table += [row]
 
                     # Create row index
-                    if spot > 500.0:
-                        spot = m.mround(spot, 10.0)
-                    elif spot > 100.0:
-                        spot = m.mround(spot, 1.00)
-                    elif spot > 50.0:
-                        spot = m.mround(spot, 0.50)
-                    elif spot > 20.0:
-                        spot = m.mround(spot, 0.10)
-                    else:
-                        spot = m.mround(spot, 0.01)
-
                     row_index += [spot]
 
                 # Strip the time from the datetime string
@@ -234,6 +223,8 @@ class Leg:
                 value = pd.DataFrame(table, index=row_index, columns=col_index)
                 value = value.iloc[::-1]
 
+        print(f'{self.option.strike=:.2f}, {self.min=:.2f}, {self.max=:.2f}, {self.step=:.2f}')
+        print(value)
         return value
 
     def _calculate_date_step(self) -> tuple[int, int]:
