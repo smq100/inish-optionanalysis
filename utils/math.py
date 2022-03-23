@@ -6,7 +6,7 @@ import pandas as pd
 
 
 MIN_MAX_PERCENT = 0.20
-VALUETABLE_ROWS = 60
+VALUETABLE_ROWS = 50
 VALUETABLE_COLS = 11
 
 range_mms = collections.namedtuple('range', ['min', 'max', 'step'])

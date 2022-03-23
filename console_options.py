@@ -239,7 +239,7 @@ class Interface():
                 if style == 0:
                     style = ui.input_integer('(1) Summary, (2) Table, (3) Chart, (4) Contour, (5) Surface, or (0) Cancel: ', 0, 5)
                 if style > 0:
-                    title = f'Analysis: {self.strategy.ticker} ({self.strategy.legs[0].company})'
+                    title = f'Analysis: {self.strategy.ticker}'
 
                     rows, cols = analysis.shape
                     if rows > m.VALUETABLE_ROWS:
@@ -255,16 +255,13 @@ class Interface():
                     if rows > 0 or cols > 0:
                         analysis = m.compress_table(analysis, rows, cols)
 
-                    if style == 1: # TODO allow for 4 contracts
-                        if self.strategy.legs[0].option.contract:
-                            title += f' ({self.strategy.legs[0].option.contract}'
-                            if len(self.strategy.legs) > 1:
-                                title += f' / {self.strategy.legs[1].option.contract})'
-                            else:
-                                title += ')'
-
+                    if style == 1:
                         ui.print_message(title)
                         print(self.strategy.analysis)
+                        if self.strategy.legs[0].option.contract:
+                            print('Contracts:')
+                            for leg in self.strategy.legs:
+                                print(f'{leg.option.contract}')
                     elif style == 2:
                         ui.print_message(title)
                         print(tabulate(analysis, headers=analysis.columns, tablefmt='simple', floatfmt='.2f'))

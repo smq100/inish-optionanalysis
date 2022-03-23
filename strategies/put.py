@@ -79,26 +79,16 @@ class Put(Strategy):
 
             self.analysis.credit_debit = 'debit' if self.direction == 'long' else 'credit'
             self.analysis.total = self.legs[0].option.eff_price * self.quantity
-            self.analysis.table = self.generate_profit_table()
+
             self.analysis.max_gain, self.analysis.max_loss, self.analysis.upside, self.analysis.sentiment = self.calculate_gain_loss()
+            self.analysis.table = self.generate_profit_table()
             self.analysis.breakeven = self.calculate_breakeven()
             self.analysis.summarize()
 
-            _logger.info(f'{__name__}: {self.ticker}: p={self.legs[0].option.eff_price:.2f}, g={self.analysis.max_gain:.2f}, l={self.analysis.max_loss:.2f} b={self.analysis.breakeven :.2f}')
+            _logger.info(f'{__name__}: {self.ticker}: p={self.legs[0].option.eff_price:.2f}, g={self.analysis.max_gain:.2f}, \
+                l={self.analysis.max_loss:.2f} b={self.analysis.breakeven[0]:.2f}')
 
         self.task_error = 'Done'
-
-    def generate_profit_table(self) -> pd.DataFrame:
-        profit = pd.DataFrame()
-
-        if self.legs[0].direction == 'long':
-            profit = self.legs[0].value_table - self.legs[0].option.eff_price
-            profit = profit.applymap(lambda x: x if x > -self.legs[0].option.eff_price else -self.legs[0].option.eff_price)
-        else:
-            profit = self.legs[0].value_table
-            profit = profit.applymap(lambda x: (self.legs[0].option.eff_price - x) if x < self.legs[0].option.eff_price else -(x - self.legs[0].option.eff_price))
-
-        return profit
 
     def calculate_gain_loss(self) -> tuple[float, float, float, str]:
         upside = -1.0
@@ -113,6 +103,18 @@ class Put(Strategy):
             sentiment = 'bullish'
 
         return max_gain, max_loss, upside, sentiment
+
+    def generate_profit_table(self) -> pd.DataFrame:
+        profit = pd.DataFrame()
+
+        if self.legs[0].direction == 'long':
+            profit = self.legs[0].value_table - self.legs[0].option.eff_price
+            profit = profit.applymap(lambda x: x if x > -self.legs[0].option.eff_price else -self.legs[0].option.eff_price)
+        else:
+            profit = self.legs[0].value_table
+            profit = profit.applymap(lambda x: (self.legs[0].option.eff_price - x) if x < self.legs[0].option.eff_price else -(x - self.legs[0].option.eff_price))
+
+        return profit
 
     def calculate_breakeven(self) -> list[float]:
         if self.legs[0].direction == 'long':

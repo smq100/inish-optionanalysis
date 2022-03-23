@@ -123,24 +123,14 @@ class Vertical(Strategy):
 
             self.analysis.credit_debit = 'debit' if self.direction == 'long' else 'credit'
             self.analysis.total = abs(self.legs[0].option.eff_price - self.legs[1].option.eff_price) * self.quantity
-            self.analysis.table = self.generate_profit_table()
+
             self.analysis.max_gain, self.analysis.max_loss, self.analysis.upside, self.analysis.sentiment = self.calculate_gain_loss()
+            self.analysis.table = self.generate_profit_table()
             self.analysis.breakeven = self.calculate_breakeven()
             self.analysis.summarize()
 
             _logger.info(f'{__name__}: {self.ticker}: g={self.analysis.max_gain:.2f}, l={self.analysis.max_loss:.2f} b={self.analysis.breakeven[0]:.2f}')
         self.task_error = 'Done'
-
-    def generate_profit_table(self) -> pd.DataFrame:
-        profit = self.legs[0].value_table.sub(self.legs[1].value_table)
-        profit *= self.quantity
-
-        if self.analysis.credit_debit == 'credit':
-            profit += self.analysis.total
-        else:
-            profit -= self.analysis.total
-
-        return profit
 
     def calculate_gain_loss(self) -> tuple[float, float, float, str]:
         max_gain = max_loss = 0.0
@@ -178,6 +168,17 @@ class Vertical(Strategy):
 
         upside = max_gain - max_loss
         return max_gain, max_loss, upside, sentiment
+
+    def generate_profit_table(self) -> pd.DataFrame:
+        profit = self.legs[0].value_table.sub(self.legs[1].value_table)
+        profit *= self.quantity
+
+        if self.analysis.credit_debit == 'credit':
+            profit += self.analysis.total
+        else:
+            profit -= self.analysis.total
+
+        return profit
 
     def calculate_breakeven(self) -> list[float]:
         if self.analysis.credit_debit == 'debit':

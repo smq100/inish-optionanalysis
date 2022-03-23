@@ -27,8 +27,8 @@ class Leg:
         if quantity < 1:
             raise ValueError('Invalid quantity')
 
-        self.company: Company = Company(ticker, days=1)
-        self.option: Option = Option(ticker, product, strike, expiry)
+        self.company = Company(ticker, days=1)
+        self.option = Option(ticker, product, strike, expiry)
         self.quantity = quantity
         self.product = product
         self.direction = direction

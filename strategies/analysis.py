@@ -48,7 +48,8 @@ class Analysis:
                 'max_gain': self.max_gain,
                 'max_loss': self.max_loss,
                 'upside': self.upside,
-                'breakeven': self.breakeven,
+                'breakeven1': self.breakeven[0],
+                'breakeven2': self.breakeven[1] if len(self.breakeven) > 1 else 0.0
             }
 
             self.summary = pd.DataFrame(data, index=[self.ticker])

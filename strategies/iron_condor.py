@@ -128,13 +128,33 @@ class IronCondor(Strategy):
             total_p = abs(self.legs[3].option.eff_price - self.legs[2].option.eff_price) * self.quantity
             self.analysis.total = total_c + total_p
 
-            self.analysis.table = self.generate_profit_table()
             self.analysis.max_gain, self.analysis.max_loss, self.analysis.upside, self.analysis.sentiment = self.calculate_gain_loss()
+            self.analysis.table = self.generate_profit_table()
             self.analysis.breakeven = self.calculate_breakeven()
             self.analysis.summarize()
 
-            _logger.info(f'{__name__}: {self.ticker}: g={self.analysis.max_gain:.2f}, l={self.analysis.max_loss:.2f} b1={self.analysis.breakeven[0] :.2f} b2={self.analysis.breakeven[1] :.2f}')
+            _logger.info(f'{__name__}: {self.ticker}: g={self.analysis.max_gain:.2f}, l={self.analysis.max_loss:.2f} \
+                b1={self.analysis.breakeven[0] :.2f} b2={self.analysis.breakeven[1] :.2f}')
         self.task_error = 'Done'
+
+    def calculate_gain_loss(self) -> tuple[float, float, float, str]:
+        max_gain = max_loss = 0.0
+
+        if self.analysis.credit_debit == 'credit':
+            max_gain = self.analysis.total
+            max_loss = (self.quantity * (self.legs[0].option.strike - self.legs[1].option.strike)) - max_gain
+            if max_loss < 0.0:
+                max_loss = 0.0 # Credit is more than possible loss!
+            sentiment = 'bullish'
+        else:
+            max_loss = self.analysis.total
+            max_gain = (self.quantity * (self.legs[0].option.strike - self.legs[1].option.strike)) - max_loss
+            if max_gain < 0.0:
+                max_gain = 0.0 # Debit is more than possible gain!
+            sentiment = 'bearish'
+
+        upside = max_gain - max_loss
+        return max_gain, max_loss, upside, sentiment
 
     def generate_profit_table(self) -> pd.DataFrame:
         if self.direction == 'long':
@@ -148,30 +168,11 @@ class IronCondor(Strategy):
         profit *= self.quantity
 
         if self.analysis.credit_debit == 'credit':
-            profit += self.analysis.total
+            profit -= self.analysis.max_loss
         else:
-            profit -= self.analysis.total
+            profit += self.analysis.max_gain
 
         return profit
-
-    def calculate_gain_loss(self) -> tuple[float, float, float, str]:
-        max_gain = max_loss = 0.0
-
-        if self.analysis.credit_debit == 'credit':
-            max_gain = self.analysis.total
-            max_loss = (self.quantity * (self.legs[0].option.strike - self.legs[3].option.strike)) - max_gain
-            if max_loss < 0.0:
-                max_loss = 0.0 # Credit is more than possible loss!
-            sentiment = 'bullish'
-        else:
-            max_loss = self.analysis.total
-            max_gain = (self.quantity * (self.legs[0].option.strike - self.legs[3].option.strike)) - max_loss
-            if max_gain < 0.0:
-                max_gain = 0.0 # Debit is more than possible gain!
-            sentiment = 'bearish'
-
-        upside = max_gain - max_loss
-        return max_gain, max_loss, upside, sentiment
 
     def calculate_breakeven(self) -> list[float]:
         breakeven  = [self.legs[1].option.strike - self.analysis.total]
@@ -205,23 +206,24 @@ if __name__ == '__main__':
 
     ticker = 'AAPL'
     strike = float(math.ceil(store.get_last_price(ticker)))
-    ic = IronCondor(ticker, 'hybrid', 'long', strike, 1, load_contracts=True)
+    ic = IronCondor(ticker, 'hybrid', 'short', strike, 1, load_contracts=True)
     ic.analyze()
 
-    print(ic.legs[0])
-    print(ic.legs[0].option.eff_price)
+    # print(ic.legs[0])
+    # print(ic.legs[0].option.eff_price)
     # print(ic.legs[0].value_table)
 
-    print(ic.legs[1])
-    print(ic.legs[1].option.eff_price)
+    # print(ic.legs[1])
+    # print(ic.legs[1].option.eff_price)
     # print(ic.legs[1].value_table)
 
-    print(ic.legs[2])
-    print(ic.legs[2].option.eff_price)
+    # print(ic.legs[2])
+    # print(ic.legs[2].option.eff_price)
     # print(ic.legs[2].value_table)
 
-    print(ic.legs[3])
-    print(ic.legs[3].option.eff_price)
+    # print(ic.legs[3])
+    # print(ic.legs[3].option.eff_price)
     # print(ic.legs[3].value_table)
 
+    print(f'{ic.analysis.max_gain=:.2f}, {ic.analysis.max_loss=:.2f}, {ic.analysis.total=:.2f}')
     print(ic.analysis.table)
