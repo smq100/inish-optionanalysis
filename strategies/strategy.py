@@ -12,8 +12,6 @@ from strategies.leg import Leg
 from strategies.analysis import Analysis
 from options.chain import Chain
 import pricing as p
-from pricing.blackscholes import BlackScholes
-from pricing.montecarlo import MonteCarlo
 from data import store
 from utils import math as m
 from utils import logger
@@ -23,13 +21,15 @@ _logger = logger.get_logger()
 
 
 class Strategy(ABC, Threaded):
-    def __init__(self, ticker: str, product: str, direction: str, width: int, quantity: int, load_default: bool = False):
+    def __init__(self, ticker: str, product: str, direction: str, strike: float, width: int, quantity: int = 1, load_contracts: bool = False):
         if not store.is_ticker(ticker):
             raise ValueError('Invalid ticker')
         if product not in s.PRODUCTS:
             raise ValueError('Invalid product')
         if direction not in s.DIRECTIONS:
             raise ValueError('Invalid direction')
+        if strike < 0.0:
+            raise ValueError('Invalid strike')
         if width < 0:
             raise ValueError('Invalid width')
         if quantity < 1:
@@ -39,6 +39,7 @@ class Strategy(ABC, Threaded):
         self.ticker = ticker.upper()
         self.product = product
         self.direction = direction
+        self.strike = strike
         self.quantity = quantity
         self.width = width
         self.pricing_method = 'black-scholes'
@@ -72,7 +73,7 @@ class Strategy(ABC, Threaded):
         return len(self.legs)
 
     def get_current_spot(self, roundup: bool = False) -> float:
-        history = store.get_history(self.ticker, days=365)
+        history = store.get_history(self.ticker, days=30)
         spot = history.iloc[-1]['close']
 
         if roundup:
@@ -88,37 +89,10 @@ class Strategy(ABC, Threaded):
         else:
             raise ValueError('Invalid pricing method')
 
-    def fetch_default_contracts(self, distance: int = 1, weeks: int = -1) -> tuple[str, int, list[str]]:
-        # Works for strategies with one leg. Multiple-leg strategies should be overridden
-        if distance < 0:
-            raise ValueError('Invalid distance')
-
-        contract = ''
-        expiry = self.chain.get_expiry()
-
-        if not expiry:
-            raise KeyError('No option expiry dates')
-        elif weeks < 0:
-            # Default to next month's option date
-            third = f'{m.third_friday():%Y-%m-%d}'
-            self.chain.expire = third if third in expiry else expiry[0]
-        elif len(expiry) > weeks:
-            self.chain.expire = expiry[weeks]
-        else:
-            self.chain.expire = expiry[0]
-
-        product = self.legs[0].option.product
-        options = self.chain.get_chain(product)
-        index = self.chain.get_itm()
-        if index >= 0:
-            contract = options.iloc[index]['contractSymbol']
-        else:
-            _logger.error(f'{__name__}: Error fetching default contract')
-
-        _logger.debug(f'{__name__}: {options}')
-        _logger.debug(f'{__name__}: {index=}')
-
-        return product, index, [contract]
+    @abc.abstractmethod
+    def fetch_contracts(self, strike: float = -1.0, distance: int = 1, weeks: int = -1) -> tuple[str, int, list[str]]:
+        pass
+        # return 0, 0, []
 
     @abc.abstractmethod
     def generate_profit_table(self) -> pd.DataFrame:
@@ -129,8 +103,8 @@ class Strategy(ABC, Threaded):
         return (0.0, 0.0, 0.0, '')
 
     @abc.abstractmethod
-    def calculate_breakeven(self) -> float:
-        return 0.0
+    def calculate_breakeven(self) -> list[float]:
+        return [0.0]
 
     def get_errors(self) -> str:
         return ''

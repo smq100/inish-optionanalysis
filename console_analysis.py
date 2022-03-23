@@ -1,5 +1,6 @@
 import os
 import time
+import math
 import threading
 import logging
 from datetime import datetime as dt
@@ -354,14 +355,19 @@ class Interface:
         ui.progress_bar(0, 0, prefix='Analyzing Options', reset=True)
 
         for ticker in tickers:
+            if direction == 'long':
+                strike = float(math.floor(store.get_last_price(ticker)))
+            else:
+                strike = float(math.ceil(store.get_last_price(ticker)))
+
             if strategy == 'call':
-                self.strategy = Call(ticker, 'call', direction, 1, 1, True)
+                self.strategy = Call(ticker, 'call', direction, strike, 1, 1, True)
             elif strategy == 'put':
-                self.strategy = Put(ticker, 'put', direction, 1, 1, True)
+                self.strategy = Put(ticker, 'put', direction, strike, 1, 1, True)
             elif strategy == 'vertc':
-                self.strategy = Vertical(ticker, 'call', direction, 1, 1, True)
+                self.strategy = Vertical(ticker, 'call', direction, strike, 1, 1, True)
             elif strategy == 'vertp':
-                self.strategy = Vertical(ticker, 'put', direction, 1, 1, True)
+                self.strategy = Vertical(ticker, 'put', direction, strike, 1, 1, True)
 
             strategies += [self.strategy]
 
@@ -371,6 +377,7 @@ class Interface:
         self.show_progress_options()
 
         ui.print_message('Strategy Analysis')
+        print()
         headers = [header.replace('_', ' ').title() for header in st.strategy_results.columns]
         print(tabulate(st.strategy_results, headers=headers, tablefmt='simple', floatfmt='.2f'))
 

@@ -17,7 +17,7 @@ class Analysis:
         self.gain = ''
         self.loss = ''
         self.upside = 0.0
-        self.breakeven = 0.0
+        self.breakeven = [0.0]
 
     def __str__(self):
         if not self.table.empty:
@@ -27,8 +27,10 @@ class Analysis:
                 f'Total:     ${abs(self.total):.2f} {self.credit_debit}\n'\
                 f'Max Gain:  {self.gain}\n'\
                 f'Max Loss:  {self.loss}\n'\
-                f'Upside:    {self.upside:.2f}\n'\
-                f'Breakeven: ${self.breakeven:.2f} at expiry\n'
+                f'Upside:    {self.upside:.2f}\n'
+
+            for breakeven in self.breakeven:
+                output += f'Breakeven: ${breakeven:.2f} at expiry\n'
         else:
             output = 'Not yet analyzed'
 
@@ -48,4 +50,5 @@ class Analysis:
                 'upside': self.upside,
                 'breakeven': self.breakeven,
             }
+
             self.summary = pd.DataFrame(data, index=[self.ticker])

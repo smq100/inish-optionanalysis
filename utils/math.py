@@ -1,5 +1,6 @@
 import math
 import datetime as dt
+import collections
 
 import pandas as pd
 
@@ -8,6 +9,7 @@ MIN_MAX_PERCENT = 0.20
 VALUETABLE_ROWS = 60
 VALUETABLE_COLS = 11
 
+range_mms = collections.namedtuple('range', ['min', 'max', 'step'])
 
 def mround(n: float, precision: float) -> float:
     val = float(round(n / precision) * precision)
@@ -47,7 +49,7 @@ def calculate_min_max_step(strike: float) -> tuple[float, float, float]:
     if min_ < step:
         min_ = step
 
-    return min_, max_, step
+    return range_mms(min_, max_, step)
 
 
 def compress_table(table: pd.DataFrame, rows: int, cols: int) -> pd.DataFrame:
@@ -82,6 +84,9 @@ def third_friday() -> dt.datetime:
     w = third.weekday()
     if w != 4:
         third = third.replace(day=(15 + (4 - w) % 7))
+
+    # Contracts seem to list Thursday as last day for monthly options (last day to trade)
+    third -= dt.timedelta(days=1)
 
     return third
 

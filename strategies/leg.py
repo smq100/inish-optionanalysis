@@ -4,21 +4,20 @@ import math
 import pandas as pd
 import numpy as np
 
+import pricing
 import strategies as s
 from company.company import Company
 from options.option import Option
 from pricing.pricing import Pricing
 from pricing.blackscholes import BlackScholes
 from pricing.montecarlo import MonteCarlo
-from utils import ui, logger
+from utils import logger
 from utils import math as m
 
 
 _IV_CUTOFF = 0.020
 
 _logger = logger.get_logger()
-
-
 class Leg:
     def __init__(self, ticker: str, quantity: int, product: str, direction: str, strike: float, expiry: dt.datetime):
         if product not in s.PRODUCTS:
@@ -30,19 +29,17 @@ class Leg:
 
         self.company: Company = Company(ticker, days=1)
         self.option: Option = Option(ticker, product, strike, expiry)
-        self.quantity: int = quantity
-        self.product: str = product
-        self.direction: str = direction
-        self.pricing_method: str = 'black-scholes'
+        self.quantity = quantity
+        self.product = product
+        self.direction = direction
+        self.pricing_method = pricing.PRICING_METHODS[0]
         self.pricer: Pricing = None
-        self.value: pd.DataFrame = None
-        self.min = 0.0
-        self.max = 0.0
-        self.step = 0.0
+        self.value_table = pd.DataFrame()
+        self.range = m.range_mms(0.0, 0.0, 0.0)
 
     def __str__(self):
         if self.option.calc_price > 0.0:
-            d1 = 'bs' if self.pricing_method == 'black-scholes' else 'mc'
+            d1 = 'bs' if self.pricing_method == pricing.PRICING_METHODS[0] else pricing.PRICING_METHODS[1]
             d2 = 'cv' if self.option.implied_volatility < _IV_CUTOFF else 'iv'
             d3 = '*' if self.option.implied_volatility < _IV_CUTOFF else ''
             output = f'{self.quantity:2d} '\
@@ -58,11 +55,11 @@ class Leg:
 
             if self.option.last_price > 0.0:
                 if self.option.implied_volatility < _IV_CUTOFF and self.option.implied_volatility > 0.0:
-                    output += '\n    *** Warning: The iv is unsually low, perhaps due to after-hours. Using cv.'
+                    output += '\n    *** The iv is unsually low, perhaps due to after-hours. Using cv.'
 
                 diff = self.option.calc_price / self.option.last_price
                 if diff > 1.50 or diff < 0.50:
-                    output += '\n    *** Warning: The calculated price is significantly different than the last traded price.'
+                    output += '\n    *** The calculated price is significantly different than the last traded price.'
         else:
             output = f'{self.quantity:2d} '\
                 f'{self.company.ticker}@${self.company.price:.2f} '\
@@ -78,9 +75,9 @@ class Leg:
 
         if self._validate():
             # Build the pricer
-            if self.pricing_method == 'black-scholes':
+            if self.pricing_method == pricing.PRICING_METHODS[0]:
                 self.pricer = BlackScholes(self.company.ticker, self.option.expiry, self.option.strike)
-            elif self.pricing_method == 'monte-carlo':
+            elif self.pricing_method == pricing.PRICING_METHODS[1]:
                 self.pricer = MonteCarlo(self.company.ticker, self.option.expiry, self.option.strike)
             else:
                 raise ValueError('Unknown pricing model')
@@ -109,7 +106,7 @@ class Leg:
 
             # Generate the values table
             if value_table:
-                self.value = self.generate_value_table()
+                self.value_table = self.generate_value_table()
 
             _logger.info(f'{__name__}: Strike {self.option.strike:.2f}')
             _logger.info(f'{__name__}: Expiry {self.option.expiry}')
@@ -162,7 +159,7 @@ class Leg:
         return call, put
 
     def reset(self) -> None:
-        self.value = None
+        self.value_table = None
         self.pricer = None
         self.calculate()
 
@@ -186,11 +183,11 @@ class Leg:
                     today += dt.timedelta(days=step)
                     col_index += [str(today)]
 
-                if self.min <= 0.0 or self.max <= 0.0 or self.step <= 0.0:
-                    self.min, self.max, self.step = m.calculate_min_max_step(self.option.strike)
+                if self.range.min <= 0.0 or self.range.max <= 0.0 or self.range.step <= 0.0:
+                    self.range = m.calculate_min_max_step(self.option.strike)
 
                 # Calculate option price every day till expiry
-                for spot in np.arange(self.min, self.max, self.step):
+                for spot in np.arange(self.range.min, self.range.max, self.range.step):
                     row = []
                     for item in col_index:
                         maturity_date = dt.datetime.strptime(item, '%Y-%m-%d %H:%M:%S')
@@ -223,8 +220,6 @@ class Leg:
                 value = pd.DataFrame(table, index=row_index, columns=col_index)
                 value = value.iloc[::-1]
 
-        print(f'{self.option.strike=:.2f}, {self.min=:.2f}, {self.max=:.2f}, {self.step=:.2f}')
-        print(value)
         return value
 
     def _calculate_date_step(self) -> tuple[int, int]:
@@ -240,9 +235,9 @@ class Leg:
         # Check for valid pricing method
         if not valid:
             pass
-        elif self.pricing_method == 'black-scholes':
+        elif self.pricing_method == pricing.PRICING_METHODS[0]:
             valid = True
-        elif self.pricing_method == 'monte-carlo':
+        elif self.pricing_method == pricing.PRICING_METHODS[1]:
             valid = True
 
         return valid

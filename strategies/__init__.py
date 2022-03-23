@@ -1,4 +1,4 @@
-STRATEGIES_BROAD = ['call', 'put', 'vertical']
-STRATEGIES = ['call', 'put', 'vertc', 'vertp']
+STRATEGIES_BROAD = ['call', 'put', 'vertical', 'iron condor']
+STRATEGIES = ['call', 'put', 'vertc', 'vertp', 'ic']
 DIRECTIONS = ['long', 'short']
-PRODUCTS = ['call', 'put']
+PRODUCTS = ['call', 'put', 'hybrid']
