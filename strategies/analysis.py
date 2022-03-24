@@ -27,7 +27,7 @@ class Analysis:
                 f'Total:     ${abs(self.total):.2f} {self.credit_debit}\n'\
                 f'Max Gain:  {self.gain}\n'\
                 f'Max Loss:  {self.loss}\n'\
-                f'Upside:    {self.upside:.2f}\n'
+                f'Return:    {self.upside*100:.2f}%\n'
 
             for breakeven in self.breakeven:
                 output += f'Breakeven: ${breakeven:.2f} at expiry\n'
@@ -47,7 +47,7 @@ class Analysis:
                 'total': self.total,
                 'max_gain': self.max_gain,
                 'max_loss': self.max_loss,
-                'upside': self.upside,
+                'return': self.upside,
                 'breakeven1': self.breakeven[0],
                 'breakeven2': self.breakeven[1] if len(self.breakeven) > 1 else 0.0
             }

@@ -211,7 +211,7 @@ class Interface():
     def show_value(self, style: int = 0) -> None:
         if not self.dirty_analyze:
             if len(self.strategy.legs) > 1:
-                leg = ui.input_integer('Enter Leg: ', 1, 2) - 1
+                leg = ui.input_integer('Enter Leg: ', 1, len(self.strategy.legs)) - 1
             else:
                 leg = 0
 

@@ -18,6 +18,7 @@ class IronCondor(Strategy):
 
         # Initialize the base strategy
         product = s.PRODUCTS[2]
+        direction = 'short' # The IC is by definition a short strategy, but long can be calculated
         super().__init__(ticker, product, direction, strike, width1, width2, quantity, load_contracts)
 
         self.name = s.STRATEGIES_BROAD[3]
@@ -109,11 +110,12 @@ class IronCondor(Strategy):
             self.task_error = 'None'
             self.task_message = self.legs[0].option.ticker
 
+            # Ensure all legs use the same min, max, step centered around the strike
+            range = m.calculate_min_max_step(self.strike)
+            self.legs[0].range = self.legs[1].range = self.legs[2].range = self.legs[3].range = range
+
             self.legs[0].calculate()
             self.legs[0].option.eff_price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
-
-            # Ensure all legs use the same min, max, step calculated in leg[0]
-            self.legs[3].range = self.legs[2].range = self.legs[1].range = self.legs[0].range
 
             self.legs[1].calculate()
             self.legs[1].option.eff_price = self.legs[1].option.last_price if self.legs[1].option.last_price > 0.0 else self.legs[1].option.calc_price
@@ -124,10 +126,10 @@ class IronCondor(Strategy):
             self.legs[3].calculate()
             self.legs[3].option.eff_price = self.legs[3].option.last_price if self.legs[3].option.last_price > 0.0 else self.legs[3].option.calc_price
 
-            if self.direction == 'long':
-                self.analysis.credit_debit = 'debit'
-            else:
+            if self.direction == 'short':
                 self.analysis.credit_debit = 'credit'
+            else:
+                self.analysis.credit_debit = 'debit'
 
             total_c = abs(self.legs[0].option.eff_price - self.legs[1].option.eff_price) * self.quantity
             total_p = abs(self.legs[3].option.eff_price - self.legs[2].option.eff_price) * self.quantity
@@ -150,38 +152,38 @@ class IronCondor(Strategy):
             max_loss = (self.quantity * (self.legs[0].option.strike - self.legs[1].option.strike)) - max_gain
             if max_loss < 0.0:
                 max_loss = 0.0 # Credit is more than possible loss!
-            sentiment = 'high volatility'
+            sentiment = 'low volatility'
         else:
             max_loss = self.analysis.total
             max_gain = (self.quantity * (self.legs[0].option.strike - self.legs[1].option.strike)) - max_loss
             if max_gain < 0.0:
                 max_gain = 0.0 # Debit is more than possible gain!
-            sentiment = 'low volatility'
+            sentiment = 'high volatility'
 
-        upside = max_gain - max_loss
+        upside = max_gain / max_loss
         return max_gain, max_loss, upside, sentiment
 
     def generate_profit_table(self) -> pd.DataFrame:
         if self.direction == 'long':
-            profit_c = self.legs[0].value_table.sub(self.legs[1].value_table)
-            profit_p = self.legs[3].value_table.sub(self.legs[2].value_table)
+            profit_c = self.legs[1].value_table - self.legs[0].value_table
+            profit_p = self.legs[2].value_table - self.legs[3].value_table
         else:
-            profit_c = self.legs[1].value_table.sub(self.legs[0].value_table)
-            profit_p = self.legs[2].value_table.sub(self.legs[3].value_table)
+            profit_c = self.legs[0].value_table - self.legs[1].value_table
+            profit_p = self.legs[3].value_table - self.legs[2].value_table
 
-        profit = profit_c.add(profit_p)
+        profit = profit_c + profit_p
         profit *= self.quantity
 
-        if self.analysis.credit_debit == 'credit':
-            profit -= self.analysis.max_loss
-        else:
+        if self.direction == 'short':
             profit += self.analysis.max_gain
+        else:
+            profit -= self.analysis.max_loss
 
         return profit
 
     def calculate_breakeven(self) -> list[float]:
-        breakeven  = [self.legs[1].option.strike - self.analysis.total]
-        breakeven += [self.legs[2].option.strike + self.analysis.total]
+        breakeven  = [self.legs[1].option.strike + self.analysis.total]
+        breakeven += [self.legs[2].option.strike - self.analysis.total]
 
         return breakeven
 

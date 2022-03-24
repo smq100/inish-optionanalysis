@@ -169,11 +169,11 @@ class Vertical(Strategy):
                     max_loss = 0.0 # Credit is more than possible loss!
                 sentiment = 'bullish'
 
-        upside = max_gain - max_loss
+        upside = max_gain / max_loss
         return max_gain, max_loss, upside, sentiment
 
     def generate_profit_table(self) -> pd.DataFrame:
-        profit = self.legs[0].value_table.sub(self.legs[1].value_table)
+        profit = self.legs[0].value_table - self.legs[1].value_table
         profit *= self.quantity
 
         if self.analysis.credit_debit == 'credit':

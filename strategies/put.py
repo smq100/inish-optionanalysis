@@ -54,7 +54,6 @@ class Put(Strategy):
 
         product = self.legs[0].option.product
         options = self.chain.get_chain(product)
-        print(options)
 
         if strike <= 0.0:
             chain_index = self.chain.get_index_itm()
