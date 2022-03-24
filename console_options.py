@@ -28,12 +28,16 @@ logger.get_logger(logging.WARNING, logfile='')
 
 
 class Interface():
-    def __init__(self, ticker: str, strategy: str, direction: str, strike: float = -1.0, quantity: int = 1, width: int = 0, default: bool = False, analyze: bool = False, exit: bool = False):
+    def __init__(self, ticker: str, strategy: str, direction: str,
+        strike: float = -1.0, quantity: int = 1, width1: int = 0, width2: int = 0,
+        default: bool = False, analyze: bool = False, exit: bool = False):
+
         self.ticker = ticker.upper()
         self.strategy: Strategy = None
         self.direction = direction
         self.quantity = quantity
-        self.width = width
+        self.width1 = width1
+        self.width2 = width2
         self.dirty_analyze = True
         self.task: threading.Thread = None
 
@@ -53,17 +57,19 @@ class Interface():
             ui.print_error('Invalid strategy specified')
         elif direction not in s.DIRECTIONS:
             ui.print_error('Invalid direction specified')
-        elif width < 0:
+        elif width1 < 0:
             ui.print_error('Invalid width specified')
         elif quantity < 1:
             ui.print_error('Invalid quantity specified')
-        elif strategy == 'vertp' and width < 1:
+        elif strategy == 'vertp' and width1 < 1:
             ui.print_error('Invalid width specified')
-        elif strategy == 'vertc' and width < 1:
+        elif strategy == 'vertc' and width1 < 1:
             ui.print_error('Invalid width specified')
-        elif self.load_strategy(self.ticker, strategy, direction, self.strike, self.width, self.quantity, default, analyze or exit):
+        elif self.load_strategy(self.ticker, strategy, direction, self.strike, self.width1, self.width2, self.quantity, default, analyze or exit):
             if not exit:
                 self.main_menu()
+            else:
+                self.show_legs()
         else:
             ui.print_error('Problem loading strategy')
 
@@ -84,11 +90,17 @@ class Interface():
             loaded = '' if self.strategy.legs[0].option.last_price > 0 else '*'
             expire = f'{self.strategy.legs[0].option.expiry:%Y-%m-%d}'
 
-            if self.strategy.name == 'vertical':
+            if self.strategy.name == s.STRATEGIES_BROAD[2]: # Vertical
                 menu_items['3'] += f's ({expire}, '\
                     f'L:${self.strategy.legs[0].option.strike:.2f}{loaded}, '\
                     f'S:${self.strategy.legs[1].option.strike:.2f}{loaded})'
-            else:
+            elif self.strategy.name == s.STRATEGIES_BROAD[3]: # Iron Condor
+                menu_items['3'] += f's ({expire}, '\
+                    f'${self.strategy.legs[0].option.strike:.2f}{loaded}, '\
+                    f'${self.strategy.legs[1].option.strike:.2f}{loaded}, '\
+                    f'${self.strategy.legs[2].option.strike:.2f}{loaded}, '\
+                    f'${self.strategy.legs[3].option.strike:.2f}{loaded})'
+            else: # Call or Put
                 menu_items['3'] += f' ({expire}, ${self.strategy.legs[0].option.strike:.2f}{loaded})'
 
             if self.dirty_analyze:
@@ -120,7 +132,10 @@ class Interface():
             elif selection == 0:
                 break
 
-    def load_strategy(self, ticker: str, strategy: str, direction: str, strike: float, width: int, quantity: int, default: bool = False, analyze: bool = False) -> bool:
+    def load_strategy(self, ticker: str, strategy: str, direction: str,
+        strike: float, width1: int, width2: int, quantity: int,
+        default: bool = False, analyze: bool = False) -> bool:
+
         modified = True
 
         if not store.is_ticker(ticker):
@@ -133,30 +148,30 @@ class Interface():
             raise ValueError('Invalid strike')
         if quantity < 1:
             raise ValueError('Invalid quantity')
-        if strategy == 'vertp' and width < 1:
+        if strategy == 'vertp' and width1 < 1:
             raise ValueError('Invalid width specified')
-        if strategy == 'vertc' and width < 1:
+        if strategy == 'vertc' and width1 < 1:
             raise ValueError('Invalid width specified')
 
         self.ticker = ticker.upper()
         self.direction = direction
         self.strike = strike
         self.quantity = quantity
-        self.width = width
+        self.width1 = width1
 
         try:
             if strategy.lower() == 'call':
-                self.width = 0
-                self.strategy = Call(self.ticker, 'call', direction, strike, width, quantity, default)
+                self.width1 = 0
+                self.strategy = Call(self.ticker, 'call', direction, strike, width1, width2, quantity, default)
             elif strategy.lower() == 'put':
-                self.width = 0
-                self.strategy = Put(self.ticker, 'put', direction, strike, width, quantity, default)
+                self.width1 = 0
+                self.strategy = Put(self.ticker, 'put', direction, strike, width1, width2, quantity, default)
             elif strategy.lower() == 'vertc':
-                self.strategy = Vertical(self.ticker, 'call', direction, strike, width, quantity, default)
+                self.strategy = Vertical(self.ticker, 'call', direction, strike, width1, width2, quantity, default)
             elif strategy.lower() == 'vertp':
-                self.strategy = Vertical(self.ticker, 'put', direction, strike, width, quantity, default)
+                self.strategy = Vertical(self.ticker, 'put', direction, strike, width1, width2, quantity, default)
             elif strategy.lower() == 'ic':
-                self.strategy = IronCondor(self.ticker, 'hybrid', direction, strike, width, quantity, default)
+                self.strategy = IronCondor(self.ticker, 'hybrid', direction, strike, width1, width2, quantity, default)
             else:
                 modified = False
                 ui.print_error('Unknown argument')
@@ -168,15 +183,14 @@ class Interface():
             self.dirty_analyze = True
 
             if analyze:
-                self.analyze()
+                modified = self.analyze()
 
         return modified
 
-    def analyze(self) -> None:
+    def analyze(self) -> bool:
         errors = self.strategy.get_errors()
-        if errors:
-            ui.print_error(errors)
-        else:
+
+        if not errors:
             self.task = threading.Thread(target=self.strategy.analyze)
             self.task.start()
 
@@ -186,6 +200,10 @@ class Interface():
 
             self.show_analysis(style=1)
             self.show_analysis(style=2)
+        else:
+            ui.print_error(errors)
+
+        return not bool(errors)
 
     def reset(self) -> None:
         self.strategy.reset()
@@ -239,7 +257,7 @@ class Interface():
                 if style == 0:
                     style = ui.input_integer('(1) Summary, (2) Table, (3) Chart, (4) Contour, (5) Surface, or (0) Cancel: ', 0, 5)
                 if style > 0:
-                    title = f'Analysis: {self.strategy.ticker}'
+                    title = f'Analysis: {self.strategy.ticker} (${self.strike:.2f})'
 
                     rows, cols = analysis.shape
                     if rows > m.VALUETABLE_ROWS:
@@ -351,28 +369,28 @@ class Interface():
         if selection == 1:
             d = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
             direction = 'long' if d == 1 else 'short'
-            self.width = 0
-            self.load_strategy(self.strategy.ticker, 'call', direction, self.width, self.quantity)
+            self.width1 = 0
+            self.load_strategy(self.strategy.ticker, 'call', direction, self.width1, self.quantity)
         elif selection == 2:
             d = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
             direction = 'long' if d == 1 else 'short'
-            self.width = 0
-            self.load_strategy(self.strategy.ticker, 'put', direction, self.width, self.quantity)
+            self.width1 = 0
+            self.load_strategy(self.strategy.ticker, 'put', direction, self.width1, self.quantity)
         elif selection == 3:
             p = ui.input_integer('(1) Call, or (2) Put: ', 1, 2)
             product = 'call' if p == 1 else 'put'
             d = ui.input_integer('(1) Debit, or (2) Credit: ', 1, 2)
             direction = 'long' if d == 1 else 'short'
-            self.width = 1 if self.width == 0 else self.width
+            self.width1 = 1 if self.width1 == 0 else self.width1
             if product == 'call':
-                self.load_strategy(self.strategy.ticker, 'vertc', direction, self.width, self.quantity)
+                self.load_strategy(self.strategy.ticker, 'vertc', direction, self.width1, self.quantity)
             else:
-                self.load_strategy(self.strategy.ticker, 'vertp', direction, self.width, self.quantity)
+                self.load_strategy(self.strategy.ticker, 'vertp', direction, self.width1, self.quantity)
         elif selection == 4:
             d = ui.input_integer('(1) Debit, or (2) Credit: ', 1, 2)
             direction = 'long' if d == 1 else 'short'
-            self.width = 1 if self.width == 0 else self.width
-            self.load_strategy(self.strategy.ticker, 'ic', direction, self.width, self.quantity)
+            self.width1 = 1 if self.width1 == 0 else self.width1
+            self.load_strategy(self.strategy.ticker, 'ic', direction, self.width1, self.quantity)
         else:
             modified = False
 
@@ -404,7 +422,7 @@ class Interface():
                 menu_items = {
                     '1': f'Select Expiry Date ({expiry})',
                     '2': f'Quantity ({self.quantity})',
-                    '3': f'Width ({self.width})',
+                    '3': f'Width ({self.width1})',
                     '4': f'Select Option',
                     '0': 'Done'
                 }
@@ -426,7 +444,7 @@ class Interface():
                 elif selection == 2:
                     self.quantity = ui.input_integer('Enter quantity (1 - 10): ', 1, 10)
                 elif selection == 3:
-                    self.width = ui.input_integer('Enter width (1 - 5): ', 1, 5)
+                    self.width1 = ui.input_integer('Enter width (1 - 5): ', 1, 5)
                 elif selection == 4:
                     if self.strategy.chain.expire:
                         leg = 0
@@ -491,16 +509,16 @@ class Interface():
                 sel_row = options.iloc[select]
                 contracts = [sel_row['contractSymbol']]  # First contract
 
-                if self.width > 0:
+                if self.width1 > 0:
                     if product == 'call':
                         if self.strategy.direction == 'long':
-                            sel_row = options.iloc[select+self.width] if (select+self.width) < options.shape[0] else None
+                            sel_row = options.iloc[select+self.width1] if (select+self.width1) < options.shape[0] else None
                         else:
-                            sel_row = options.iloc[select-self.width] if (select-self.width) >= 0 else None
+                            sel_row = options.iloc[select-self.width1] if (select-self.width1) >= 0 else None
                     elif self.strategy.direction == 'long':
-                        sel_row = options.iloc[select-self.width] if (select-self.width) >= 0 else None
+                        sel_row = options.iloc[select-self.width1] if (select-self.width1) >= 0 else None
                     else:
-                        sel_row = options.iloc[select+self.width] if (select+self.width) < options.shape[0] else None
+                        sel_row = options.iloc[select+self.width1] if (select+self.width1) < options.shape[0] else None
 
                     if sel_row is not None:
                         contracts += [sel_row['contractSymbol']]  # Second contract
@@ -680,7 +698,9 @@ def main():
     parser.add_argument('-t', '--ticker', help='Specify the ticker symbol', required=False, default='AAPL')
     parser.add_argument('-s', '--strategy', help='Load and analyze strategy', required=False, choices=['call', 'put', 'vertc', 'vertp', 'ic'], default='call')
     parser.add_argument('-d', '--direction', help='Specify the direction', required=False, choices=['long', 'short'], default='long')
-    parser.add_argument('-w', '--width', help='Specify the width (used for spreads)', required=False, default='0')
+    parser.add_argument('-k', '--strike', help='Specify the strike price', required=False, default='-1')
+    parser.add_argument('-w1', '--width1', help='Specify the inner width', required=False, default='0')
+    parser.add_argument('-w2', '--width2', help='Specify the outer width', required=False, default='0')
     parser.add_argument('-q', '--quantity', help='Specify the quantity', required=False, default='1')
     parser.add_argument('-f', '--default', help='Load the default options', required=False, action='store_true')
     parser.add_argument('-a', '--analyze', help='Analyze the strategy', required=False, action='store_true')
@@ -688,7 +708,8 @@ def main():
 
     command = vars(parser.parse_args())
     Interface(ticker=command['ticker'], strategy=command['strategy'], direction=command['direction'],
-              width=int(command['width']), quantity=int(command['quantity']), default=command['default'], analyze=command['analyze'], exit=command['exit'])
+              width1=int(command['width1']), width2=int(command['width2']), quantity=int(command['quantity']), default=command['default'],
+              analyze=command['analyze'], exit=command['exit'], strike=int(command['strike']))
 
 
 if __name__ == '__main__':

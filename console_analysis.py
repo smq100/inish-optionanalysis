@@ -16,6 +16,7 @@ from strategies.strategy import Strategy
 from strategies.call import Call
 from strategies.put import Put
 from strategies.vertical import Vertical
+from strategies.iron_condor import IronCondor
 from screener.screener import Screener, Result, SCREEN_INIT_NAME, SCREEN_BASEPATH, SCREEN_SUFFIX, CACHE_BASEPATH, CACHE_SUFFIX
 from analysis.trend import SupportResistance
 from analysis.correlate import Correlate
@@ -223,6 +224,7 @@ class Interface:
                 '1': 'Call',
                 '2': 'Put',
                 '3': 'Vertical',
+                '4': 'Iron Condor',
                 '0': 'Cancel',
             }
 
@@ -240,6 +242,10 @@ class Interface:
                 p = ui.input_integer('(1) Call, or (2) Put: ', 1, 2)
                 strategy = 'vertc' if p == 1 else 'vertp'
                 d = ui.input_integer('(1) Debit, or (2) Credit: ', 1, 2)
+                direction = 'long' if d == 1 else 'short'
+            elif selection == 4:
+                strategy = 'ic'
+                d = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
                 direction = 'long' if d == 1 else 'short'
             else:
                 modified = False
@@ -361,13 +367,15 @@ class Interface:
                 strike = float(math.ceil(store.get_last_price(ticker)))
 
             if strategy == 'call':
-                self.strategy = Call(ticker, 'call', direction, strike, 1, 1, True)
+                self.strategy = Call(ticker, 'call', direction, strike, 1, 1, 1, True)
             elif strategy == 'put':
-                self.strategy = Put(ticker, 'put', direction, strike, 1, 1, True)
+                self.strategy = Put(ticker, 'put', direction, strike, 1, 1, 1, True)
             elif strategy == 'vertc':
-                self.strategy = Vertical(ticker, 'call', direction, strike, 1, 1, True)
+                self.strategy = Vertical(ticker, 'call', direction, strike, 1, 1, 1, True)
             elif strategy == 'vertp':
-                self.strategy = Vertical(ticker, 'put', direction, strike, 1, 1, True)
+                self.strategy = Vertical(ticker, 'put', direction, strike, 1, 1, 1, True)
+            elif strategy == 'ic':
+                self.strategy = IronCondor(ticker, 'hybrid', direction, strike, 1, 1, 1, True)
 
             strategies += [self.strategy]
 

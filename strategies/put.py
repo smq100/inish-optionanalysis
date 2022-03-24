@@ -11,11 +11,11 @@ _logger = logger.get_logger()
 
 
 class Put(Strategy):
-    def __init__(self, ticker: str, product: str, direction: str, strike: float, width: int, quantity: int = 1, load_contracts: bool = False):
+    def __init__(self, ticker: str, product: str, direction: str, strike: float, width1: int, width2: int, quantity: int = 1, load_contracts: bool = False):
+        product = s.PRODUCTS[1]
 
         # Initialize the base strategy
-        product = s.PRODUCTS[1]
-        super().__init__(ticker, product, direction, strike, width, quantity, load_contracts)
+        super().__init__(ticker, product, direction, strike, width1, 0, quantity, load_contracts)
 
         self.name = s.STRATEGIES_BROAD[1]
 
@@ -135,7 +135,7 @@ if __name__ == '__main__':
 
     ticker = 'AAPL'
     strike = float(math.floor(store.get_last_price(ticker)))
-    put = Put(ticker, 'put', 'long', strike, 1, load_contracts=True)
+    put = Put(ticker, 'put', 'long', strike, 1, 0, load_contracts=True)
     put.analyze()
 
     print(put.legs[0])

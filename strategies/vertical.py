@@ -11,33 +11,36 @@ _logger = logger.get_logger()
 
 
 class Vertical(Strategy):
-    def __init__(self, ticker: str, product: str, direction: str, strike: float, width: int, quantity: int = 1, load_contracts: bool = False):
-        if width < 1:
+    def __init__(self, ticker: str, product: str, direction: str, strike: float, width1: int, width2: int, quantity: int = 1, load_contracts: bool = False):
+        if width1 < 1:
             raise ValueError('Invalid width')
 
         # Initialize the base strategy
-        super().__init__(ticker, product, direction, strike, width, quantity, load_contracts)
+        super().__init__(ticker, product, direction, strike, width1, 0, quantity, load_contracts)
 
         self.name = s.STRATEGIES_BROAD[2]
 
         # Default expiry to tird Friday of next month
         expiry = m.third_friday()
 
-        # Add legs. Long leg is always first!
+        # Add legs. Long leg is always first
+        # Width1 is dollar amounts when not loading contracts
+        # Width1 is indexes into the chain when loading contracts
+        # Strike price will be overriden when loading contracts
         if product == 'call':
             if direction == 'long':
                 self.add_leg(self.quantity, product, 'long', self.strike, expiry)
-                self.add_leg(self.quantity, product, 'short', self.strike + self.width, expiry)
+                self.add_leg(self.quantity, product, 'short', self.strike + self.width1, expiry)
             else:
-                self.add_leg(self.quantity, product, 'long', self.strike + self.width, expiry)
+                self.add_leg(self.quantity, product, 'long', self.strike + self.width1, expiry)
                 self.add_leg(self.quantity, product, 'short', self.strike, expiry)
         else:
             if direction == 'long':
-                self.add_leg(self.quantity, product, 'long', self.strike + self.width, expiry)
+                self.add_leg(self.quantity, product, 'long', self.strike + self.width1, expiry)
                 self.add_leg(self.quantity, product, 'short', self.strike, expiry)
             else:
                 self.add_leg(self.quantity, product, 'long', self.strike, expiry)
-                self.add_leg(self.quantity, product, 'short', self.strike + self.width, expiry)
+                self.add_leg(self.quantity, product, 'short', self.strike + self.width1, expiry)
 
         if load_contracts:
             _, _, contracts = self.fetch_contracts(strike)
@@ -85,13 +88,13 @@ class Vertical(Strategy):
         if chain_index >= 0:
             if self.product == 'call':
                 if self.direction == 'long':
-                    chain_index += self.width
+                    chain_index += self.width1
                 else:
-                    chain_index -= self.width
+                    chain_index -= self.width1
             elif self.direction == 'long':
-                chain_index -= self.width
+                chain_index -= self.width1
             else:
-                chain_index += self.width
+                chain_index += self.width1
 
         # Add the short option
         if chain_index >= 0:
@@ -220,7 +223,7 @@ if __name__ == '__main__':
 
     ticker = 'AAPL'
     strike = float(math.ceil(store.get_last_price(ticker)))
-    vert = Vertical(ticker, 'call', 'long', strike, 1, load_contracts=True)
+    vert = Vertical(ticker, 'call', 'long', strike, 1, 1, load_contracts=True)
     vert.analyze()
 
     print(vert.legs[0])

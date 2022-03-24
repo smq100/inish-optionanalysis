@@ -21,7 +21,7 @@ _logger = logger.get_logger()
 
 
 class Strategy(ABC, Threaded):
-    def __init__(self, ticker: str, product: str, direction: str, strike: float, width: int, quantity: int = 1, load_contracts: bool = False):
+    def __init__(self, ticker: str, product: str, direction: str, strike: float, width1: int, width2: int, quantity: int = 1, load_contracts: bool = False):
         if not store.is_ticker(ticker):
             raise ValueError('Invalid ticker')
         if product not in s.PRODUCTS:
@@ -30,7 +30,7 @@ class Strategy(ABC, Threaded):
             raise ValueError('Invalid direction')
         if strike < 0.0:
             raise ValueError('Invalid strike')
-        if width < 0:
+        if width1 < 0:
             raise ValueError('Invalid width')
         if quantity < 1:
             raise ValueError('Invalid quantity')
@@ -41,7 +41,8 @@ class Strategy(ABC, Threaded):
         self.direction = direction
         self.strike = strike
         self.quantity = quantity
-        self.width = width
+        self.width1 = width1
+        self.width2 = width2
         self.pricing_method = 'black-scholes'
         self.chain: Chain = Chain(self.ticker)
         self.analysis = Analysis(self.ticker)
