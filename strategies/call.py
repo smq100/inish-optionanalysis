@@ -28,6 +28,7 @@ class Call(Strategy):
             _, _, contract = self.fetch_contracts(strike)
             if contract:
                 self.legs[0].option.load_contract(contract[0])
+                self.analysis.volatility = 'implied'
             else:
                 _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}. Using calculated values')
 
@@ -81,6 +82,7 @@ class Call(Strategy):
 
             self.analysis.max_gain, self.analysis.max_loss, self.analysis.upside, self.analysis.sentiment = self.calculate_gain_loss()
             self.analysis.table = self.generate_profit_table()
+            self.analysis.pop = self.calculate_pop()
             self.analysis.breakeven = self.calculate_breakeven()
             self.analysis.summarize()
 
@@ -113,6 +115,13 @@ class Call(Strategy):
             profit = profit.applymap(lambda x: (self.legs[0].option.eff_price - x) if x < self.legs[0].option.eff_price else -(x - self.legs[0].option.eff_price))
 
         return profit
+
+    def calculate_pop(self) -> float:
+        pop = self.legs[0].option.delta
+        if self.legs[0].direction == 'short':
+            pop = 1.0 - pop
+
+        return pop
 
     def calculate_breakeven(self) -> list[float]:
         if self.legs[0].direction == 'long':

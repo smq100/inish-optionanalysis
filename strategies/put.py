@@ -28,6 +28,7 @@ class Put(Strategy):
             _, _, contract = self.fetch_contracts(strike)
             if contract:
                 self.legs[0].option.load_contract(contract[0])
+                self.analysis.volatility = 'implied'
             else:
                 _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}. Using calculated values')
 
@@ -81,6 +82,7 @@ class Put(Strategy):
 
             self.analysis.max_gain, self.analysis.max_loss, self.analysis.upside, self.analysis.sentiment = self.calculate_gain_loss()
             self.analysis.table = self.generate_profit_table()
+            self.analysis.pop = self.calculate_pop()
             self.analysis.breakeven = self.calculate_breakeven()
             self.analysis.summarize()
 
@@ -90,8 +92,6 @@ class Put(Strategy):
         self.task_error = 'Done'
 
     def calculate_gain_loss(self) -> tuple[float, float, float, str]:
-        upside = -1.0
-
         if self.legs[0].direction == 'long':
             max_gain = (self.legs[0].option.strike - self.legs[0].option.eff_price) * self.quantity
             max_loss = self.legs[0].option.eff_price * self.quantity
@@ -101,6 +101,7 @@ class Put(Strategy):
             max_loss = (self.legs[0].option.strike - self.legs[0].option.eff_price) * self.quantity
             sentiment = 'bullish'
 
+        upside = max_gain / max_loss if max_loss > 0.0 else 0.0
         return max_gain, max_loss, upside, sentiment
 
     def generate_profit_table(self) -> pd.DataFrame:
@@ -114,6 +115,13 @@ class Put(Strategy):
             profit = profit.applymap(lambda x: (self.legs[0].option.eff_price - x) if x < self.legs[0].option.eff_price else -(x - self.legs[0].option.eff_price))
 
         return profit
+
+    def calculate_pop(self) -> float:
+        pop = abs(self.legs[0].option.delta)
+        if self.legs[0].direction == 'short':
+            pop = 1.0 - pop
+
+        return pop
 
     def calculate_breakeven(self) -> list[float]:
         if self.legs[0].direction == 'long':

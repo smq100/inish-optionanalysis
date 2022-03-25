@@ -96,12 +96,16 @@ class Strategy(ABC, Threaded):
         # return 0, 0, []
 
     @abc.abstractmethod
+    def calculate_gain_loss(self) -> tuple[float, float, float, str]:
+        return (0.0, 0.0, 0.0, '')
+
+    @abc.abstractmethod
     def generate_profit_table(self) -> pd.DataFrame:
         return pd.DataFrame()
 
     @abc.abstractmethod
-    def calculate_gain_loss(self) -> tuple[float, float, float, str]:
-        return (0.0, 0.0, 0.0, '')
+    def calculate_pop(self) -> float:
+        return 0.0
 
     @abc.abstractmethod
     def calculate_breakeven(self) -> list[float]:
@@ -142,8 +146,8 @@ def analyze_list(strategies: list[Strategy]) -> None:
 
     def analyze(strategy: Strategy):
         global strategy_results, strategy_legs, strategy_msg, strategy_completed
-        strategy_msg = strategy.ticker
 
+        strategy_msg = strategy.ticker
         strategy.analyze()
         strategy_results = pd.concat([strategy_results, strategy.analysis.summary])
         strategy_legs += [f'{str(leg)}' for leg in strategy.legs]
@@ -158,7 +162,7 @@ def analyze_list(strategies: list[Strategy]) -> None:
             for future in futures.as_completed(strategy_futures):
                 _logger.info(f'{__name__}: Thread completed: {future.result()}')
 
-        strategy_results.sort_values('upside', ascending=False, inplace=True)
+        strategy_results.sort_values('pop', ascending=False, inplace=True)
         strategy_error = 'Done'
     else:
         strategy_error = 'No tickers'

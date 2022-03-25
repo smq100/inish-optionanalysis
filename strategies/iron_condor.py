@@ -48,6 +48,8 @@ class IronCondor(Strategy):
                 self.legs[1].option.load_contract(contracts[1])
                 self.legs[2].option.load_contract(contracts[2])
                 self.legs[3].option.load_contract(contracts[3])
+
+                self.analysis.volatility = 'implied'
             else:
                 _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}. Using calculated values')
 
@@ -73,36 +75,43 @@ class IronCondor(Strategy):
 
         # Get baseline chain index
         contracts = []
-        options_c = self.chain.get_chain('call')
-        options_p = self.chain.get_chain('put')
 
+        # Need to track call and put indexes seperately because there may be differences in structures
+        options_c = self.chain.get_chain('call')
         if strike <= 0.0:
-            chain_index = self.chain.get_index_itm()
+            chain_index_c = self.chain.get_index_itm()
         else:
-            chain_index = self.chain.get_index_strike(strike)
+            chain_index_c = self.chain.get_index_strike(strike)
+
+        options_p = self.chain.get_chain('put')
+        if strike <= 0.0:
+            chain_index_p = self.chain.get_index_itm()
+        else:
+            chain_index_p = self.chain.get_index_strike(strike)
 
         # Make sure the chain is large enough to work with
-        if chain_index < (self.width1 + self.width2):
-            chain_index = -1
-        elif len(options_c) < (2 * (self.width1 + self.width2)):
-            chain_index = -1
-        elif len(options_p) < (2 * (self.width1 + self.width2)):
-            chain_index = -1
-        elif len(options_c) - chain_index < (self.width1 + self.width2):
-            chain_index = -1
-        elif len(options_p) - chain_index < (self.width1 + self.width2):
-            chain_index = -1
+        if len(options_c) < (self.width1 + self.width2 + 1):
+            chain_index_c = -1 # Chain too small
+        elif (len(options_c) - chain_index_c) <= (self.width1 + self.width2 + 1):
+            chain_index_c = -1 # Index too close to end of chain
+
+        elif len(options_p) < (self.width1 + self.width2 + 1):
+            chain_index_p = -1 # Chain too small
+        elif (len(options_p) - chain_index_p) <= (self.width1 + self.width2 + 1):
+            chain_index_p = -1 # Index too close to beginning of chain
 
         # Get the option contracts
-        if chain_index < 0:
-            _logger.error(f'{__name__}: Option chain not large enough for {self.ticker}')
+        if chain_index_c < 0:
+            _logger.warning(f'{__name__}: Option call chain not large enough for {self.ticker}')
+        elif chain_index_p < 0:
+            _logger.warning(f'{__name__}: Option put chain not large enough for {self.ticker}')
         else:
-            contracts  = [options_c.iloc[chain_index + self.width1 + self.width2]['contractSymbol']]
-            contracts += [options_c.iloc[chain_index + self.width1]['contractSymbol']]
-            contracts += [options_p.iloc[chain_index - self.width1]['contractSymbol']]
-            contracts += [options_p.iloc[chain_index - self.width1 - self.width2]['contractSymbol']]
+            contracts  = [options_c.iloc[chain_index_c + self.width1 + self.width2]['contractSymbol']]
+            contracts += [options_c.iloc[chain_index_c + self.width1]['contractSymbol']]
+            contracts += [options_p.iloc[chain_index_p - self.width1]['contractSymbol']]
+            contracts += [options_p.iloc[chain_index_p - self.width1 - self.width2]['contractSymbol']]
 
-        return s.PRODUCTS[2], chain_index, contracts
+        return s.PRODUCTS[2], chain_index_c, contracts
 
     @Threaded.threaded
     def analyze(self) -> None:
@@ -137,6 +146,7 @@ class IronCondor(Strategy):
 
             self.analysis.max_gain, self.analysis.max_loss, self.analysis.upside, self.analysis.sentiment = self.calculate_gain_loss()
             self.analysis.table = self.generate_profit_table()
+            self.analysis.pop = self.calculate_pop()
             self.analysis.breakeven = self.calculate_breakeven()
             self.analysis.summarize()
 
@@ -160,16 +170,16 @@ class IronCondor(Strategy):
                 max_gain = 0.0 # Debit is more than possible gain!
             sentiment = 'high volatility'
 
-        upside = max_gain / max_loss
+        upside = max_gain / max_loss if max_loss > 0.0 else 0.0
         return max_gain, max_loss, upside, sentiment
 
     def generate_profit_table(self) -> pd.DataFrame:
-        if self.direction == 'long':
-            profit_c = self.legs[1].value_table - self.legs[0].value_table
-            profit_p = self.legs[2].value_table - self.legs[3].value_table
-        else:
+        if self.direction == 'short':
             profit_c = self.legs[0].value_table - self.legs[1].value_table
             profit_p = self.legs[3].value_table - self.legs[2].value_table
+        else:
+            profit_c = self.legs[1].value_table - self.legs[0].value_table
+            profit_p = self.legs[2].value_table - self.legs[3].value_table
 
         profit = profit_c + profit_p
         profit *= self.quantity
@@ -180,6 +190,10 @@ class IronCondor(Strategy):
             profit -= self.analysis.max_loss
 
         return profit
+
+    def calculate_pop(self) -> float:
+        pop = 1.0 - (self.analysis.max_gain / (self.legs[0].option.strike - self.legs[1].option.strike))
+        return pop
 
     def calculate_breakeven(self) -> list[float]:
         breakeven  = [self.legs[1].option.strike + self.analysis.total]

@@ -26,7 +26,7 @@ from utils import ui, logger
 logger.get_logger(logging.WARNING, logfile='')
 
 COOR_CUTOFF = 0.85
-LISTTOP_SCREEN = 10
+LISTTOP_SCREEN = 5
 LISTTOP_TREND = 5
 LISTTOP_CORR = 3
 
@@ -245,8 +245,7 @@ class Interface:
                 direction = 'long' if d == 1 else 'short'
             elif selection == 4:
                 strategy = 'ic'
-                d = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
-                direction = 'long' if d == 1 else 'short'
+                direction = 'short'
             else:
                 modified = False
 
@@ -498,11 +497,11 @@ class Interface:
         if st.strategy_error == 'None':
             prefix = 'Analyzing Options'
             tasks = len([True for future in st.strategy_futures if future.running()])
-            ui.progress_bar(st.strategy_completed, st.strategy_total, prefix=prefix, suffix=st.strategy_msg, tasks=tasks, reset=True)
+            ui.progress_bar(st.strategy_completed, st.strategy_total, prefix=prefix, tasks=tasks, reset=True)
             while st.strategy_error == 'None':
                 time.sleep(0.20)
                 tasks = len([True for future in st.strategy_futures if future.running()])
-                ui.progress_bar(st.strategy_completed, st.strategy_total, prefix=prefix, suffix=st.strategy_msg, tasks=tasks)
+                ui.progress_bar(st.strategy_completed, st.strategy_total, prefix=prefix, tasks=tasks)
         else:
             ui.print_message(f'{st.strategy_error}')
 

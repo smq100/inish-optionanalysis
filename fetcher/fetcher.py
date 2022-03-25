@@ -280,19 +280,20 @@ def get_treasury_rate(ticker: str) -> float:
 
 
 if __name__ == '__main__':
-    from logging import WARNING
     import sys
+    import logging
+    logger.get_logger(logging.INFO)
 
-    _logger = ui.get_logger(WARNING, logfile='output')
     if len(sys.argv) > 1:
         c = get_company_live(sys.argv[1])
     else:
-        c = get_company_live('AAPL')
+        c = get_company_live('MSFT')
 
-    print(c.mutualfund_holders)
-    # dates = c.options
-    # chain = c.option_chain(dates[0])
-    # print(chain.calls)
+    # print(c.mutualfund_holders)
+    dates = c.options
+    chain = c.option_chain(dates[0])
+    print(chain)
+    # print(dates)
 
     '''
     Retrieves a company object that may be used to gather numerous data about the company and security.

@@ -77,14 +77,8 @@ class Option:
 
     def load_contract(self, contract_name: str) -> bool:
         ret = True
-        parsed = _parse_contract_name(contract_name)
 
-        self.ticker = parsed['ticker']
-        self.product = parsed['product']
-        self.expiry = dt.datetime.strptime(parsed['expiry'], '%Y-%m-%d')
-        self.strike = parsed['strike']
-
-        contract = _get_contract(contract_name)
+        contract = self.get_contract(contract_name)
 
         if not contract.empty:
             self.contract = contract['contractSymbol']
@@ -108,36 +102,36 @@ class Option:
                 diff = self.calc_price / self.last_price
                 if diff > 1.25 or diff < 0.75:
                     _logger.info(f'{__name__}: The calculated price is significantly different than the last traded price')
-
         else:
             ret = False
 
         return ret
 
 
-def _get_contract(contract_name: str) -> pd.Series:
-    parsed = _parse_contract_name(contract_name)
+    def get_contract(self, contract_name: str) -> pd.Series:
+        contract = pd.Series(dtype=float)
+        parsed = _parse_contract_name(contract_name)
 
-    ticker = parsed['ticker']
-    product = parsed['product']
-    expiry = parsed['expiry']
+        self.ticker = parsed['ticker']
+        self.product = parsed['product']
+        self.expiry = dt.datetime.strptime(parsed['expiry'], '%Y-%m-%d')
+        self.strike = parsed['strike']
 
-    try:
-        if product == 'call':
-            chain = store.get_option_chain(ticker, uselast=True)(expiry).calls
-        else:
-            chain = store.get_option_chain(ticker, uselast=True)(expiry).puts
+        try:
+            if self.product == 'call':
+                chain = store.get_option_chain(self.ticker, uselast=True)(str(self.expiry.date())).calls
+            else:
+                chain = store.get_option_chain(self.ticker, uselast=True)(str(self.expiry.date())).puts
 
-        contract = chain.loc[chain['contractSymbol'] == contract_name]
-        return contract.iloc[0]
-    except Exception as e:
-        print(str(e))
-        return pd.Series(dtype=float)
+            contract = chain.loc[chain['contractSymbol'] == contract_name].iloc[0]
+        except Exception as e:
+            print(str(e))
+
+        return contract
 
 
 def _parse_contract_name(contract_name: str) -> dict:
-    # ex: MSFT210305C00237500
-    regex = r'([\d]{6})([PC])'
+    regex = r'([\d]{6})([PC])' # ex: MSFT210305C00237500
     parsed = re.split(regex, contract_name)
 
     ticker = parsed[0]

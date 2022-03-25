@@ -47,6 +47,7 @@ class Vertical(Strategy):
             if len(contracts) == 2:
                 self.legs[0].option.load_contract(contracts[0])
                 self.legs[1].option.load_contract(contracts[1])
+                self.analysis.volatility = 'implied'
             else:
                 _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}. Using calculated values')
 
@@ -129,6 +130,7 @@ class Vertical(Strategy):
 
             self.analysis.max_gain, self.analysis.max_loss, self.analysis.upside, self.analysis.sentiment = self.calculate_gain_loss()
             self.analysis.table = self.generate_profit_table()
+            self.analysis.pop = self.calculate_pop()
             self.analysis.breakeven = self.calculate_breakeven()
             self.analysis.summarize()
 
@@ -169,7 +171,7 @@ class Vertical(Strategy):
                     max_loss = 0.0 # Credit is more than possible loss!
                 sentiment = 'bullish'
 
-        upside = max_gain / max_loss
+        upside = max_gain / max_loss if max_loss > 0.0 else 0.0
         return max_gain, max_loss, upside, sentiment
 
     def generate_profit_table(self) -> pd.DataFrame:
@@ -182,6 +184,10 @@ class Vertical(Strategy):
             profit -= self.analysis.total
 
         return profit
+
+    def calculate_pop(self) -> float:
+        pop = 1.0 - (self.analysis.max_gain / (self.legs[0].option.strike - self.legs[1].option.strike))
+        return pop
 
     def calculate_breakeven(self) -> list[float]:
         if self.analysis.credit_debit == 'debit':

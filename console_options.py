@@ -257,7 +257,7 @@ class Interface():
                 if style == 0:
                     style = ui.input_integer('(1) Summary, (2) Table, (3) Chart, (4) Contour, (5) Surface, or (0) Cancel: ', 0, 5)
                 if style > 0:
-                    title = f'Analysis: {self.strategy.ticker} (${self.strike:.2f})'
+                    title = f'{self.strategy.name.title()}: {self.strategy.ticker} (${self.strike:.2f})'
 
                     rows, cols = analysis.shape
                     if rows > m.VALUETABLE_ROWS:
@@ -277,7 +277,7 @@ class Interface():
                         ui.print_message(title)
                         print(self.strategy.analysis)
                         if self.strategy.legs[0].option.contract:
-                            print('Contracts:')
+                            ui.print_message('Option Contracts')
                             for leg in self.strategy.legs:
                                 print(f'{leg.option.contract}')
                     elif style == 2:
@@ -412,6 +412,7 @@ class Interface():
 
                 if contracts:
                     self.strategy.legs[0].option.load_contract(contracts[0])
+                    print()
 
         if not contracts:
             done = False
@@ -457,8 +458,6 @@ class Interface():
                             for leg, contract in enumerate(contracts):
                                 success = self.strategy.legs[leg].option.load_contract(contract)
                             done = True
-                        else:
-                            ui.print_error('Invalid option selected')
                     else:
                         ui.print_error('Please first select expiry date')
                 elif selection == 0:

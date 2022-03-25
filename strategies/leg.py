@@ -104,7 +104,7 @@ class Leg:
             self.option.calc_volatility = self.pricer.volatility
             self.option.time_to_maturity = self.pricer.time_to_maturity
 
-            # Generate the values table
+            # Generate the value table
             if value_table:
                 self.value_table = self.generate_value_table()
 

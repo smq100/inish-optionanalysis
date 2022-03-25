@@ -89,6 +89,10 @@ class Pricing(ABC):
     def calculate_vega(self, spot_price: float = -1.0, time_to_maturity: float = -1.0, volatility: float = -1.0) -> tuple[float, float]:
         return 0.0, 0.0
 
+    @abc.abstractmethod
+    def calculate_rho(self, spot_price: float = -1.0, time_to_maturity: float = -1.0, volatility: float = -1.0) -> tuple[float, float]:
+        return 0.0, 0.0
+
     def is_call_put_parity_maintained(self, call_price: float, put_price: float) -> bool:
         ''' Verify is the Put-Call Pairty is maintained by the two option prices calculated by us.
 
