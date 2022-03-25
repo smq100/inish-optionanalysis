@@ -29,14 +29,14 @@ class Analysis:
                 f'Total:      ${abs(self.total):.2f} {self.credit_debit}\n'\
                 f'Max Gain:   {self.gain}\n'\
                 f'Max Loss:   {self.loss}\n'\
-                f'Return:     {self.upside*100:.2f}%\n'\
-                f'POP:        {self.pop*100:.2f}%\n'\
+                f'Return:     {self.upside * 100.0:.2f}%\n'\
+                f'POP:        {self.pop * 100.0:.2f}%\n'\
                 f'Volatility: {self.volatility}\n'
 
             for breakeven in self.breakeven:
-                output += f'Breakeven: ${breakeven:.2f} at expiry\n'
+                output += f'Breakeven:  ${breakeven:.2f} at expiry\n'
         else:
-            output = 'Not yet analyzed'
+            output = 'Not yet analyzed\n'
 
         return output
 
@@ -54,8 +54,12 @@ class Analysis:
                 'return': self.upside if self.upside >= 0.0 else 'unlimited',
                 'pop': self.pop,
                 'volatility': self.volatility,
-                'breakeven1': self.breakeven[0],
-                'breakeven2': self.breakeven[1] if len(self.breakeven) > 1 else 0.0,
             }
+
+            if len(self.breakeven) > 1:
+                data['breakeven1'] = self.breakeven[0]
+                data['breakeven2'] = self.breakeven[1]
+            else:
+                data['breakeven'] = self.breakeven[0]
 
             self.summary = pd.DataFrame(data, index=[self.ticker])

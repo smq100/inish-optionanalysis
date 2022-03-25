@@ -18,7 +18,6 @@ class IronCondor(Strategy):
 
         # Initialize the base strategy
         product = s.PRODUCTS[2]
-        direction = 'short' # The IC is by definition a short strategy, but long can be calculated
         super().__init__(ticker, product, direction, strike, width1, width2, quantity, load_contracts)
 
         self.name = s.STRATEGIES_BROAD[3]
@@ -42,7 +41,7 @@ class IronCondor(Strategy):
             self.add_leg(self.quantity, 'put', 'short', self.strike - (self.width1 + self.width2), expiry)
 
         if load_contracts:
-            _, _, contracts = self.fetch_contracts(strike)
+            _, _, contracts = self.fetch_contracts(self.strike)
             if len(contracts) == 4:
                 self.legs[0].option.load_contract(contracts[0])
                 self.legs[1].option.load_contract(contracts[1])

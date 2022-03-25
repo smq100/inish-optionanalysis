@@ -195,6 +195,8 @@ def progress_bar(iteration, total: int, prefix: str = 'Working', suffix: str = '
         position = 0
         forward = True
         start = time.perf_counter()
+        erase = 100 * ' '
+        print(f'\r{erase}', end='\r')
 
     if total > 0:
         filled = int(length * iteration // total)

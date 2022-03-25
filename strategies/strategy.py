@@ -2,7 +2,6 @@ import abc
 from abc import ABC
 import datetime as dt
 import math
-from concurrent import futures
 
 import pandas as pd
 
@@ -13,7 +12,6 @@ from strategies.analysis import Analysis
 from options.chain import Chain
 import pricing as p
 from data import store
-from utils import math as m
 from utils import logger
 
 
@@ -30,8 +28,6 @@ class Strategy(ABC, Threaded):
             raise ValueError('Invalid direction')
         if strike < 0.0:
             raise ValueError('Invalid strike')
-        if width1 < 0:
-            raise ValueError('Invalid width')
         if quantity < 1:
             raise ValueError('Invalid quantity')
 
@@ -116,57 +112,6 @@ class Strategy(ABC, Threaded):
 
     def validate(self):
         return len(self.legs) > 0
-
-
-strategy_error = ''
-strategy_msg = ''
-strategy_results = pd.DataFrame()
-strategy_legs = []
-strategy_total = 0
-strategy_completed = 0
-strategy_futures = []
-
-
-def analyze_list(strategies: list[Strategy]) -> None:
-    global strategy_error
-    global strategy_msg
-    global strategy_results
-    global strategy_legs
-    global strategy_total
-    global strategy_completed
-    global strategy_futures
-
-    strategy_error = ''
-    strategy_msg = ''
-    strategy_results = pd.DataFrame()
-    strategy_legs = []
-    strategy_total = 0
-    strategy_completed = 0
-    strategy_futures = []
-
-    def analyze(strategy: Strategy):
-        global strategy_results, strategy_legs, strategy_msg, strategy_completed
-
-        strategy_msg = strategy.ticker
-        strategy.analyze()
-        strategy_results = pd.concat([strategy_results, strategy.analysis.summary])
-        strategy_legs += [f'{str(leg)}' for leg in strategy.legs]
-        strategy_completed += 1
-
-    strategy_total = len(strategies)
-    if strategy_total > 0:
-        strategy_error = 'None'
-        with futures.ThreadPoolExecutor(max_workers=strategy_total) as executor:
-            strategy_futures = [executor.submit(analyze, item) for item in strategies]
-
-            for future in futures.as_completed(strategy_futures):
-                _logger.info(f'{__name__}: Thread completed: {future.result()}')
-
-        strategy_results.sort_values('pop', ascending=False, inplace=True)
-        strategy_error = 'Done'
-    else:
-        strategy_error = 'No tickers'
-
 
 
 if __name__ == '__main__':

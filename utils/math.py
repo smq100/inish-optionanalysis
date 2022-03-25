@@ -9,7 +9,7 @@ MIN_MAX_PERCENT = 0.20
 VALUETABLE_ROWS = 50
 VALUETABLE_COLS = 11
 
-range_mms = collections.namedtuple('range', ['min', 'max', 'step'])
+range_type = collections.namedtuple('range', ['min', 'max', 'step'])
 
 def mround(n: float, precision: float) -> float:
     val = float(round(n / precision) * precision)
@@ -49,7 +49,7 @@ def calculate_min_max_step(strike: float) -> tuple[float, float, float]:
     if min_ < step:
         min_ = step
 
-    return range_mms(min_, max_, step)
+    return range_type(min_, max_, step)
 
 
 def compress_table(table: pd.DataFrame, rows: int, cols: int) -> pd.DataFrame:

@@ -43,7 +43,7 @@ class Vertical(Strategy):
                 self.add_leg(self.quantity, product, 'short', self.strike + self.width1, expiry)
 
         if load_contracts:
-            _, _, contracts = self.fetch_contracts(strike)
+            _, _, contracts = self.fetch_contracts(self.strike)
             if len(contracts) == 2:
                 self.legs[0].option.load_contract(contracts[0])
                 self.legs[1].option.load_contract(contracts[1])
@@ -186,8 +186,7 @@ class Vertical(Strategy):
         return profit
 
     def calculate_pop(self) -> float:
-        pop = 1.0 - (self.analysis.max_gain / (self.legs[0].option.strike - self.legs[1].option.strike))
-        return pop
+        return 1.0 - (self.analysis.max_gain / abs((self.legs[1].option.strike - self.legs[0].option.strike)))
 
     def calculate_breakeven(self) -> list[float]:
         if self.analysis.credit_debit == 'debit':

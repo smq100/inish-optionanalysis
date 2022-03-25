@@ -1,5 +1,6 @@
 import datetime as dt
 import re
+import collections
 
 import pandas as pd
 
@@ -7,6 +8,9 @@ from data import store as store
 from utils import logger
 
 _logger = logger.get_logger()
+contract_type = collections.namedtuple('contract', ['ticker', 'expiry', 'product', 'strike'])
+
+MIN_CONTRACT_SIZE = 16
 
 
 class Option:
@@ -76,46 +80,47 @@ class Option:
             f'Rho: {self.rho:.5f}'
 
     def load_contract(self, contract_name: str) -> bool:
-        ret = True
+        ret = False
 
-        contract = self.get_contract(contract_name)
+        if len(contract_name) >= MIN_CONTRACT_SIZE:
+            contract = self.get_contract(contract_name)
 
-        if not contract.empty:
-            self.contract = contract['contractSymbol']
-            self.last_trade_date = contract['lastTradeDate']
-            self.strike = contract['strike']
-            self.last_price = contract['lastPrice']
-            self.bid = contract['bid']
-            self.ask = contract['ask']
-            self.change = contract['change']
-            self.percent_change = contract['percentChange']
-            self.volume = contract['volume']
-            self.open_interest = contract['openInterest']
-            self.implied_volatility = contract['impliedVolatility']
-            self.itm = contract['inTheMoney']
-            self.contract_size = contract['contractSize']
-            self.currency = contract['currency']
+            if not contract.empty:
+                self.contract = contract['contractSymbol']
+                self.last_trade_date = contract['lastTradeDate']
+                self.strike = contract['strike']
+                self.last_price = contract['lastPrice']
+                self.bid = contract['bid']
+                self.ask = contract['ask']
+                self.change = contract['change']
+                self.percent_change = contract['percentChange']
+                self.volume = contract['volume']
+                self.open_interest = contract['openInterest']
+                self.implied_volatility = contract['impliedVolatility']
+                self.itm = contract['inTheMoney']
+                self.contract_size = contract['contractSize']
+                self.currency = contract['currency']
 
-            _logger.info(f'{__name__}: Loaded contract {contract_name}')
+                _logger.info(f'{__name__}: Loaded contract {contract_name}')
 
-            if self.last_price > 0.0:
-                diff = self.calc_price / self.last_price
-                if diff > 1.25 or diff < 0.75:
-                    _logger.info(f'{__name__}: The calculated price is significantly different than the last traded price')
-        else:
-            ret = False
+                if self.last_price > 0.0:
+                    diff = self.calc_price / self.last_price
+                    if diff > 1.25 or diff < 0.75:
+                        _logger.info(f'{__name__}: The calculated price is significantly different than the last traded price')
+
+                ret = True
 
         return ret
 
 
     def get_contract(self, contract_name: str) -> pd.Series:
         contract = pd.Series(dtype=float)
-        parsed = _parse_contract_name(contract_name)
+        parsed = parse_contract_name(contract_name)
 
-        self.ticker = parsed['ticker']
-        self.product = parsed['product']
-        self.expiry = dt.datetime.strptime(parsed['expiry'], '%Y-%m-%d')
-        self.strike = parsed['strike']
+        self.ticker = parsed.ticker
+        self.product = parsed.product
+        self.expiry = dt.datetime.strptime(parsed.expiry, '%Y-%m-%d')
+        self.strike = parsed.strike
 
         try:
             if self.product == 'call':
@@ -130,7 +135,7 @@ class Option:
         return contract
 
 
-def _parse_contract_name(contract_name: str) -> dict:
+def parse_contract_name(contract_name: str) -> tuple[str, str, str, float]:
     regex = r'([\d]{6})([PC])' # ex: MSFT210305C00237500
     parsed = re.split(regex, contract_name)
 
@@ -139,4 +144,4 @@ def _parse_contract_name(contract_name: str) -> dict:
     product = 'call' if 'C' in parsed[2].upper() else 'put'
     strike = float(parsed[3][:5]) + (float(parsed[3][5:]) / 1000.0)
 
-    return {'ticker': ticker, 'expiry': expiry, 'product': product, 'strike': strike}
+    return contract_type(ticker, expiry, product, strike)

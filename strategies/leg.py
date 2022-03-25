@@ -35,7 +35,7 @@ class Leg:
         self.pricing_method = pricing.PRICING_METHODS[0]
         self.pricer: Pricing = None
         self.value_table = pd.DataFrame()
-        self.range = m.range_mms(0.0, 0.0, 0.0)
+        self.range = m.range_type(0.0, 0.0, 0.0)
 
     def __str__(self):
         if self.option.calc_price > 0.0:

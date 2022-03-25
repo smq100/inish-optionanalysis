@@ -11,12 +11,8 @@ import pandas as pd
 from tabulate import tabulate
 
 import strategies as s
-import strategies.strategy as st
+import strategies.strategy_list as sl
 from strategies.strategy import Strategy
-from strategies.call import Call
-from strategies.put import Put
-from strategies.vertical import Vertical
-from strategies.iron_condor import IronCondor
 from screener.screener import Screener, Result, SCREEN_INIT_NAME, SCREEN_BASEPATH, SCREEN_SUFFIX, CACHE_BASEPATH, CACHE_SUFFIX
 from analysis.trend import SupportResistance
 from analysis.correlate import Correlate
@@ -232,25 +228,29 @@ class Interface:
             selection = ui.menu(menu_items, 'Select Strategy', 0, len(menu_items))
             if selection == 1:
                 strategy = 'call'
+                product = 'call'
                 d = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
                 direction = 'long' if d == 1 else 'short'
             elif selection == 2:
                 strategy = 'put'
+                product = 'put'
                 d = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
                 direction = 'long' if d == 1 else 'short'
             elif selection == 3:
+                strategy = 'vert'
                 p = ui.input_integer('(1) Call, or (2) Put: ', 1, 2)
-                strategy = 'vertc' if p == 1 else 'vertp'
+                product = 'call' if p == 1 else 'put'
                 d = ui.input_integer('(1) Debit, or (2) Credit: ', 1, 2)
                 direction = 'long' if d == 1 else 'short'
             elif selection == 4:
                 strategy = 'ic'
+                product = 'hybrid'
                 direction = 'short'
             else:
                 modified = False
 
             if modified:
-                self.run_options(strategy, direction)
+                self.run_options(strategy, product, direction)
         else:
             ui.print_error('No valid results to analyze')
 
@@ -347,46 +347,41 @@ class Interface:
         else:
             ui.print_error('No valid results to analyze')
 
-    def run_options(self, strategy: str, direction: str) -> None:
+    def run_options(self, strategy: str, product: str, direction: str) -> None:
         if strategy not in s.STRATEGIES:
             raise ValueError('Invalid strategy')
         if direction not in s.DIRECTIONS:
             raise ValueError('Invalid direction')
+        if product not in s.PRODUCTS:
+            raise ValueError('Invalid product')
 
         tickers = [str(result) for result in self.results_valids[:LISTTOP_SCREEN]]
-        strategies = []
 
         print()
         ui.progress_bar(0, 0, prefix='Analyzing Options', reset=True)
 
+        strategies = []
         for ticker in tickers:
             if direction == 'long':
                 strike = float(math.floor(store.get_last_price(ticker)))
             else:
                 strike = float(math.ceil(store.get_last_price(ticker)))
 
-            if strategy == 'call':
-                self.strategy = Call(ticker, 'call', direction, strike, 1, 1, 1, True)
-            elif strategy == 'put':
-                self.strategy = Put(ticker, 'put', direction, strike, 1, 1, 1, True)
-            elif strategy == 'vertc':
-                self.strategy = Vertical(ticker, 'call', direction, strike, 1, 1, 1, True)
-            elif strategy == 'vertp':
-                self.strategy = Vertical(ticker, 'put', direction, strike, 1, 1, 1, True)
-            elif strategy == 'ic':
-                self.strategy = IronCondor(ticker, 'hybrid', direction, strike, 1, 1, 1, True)
+            strategies += [sl.strategy_type(ticker, strategy, product, direction, strike)]
 
-            strategies += [self.strategy]
+        if len(strategies) > 0:
+            sl.reset()
+            self.task = threading.Thread(target=sl.analyze_list, args=[strategies])
+            self.task.start()
 
-        self.task = threading.Thread(target=st.analyze_list, args=[strategies])
-        self.task.start()
+            self.show_progress_options()
 
-        self.show_progress_options()
-
-        ui.print_message('Strategy Analysis')
-        print()
-        headers = [header.replace('_', ' ').title() for header in st.strategy_results.columns]
-        print(tabulate(st.strategy_results, headers=headers, tablefmt='simple', floatfmt='.2f'))
+            ui.print_message('Strategy Analysis')
+            print()
+            headers = [header.replace('_', ' ').title() for header in sl.strategy_results.columns]
+            print(tabulate(sl.strategy_results, headers=headers, tablefmt='simple', floatfmt='.2f'))
+        else:
+            ui.print_warning('No tickers to process')
 
     def show_valids(self, top: int = -1, verbose: bool = False, ticker: str = '') -> None:
         if not self.table:
@@ -491,19 +486,27 @@ class Interface:
             ui.print_message(f'{self.trend.task_error}')
 
     def show_progress_options(self) -> None:
-        while not st.strategy_error:
+        while not sl.strategy_error:
             pass
 
-        if st.strategy_error == 'None':
-            prefix = 'Analyzing Options'
-            tasks = len([True for future in st.strategy_futures if future.running()])
-            ui.progress_bar(st.strategy_completed, st.strategy_total, prefix=prefix, tasks=tasks, reset=True)
-            while st.strategy_error == 'None':
+        if sl.strategy_error == 'None':
+            prefix = 'Collecting Option Info'
+            ui.progress_bar(0, 0, prefix=prefix, reset=True)
+
+            while sl.strategy_error == 'None':
                 time.sleep(0.20)
-                tasks = len([True for future in st.strategy_futures if future.running()])
-                ui.progress_bar(st.strategy_completed, st.strategy_total, prefix=prefix, tasks=tasks)
+                ui.progress_bar(0, 0, prefix=prefix, suffix=sl.strategy_msg)
+
+            prefix = 'Analyzing Strategies'
+            ui.progress_bar(0, 0, prefix=prefix, reset=True)
+
+            tasks = len([True for future in sl.strategy_futures if future.running()])
+            while sl.strategy_error == 'Next':
+                time.sleep(0.20)
+                tasks = len([True for future in sl.strategy_futures if future.running()])
+                ui.progress_bar(sl.strategy_completed, sl.strategy_total, prefix=prefix, suffix='', tasks=tasks)
         else:
-            ui.print_message(f'{st.strategy_error}')
+            ui.print_message(f'{sl.strategy_error}')
 
     def manage_cache_files(self) -> None:
         paths = _get_cache_files()
