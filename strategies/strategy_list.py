@@ -23,7 +23,7 @@ strategy_completed = 0
 strategy_futures = []
 
 
-def analyze_list(strategies: list[strategy_type]) -> None:
+def analyze(strategies: list[strategy_type]) -> None:
     global strategy_error
     global strategy_msg
     global strategy_results
@@ -32,7 +32,7 @@ def analyze_list(strategies: list[strategy_type]) -> None:
     global strategy_completed
     global strategy_futures
 
-    def analyze(strategy: Strategy) -> None:
+    def process(strategy: Strategy) -> None:
         global strategy_results, strategy_legs, strategy_msg, strategy_completed
 
         strategy_msg = strategy.ticker
@@ -65,7 +65,7 @@ def analyze_list(strategies: list[strategy_type]) -> None:
         if len(items) > 0:
             strategy_error = 'Next'
             with futures.ThreadPoolExecutor(max_workers=strategy_total) as executor:
-                strategy_futures = [executor.submit(analyze, item) for item in items]
+                strategy_futures = [executor.submit(process, item) for item in items]
 
                 for future in futures.as_completed(strategy_futures):
                     _logger.info(f'{__name__}: Thread completed: {future.result()}')

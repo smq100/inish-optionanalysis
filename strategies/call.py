@@ -1,10 +1,9 @@
 import pandas as pd
 
-from base import Threaded
 import strategies as s
 from strategies.strategy import Strategy
 from utils import math as m
-from utils import ui, logger
+from utils import logger
 
 
 _logger = logger.get_logger()
@@ -32,68 +31,7 @@ class Call(Strategy):
             else:
                 _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}. Using calculated values')
 
-    def __str__(self):
-        return f'{self.legs[0].direction} {self.name}'
-
-    def fetch_contracts(self, strike: float = -1.0, distance: int = 1, weeks: int = -1) -> tuple[str, int, list[str]]:
-        if distance < 0:
-            raise ValueError('Invalid distance')
-
-        contract = ''
-        expiry = self.chain.get_expiry()
-
-        if not expiry:
-            raise ValueError('No option expiry dates')
-        elif weeks < 0:
-            # Default to next month's option date
-            third = f'{m.third_friday():%Y-%m-%d}'
-            self.chain.expire = third if third in expiry else expiry[0]
-        elif len(expiry) > weeks:
-            self.chain.expire = expiry[weeks]
-        else:
-            self.chain.expire = expiry[0]
-
-        product = self.legs[0].option.product
-        options = self.chain.get_chain(product)
-
-        if strike <= 0.0:
-            chain_index = self.chain.get_index_itm()
-        else:
-            chain_index = self.chain.get_index_strike(strike)
-
-        if chain_index >= 0:
-            contract = options.iloc[chain_index]['contractSymbol']
-        else:
-            _logger.error(f'{__name__}: Error fetching default contract for {self.ticker}')
-
-        return product, chain_index, [contract]
-
-    @Threaded.threaded
-    def analyze(self) -> None:
-        if self.validate():
-            self.task_error = 'None'
-            self.task_message = self.legs[0].option.ticker
-
-            self.legs[0].calculate()
-            self.legs[0].option.eff_price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
-
-            self.analysis.credit_debit = 'debit' if self.direction == 'long' else 'credit'
-            self.analysis.total = self.legs[0].option.eff_price * self.quantity
-
-            self.analysis.max_gain, self.analysis.max_loss, self.analysis.upside, self.analysis.sentiment = self.calculate_gain_loss()
-            self.analysis.table = self.generate_profit_table()
-            self.analysis.pop = self.calculate_pop()
-            self.analysis.breakeven = self.calculate_breakeven()
-            self.analysis.summarize()
-
-            _logger.info(f'{__name__}: {self.ticker}: p={self.legs[0].option.eff_price:.2f}, g={self.analysis.max_gain:.2f}, \
-                l={self.analysis.max_loss:.2f} b={self.analysis.breakeven[0] :.2f}')
-
-        self.task_error = 'Done'
-
     def calculate_gain_loss(self) -> tuple[float, float, float, str]:
-        upside = -1.0
-
         if self.legs[0].direction == 'long':
             max_gain = -1.0
             max_loss = self.legs[0].option.eff_price * self.quantity
@@ -103,6 +41,7 @@ class Call(Strategy):
             max_loss = -1.0
             sentiment = 'bearish'
 
+        upside = -1.0
         return max_gain, max_loss, upside, sentiment
 
     def generate_profit_table(self) -> pd.DataFrame:
@@ -115,13 +54,6 @@ class Call(Strategy):
             profit = profit.applymap(lambda x: (self.legs[0].option.eff_price - x) if x < self.legs[0].option.eff_price else -(x - self.legs[0].option.eff_price))
 
         return profit
-
-    def calculate_pop(self) -> float:
-        pop = self.legs[0].option.delta
-        if self.legs[0].direction == 'short':
-            pop = 1.0 - pop
-
-        return pop
 
     def calculate_breakeven(self) -> list[float]:
         if self.legs[0].direction == 'long':

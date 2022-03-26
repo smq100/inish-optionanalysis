@@ -12,6 +12,7 @@ from strategies.analysis import Analysis
 from options.chain import Chain
 import pricing as p
 from data import store
+from utils import math as m
 from utils import logger
 
 
@@ -48,13 +49,36 @@ class Strategy(ABC, Threaded):
 
         self.analysis.credit_debit = 'debit' if direction == 'long' else 'credit'
 
+    def __str__(self):
+        return f'{self.legs[0].direction} {self.name}'
+
     def calculate(self) -> None:
         for leg in self.legs:
             leg.calculate()
 
-    @abc.abstractmethod
+    @Threaded.threaded
     def analyze(self) -> None:
-        pass
+        # Works for one-legged strategies. Override for others
+        if self.validate():
+            self.task_error = 'None'
+            self.task_message = self.legs[0].option.ticker
+
+            self.legs[0].calculate()
+            self.legs[0].option.eff_price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
+
+            self.analysis.credit_debit = 'debit' if self.direction == 'long' else 'credit'
+            self.analysis.total = self.legs[0].option.eff_price * self.quantity
+
+            self.analysis.max_gain, self.analysis.max_loss, self.analysis.upside, self.analysis.sentiment = self.calculate_gain_loss()
+            self.analysis.table = self.generate_profit_table()
+            self.analysis.breakeven = self.calculate_breakeven()
+            self.analysis.pop = self.calculate_pop()
+            self.analysis.summarize()
+
+            _logger.info(f'{__name__}: {self.ticker}: p={self.legs[0].option.eff_price:.2f}, g={self.analysis.max_gain:.2f}, \
+                l={self.analysis.max_loss:.2f} b={self.analysis.breakeven[0] :.2f}')
+
+        self.task_error = 'Done'
 
     def reset(self) -> None:
         self.analysis = Analysis()
@@ -86,10 +110,39 @@ class Strategy(ABC, Threaded):
         else:
             raise ValueError('Invalid pricing method')
 
-    @abc.abstractmethod
     def fetch_contracts(self, strike: float = -1.0, distance: int = 1, weeks: int = -1) -> tuple[str, int, list[str]]:
-        pass
-        # return 0, 0, []
+        # Works for one-legged strategies. Override for others
+        if distance < 0:
+            raise ValueError('Invalid distance')
+
+        contract = ''
+        expiry = self.chain.get_expiry()
+
+        if not expiry:
+            raise ValueError('No option expiry dates')
+        elif weeks < 0:
+            # Default to next month's option date
+            third = f'{m.third_friday():%Y-%m-%d}'
+            self.chain.expire = third if third in expiry else expiry[0]
+        elif len(expiry) > weeks:
+            self.chain.expire = expiry[weeks]
+        else:
+            self.chain.expire = expiry[0]
+
+        product = self.legs[0].option.product
+        options = self.chain.get_chain(product)
+
+        if strike <= 0.0:
+            chain_index = self.chain.get_index_itm()
+        else:
+            chain_index = self.chain.get_index_strike(strike)
+
+        if chain_index >= 0:
+            contract = options.iloc[chain_index]['contractSymbol']
+        else:
+            _logger.error(f'{__name__}: Error fetching default contract for {self.ticker}')
+
+        return product, chain_index, [contract]
 
     @abc.abstractmethod
     def calculate_gain_loss(self) -> tuple[float, float, float, str]:
@@ -100,12 +153,16 @@ class Strategy(ABC, Threaded):
         return pd.DataFrame()
 
     @abc.abstractmethod
-    def calculate_pop(self) -> float:
-        return 0.0
-
-    @abc.abstractmethod
     def calculate_breakeven(self) -> list[float]:
         return [0.0]
+
+    def calculate_pop(self) -> float:
+        # Works for one-legged strategies. Override for others
+        pop = abs(self.legs[0].option.delta)
+        if self.legs[0].direction == 'short':
+            pop = 1.0 - pop
+
+        return pop
 
     def get_errors(self) -> str:
         return ''

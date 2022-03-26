@@ -22,7 +22,7 @@ from utils import ui, logger
 logger.get_logger(logging.WARNING, logfile='')
 
 COOR_CUTOFF = 0.85
-LISTTOP_SCREEN = 5
+LISTTOP_SCREEN = 10
 LISTTOP_TREND = 5
 LISTTOP_CORR = 3
 
@@ -371,7 +371,7 @@ class Interface:
 
         if len(strategies) > 0:
             sl.reset()
-            self.task = threading.Thread(target=sl.analyze_list, args=[strategies])
+            self.task = threading.Thread(target=sl.analyze, args=[strategies])
             self.task.start()
 
             self.show_progress_options()
@@ -490,7 +490,7 @@ class Interface:
             pass
 
         if sl.strategy_error == 'None':
-            prefix = 'Collecting Option Info'
+            prefix = 'Collecting Option Data'
             ui.progress_bar(0, 0, prefix=prefix, reset=True)
 
             while sl.strategy_error == 'None':

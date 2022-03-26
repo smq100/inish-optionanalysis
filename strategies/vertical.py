@@ -110,7 +110,7 @@ class Vertical(Strategy):
 
     @Threaded.threaded
     def analyze(self) -> None:
-        if self._validate():
+        if self.validate():
             self.task_error = 'None'
             self.task_message = self.legs[0].option.ticker
 
@@ -130,8 +130,8 @@ class Vertical(Strategy):
 
             self.analysis.max_gain, self.analysis.max_loss, self.analysis.upside, self.analysis.sentiment = self.calculate_gain_loss()
             self.analysis.table = self.generate_profit_table()
-            self.analysis.pop = self.calculate_pop()
             self.analysis.breakeven = self.calculate_breakeven()
+            self.analysis.pop = self.calculate_pop()
             self.analysis.summarize()
 
             _logger.info(f'{__name__}: {self.ticker}: g={self.analysis.max_gain:.2f}, l={self.analysis.max_loss:.2f} b={self.analysis.breakeven[0]:.2f}')
@@ -185,9 +185,6 @@ class Vertical(Strategy):
 
         return profit
 
-    def calculate_pop(self) -> float:
-        return 1.0 - (self.analysis.max_gain / abs((self.legs[1].option.strike - self.legs[0].option.strike)))
-
     def calculate_breakeven(self) -> list[float]:
         if self.analysis.credit_debit == 'debit':
             breakeven = self.legs[1].option.strike + self.analysis.total
@@ -195,6 +192,10 @@ class Vertical(Strategy):
             breakeven = self.legs[1].option.strike - self.analysis.total
 
         return [breakeven]
+
+    def calculate_pop(self) -> float:
+        pop = 1.0 - (self.analysis.max_gain / abs((self.legs[1].option.strike - self.legs[0].option.strike)))
+        return pop if pop > 0.0 else 0.0
 
     def get_errors(self) -> str:
         error = ''
@@ -214,7 +215,7 @@ class Vertical(Strategy):
 
         return error
 
-    def _validate(self) -> bool:
+    def validate(self) -> bool:
         return len(self.legs) == 2
 
 
