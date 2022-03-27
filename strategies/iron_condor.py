@@ -77,13 +77,21 @@ class IronCondor(Strategy):
 
         # Need to track call and put indexes seperately because there may be differences in structures
         options_c = self.chain.get_chain('call')
-        if strike <= 0.0:
+
+        if options_c.empty:
+            chain_index_c = -1
+            _logger.warning(f'{__name__}: Error fetching call option chain for {self.ticker}')
+        elif strike <= 0.0:
             chain_index_c = self.chain.get_index_itm()
         else:
             chain_index_c = self.chain.get_index_strike(strike)
 
         options_p = self.chain.get_chain('put')
-        if strike <= 0.0:
+
+        if options_p.empty:
+            chain_index_p = -1
+            _logger.warning(f'{__name__}: Error fetching put option chain for {self.ticker}')
+        elif strike <= 0.0:
             chain_index_p = self.chain.get_index_itm()
         else:
             chain_index_p = self.chain.get_index_strike(strike)

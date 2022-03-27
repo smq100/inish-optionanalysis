@@ -22,7 +22,7 @@ from utils import ui, logger
 logger.get_logger(logging.WARNING, logfile='')
 
 COOR_CUTOFF = 0.85
-LISTTOP_SCREEN = 10
+LISTTOP_SCREEN = 3
 LISTTOP_TREND = 5
 LISTTOP_CORR = 3
 
@@ -109,7 +109,7 @@ class Interface:
                 '8':  'Show All Results',
                 '9':  'Show Ticker Summary',
                 '10': 'Manage Cache Files',
-                '11': 'Clear Old Cache Files',
+                '11': 'Delete Old Cache Files',
                 '0':  'Exit'
             }
 
@@ -142,9 +142,9 @@ class Interface:
                 if len(self.results_valids) > 0:
                     self.show_valids(top=LISTTOP_SCREEN)
             elif selection == 4:
-                self.run_option_strategy()
+                self.select_option_strategy()
             elif selection == 5:
-                self.get_support_resistance()
+                self.select_support_resistance()
             elif selection == 6:
                 self.run_coorelate()
                 if len(self.results_corr) > 0:
@@ -214,7 +214,7 @@ class Interface:
         else:
             ui.print_message('No screener files found')
 
-    def run_option_strategy(self) -> None:
+    def select_option_strategy(self) -> None:
         if len(self.results_valids) > 0:
             menu_items = {
                 '1': 'Call',
@@ -250,9 +250,24 @@ class Interface:
                 modified = False
 
             if modified:
-                self.run_options(strategy, product, direction)
+                self.run_option_strategy(strategy, product, direction)
         else:
             ui.print_error('No valid results to analyze')
+
+    def select_support_resistance(self) -> list[str]:
+        tickers = []
+        ticker = ui.input_text("Enter ticker or 'valids': ").upper()
+        if store.is_ticker(ticker):
+            tickers = [ticker]
+        elif ticker != 'VALIDS':
+            pass
+        elif len(self.results_valids) > 0:
+            tickers = [str(result) for result in self.results_valids[:LISTTOP_TREND]]
+        else:
+            ui.print_error('Not a valid ticker')
+
+        if tickers:
+            self.run_support_resistance(tickers)
 
     def run_screen(self) -> bool:
         success = False
@@ -268,11 +283,12 @@ class Interface:
             try:
                 self.screener = Screener(self.table, screen=self.path_screen)
             except ValueError as e:
-                ui.print_error(str(e))
+                ui.print_error(f'{__name__}: {str(e)}')
             else:
                 self.task = threading.Thread(target=self.screener.run_script, kwargs={'ignore_cache': self.ignore_cache})
                 self.task.start()
 
+                # Show thread progress. Blocking while thread is active
                 self.show_progress_screen()
 
                 if self.screener.task_error == 'Done':
@@ -286,68 +302,7 @@ class Interface:
 
         return success
 
-    def run_coorelate(self) -> None:
-        if len(self.results_valids) == 0:
-            ui.print_error('Please run screen before correlating')
-        elif not store.is_list(self.table):
-            ui.print_error('List is not valid')
-        else:
-            table = store.get_tickers(self.table)
-            self.coorelate = Correlate(table)
-
-            self.task = threading.Thread(target=self.coorelate.compute_correlation)
-            self.task.start()
-
-            print()
-            self.show_progress_correlate()
-
-            self.results_corr = []
-            for valid in self.results_valids:
-                ticker = valid.company.ticker
-                df = self.coorelate.get_ticker_coorelation(ticker)
-                self.results_corr += [(ticker, df.iloc[-1])]
-
-    def get_support_resistance(self) -> list[str]:
-        tickers = []
-        ticker = ui.input_text("Enter ticker or 'valids': ").upper()
-        if store.is_ticker(ticker):
-            tickers = [ticker]
-        elif ticker != 'VALIDS':
-            pass
-        elif len(self.results_valids) > 0:
-            tickers = [str(result) for result in self.results_valids[:LISTTOP_TREND]]
-        else:
-            ui.print_error('Not a valid ticker')
-
-        if tickers:
-            self.run_support_resistance(tickers)
-
-    def run_support_resistance(self, tickers: list[str]) -> None:
-        if tickers:
-            ui.progress_bar(0, 0, prefix='Analyzing S & R', reset=True)
-            for ticker in tickers:
-                if self.quick:
-                    self.trend = SupportResistance(ticker, days=self.days)
-                else:
-                    methods = ['NSQUREDLOGN', 'NCUBED', 'HOUGHLINES', 'PROBHOUGH']
-                    extmethods = ['NAIVE', 'NAIVECONSEC', 'NUMDIFF']
-                    self.trend = SupportResistance(ticker, methods=methods, extmethods=extmethods, days=self.days)
-
-                self.task = threading.Thread(target=self.trend.calculate)
-                self.task.start()
-
-                self.show_progress_analyze()
-
-                figure = self.trend.plot()
-                plt.figure(figure)
-
-            if tickers:
-                print()
-                plt.show()
-        else:
-            ui.print_error('No valid results to analyze')
-
-    def run_options(self, strategy: str, product: str, direction: str) -> None:
+    def run_option_strategy(self, strategy: str, product: str, direction: str) -> None:
         if strategy not in s.STRATEGIES:
             raise ValueError('Invalid strategy')
         if direction not in s.DIRECTIONS:
@@ -356,9 +311,6 @@ class Interface:
             raise ValueError('Invalid product')
 
         tickers = [str(result) for result in self.results_valids[:LISTTOP_SCREEN]]
-
-        print()
-        ui.progress_bar(0, 0, prefix='Analyzing Options', reset=True)
 
         strategies = []
         for ticker in tickers:
@@ -372,16 +324,65 @@ class Interface:
         if len(strategies) > 0:
             sl.reset()
             self.task = threading.Thread(target=sl.analyze, args=[strategies])
+
+            # Show thread progress. Blocking while thread is active
             self.task.start()
 
             self.show_progress_options()
 
-            ui.print_message('Strategy Analysis')
-            print()
+            ui.print_message('Strategy Analysis', pre_creturn=1, post_creturn=1)
+
             headers = [header.replace('_', ' ').title() for header in sl.strategy_results.columns]
             print(tabulate(sl.strategy_results, headers=headers, tablefmt='simple', floatfmt='.2f'))
         else:
             ui.print_warning('No tickers to process')
+
+    def run_support_resistance(self, tickers: list[str]) -> None:
+        if tickers:
+            for ticker in tickers:
+                if self.quick:
+                    self.trend = SupportResistance(ticker, days=self.days)
+                else:
+                    methods = ['NSQUREDLOGN', 'NCUBED', 'HOUGHLINES', 'PROBHOUGH']
+                    extmethods = ['NAIVE', 'NAIVECONSEC', 'NUMDIFF']
+                    self.trend = SupportResistance(ticker, methods=methods, extmethods=extmethods, days=self.days)
+
+                self.task = threading.Thread(target=self.trend.calculate)
+
+                # Show thread progress. Blocking while thread is active
+                self.task.start()
+
+                # Show thread progress. Blocking while thread is active
+                self.show_progress_support_resistance()
+
+                figure = self.trend.plot()
+                plt.figure(figure)
+
+            plt.show()
+        else:
+            ui.print_error('No valid results to analyze')
+
+    def run_coorelate(self) -> None:
+        if len(self.results_valids) == 0:
+            ui.print_error('Please run screen before correlating')
+        elif not store.is_list(self.table):
+            ui.print_error('List is not valid')
+        else:
+            table = store.get_tickers(self.table)
+            self.coorelate = Correlate(table)
+
+            self.task = threading.Thread(target=self.coorelate.compute_correlation)
+
+            self.task.start()
+
+            # Show thread progress. Blocking while thread is active
+            self.show_progress_correlate()
+
+            self.results_corr = []
+            for valid in self.results_valids:
+                ticker = valid.company.ticker
+                df = self.coorelate.get_ticker_coorelation(ticker)
+                self.results_corr += [(ticker, df.iloc[-1])]
 
     def show_valids(self, top: int = -1, verbose: bool = False, ticker: str = '') -> None:
         if not self.table:
@@ -450,45 +451,11 @@ class Interface:
 
                 ui.progress_bar(completed, total, prefix=prefix, ticker=ticker, success=success, tasks=tasks)
 
-    def show_progress_correlate(self):
-        while not self.coorelate.task_error:
-            pass
-
-        if self.coorelate.task_error == 'None':
-            prefix = 'Correlating'
-            total = self.coorelate.task_total
-            ui.progress_bar(self.coorelate.task_completed, self.coorelate.task_total, success=self.coorelate.task_success, prefix=prefix, reset=True)
-
-            while self.task.is_alive() and self.coorelate.task_error == 'None':
-                time.sleep(0.20)
-                completed = self.coorelate.task_completed
-                success = completed
-                ticker = self.coorelate.task_ticker
-                ui.progress_bar(completed, total, prefix=prefix, ticker=ticker, success=success)
-
-    def show_progress_analyze(self) -> None:
-        while not self.trend.task_error:
-            pass
-
-        if self.trend.task_error == 'None':
-            prefix = 'Analyzing S & R'
-            while self.trend.task_error == 'None':
-                time.sleep(0.20)
-                ui.progress_bar(0, 0, prefix=prefix, suffix=self.trend.task_message)
-
-            if self.trend.task_error == 'Next':
-                pass
-            elif self.trend.task_error == 'Done':
-                ui.print_message(f'{self.trend.task_error}: {self.trend.task_total} lines extracted in {self.trend.task_time:.1f} seconds')
-            else:
-                ui.print_error(f'{self.trend.task_error}: Error extracting lines')
-        else:
-            ui.print_message(f'{self.trend.task_error}')
-
     def show_progress_options(self) -> None:
         while not sl.strategy_error:
             pass
 
+        ui.progress_bar(0, 0, prefix='Analyzing Options', reset=True)
         if sl.strategy_error == 'None':
             prefix = 'Collecting Option Data'
             ui.progress_bar(0, 0, prefix=prefix, reset=True)
@@ -508,6 +475,46 @@ class Interface:
         else:
             ui.print_message(f'{sl.strategy_error}')
 
+    def show_progress_support_resistance(self) -> None:
+        while not self.trend.task_error:
+            pass
+
+        if self.trend.task_error == 'History':
+            prefix = 'Retrieving History'
+            ui.progress_bar(0, 0, prefix=prefix, reset=True)
+            while self.trend.task_error == 'History':
+                time.sleep(0.20)
+                ui.progress_bar(0, 0, prefix=prefix, suffix=self.trend.task_message)
+
+        if self.trend.task_error == 'None':
+            prefix = 'Analyzing S & R'
+            while self.trend.task_error == 'None':
+                time.sleep(0.20)
+                ui.progress_bar(0, 0, prefix=prefix, suffix=self.trend.task_message)
+
+            if self.trend.task_error == 'Done':
+                ui.print_message(f'{self.trend.task_error}: {self.trend.task_total} lines extracted in {self.trend.task_time:.1f} seconds', pre_creturn=1)
+            else:
+                ui.print_error(f'{self.trend.task_error}: Error extracting lines', pre_creturn=1)
+        else:
+            ui.print_message(f'{self.trend.task_error}')
+
+    def show_progress_correlate(self):
+        while not self.coorelate.task_error:
+            pass
+
+        if self.coorelate.task_error == 'None':
+            prefix = 'Correlating'
+            total = self.coorelate.task_total
+            ui.progress_bar(self.coorelate.task_completed, self.coorelate.task_total, success=self.coorelate.task_success, prefix=prefix, reset=True)
+
+            while self.task.is_alive() and self.coorelate.task_error == 'None':
+                time.sleep(0.20)
+                completed = self.coorelate.task_completed
+                success = completed
+                ticker = self.coorelate.task_ticker
+                ui.progress_bar(completed, total, prefix=prefix, ticker=ticker, success=success)
+
     def manage_cache_files(self) -> None:
         paths = _get_cache_files()
         if paths:
@@ -525,7 +532,7 @@ class Interface:
                     try:
                         os.remove(file)
                     except OSError as e:
-                        ui.print_error(f'File error for {e.filename}: {e.strerror}')
+                        ui.print_error(f'{__name__}: File error for {e.filename}: {e.strerror}')
                     else:
                         ui.print_message(f'Cache {screen} deleted')
                 elif selection == 2:
@@ -561,7 +568,7 @@ class Interface:
                         try:
                             os.remove(path)
                         except OSError as e:
-                            ui.print_error(f'File error for {e.filename}: {e.strerror}')
+                            ui.print_error(f'{__name__}: File error for {e.filename}: {e.strerror}')
                         else:
                             deleted += 1
                     ui.print_message(f'Deleted {deleted} files')

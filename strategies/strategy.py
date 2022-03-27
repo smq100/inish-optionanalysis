@@ -132,7 +132,10 @@ class Strategy(ABC, Threaded):
         product = self.legs[0].option.product
         options = self.chain.get_chain(product)
 
-        if strike <= 0.0:
+        if options.empty:
+            chain_index = -1
+            _logger.warning(f'{__name__}: Error fetching option chain for {self.ticker}')
+        elif strike <= 0.0:
             chain_index = self.chain.get_index_itm()
         else:
             chain_index = self.chain.get_index_strike(strike)
@@ -140,7 +143,7 @@ class Strategy(ABC, Threaded):
         if chain_index >= 0:
             contract = options.iloc[chain_index]['contractSymbol']
         else:
-            _logger.error(f'{__name__}: Error fetching default contract for {self.ticker}')
+            _logger.warning(f'{__name__}: Error fetching default contract for {self.ticker}')
 
         return product, chain_index, [contract]
 

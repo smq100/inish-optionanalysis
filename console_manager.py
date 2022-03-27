@@ -220,8 +220,8 @@ class Interface:
             self.task.start()
 
             if progressbar:
-                print()
-                self._show_progress('Progress', '')
+                # Show thread progress. Blocking while thread is active
+                self.show_progress('Progress', '')
 
             if self.manager.task_error == 'Done':
                 ui.print_message(f'{self.manager.task_success} {table} '
@@ -234,8 +234,8 @@ class Interface:
             self.task.start()
 
             if progressbar:
-                print()
-                self._show_progress('Progress', '')
+                # Show thread progress. Blocking while thread is active
+                self.show_progress('Progress', '')
 
             if self.manager.task_error == 'Done':
                 ui.print_message(f'{self.manager.task_success} {table} Symbols populated in {self.manager.task_time:.0f} seconds')
@@ -255,7 +255,8 @@ class Interface:
             self.task.start()
 
             if progressbar:
-                self._show_progress('Progress', '')
+                # Show thread progress. Blocking while thread is active
+                self.show_progress('Progress', '')
 
             if self.manager.task_error == 'Done':
                 ui.print_message(f'{self.manager.task_total} {table} Ticker pricing refreshed in {self.manager.task_time:.0f} seconds')
@@ -280,8 +281,8 @@ class Interface:
             self.task.start()
 
             if progressbar:
-                print()
-                self._show_progress('Progress', '')
+                # Show thread progress. Blocking while thread is active
+                self.show_progress('Progress', '')
 
             if self.manager.task_error == 'Done':
                 ui.print_message(f'{self.manager.task_total} {table} Company infomation refreshed in {self.manager.task_time:.0f} seconds')
@@ -293,8 +294,8 @@ class Interface:
             self.task.start()
 
             if progressbar:
-                print()
-                self._show_progress('', '')
+                # Show thread progress. Blocking while thread is active
+                self.show_progress('', '')
 
             self.create_missing_tables()
 
@@ -362,7 +363,8 @@ class Interface:
             self.task.start()
 
             if progressbar:
-                self._show_progress('Progress', '')
+                # Show thread progress. Blocking while thread is active
+                self.show_progress('Progress', '')
 
             if self.manager.task_error == 'Done':
                 ui.print_message(f'{self.manager.task_total} {table} Ticker pricing checked in {self.manager.task_time:.0f} seconds')
@@ -373,8 +375,7 @@ class Interface:
                 for item in self.manager.task_results:
                     total += item[1]
                     print(f'{item[0]}:')
-                    ui.print_tickers(item[1])
-                    print()
+                    ui.print_tickers(item[1], post_creturn=1)
 
                 if ui.input_yesno('Mark tickers as inactive?'):
                     self.manager.change_active(total, False)
@@ -400,7 +401,8 @@ class Interface:
             self.task.start()
 
             if progressbar:
-                self._show_progress('Progress', '')
+                # Show thread progress. Blocking while thread is active
+                self.show_progress('Progress', '')
 
             if self.manager.task_error == 'Done':
                 ui.print_message(f'{self.manager.task_success} Inactive tickers updated in {self.manager.task_time:.0f} seconds')
@@ -449,7 +451,7 @@ class Interface:
         self.manager.create_exchanges()
         self.manager.create_indexes()
 
-    def _show_progress(self, prefix: str, suffix: str) -> None:
+    def show_progress(self, prefix: str, suffix: str) -> None:
         while not self.manager.task_error:
             pass
 

@@ -19,9 +19,9 @@ def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int) -> int:
     return input_integer('Please select: ', minvalue, maxvalue)
 
 
-def delimeter(message, creturn: int = 0, attr: int = 0) -> str:
-    if creturn > 0:
-        output = '\n' * creturn
+def delimeter(message, pre_creturn: int = 0, post_creturn: int = 0) -> str:
+    if pre_creturn > 0:
+        output = '\n' * pre_creturn
     else:
         output = ''
 
@@ -30,27 +30,26 @@ def delimeter(message, creturn: int = 0, attr: int = 0) -> str:
     else:
         output += '*****'
 
+    if post_creturn > 0:
+        output += '\n' * post_creturn
+
     return output
 
 
-def print_message(message: str, creturn: int = 1) -> None:
-    print(delimeter(f'{message}', creturn))
+def print_message(message: str, pre_creturn: int = 1, post_creturn: int = 0) -> None:
+    print(delimeter(message, pre_creturn, post_creturn))
 
 
-def print_warning(message: str, creturn: int = 1) -> None:
+def print_warning(message: str, pre_creturn: int = 1, post_creturn: int = 0) -> None:
     print(Fore.RED, end='')
-    print(delimeter(f'Warning: {message}', creturn))
+    print(delimeter(f'Warning: {message}', pre_creturn, post_creturn))
     print(Style.RESET_ALL)
 
 
-def print_error(message: str, creturn: int = 1) -> None:
+def print_error(message: str, pre_creturn: int = 1, post_creturn: int = 0) -> None:
     print(Fore.RED, end='')
-    print(delimeter(f'Error: {message}', creturn))
+    print(delimeter(f'Error: {message}', pre_creturn, post_creturn))
     print(Style.RESET_ALL)
-
-
-def print_line(message: str, creturn: int = 1) -> None:
-    print(delimeter(message, creturn))
 
 
 def print_tickers(tickers: list[str], group: int = 15) -> None:
@@ -89,24 +88,37 @@ def input_integer(message: str, min_: int, max_: int) -> int:
 
 
 def input_float(message: str, min_: float, max_: float) -> float:
-    val = min_ - 1
+    val = min_ - 1.0
     while val < min_:
         text = input(message)
         if not m.isnumeric(text):
-            print_error(f'Invalid value. Enter an integer between {min_} and {max_}')
-            val = min_ - 1
+            print_error(f'Invalid value. Enter an integer between {min_:.2f} and {max_:.2f}')
+            val = min_ - 1.0
         else:
             val = int(text)
             if float(val) < min_:
-                print_error(f'Invalid value. Enter an integer between {min_} and {max_}')
-                val = min_ - 1
+                print_error(f'Invalid value. Enter an integer between {min_:.2f} and {max_:.2f}')
+                val = min_ - 1.0
             elif float(val) > max_:
-                print_error(f'Invalid value. Enter an integer between {min_} and {max_}')
-                val = min_ - 1
+                print_error(f'Invalid value. Enter an integer between {min_:.2f} and {max_:.2f}')
+                val = min_ - 1.0
             else:
                 val = float(val)
 
     return val
+
+
+def input_float_range(message: str, middle: float, percent: float) -> float:
+    if percent < 1.0:
+        percent = 1.0
+    elif percent > 100.0:
+        percent = 100.0
+
+    percent /= 100.0
+    min_ = middle * (1.0 - percent)
+    max_ = middle * (1.0 + percent)
+
+    return input_float(message, min_, max_)
 
 
 def input_text(message: str) -> str:
@@ -196,7 +208,7 @@ def progress_bar(iteration, total: int, prefix: str = 'Working', suffix: str = '
         forward = True
         start = time.perf_counter()
         erase = 100 * ' '
-        print(f'\r{erase}', end='\r')
+        print(f'\r\n{erase}', end='\r')
 
     if total > 0:
         filled = int(length * iteration // total)

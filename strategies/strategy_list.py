@@ -60,7 +60,7 @@ def analyze(strategies: list[strategy_type]) -> None:
                     items += [IronCondor(s.ticker, 'hybrid', s.direction, s.strike, 1, 1, 1, load_contracts=True)]
         except Exception as e:
             items = []
-            strategy_error = str(sys.exc_info()[1])
+            strategy_error = f'{__name__}: {str(sys.exc_info()[1])}'
 
         if len(items) > 0:
             strategy_error = 'Next'

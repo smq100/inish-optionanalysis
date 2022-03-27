@@ -140,41 +140,44 @@ class SupportResistance(Threaded):
 
     @Threaded.threaded
     def calculate(self) -> None:
-        self.history = store.get_history(self.ticker, self.days)
-        if self.history is None:
-            raise ValueError('Unable to get history')
-
         self.task_message = self.ticker
+        self.task_error = 'History'
 
-        self.price = self.history.iloc[-1]['close']
-        self.company = store.get_company(self.ticker)
-        if not self.company:
-            self.company['name'] = 'Error'
-            _logger.warning(f'Unable to get company information ({self.ticker})')
+        self.history = store.get_history(self.ticker, self.days)
+        if not self.history.empty:
+            self.task_error = 'None'
+            self.price = self.history.iloc[-1]['close']
+            self.company = store.get_company(self.ticker)
 
-        self.points = len(self.history)
-        self.task_error = 'None'
+            if not self.company:
+                self.company['name'] = 'Error'
+                _logger.warning(f'Unable to get company information ({self.ticker})')
 
-        # Extract lines across methods, extmethods, and then flatten the results
-        lines = [self._extract_lines(method, extmethod) for method in self.methods for extmethod in self.extmethods]
-        lines = [item for sublist in lines for item in sublist]
+            self.points = len(self.history)
 
-        self.task_total = len(lines)
-        _logger.info(f'{__name__}: {self.task_total} total lines extracted')
+            # Extract lines across methods, extmethods, and then flatten the results
+            lines = [self._extract_lines(method, extmethod) for method in self.methods for extmethod in self.extmethods]
+            lines = [item for sublist in lines for item in sublist]
 
-        # Create dataframe of lines then sort, round, and drop duplicates
-        df = pd.DataFrame.from_records([vars(l) for l in lines])
-        df.dropna(inplace=True)
-        df.drop('_score', axis=1, inplace=True)
-        df.sort_values(by=['score'], ascending=False, inplace=True)
-        df = df.round(6)
-        df.drop_duplicates(subset=['slope', 'intercept'], inplace=True)
-        self.lines = df.reset_index(drop=True)
-        _logger.info(f'{__name__}: {len(self.lines)} rows created ({len(lines)-len(self.lines)} duplicates deleted)')
+            self.task_total = len(lines)
+            _logger.info(f'{__name__}: {self.task_total} total lines extracted')
 
-        self._calculate_stats()
+            # Create dataframe of lines then sort, round, and drop duplicates
+            df = pd.DataFrame.from_records([vars(l) for l in lines])
+            df.dropna(inplace=True)
+            df.drop('_score', axis=1, inplace=True)
+            df.sort_values(by=['score'], ascending=False, inplace=True)
+            df = df.round(6)
+            df.drop_duplicates(subset=['slope', 'intercept'], inplace=True)
+            self.lines = df.reset_index(drop=True)
+            _logger.info(f'{__name__}: {len(self.lines)} rows created ({len(lines)-len(self.lines)} duplicates deleted)')
 
-        self.task_error = 'Next'
+            self._calculate_stats()
+
+            self.task_error = 'Done'
+        else:
+            self.task_error = 'Unable to get history'
+
 
     def _extract_lines(self, method: str, extmethod: str) -> list[_Line]:
         if not method in METHOD:

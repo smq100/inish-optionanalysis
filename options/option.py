@@ -130,7 +130,7 @@ class Option:
 
             contract = chain.loc[chain['contractSymbol'] == contract_name].iloc[0]
         except Exception as e:
-            print(str(e))
+            _logger.warning(f'{__name__}: {str(e)}')
 
         return contract
 

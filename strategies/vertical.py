@@ -76,7 +76,10 @@ class Vertical(Strategy):
         product = self.legs[0].option.product
         options = self.chain.get_chain(product)
 
-        if strike <= 0.0:
+        if options.empty:
+            chain_index = -1
+            _logger.warning(f'{__name__}: Error fetching option chain for {self.ticker}')
+        elif strike <= 0.0:
             chain_index = self.chain.get_index_itm()
         else:
             chain_index = self.chain.get_index_strike(strike)
@@ -84,7 +87,7 @@ class Vertical(Strategy):
         if chain_index >= 0:
             contracts = [options.iloc[chain_index]['contractSymbol']]
         else:
-            _logger.error(f'{__name__}: Error fetching default contract for {self.ticker}')
+            _logger.warning(f'{__name__}: Error fetching default contract for {self.ticker}')
 
         if chain_index >= 0:
             if self.product == 'call':
@@ -101,7 +104,7 @@ class Vertical(Strategy):
         if chain_index >= 0:
             contracts += [options.iloc[chain_index]['contractSymbol']]
         else:
-            _logger.error(f'{__name__}: Bad index value for {self.ticker}: {chain_index=}')
+            _logger.warning(f'{__name__}: Bad index value for {self.ticker}: {chain_index=}')
             product = ''
             chain_index = 0
             contracts = []

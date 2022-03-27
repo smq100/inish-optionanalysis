@@ -49,8 +49,7 @@ class Chain:
                         index = index - 1 if index > 0 else 0
                     break
         else:
-            _logger.error(f'{__name__}: Empty option chain for {self.ticker}')
-
+            _logger.warning(f'{__name__}: Empty ITM option chain for {self.ticker}')
 
         return index
 
@@ -62,6 +61,6 @@ class Chain:
                 if option.strike >= strike:
                     break
         else:
-            _logger.error(f'{__name__}: Empty option chain for {self.ticker}')
+            _logger.warning(f'{__name__}: Empty Strike option chain for {self.ticker}')
 
         return index

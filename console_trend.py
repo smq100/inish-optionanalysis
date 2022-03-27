@@ -116,7 +116,8 @@ class Interface:
                 self.task = threading.Thread(target=self.trend.calculate)
                 self.task.start()
 
-                self._show_progress()
+                # Show thread progress. Blocking while thread is active
+                self.show_progress()
 
                 figure = self.trend.plot()
                 plt.figure(figure)
@@ -126,11 +127,13 @@ class Interface:
         else:
             ui.print_error('Enter a ticker before calculating')
 
-    def _show_progress(self) -> None:
+    def show_progress(self) -> None:
         while not self.trend.task_error:
             pass
 
         if self.trend.task_error == 'None':
+            ui.progress_bar(0, 0, suffix=self.trend.task_message, reset=True)
+
             while self.trend.task_error == 'None':
                 time.sleep(0.20)
                 ui.progress_bar(0, 0, suffix=self.trend.task_message)

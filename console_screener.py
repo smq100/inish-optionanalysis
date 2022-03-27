@@ -205,12 +205,13 @@ class Interface:
             try:
                 self.screener = Screener(self.table, screen=self.screen_path, end=self.end, live=self.live)
             except ValueError as e:
-                ui.print_error(str(e))
+                ui.print_error(f'{__name__}: {str(e)}')
             else:
                 self.valids = []
                 self.task = threading.Thread(target=self.screener.run_script)
                 self.task.start()
 
+                # Show thread progress. Blocking while thread is active
                 self.show_progress('Progress', '')
 
                 if self.screener.task_error == 'Done':
@@ -310,7 +311,6 @@ class Interface:
                 self.print_results(ticker=ticker)
 
     def show_progress(self, prefix, suffix) -> None:
-        # Wait for thread to initialize
         while not self.screener.task_error:
             pass
 

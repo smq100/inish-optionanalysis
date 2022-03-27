@@ -177,7 +177,7 @@ class Interface():
                 modified = False
                 ui.print_error('Unknown argument')
         except Exception as e:
-            ui.print_error(str(sys.exc_info()[1]))
+            ui.print_error(f'{__name__}: {str(sys.exc_info()[1])}')
             modified = False
 
         if modified:
@@ -195,7 +195,8 @@ class Interface():
             self.task = threading.Thread(target=self.strategy.analyze)
             self.task.start()
 
-            self._show_progress()
+            # Show thread progress. Blocking while thread is active
+            self.show_progress()
 
             self.dirty_analyze = False
 
@@ -275,14 +276,14 @@ class Interface():
                         analysis = m.compress_table(analysis, rows, cols)
 
                     if style == 1:
-                        ui.print_message(title)
+                        ui.print_message(title, pre_creturn=2)
                         print(self.strategy.analysis)
                         if self.strategy.legs[0].option.contract:
-                            ui.print_message('Option Contracts')
+                            ui.print_message('Option Contracts', pre_creturn=0)
                             for leg in self.strategy.legs:
                                 print(f'{leg.option.contract}')
                     elif style == 2:
-                        ui.print_message(title)
+                        ui.print_message(title, post_creturn=1)
                         print(tabulate(analysis, headers=analysis.columns, tablefmt='simple', floatfmt='.2f'))
                     elif style == 3:
                         self._show_chart(analysis, title, charttype='chart')
@@ -369,27 +370,33 @@ class Interface():
 
         self.width1 = 0
         self.width2 = 0
+        price = store.get_current_price(self.strategy.ticker)
+
         if selection == 1:
             d = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
             direction = 'long' if d == 1 else 'short'
-            self.load_strategy(self.strategy.ticker, 'call', direction, self.strike, self.width1, self.width2, self.quantity)
+            self.strike = ui.input_float_range(f'Enter strike ({price:.2f}): ', price, 20.0)
+            self.load_strategy(self.strategy.ticker, 'call', 'call', direction, self.strike, 0, 0, self.quantity)
         elif selection == 2:
             d = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
             direction = 'long' if d == 1 else 'short'
-            self.load_strategy(self.strategy.ticker, 'put', direction, self.strike, self.width1, self.width2, self.quantity)
+            self.strike = ui.input_float_range(f'Enter strike ({price:.2f}): ', price, 20.0)
+            self.load_strategy(self.strategy.ticker, 'put', 'put', direction, self.strike, 0, 0, self.quantity)
         elif selection == 3:
             p = ui.input_integer('(1) Call, or (2) Put: ', 1, 2)
             product = 'call' if p == 1 else 'put'
             d = ui.input_integer('(1) Debit, or (2) Credit: ', 1, 2)
             direction = 'long' if d == 1 else 'short'
-            self.width1 = 1 if self.width1 == 0 else self.width1
-            self.load_strategy(self.strategy.ticker, 'vert', direction, product, self.strike, self.width1, self.width2, self.quantity)
+            self.strike = ui.input_float_range(f'Enter strike ({price:.2f}): ', price, 20.0)
+            self.width1 = self.width1 if self.width1 > 0 else 1
+            self.load_strategy(self.strategy.ticker, 'vert', product, direction, self.strike, self.width1, 0, self.quantity)
         elif selection == 4:
             d = ui.input_integer('(1) Debit, or (2) Credit: ', 1, 2)
             direction = 'long' if d == 1 else 'short'
-            self.width1 = 1 if self.width1 == 0 else self.width1
-            self.width2 = 1 if self.width2 == 0 else self.width2
-            self.load_strategy(self.strategy.ticker, 'ic', direction, self.strike, self.width1, self.width2, self.quantity)
+            self.strike = ui.input_float_range(f'Enter strike ({price:.2f}): ', price, 20.0)
+            self.width1 = self.width1 if self.width1 > 0 else 1
+            self.width2 = self.width2 if self.width2 > 0 else 1
+            self.load_strategy(self.strategy.ticker, 'ic', 'hybrid', direction, self.strike, self.width1, self.width2, self.quantity)
         else:
             modified = False
 
@@ -569,15 +576,12 @@ class Interface():
 
             ui.print_error('Unknown method selected')
 
-    def _show_progress(self) -> None:
-        print()
+    def show_progress(self) -> None:
         ui.progress_bar(0, 0, prefix='Analyzing', suffix=self.ticker, reset=True)
 
         while self.task.is_alive():
             time.sleep(0.20)
             ui.progress_bar(0, 0, prefix='Analyzing', suffix=self.ticker)
-
-        print()
 
     def _show_chart(self, table: str, title: str, charttype: str) -> None:
         if not isinstance(table, pd.DataFrame):

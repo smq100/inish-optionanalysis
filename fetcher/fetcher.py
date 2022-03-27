@@ -210,8 +210,14 @@ def get_option_expiry(ticker: str, uselast: bool = False) -> tuple[str]:
     if not _connected:
         raise ConnectionError('No internet connection')
 
-    company = get_company_live(ticker, uselast)
-    value = company.options
+    for retry in range(_RETRIES):
+        company = get_company_live(ticker, uselast)
+        if company is not None:
+            value = company.options
+            break
+        else:
+            _logger.warning(f'{__name__}: Retry {retry} to fetch option expiry for {ticker}')
+            time.sleep(_THROTTLE_ERROR)
 
     return value
 
@@ -221,9 +227,15 @@ def get_option_chain(ticker: str, uselast: bool = False) -> dict:
         raise ConnectionError('No internet connection')
 
     chain = {}
-    company = get_company_live(ticker, uselast)
-    if company is not None:
-        chain = company.option_chain
+
+    for retry in range(_RETRIES):
+        company = get_company_live(ticker, uselast)
+        if company is not None:
+            chain = company.option_chain
+            break
+        else:
+            _logger.warning(f'{__name__}: Retry {retry} to fetch option chain for {ticker}')
+            time.sleep(_THROTTLE_ERROR)
 
     return chain
 
