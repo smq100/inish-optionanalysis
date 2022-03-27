@@ -19,6 +19,7 @@ from strategies.vertical import Vertical
 from strategies.call import Call
 from strategies.put import Put
 from strategies.iron_condor import IronCondor
+from strategies.iron_butterfly import IronButterfly
 from data import store
 from utils import math as m
 from utils import ui, logger
@@ -165,14 +166,16 @@ class Interface():
         try:
             if strategy.lower() == 'call':
                 self.width1 = 0
-                self.strategy = Call(self.ticker, 'call', direction, strike, width1, width2, quantity, default)
+                self.strategy = Call(self.ticker, 'call', direction, strike, 0, 0, quantity, default)
             elif strategy.lower() == 'put':
                 self.width1 = 0
-                self.strategy = Put(self.ticker, 'put', direction, strike, width1, width2, quantity, default)
+                self.strategy = Put(self.ticker, 'put', direction, strike, 0, 0, quantity, default)
             elif strategy.lower() == 'vert':
-                self.strategy = Vertical(self.ticker, product, direction, strike, width1, width2, quantity, default)
+                self.strategy = Vertical(self.ticker, product, direction, strike, width1, 0, quantity, default)
             elif strategy.lower() == 'ic':
                 self.strategy = IronCondor(self.ticker, 'hybrid', direction, strike, width1, width2, quantity, default)
+            elif strategy.lower() == 'ib':
+                self.strategy = IronButterfly(self.ticker, 'hybrid', direction, strike, width1, 0, quantity, default)
             else:
                 modified = False
                 ui.print_error('Unknown argument')
@@ -698,7 +701,7 @@ class Interface():
 def main():
     parser = argparse.ArgumentParser(description='Option Strategy Analyzer')
     parser.add_argument('-t', '--ticker', help='Specify the ticker symbol', required=False, default='AAPL')
-    parser.add_argument('-s', '--strategy', help='Load and analyze strategy', required=False, choices=['call', 'put', 'vert', 'ic'], default='call')
+    parser.add_argument('-s', '--strategy', help='Load and analyze strategy', required=False, choices=['call', 'put', 'vert', 'ic', 'ib'], default='call')
     parser.add_argument('-d', '--direction', help='Specify the direction', required=False, choices=['long', 'short'], default='long')
     parser.add_argument('-p', '--product', help='Specify the product', required=False, choices=['call', 'put'], default='call')
     parser.add_argument('-k', '--strike', help='Specify the strike price', required=False, default='-1.0')

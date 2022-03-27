@@ -9,6 +9,7 @@ from strategies.call import Call
 from strategies.put import Put
 from strategies.vertical import Vertical
 from strategies.iron_condor import IronCondor
+from strategies.iron_butterfly import IronButterfly
 from utils import logger
 
 _logger = logger.get_logger()
@@ -51,13 +52,15 @@ def analyze(strategies: list[strategy_type]) -> None:
                 strategy_msg = f'{s.ticker}: ${s.strike:.2f} {s.direction} {s.product}'
 
                 if s.strategy == 'call':
-                    items += [Call(s.ticker, 'call', s.direction, s.strike, 1, 1, 1, load_contracts=True)]
+                    items += [Call(s.ticker, 'call', s.direction, s.strike, 0, 0, 1, load_contracts=True)]
                 elif s.strategy == 'put':
-                    items += [Put(s.ticker, 'put', s.direction, s.strike, 1, 1, 1, load_contracts=True)]
+                    items += [Put(s.ticker, 'put', s.direction, s.strike, 0, 0, 1, load_contracts=True)]
                 elif s.strategy == 'vert':
-                    items += [Vertical(s.ticker, s.product, s.direction, s.strike, 1, 1, 1, load_contracts=True)]
+                    items += [Vertical(s.ticker, s.product, s.direction, s.strike, 1, 0, 1, load_contracts=True)]
                 elif s.strategy == 'ic':
                     items += [IronCondor(s.ticker, 'hybrid', s.direction, s.strike, 1, 1, 1, load_contracts=True)]
+                elif s.strategy == 'ib':
+                    items += [IronButterfly(s.ticker, 'hybrid', s.direction, s.strike, 1, 0, 1, load_contracts=True)]
         except Exception as e:
             items = []
             strategy_error = f'{__name__}: {str(sys.exc_info()[1])}'

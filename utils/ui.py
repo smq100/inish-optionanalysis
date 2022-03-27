@@ -1,3 +1,4 @@
+import os
 import time
 
 from colorama import Fore, Style
@@ -64,6 +65,12 @@ def print_tickers(tickers: list[str], group: int = 15) -> None:
             if index % group == 0:
                 print()
         print()
+
+
+def erase_line():
+    size = os.get_terminal_size()
+    erase = size.columns * ' '
+    print(f'{erase}', end='\r')
 
 
 def input_integer(message: str, min_: int, max_: int) -> int:
@@ -207,8 +214,7 @@ def progress_bar(iteration, total: int, prefix: str = 'Working', suffix: str = '
         position = 0
         forward = True
         start = time.perf_counter()
-        erase = 100 * ' '
-        print(f'\r\n{erase}', end='\r')
+        print()
 
     if total > 0:
         filled = int(length * iteration // total)

@@ -221,6 +221,7 @@ class Interface:
                 '2': 'Put',
                 '3': 'Vertical',
                 '4': 'Iron Condor',
+                '5': 'Iron Butterfly',
                 '0': 'Cancel',
             }
 
@@ -244,6 +245,10 @@ class Interface:
                 direction = 'long' if d == 1 else 'short'
             elif selection == 4:
                 strategy = 'ic'
+                product = 'hybrid'
+                direction = 'short'
+            elif selection == 5:
+                strategy = 'ib'
                 product = 'hybrid'
                 direction = 'short'
             else:
@@ -455,17 +460,16 @@ class Interface:
         while not sl.strategy_error:
             pass
 
-        ui.progress_bar(0, 0, prefix='Analyzing Options', reset=True)
+        prefix = 'Collecting Option Data'
+        ui.progress_bar(0, 0, prefix=prefix, reset=True)
         if sl.strategy_error == 'None':
-            prefix = 'Collecting Option Data'
-            ui.progress_bar(0, 0, prefix=prefix, reset=True)
-
             while sl.strategy_error == 'None':
                 time.sleep(0.20)
                 ui.progress_bar(0, 0, prefix=prefix, suffix=sl.strategy_msg)
 
+            ui.erase_line()
             prefix = 'Analyzing Strategies'
-            ui.progress_bar(0, 0, prefix=prefix, reset=True)
+            ui.progress_bar(0, 0, prefix=prefix)
 
             tasks = len([True for future in sl.strategy_futures if future.running()])
             while sl.strategy_error == 'Next':

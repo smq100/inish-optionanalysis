@@ -9,18 +9,16 @@ from utils import logger
 
 _logger = logger.get_logger()
 
-class IronCondor(Strategy):
+class IronButterfly(Strategy):
     def __init__(self, ticker: str, product: str, direction: str, strike: float, width1: int, width2: int, quantity: int = 1, load_contracts: bool = False):
         if width1 < 1:
             raise ValueError('Invalid width1')
-        if width2 < 1:
-            raise ValueError('Invalid width2')
 
         # Initialize the base strategy
         product = s.PRODUCTS[2]
         super().__init__(ticker, product, direction, strike, width1, width2, quantity, load_contracts)
 
-        self.name = s.STRATEGIES_BROAD[3]
+        self.name = s.STRATEGIES_BROAD[4]
 
         # Default expiry to third Friday of next month
         expiry = m.third_friday()
@@ -30,15 +28,15 @@ class IronCondor(Strategy):
         # Width1 and width2 are indexes into the chain when loading contracts
         # Strike price will be overriden when loading contracts
         if direction == 'short':
-            self.add_leg(self.quantity, 'call', 'long', self.strike + (self.width1 + self.width2), expiry)
-            self.add_leg(self.quantity, 'call', 'short', self.strike + self.width1, expiry)
-            self.add_leg(self.quantity, 'put', 'short', self.strike - self.width1, expiry)
-            self.add_leg(self.quantity, 'put', 'long', self.strike - (self.width1 + self.width2), expiry)
-        else:
-            self.add_leg(self.quantity, 'call', 'short', self.strike + (self.width1 + self.width2), expiry)
             self.add_leg(self.quantity, 'call', 'long', self.strike + self.width1, expiry)
+            self.add_leg(self.quantity, 'call', 'short', self.strike, expiry)
+            self.add_leg(self.quantity, 'put', 'short', self.strike, expiry)
             self.add_leg(self.quantity, 'put', 'long', self.strike - self.width1, expiry)
-            self.add_leg(self.quantity, 'put', 'short', self.strike - (self.width1 + self.width2), expiry)
+        else:
+            self.add_leg(self.quantity, 'call', 'short', self.strike + self.width1, expiry)
+            self.add_leg(self.quantity, 'call', 'long', self.strike, expiry)
+            self.add_leg(self.quantity, 'put', 'long', self.strike, expiry)
+            self.add_leg(self.quantity, 'put', 'short', self.strike - self.width1, expiry)
 
         if load_contracts:
             _, _, contracts = self.fetch_contracts(self.strike)
@@ -97,14 +95,14 @@ class IronCondor(Strategy):
             chain_index_p = self.chain.get_index_strike(strike)
 
         # Make sure the chain is large enough to work with
-        if len(options_c) < (self.width1 + self.width2 + 1):
+        if len(options_c) < (self.width1 + 1):
             chain_index_c = -1 # Chain too small
-        elif (len(options_c) - chain_index_c) <= (self.width1 + self.width2 + 1):
+        elif (len(options_c) - chain_index_c) <= (self.width1 + 1):
             chain_index_c = -1 # Index too close to end of chain
 
-        elif len(options_p) < (self.width1 + self.width2 + 1):
+        elif len(options_p) < (self.width1 + 1):
             chain_index_p = -1 # Chain too small
-        elif (len(options_p) - chain_index_p) <= (self.width1 + self.width2 + 1):
+        elif (len(options_p) - chain_index_p) <= (self.width1 + 1):
             chain_index_p = -1 # Index too close to beginning of chain
 
         # Get the option contracts
@@ -113,10 +111,10 @@ class IronCondor(Strategy):
         elif chain_index_p < 0:
             _logger.warning(f'{__name__}: Option put chain not large enough for {self.ticker}')
         else:
-            contracts  = [options_c.iloc[chain_index_c + self.width1 + self.width2]['contractSymbol']]
-            contracts += [options_c.iloc[chain_index_c + self.width1]['contractSymbol']]
+            contracts  = [options_c.iloc[chain_index_c + self.width1]['contractSymbol']]
+            contracts += [options_c.iloc[chain_index_c]['contractSymbol']]
+            contracts += [options_p.iloc[chain_index_p]['contractSymbol']]
             contracts += [options_p.iloc[chain_index_p - self.width1]['contractSymbol']]
-            contracts += [options_p.iloc[chain_index_p - self.width1 - self.width2]['contractSymbol']]
 
         return s.PRODUCTS[2], chain_index_c, contracts
 
@@ -213,8 +211,6 @@ class IronCondor(Strategy):
 
         if self.legs[0].option.strike <= self.legs[1].option.strike:
             error = f'Bad option configuration ({self.legs[0].option.strike:.2f} <= {self.legs[1].option.strike:.2f})'
-        elif self.legs[1].option.strike <= self.legs[2].option.strike:
-            error = f'Bad option configuration ({self.legs[1].option.strike:.2f} <= {self.legs[2].option.strike:.2f})'
         elif self.legs[2].option.strike <= self.legs[3].option.strike:
             error = f'Bad option configuration ({self.legs[2].option.strike:.2f} <= {self.legs[3].option.strike:.2f})'
 
@@ -234,7 +230,7 @@ if __name__ == '__main__':
 
     ticker = 'MSFT'
     strike = float(math.ceil(store.get_last_price(ticker)))
-    ic = IronCondor(ticker, 'hybrid', 'short', strike, 1, 1, load_contracts=True)
+    ic = IronButterfly(ticker, 'hybrid', 'short', strike, 1, 0, load_contracts=True)
     ic.analyze()
 
     # print(ic.legs[0])

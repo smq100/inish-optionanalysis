@@ -5,7 +5,7 @@
 * Developed and tested with Python 3.9.0
 
 ## Features
-* Option Strategy Analysis (calls, puts, vertical spreads, and iron condors currently supported)
+* Option Strategy Analysis (calls, puts, vertical spreads, iron condors, and iron butterflys currently supported)
 * Script-based security screening and scoring
 * Technical Analysis with sophisticated support & resistance analysis
 * Local pricing history database support and data manager
