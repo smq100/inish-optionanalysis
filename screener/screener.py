@@ -108,25 +108,25 @@ class Screener(Threaded):
             self.valids = sorted(self.valids, reverse=True, key=lambda r: float(r))
             self.task_completed = self.task_total
             self.task_success = len(self.valids)
-            self.task_error = 'Done'
+            self.task_state = 'Done'
             self.cache_used = True
             _logger.info(f'{__name__}: Using cached results')
         elif self.task_total == 0:
             self.results = []
             self.valids = []
             self.task_completed = self.task_total
-            self.task_error = 'No symbols'
-            _logger.warning(f'{__name__}: {self.task_error}')
+            self.task_state = 'No symbols'
+            _logger.warning(f'{__name__}: {self.task_state}')
         elif len(self.scripts) == 0:
             self.results = []
             self.valids = []
             self.task_completed = self.task_total
-            self.task_error = 'Illegal script'
-            _logger.warning(f'{__name__}: {self.task_error}')
+            self.task_state = 'Illegal script'
+            _logger.warning(f'{__name__}: {self.task_state}')
         else:
             self.results = []
             self.valids = []
-            self.task_error = 'None'
+            self.task_state = 'None'
             self._concurrency = 10 if len(self.companies) > 10 else 1
 
             if self.task_total > 1:
@@ -151,7 +151,7 @@ class Screener(Threaded):
             if dump_cache:
                 self._dump_results()
 
-            self.task_error = 'Done'
+            self.task_state = 'Done'
 
     def _run(self, companies: list[Company]) -> None:
         for ticker in companies:
@@ -166,19 +166,19 @@ class Screener(Threaded):
                     score += [interpreter.score]
                     result += [interpreter.result]
                 except SyntaxError as e:
-                    self.task_error = str(e)
-                    _logger.error(f'{__name__}: SyntaxError: {self.task_error}')
+                    self.task_state = str(e)
+                    _logger.error(f'{__name__}: SyntaxError: {self.task_state}')
                     break
                 except RuntimeError as e:
-                    self.task_error = str(e)
-                    _logger.error(f'{__name__}: RuntimeError: {self.task_error}')
+                    self.task_state = str(e)
+                    _logger.error(f'{__name__}: RuntimeError: {self.task_state}')
                     break
                 except Exception as e:
-                    self.task_error = str(e)
-                    _logger.error(f'{__name__}: Exception: {self.task_error} for {ticker}')
+                    self.task_state = str(e)
+                    _logger.error(f'{__name__}: Exception: {self.task_state} for {ticker}')
                     break
 
-            if self.task_error == 'None':
+            if self.task_state == 'None':
                 self.task_completed += 1
                 self.results += [Result(ticker, success, score, result)]
                 if (bool(self.results[-1])):

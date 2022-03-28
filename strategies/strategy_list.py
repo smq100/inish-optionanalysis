@@ -15,7 +15,7 @@ from utils import logger
 _logger = logger.get_logger()
 
 strategy_type = collections.namedtuple('strategy', ['ticker', 'strategy', 'product', 'direction', 'strike'])
-strategy_error = ''
+strategy_state = ''
 strategy_msg = ''
 strategy_results = pd.DataFrame()
 strategy_legs = []
@@ -25,7 +25,7 @@ strategy_futures = []
 
 
 def analyze(strategies: list[strategy_type]) -> None:
-    global strategy_error
+    global strategy_state
     global strategy_msg
     global strategy_results
     global strategy_legs
@@ -44,7 +44,7 @@ def analyze(strategies: list[strategy_type]) -> None:
 
     strategy_total = len(strategies)
     if strategy_total > 0:
-        strategy_error = 'None'
+        strategy_state = 'None'
         items = []
 
         try:
@@ -63,10 +63,10 @@ def analyze(strategies: list[strategy_type]) -> None:
                     items += [IronButterfly(s.ticker, 'hybrid', s.direction, s.strike, 1, 0, 1, load_contracts=True)]
         except Exception as e:
             items = []
-            strategy_error = f'{__name__}: {str(sys.exc_info()[1])}'
+            strategy_state = f'{__name__}: {str(sys.exc_info()[1])}'
 
         if len(items) > 0:
-            strategy_error = 'Next'
+            strategy_state = 'Next'
             with futures.ThreadPoolExecutor(max_workers=strategy_total) as executor:
                 strategy_futures = [executor.submit(process, item) for item in items]
 
@@ -74,13 +74,13 @@ def analyze(strategies: list[strategy_type]) -> None:
                     _logger.info(f'{__name__}: Thread completed: {future.result()}')
 
             strategy_results.sort_values('pop', ascending=False, inplace=True)
-            strategy_error = 'Done'
+            strategy_state = 'Done'
     else:
-        strategy_error = 'No tickers'
+        strategy_state = 'No tickers'
 
 
 def reset():
-    global strategy_error
+    global strategy_state
     global strategy_msg
     global strategy_results
     global strategy_legs
@@ -88,7 +88,7 @@ def reset():
     global strategy_completed
     global strategy_futures
 
-    strategy_error = ''
+    strategy_state = ''
     strategy_msg = ''
     strategy_results = pd.DataFrame()
     strategy_legs = []

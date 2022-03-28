@@ -21,7 +21,7 @@ class Correlate(Threaded):
     def compute_correlation(self) -> None:
         main_df = pd.DataFrame()
         self.task_total = len(self.tickers)
-        self.task_error = 'None'
+        self.task_state = 'None'
         self.correlation = None
 
         for ticker in self.tickers:
@@ -46,7 +46,7 @@ class Correlate(Threaded):
             self.task_object = self.correlation
             self.task_success += 1
 
-        self.task_error = 'Done'
+        self.task_state = 'Done'
 
     def get_sorted_coorelations(self, count: int, best: bool) -> list[tuple[str, str, float]]:
         all = self.get_all_coorelations()

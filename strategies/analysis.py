@@ -1,25 +1,23 @@
+from dataclasses import dataclass, field
 import pandas as pd
 
 
+@dataclass
 class Analysis:
-    def __init__(self, ticker: str):
-        if not ticker:
-            raise ValueError('Invalid ticker')
-
-        self.ticker = ticker.upper()
-        self.table = pd.DataFrame()
-        self.summary = pd.DataFrame()
-        self.credit_debit = ''
-        self.sentiment = ''
-        self.total = 0.0
-        self.max_gain = 0.0
-        self.max_loss = 0.0
-        self.gain = ''
-        self.loss = ''
-        self.upside = 0.0
-        self.pop = 0.0
-        self.volatility = 'calculated'
-        self.breakeven = [0.0]
+    ticker: str = ''
+    table: pd.DataFrame = pd.DataFrame()
+    summary: pd.DataFrame = pd.DataFrame()
+    credit_debit: str = ''
+    sentiment: str = ''
+    total: float = 0.0
+    max_gain: float = 0.0
+    max_loss: float = 0.0
+    gain: str = ''
+    loss: str = ''
+    upside: float = 0.0
+    pop: float = 0.0
+    volatility: str = 'calculated'
+    breakeven: list[float] = field(default_factory=list)
 
     def __str__(self):
         if not self.table.empty:

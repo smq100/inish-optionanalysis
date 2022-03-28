@@ -141,11 +141,11 @@ class SupportResistance(Threaded):
     @Threaded.threaded
     def calculate(self) -> None:
         self.task_message = self.ticker
-        self.task_error = 'History'
+        self.task_state = 'History'
 
         self.history = store.get_history(self.ticker, self.days)
         if not self.history.empty:
-            self.task_error = 'None'
+            self.task_state = 'None'
             self.price = self.history.iloc[-1]['close']
             self.company = store.get_company(self.ticker)
 
@@ -174,9 +174,9 @@ class SupportResistance(Threaded):
 
             self._calculate_stats()
 
-            self.task_error = 'Done'
+            self.task_state = 'Done'
         else:
-            self.task_error = 'Unable to get history'
+            self.task_state = 'Unable to get history'
 
 
     def _extract_lines(self, method: str, extmethod: str) -> list[_Line]:

@@ -214,7 +214,7 @@ class Interface:
                 # Show thread progress. Blocking while thread is active
                 self.show_progress('Progress', '')
 
-                if self.screener.task_error == 'Done':
+                if self.screener.task_state == 'Done':
                     self.valids = self.screener.valids
 
                     ui.print_message(f'{len(self.valids)} symbols identified in {self.screener.task_time:.1f} seconds')
@@ -311,13 +311,13 @@ class Interface:
                 self.print_results(ticker=ticker)
 
     def show_progress(self, prefix, suffix) -> None:
-        while not self.screener.task_error:
+        while not self.screener.task_state:
             pass
 
-        if self.screener.task_error == 'None':
+        if self.screener.task_state == 'None':
             ui.progress_bar(self.screener.task_completed, self.screener.task_total, prefix=prefix, suffix=suffix, reset=True)
 
-            while self.task.is_alive() and self.screener.task_error == 'None':
+            while self.task.is_alive() and self.screener.task_state == 'None':
                 time.sleep(0.20)
                 total = self.screener.task_total
                 completed = self.screener.task_completed
@@ -336,7 +336,7 @@ class Interface:
             else:
                 print('None')
         else:
-            ui.print_message(f'{self.screener.task_error}')
+            ui.print_message(f'{self.screener.task_state}')
 
 
 def main():

@@ -223,7 +223,7 @@ class Interface:
                 # Show thread progress. Blocking while thread is active
                 self.show_progress('Progress', '')
 
-            if self.manager.task_error == 'Done':
+            if self.manager.task_state == 'Done':
                 ui.print_message(f'{self.manager.task_success} {table} '
                                  f'Symbols populated in {self.manager.task_time/60.0:.1f} minutes with {len(self.manager.invalid_tickers)} invalid symbols')
 
@@ -237,10 +237,10 @@ class Interface:
                 # Show thread progress. Blocking while thread is active
                 self.show_progress('Progress', '')
 
-            if self.manager.task_error == 'Done':
+            if self.manager.task_state == 'Done':
                 ui.print_message(f'{self.manager.task_success} {table} Symbols populated in {self.manager.task_time:.0f} seconds')
             else:
-                ui.print_error(self.manager.task_error)
+                ui.print_error(self.manager.task_state)
 
     def update_history(self, ticker: str = '', progressbar: bool = True) -> None:
         table = ui.get_valid_table(exchange=True, ticker=True, all=True)
@@ -258,7 +258,7 @@ class Interface:
                 # Show thread progress. Blocking while thread is active
                 self.show_progress('Progress', '')
 
-            if self.manager.task_error == 'Done':
+            if self.manager.task_state == 'Done':
                 ui.print_message(f'{self.manager.task_total} {table} Ticker pricing refreshed in {self.manager.task_time:.0f} seconds')
 
                 if len(self.manager.invalid_tickers) > 0:
@@ -284,7 +284,7 @@ class Interface:
                 # Show thread progress. Blocking while thread is active
                 self.show_progress('Progress', '')
 
-            if self.manager.task_error == 'Done':
+            if self.manager.task_state == 'Done':
                 ui.print_message(f'{self.manager.task_total} {table} Company infomation refreshed in {self.manager.task_time:.0f} seconds')
 
     def delete_exchange(self, progressbar: bool = True) -> None:
@@ -299,7 +299,7 @@ class Interface:
 
             self.create_missing_tables()
 
-            if self.manager.task_error == 'Done':
+            if self.manager.task_state == 'Done':
                 ui.print_message(f'Deleted exchange {table} in {self.manager.task_time:.0f} seconds')
 
     def delete_index(self) -> None:
@@ -366,7 +366,7 @@ class Interface:
                 # Show thread progress. Blocking while thread is active
                 self.show_progress('Progress', '')
 
-            if self.manager.task_error == 'Done':
+            if self.manager.task_state == 'Done':
                 ui.print_message(f'{self.manager.task_total} {table} Ticker pricing checked in {self.manager.task_time:.0f} seconds')
 
             if len(self.manager.task_results) > 0:
@@ -404,7 +404,7 @@ class Interface:
                 # Show thread progress. Blocking while thread is active
                 self.show_progress('Progress', '')
 
-            if self.manager.task_error == 'Done':
+            if self.manager.task_state == 'Done':
                 ui.print_message(f'{self.manager.task_success} Inactive tickers updated in {self.manager.task_time:.0f} seconds')
                 if self.manager.task_results:
                     self.manager.change_active(self.manager.task_results, True)
@@ -452,13 +452,13 @@ class Interface:
         self.manager.create_indexes()
 
     def show_progress(self, prefix: str, suffix: str) -> None:
-        while not self.manager.task_error:
+        while not self.manager.task_state:
             pass
 
-        if self.manager.task_error == 'None':
+        if self.manager.task_state == 'None':
             ui.progress_bar(self.manager.task_completed, self.manager.task_total, prefix=prefix, suffix=suffix, reset=True)
 
-            while self.task.is_alive() and self.manager.task_error == 'None':
+            while self.task.is_alive() and self.manager.task_state == 'None':
                 time.sleep(0.5)
                 total = self.manager.task_total
                 completed = self.manager.task_completed
@@ -477,7 +477,7 @@ class Interface:
                 for result in results:
                     print(result)
         else:
-            ui.print_message(f'{self.manager.task_error}')
+            ui.print_message(f'{self.manager.task_state}')
 
 
 def main():

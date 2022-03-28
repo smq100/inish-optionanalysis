@@ -128,24 +128,24 @@ class Interface:
             ui.print_error('Enter a ticker before calculating')
 
     def show_progress(self) -> None:
-        while not self.trend.task_error:
+        while not self.trend.task_state:
             pass
 
-        if self.trend.task_error == 'None':
+        if self.trend.task_state == 'None':
             ui.progress_bar(0, 0, suffix=self.trend.task_message, reset=True)
 
-            while self.trend.task_error == 'None':
+            while self.trend.task_state == 'None':
                 time.sleep(0.20)
                 ui.progress_bar(0, 0, suffix=self.trend.task_message)
 
-            if self.trend.task_error == 'Hold':
+            if self.trend.task_state == 'Hold':
                 pass
-            elif self.trend.task_error == 'Done':
-                ui.print_message(f'{self.trend.task_error}: {self.trend.task_total} lines extracted in {self.trend.task_time:.1f} seconds')
+            elif self.trend.task_state == 'Done':
+                ui.print_message(f'{self.trend.task_state}: {self.trend.task_total} lines extracted in {self.trend.task_time:.1f} seconds')
             else:
-                ui.print_error(f'{self.trend.task_error}: Error extracting lines')
+                ui.print_error(f'{self.trend.task_state}: Error extracting lines')
         else:
-            ui.print_message(f'{self.trend.task_error}')
+            ui.print_message(f'{self.trend.task_state}')
 
 
 def main():

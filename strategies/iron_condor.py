@@ -123,7 +123,7 @@ class IronCondor(Strategy):
     @Threaded.threaded
     def analyze(self) -> None:
         if self.validate():
-            self.task_error = 'None'
+            self.task_state = 'None'
             self.task_message = self.legs[0].option.ticker
 
             # Ensure all legs use the same min, max, step centered around the strike
@@ -159,7 +159,7 @@ class IronCondor(Strategy):
 
             _logger.info(f'{__name__}: {self.ticker}: g={self.analysis.max_gain:.2f}, l={self.analysis.max_loss:.2f} \
                 b1={self.analysis.breakeven[0] :.2f} b2={self.analysis.breakeven[1] :.2f}')
-        self.task_error = 'Done'
+        self.task_state = 'Done'
 
     def calculate_gain_loss(self) -> tuple[float, float, float, str]:
         max_gain = max_loss = 0.0

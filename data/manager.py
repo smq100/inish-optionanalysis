@@ -83,7 +83,7 @@ class Manager(Threaded):
 
             if len(tickers) > 10:
                 self.task_total = len(tickers)
-                self.task_error = 'None'
+                self.task_state = 'None'
 
                 with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
                     if self._concurrency > 1:
@@ -99,7 +99,7 @@ class Manager(Threaded):
             else:
                 _logger.warning(f'{__name__}: No symbols for {exchange}')
 
-        self.task_error = 'Done'
+        self.task_state = 'Done'
 
     def add_ticker_to_exchange(self, ticker: str, exchange: str) -> bool:
         exchange = exchange.upper()
@@ -180,7 +180,7 @@ class Manager(Threaded):
         index = index.upper()
 
         if store.is_index(index):
-            self.task_error = 'None'
+            self.task_state = 'None'
 
             # Delete and recreate the index
             with self.session.begin() as session:
@@ -202,12 +202,12 @@ class Manager(Threaded):
             if len(valid) > 0:
                 self._add_securities_to_index(valid, index)
                 _logger.info(f'{__name__}: Populated index {index}')
-                self.task_error = 'Done'
-            elif not self.task_error:
-                self.task_error = 'No symbols'
+                self.task_state = 'Done'
+            elif not self.task_state:
+                self.task_state = 'No symbols'
                 _logger.warning(f'{__name__}: No symbols found for {index}')
         else:
-            self.task_error = f'No index {index}'
+            self.task_state = f'No index {index}'
             _logger.warning(f'{__name__}: No valid index {index}')
 
     def update_company_ticker(self, ticker: str, replace=False) -> bool:
@@ -249,7 +249,7 @@ class Manager(Threaded):
                 self.task_completed += 1
 
         if store.is_exchange(exchange):
-            self.task_error = 'None'
+            self.task_state = 'None'
             if replace:
                 tickers = store.get_tickers(exchange)
             else:
@@ -272,7 +272,7 @@ class Manager(Threaded):
                         running -= 1
                         _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
 
-        self.task_error = 'Done'
+        self.task_state = 'Done'
 
     def update_history_ticker(self, ticker: str, inactive: bool = False) -> int:
         ticker = ticker.upper()
@@ -369,7 +369,7 @@ class Manager(Threaded):
                     _write_tickers_log(self.invalid_tickers)
 
         if self.task_total > 0:
-            self.task_error = 'None'
+            self.task_state = 'None'
 
             with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
                 if self._concurrency > 1:
@@ -386,7 +386,7 @@ class Manager(Threaded):
         if log:
             _write_tickers_log(self.invalid_tickers)
 
-        self.task_error = 'Done'
+        self.task_state = 'Done'
 
     def delete_database(self, recreate: bool = False):
         if d.ACTIVE_DB == d.VALID_DBS[1]:
@@ -403,7 +403,7 @@ class Manager(Threaded):
 
     def delete_exchange(self, exchange: str) -> None:
         exchange = exchange.upper()
-        self.task_error = 'None'
+        self.task_state = 'None'
 
         if store.is_exchange(exchange):
             with self.session.begin() as session:
@@ -415,7 +415,7 @@ class Manager(Threaded):
                     _logger.warning(f'{__name__}: Exchange {exchange} does not exist')
         else:
             _logger.warning(f'{__name__}: Exchange {exchange} does not exist')
-        self.task_error = 'Done'
+        self.task_state = 'Done'
 
     def delete_index(self, index: str) -> None:
         index = index.upper()
@@ -602,7 +602,7 @@ class Manager(Threaded):
                 self.task_completed += 1
 
         if self.task_total > 0:
-            self.task_error = 'None'
+            self.task_state = 'None'
 
             random.shuffle(tickers)
             lists = np.array_split(tickers, self._concurrency)
@@ -622,7 +622,7 @@ class Manager(Threaded):
                     running -= 1
                     _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
 
-        self.task_error = 'Done'
+        self.task_state = 'Done'
 
     def identify_missing_ticker(self, exchange: str) -> list[str]:
         exchange = exchange.upper()
@@ -693,7 +693,7 @@ class Manager(Threaded):
                 self.task_completed += 1
 
         if self.task_total > 0:
-            self.task_error = 'None'
+            self.task_state = 'None'
 
             with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
                 if self._concurrency > 1:
@@ -714,7 +714,7 @@ class Manager(Threaded):
             items = self.task_object.items()
             self.task_results = sorted(items)
 
-        self.task_error = 'Done'
+        self.task_state = 'Done'
 
     def identify_incomplete_companies(self, table: str) -> list[str]:
         table = table.upper()

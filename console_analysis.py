@@ -22,7 +22,7 @@ from utils import ui, logger
 logger.get_logger(logging.WARNING, logfile='')
 
 COOR_CUTOFF = 0.85
-LISTTOP_SCREEN = 3
+LISTTOP_SCREEN = 10
 LISTTOP_TREND = 5
 LISTTOP_CORR = 3
 
@@ -296,7 +296,7 @@ class Interface:
                 # Show thread progress. Blocking while thread is active
                 self.show_progress_screen()
 
-                if self.screener.task_error == 'Done':
+                if self.screener.task_state == 'Done':
                     self.results_valids = self.screener.valids
                     success = True
 
@@ -439,15 +439,15 @@ class Interface:
             ui.print_message('No significant coorelations found')
 
     def show_progress_screen(self) -> None:
-        while not self.screener.task_error:
+        while not self.screener.task_state:
             pass
 
-        if self.screener.task_error == 'None':
+        if self.screener.task_state == 'None':
             prefix = 'Screening'
             total = self.screener.task_total
             ui.progress_bar(self.screener.task_completed, self.screener.task_total, prefix=prefix, reset=True)
 
-            while self.screener.task_error == 'None':
+            while self.screener.task_state == 'None':
                 time.sleep(0.20)
                 completed = self.screener.task_completed
                 success = self.screener.task_success
@@ -457,13 +457,13 @@ class Interface:
                 ui.progress_bar(completed, total, prefix=prefix, ticker=ticker, success=success, tasks=tasks)
 
     def show_progress_options(self) -> None:
-        while not sl.strategy_error:
+        while not sl.strategy_state:
             pass
 
         prefix = 'Collecting Option Data'
         ui.progress_bar(0, 0, prefix=prefix, reset=True)
-        if sl.strategy_error == 'None':
-            while sl.strategy_error == 'None':
+        if sl.strategy_state == 'None':
+            while sl.strategy_state == 'None':
                 time.sleep(0.20)
                 ui.progress_bar(0, 0, prefix=prefix, suffix=sl.strategy_msg)
 
@@ -472,47 +472,47 @@ class Interface:
             ui.progress_bar(0, 0, prefix=prefix)
 
             tasks = len([True for future in sl.strategy_futures if future.running()])
-            while sl.strategy_error == 'Next':
+            while sl.strategy_state == 'Next':
                 time.sleep(0.20)
                 tasks = len([True for future in sl.strategy_futures if future.running()])
                 ui.progress_bar(sl.strategy_completed, sl.strategy_total, prefix=prefix, suffix='', tasks=tasks)
         else:
-            ui.print_message(f'{sl.strategy_error}')
+            ui.print_message(f'{sl.strategy_state}')
 
     def show_progress_support_resistance(self) -> None:
-        while not self.trend.task_error:
+        while not self.trend.task_state:
             pass
 
-        if self.trend.task_error == 'History':
+        if self.trend.task_state == 'History':
             prefix = 'Retrieving History'
             ui.progress_bar(0, 0, prefix=prefix, reset=True)
-            while self.trend.task_error == 'History':
+            while self.trend.task_state == 'History':
                 time.sleep(0.20)
                 ui.progress_bar(0, 0, prefix=prefix, suffix=self.trend.task_message)
 
-        if self.trend.task_error == 'None':
+        if self.trend.task_state == 'None':
             prefix = 'Analyzing S & R'
-            while self.trend.task_error == 'None':
+            while self.trend.task_state == 'None':
                 time.sleep(0.20)
                 ui.progress_bar(0, 0, prefix=prefix, suffix=self.trend.task_message)
 
-            if self.trend.task_error == 'Done':
-                ui.print_message(f'{self.trend.task_error}: {self.trend.task_total} lines extracted in {self.trend.task_time:.1f} seconds', pre_creturn=1)
+            if self.trend.task_state == 'Done':
+                ui.print_message(f'{self.trend.task_state}: {self.trend.task_total} lines extracted in {self.trend.task_time:.1f} seconds', pre_creturn=1)
             else:
-                ui.print_error(f'{self.trend.task_error}: Error extracting lines', pre_creturn=1)
+                ui.print_error(f'{self.trend.task_state}: Error extracting lines', pre_creturn=1)
         else:
-            ui.print_message(f'{self.trend.task_error}')
+            ui.print_message(f'{self.trend.task_state}')
 
     def show_progress_correlate(self):
-        while not self.coorelate.task_error:
+        while not self.coorelate.task_state:
             pass
 
-        if self.coorelate.task_error == 'None':
+        if self.coorelate.task_state == 'None':
             prefix = 'Correlating'
             total = self.coorelate.task_total
             ui.progress_bar(self.coorelate.task_completed, self.coorelate.task_total, success=self.coorelate.task_success, prefix=prefix, reset=True)
 
-            while self.task.is_alive() and self.coorelate.task_error == 'None':
+            while self.task.is_alive() and self.coorelate.task_state == 'None':
                 time.sleep(0.20)
                 completed = self.coorelate.task_completed
                 success = completed

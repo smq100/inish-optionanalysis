@@ -42,7 +42,7 @@ class Strategy(ABC, Threaded):
         self.width2 = width2
         self.pricing_method = 'black-scholes'
         self.chain: Chain = Chain(self.ticker)
-        self.analysis = Analysis(self.ticker)
+        self.analysis = Analysis(ticker=self.ticker)
         self.legs: list[Leg] = []
         self.initial_spot = 0.0
         self.initial_spot = self.get_current_spot(roundup=True)
@@ -60,7 +60,7 @@ class Strategy(ABC, Threaded):
     def analyze(self) -> None:
         # Works for one-legged strategies. Override for others
         if self.validate():
-            self.task_error = 'None'
+            self.task_state = 'None'
             self.task_message = self.legs[0].option.ticker
 
             self.legs[0].calculate()
@@ -78,7 +78,7 @@ class Strategy(ABC, Threaded):
             _logger.info(f'{__name__}: {self.ticker}: p={self.legs[0].option.eff_price:.2f}, g={self.analysis.max_gain:.2f}, \
                 l={self.analysis.max_loss:.2f} b={self.analysis.breakeven[0] :.2f}')
 
-        self.task_error = 'Done'
+        self.task_state = 'Done'
 
     def reset(self) -> None:
         self.analysis = Analysis()
