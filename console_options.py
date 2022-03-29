@@ -75,8 +75,6 @@ class Interface():
         elif self.load_strategy(self.ticker, strategy, self.product, self.direction, self.strike, self.width1, self.width2, self.quantity, default, analyze or exit):
             if not exit:
                 self.main_menu()
-            else:
-                self.show_legs()
         else:
             ui.print_error('Problem loading strategy')
 

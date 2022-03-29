@@ -24,7 +24,7 @@ class Put(Strategy):
         self.add_leg(self.quantity, product, direction, self.strike, expiry)
 
         if load_contracts:
-            _, _, contract = self.fetch_contracts(self.strike)
+            contract = self.fetch_contracts(strike=self.strike)
             if contract:
                 if self.legs[0].option.load_contract(contract[0]):
                     self.analysis.volatility = 'implied'

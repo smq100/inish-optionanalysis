@@ -41,7 +41,7 @@ class IronCondor(Strategy):
             self.add_leg(self.quantity, 'put', 'short', self.strike - (self.width1 + self.width2), expiry)
 
         if load_contracts:
-            contracts = self.fetch_contracts(self.strike)
+            contracts = self.fetch_contracts(strike=self.strike)
             if len(contracts) == 4:
                 if not self.legs[0].option.load_contract(contracts[0]):
                     self.error = f'Unable to load leg 0 contract for {self.legs[0].company.ticker}'
@@ -87,7 +87,7 @@ class IronCondor(Strategy):
         # Calculate the index into the call option chain
         options_c = self.chain.get_chain('call')
         if options_c.empty:
-            _logger.warning(f'{__name__}: Error fetching call option chain for {self.ticker}')
+            _logger.warning(f'{__name__}: Error fetching option chain for {self.ticker} calls')
         elif strike <= 0.0:
             chain_index_c = self.chain.get_index_itm()
         else:
@@ -97,17 +97,17 @@ class IronCondor(Strategy):
         if chain_index_c >= 0:
             options_p = self.chain.get_chain('put')
             if options_p.empty:
-                _logger.warning(f'{__name__}: Error fetching put option chain for {self.ticker}')
+                _logger.warning(f'{__name__}: Error fetching option chain for {self.ticker} puts')
             elif strike <= 0.0:
                 chain_index_p = self.chain.get_index_itm()
             else:
                 chain_index_p = self.chain.get_index_strike(strike)
 
-        # Add the call option contracts
+        # Add the leg 1 & 2 option contracts
         if chain_index_c < 0:
-            _logger.warning(f'{__name__}: Error fetching call option chain for {self.ticker}')
+            _logger.warning(f'{__name__}: No option index found for {self.ticker} calls')
         elif chain_index_p < 0:
-            _logger.warning(f'{__name__}: Error fetching put option chain for {self.ticker}')
+            _logger.warning(f'{__name__}: No option index found for {self.ticker} puts')
         elif len(options_c) < (self.width1 + self.width2 + 1):
             chain_index_c = -1 # Chain too small
         elif (len(options_c) - chain_index_c) <= (self.width1 + self.width2 + 1):
@@ -116,11 +116,11 @@ class IronCondor(Strategy):
             contracts += [options_c.iloc[chain_index_c + self.width1 + self.width2]['contractSymbol']]
             contracts += [options_c.iloc[chain_index_c + self.width1]['contractSymbol']]
 
-        # Add the put option contracts
+        # Add the leg 3 & 4 option contracts
         if chain_index_c < 0:
-            _logger.warning(f'{__name__}: Error fetching call option chain for {self.ticker}')
+            _logger.warning(f'{__name__}: No option index found for {self.ticker} calls')
         elif chain_index_p < 0:
-            _logger.warning(f'{__name__}: Error fetching put option chain for {self.ticker}')
+            _logger.warning(f'{__name__}: No option index found for {self.ticker} puts')
         elif len(options_p) < (self.width1 + self.width2 + 1):
             chain_index_p = -1 # Chain too small
         elif (len(options_p) - chain_index_p) <= (self.width1 + self.width2 + 1):

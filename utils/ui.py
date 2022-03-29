@@ -68,8 +68,12 @@ def print_tickers(tickers: list[str], group: int = 15) -> None:
 
 
 def erase_line():
+    global position, forward
+
     size = os.get_terminal_size()
     erase = size.columns * ' '
+    position = 0
+    forward = True
     print(f'{erase}', end='\r')
 
 
@@ -214,7 +218,7 @@ def progress_bar(iteration, total: int, prefix: str = 'Working', suffix: str = '
         position = 0
         forward = True
         start = time.perf_counter()
-        print()
+        print('\r')
 
     if total > 0:
         filled = int(length * iteration // total)
@@ -234,11 +238,11 @@ def progress_bar(iteration, total: int, prefix: str = 'Working', suffix: str = '
         if iteration == completed:
             pass  # Nothing new to draw
         elif success < 0:
-            print(f'\r{prefix} |{bar}| {iteration}/{total} {suffix} {ticker}     ', end='\r')
+            print(f'{prefix} |{bar}| {iteration}/{total} {suffix} {ticker}     ', end='\r')
         elif tasks > 0:
-            print(f'\r{prefix} |{bar}| {success}/{iteration}/{total} [{tasks}] {ticker:<5} {hours:02.0f}:{minutes:02.0f}:{seconds:02.0f} {suffix}     ', end='\r')
+            print(f'{prefix} |{bar}| {success}/{iteration}/{total} [{tasks}] {ticker:<5} {hours:02.0f}:{minutes:02.0f}:{seconds:02.0f} {suffix}     ', end='\r')
         else:
-            print(f'\r{prefix} |{bar}| {success}/{iteration}/{total} {ticker:<5} {hours:02.0f}:{minutes:02.0f}:{seconds:02.0f} {suffix}     ', end='\r')
+            print(f'{prefix} |{bar}| {success}/{iteration}/{total} {ticker:<5} {hours:02.0f}:{minutes:02.0f}:{seconds:02.0f} {suffix}     ', end='\r')
 
         completed = iteration
 
@@ -262,7 +266,7 @@ def progress_bar(iteration, total: int, prefix: str = 'Working', suffix: str = '
         back = length - position
         bar = ('-' * front) + fill + ('-' * back)
 
-        print(f'\r{prefix} |{bar}| {suffix}             ', end='\r')
+        print(f'{prefix} |{bar}| {suffix}             ', end='\r')
 
 
 if __name__ == '__main__':

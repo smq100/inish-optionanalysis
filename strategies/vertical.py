@@ -43,7 +43,7 @@ class Vertical(Strategy):
                 self.add_leg(self.quantity, product, 'short', self.strike + self.width1, expiry)
 
         if load_contracts:
-            contracts = self.fetch_contracts(self.strike)
+            contracts = self.fetch_contracts(strike=self.strike)
             if len(contracts) == 2:
                 if not self.legs[0].option.load_contract(contracts[0]):
                     self.error = f'Unable to load leg 0 {product} contract for {self.legs[0].company.ticker}'

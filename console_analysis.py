@@ -324,19 +324,23 @@ class Interface:
             else:
                 strike = float(math.ceil(store.get_last_price(ticker)))
 
-            strategies += [sl.strategy_type(ticker, strategy, product, direction, strike)]
+            strategies += [sl.strategy_type(ticker, strategy, product, direction, strike, True)]
 
         if len(strategies) > 0:
             sl.reset()
             self.task = threading.Thread(target=sl.analyze, args=[strategies])
 
             # Show thread progress. Blocking while thread is active
+            tic = time.perf_counter()
             self.task.start()
 
             self.show_progress_options()
 
+            toc = time.perf_counter()
+            task_time = toc - tic
+
             if not sl.strategy_results.empty:
-                ui.print_message('Strategy Analysis', pre_creturn=1, post_creturn=1)
+                ui.print_message(f'Strategy Analysis ({task_time:.1f}s)', pre_creturn=1, post_creturn=1)
 
                 headers = [header.replace('_', ' ').title() for header in sl.strategy_results.columns]
                 print(tabulate(sl.strategy_results, headers=headers, tablefmt='simple', floatfmt='.2f'))
@@ -477,8 +481,8 @@ class Interface:
                 ui.progress_bar(0, 0, prefix=prefix, suffix=sl.strategy_msg)
 
             if sl.strategy_state == 'Next':
-                ui.erase_line()
                 prefix = 'Analyzing Strategies'
+                ui.erase_line()
                 ui.progress_bar(0, 0, prefix=prefix)
 
                 tasks = len([True for future in sl.strategy_futures if future.running()])
