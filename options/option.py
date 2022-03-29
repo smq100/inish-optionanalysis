@@ -128,9 +128,12 @@ class Option:
             else:
                 chain = store.get_option_chain(self.ticker, uselast=True)(str(self.expiry.date())).puts
 
-            contract = chain.loc[chain['contractSymbol'] == contract_name].iloc[0]
+            if not chain.empty:
+                contract = chain.loc[chain['contractSymbol'] == contract_name].iloc[0]
+            else:
+                _logger.info(f'{__name__}: No contract available')
         except Exception as e:
-            _logger.warning(f'{__name__}: {str(e)}')
+            _logger.warning(f'{__name__}: {contract_name} {str(e)}')
 
         return contract
 

@@ -43,23 +43,31 @@ class Vertical(Strategy):
                 self.add_leg(self.quantity, product, 'short', self.strike + self.width1, expiry)
 
         if load_contracts:
-            _, _, contracts = self.fetch_contracts(self.strike)
+            contracts = self.fetch_contracts(self.strike)
             if len(contracts) == 2:
-                self.legs[0].option.load_contract(contracts[0])
-                self.legs[1].option.load_contract(contracts[1])
-                self.analysis.volatility = 'implied'
+                if not self.legs[0].option.load_contract(contracts[0]):
+                    self.error = f'Unable to load leg 0 {product} contract for {self.legs[0].company.ticker}'
+                elif not self.legs[1].option.load_contract(contracts[1]):
+                    self.error = f'Unable to load leg 1 {product} contract for {self.legs[1].company.ticker}'
+
+                if not self.error:
+                    self.analysis.volatility = 'implied'
+                else:
+                    _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}: {self.error}')
             else:
+                # Not a fatal error
                 _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}. Using calculated values')
 
     def __str__(self):
         return f'{self.name} {self.product} {self.analysis.credit_debit} spread'
 
-    def fetch_contracts(self, strike: float = -1.0, distance: int = 1, weeks: int = -1) -> tuple[str, int, list[str]]:
+    def fetch_contracts(self, strike: float = -1.0, distance: int = 0, weeks: int = -1) -> list[str]:
         if distance < 0:
             raise ValueError('Invalid distance')
 
         expiry = self.chain.get_expiry()
 
+        # Calculate expiry
         if not expiry:
             raise ValueError('No option expiry dates')
         elif weeks < 0:
@@ -71,49 +79,58 @@ class Vertical(Strategy):
         else:
             self.chain.expire = expiry[0]
 
-        # Get the long option
+        # Get the option chain
         contracts = []
+        chain_index = -1
         product = self.legs[0].option.product
         options = self.chain.get_chain(product)
 
+        # Calculate the index into the option chain
         if options.empty:
-            chain_index = -1
             _logger.warning(f'{__name__}: Error fetching option chain for {self.ticker}')
         elif strike <= 0.0:
             chain_index = self.chain.get_index_itm()
         else:
             chain_index = self.chain.get_index_strike(strike)
 
-        if chain_index >= 0:
+        # Add the long option contract
+        if chain_index < 0:
+            _logger.warning(f'{__name__}: No option index found for {self.ticker} leg 1')
+        elif chain_index >= len(options):
+            _logger.warning(f'{__name__}: Insufficient options for {self.ticker} leg 1')
+        else:
             contracts = [options.iloc[chain_index]['contractSymbol']]
-        else:
-            _logger.warning(f'{__name__}: Error fetching default contract for {self.ticker}')
 
-        if chain_index >= 0:
-            if self.product == 'call':
-                if self.direction == 'long':
-                    chain_index += self.width1
-                else:
-                    chain_index -= self.width1
-            elif self.direction == 'long':
-                chain_index -= self.width1
-            else:
+        # Calculate the index to the short option
+        if not contracts:
+            pass
+        elif self.product == 'call':
+            if self.direction == 'long':
                 chain_index += self.width1
-
-        # Add the short option
-        if chain_index >= 0:
-            contracts += [options.iloc[chain_index]['contractSymbol']]
+            else:
+                chain_index -= self.width1
+        elif self.direction == 'long':
+            chain_index -= self.width1
         else:
-            _logger.warning(f'{__name__}: Bad index value for {self.ticker}: {chain_index=}')
-            product = ''
-            chain_index = 0
-            contracts = []
+            chain_index += self.width1
 
-        return product, chain_index, contracts
+        # Add the short option contract
+        if not contracts:
+            pass
+        elif chain_index < 0:
+            contracts = []
+            _logger.warning(f'{__name__}: No option index found for {self.ticker} leg 2')
+        elif chain_index >= len(options):
+            contracts = []
+            _logger.warning(f'{__name__}: Insufficient options for {self.ticker} leg 2')
+        else:
+            contracts += [options.iloc[chain_index]['contractSymbol']]
+
+        return contracts
 
     @Threaded.threaded
     def analyze(self) -> None:
-        if self.validate():
+        if not self.get_errors():
             self.task_state = 'None'
             self.task_message = self.legs[0].option.ticker
 
@@ -138,6 +155,9 @@ class Vertical(Strategy):
             self.analysis.summarize()
 
             _logger.info(f'{__name__}: {self.ticker}: g={self.analysis.max_gain:.2f}, l={self.analysis.max_loss:.2f} b={self.analysis.breakeven[0]:.2f}')
+        else:
+            _logger.warning(f'{__name__}: Unable to analyze strategy for {self.ticker}: {self.error}')
+
         self.task_state = 'Done'
 
     def calculate_gain_loss(self) -> tuple[float, float, float, str]:
@@ -201,25 +221,25 @@ class Vertical(Strategy):
         return pop if pop > 0.0 else 0.0
 
     def get_errors(self) -> str:
-        error = ''
-        if self.analysis.credit_debit:
+        if self.error:
+            pass # Return existing error
+        elif len(self.legs) != 2:
+            self.error = 'Insufficient number of legs'
+        elif self.analysis.credit_debit:
             if self.product == 'call':
                 if self.analysis.credit_debit == 'debit':
                     if self.legs[0].option.strike >= self.legs[1].option.strike:
-                        error = 'Bad option configuration'
+                        self.error = 'Bad option leg configuration'
                 elif self.legs[1].option.strike >= self.legs[0].option.strike:
-                    error = 'Bad option configuration'
+                    self.error = 'Bad option leg configuration'
             else:
                 if self.analysis.credit_debit == 'debit':
                     if self.legs[1].option.strike >= self.legs[0].option.strike:
-                        error = 'Bad option configuration'
+                        self.error = 'Bad option leg configuration'
                 elif self.legs[0].option.strike >= self.legs[1].option.strike:
-                    error = 'Bad option configuration'
+                    self.error = 'Bad option leg configuration'
 
-        return error
-
-    def validate(self) -> bool:
-        return len(self.legs) == 2
+        return self.error
 
 
 if __name__ == '__main__':

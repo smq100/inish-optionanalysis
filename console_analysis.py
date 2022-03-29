@@ -335,10 +335,19 @@ class Interface:
 
             self.show_progress_options()
 
-            ui.print_message('Strategy Analysis', pre_creturn=1, post_creturn=1)
+            if not sl.strategy_results.empty:
+                ui.print_message('Strategy Analysis', pre_creturn=1, post_creturn=1)
 
-            headers = [header.replace('_', ' ').title() for header in sl.strategy_results.columns]
-            print(tabulate(sl.strategy_results, headers=headers, tablefmt='simple', floatfmt='.2f'))
+                headers = [header.replace('_', ' ').title() for header in sl.strategy_results.columns]
+                print(tabulate(sl.strategy_results, headers=headers, tablefmt='simple', floatfmt='.2f'))
+            else:
+                ui.print_warning(f'No results returned: {sl.strategy_state}', pre_creturn=2, post_creturn=1)
+
+            if len(sl.strategy_errors) > 0:
+                ui.print_message('Errors', pre_creturn=1, post_creturn=1)
+                for e in sl.strategy_errors:
+                    print(f'{e}\n')
+
         else:
             ui.print_warning('No tickers to process')
 
@@ -467,17 +476,16 @@ class Interface:
                 time.sleep(0.20)
                 ui.progress_bar(0, 0, prefix=prefix, suffix=sl.strategy_msg)
 
-            ui.erase_line()
-            prefix = 'Analyzing Strategies'
-            ui.progress_bar(0, 0, prefix=prefix)
+            if sl.strategy_state == 'Next':
+                ui.erase_line()
+                prefix = 'Analyzing Strategies'
+                ui.progress_bar(0, 0, prefix=prefix)
 
-            tasks = len([True for future in sl.strategy_futures if future.running()])
-            while sl.strategy_state == 'Next':
-                time.sleep(0.20)
                 tasks = len([True for future in sl.strategy_futures if future.running()])
-                ui.progress_bar(sl.strategy_completed, sl.strategy_total, prefix=prefix, suffix='', tasks=tasks)
-        else:
-            ui.print_message(f'{sl.strategy_state}')
+                while sl.strategy_state == 'Next':
+                    time.sleep(0.20)
+                    tasks = len([True for future in sl.strategy_futures if future.running()])
+                    ui.progress_bar(sl.strategy_completed, sl.strategy_total, prefix=prefix, suffix='', tasks=tasks)
 
     def show_progress_support_resistance(self) -> None:
         while not self.trend.task_state:

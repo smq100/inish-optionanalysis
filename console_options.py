@@ -113,8 +113,6 @@ class Interface():
             if self.dirty_analyze:
                 menu_items['6'] += ' *'
 
-            self.show_legs()
-
             selection = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
 
             if selection == 1:
@@ -193,7 +191,6 @@ class Interface():
 
     def analyze(self) -> bool:
         errors = self.strategy.get_errors()
-
         if not errors:
             self.task = threading.Thread(target=self.strategy.analyze)
             self.task.start()
@@ -285,6 +282,8 @@ class Interface():
                             ui.print_message('Option Contracts', pre_creturn=0)
                             for leg in self.strategy.legs:
                                 print(f'{leg.option.contract}')
+
+                        self.show_legs()
                     elif style == 2:
                         ui.print_message(title, post_creturn=1)
                         print(tabulate(analysis, headers=analysis.columns, tablefmt='simple', floatfmt='.2f'))
@@ -322,7 +321,7 @@ class Interface():
 
     def show_legs(self, leg: int = -1, delimeter: bool = True) -> None:
         if delimeter:
-            ui.print_message('Option Leg Values')
+            ui.print_message('Option Legs')
 
         if len(self.strategy.legs) < 1:
             print('No legs configured')

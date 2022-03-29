@@ -26,8 +26,11 @@ class Put(Strategy):
         if load_contracts:
             _, _, contract = self.fetch_contracts(self.strike)
             if contract:
-                self.legs[0].option.load_contract(contract[0])
-                self.analysis.volatility = 'implied'
+                if self.legs[0].option.load_contract(contract[0]):
+                    self.analysis.volatility = 'implied'
+                else:
+                    self.error = f'Unable to load put contract for {self.legs[0].company.ticker}'
+                    _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}: {self.error}')
             else:
                 _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}. Using calculated values')
 

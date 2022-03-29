@@ -252,12 +252,11 @@ def progress_bar(iteration, total: int, prefix: str = 'Working', suffix: str = '
             else:
                 position -= 1
                 forward = False
-        else:
-            if position > 1:
+        elif position > 1:
                 position -= 1
-            else:
-                position = 2
-                forward = True
+        else:
+            position = 2
+            forward = True
 
         front = position - 1
         back = length - position

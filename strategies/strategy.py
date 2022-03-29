@@ -46,6 +46,7 @@ class Strategy(ABC, Threaded):
         self.legs: list[Leg] = []
         self.initial_spot = 0.0
         self.initial_spot = self.get_current_spot(roundup=True)
+        self.error = ''
 
         self.analysis.credit_debit = 'debit' if direction == 'long' else 'credit'
 
@@ -59,7 +60,7 @@ class Strategy(ABC, Threaded):
     @Threaded.threaded
     def analyze(self) -> None:
         # Works for one-legged strategies. Override for others
-        if self.validate():
+        if not self.get_errors():
             self.task_state = 'None'
             self.task_message = self.legs[0].option.ticker
 
@@ -77,6 +78,8 @@ class Strategy(ABC, Threaded):
 
             _logger.info(f'{__name__}: {self.ticker}: p={self.legs[0].option.eff_price:.2f}, g={self.analysis.max_gain:.2f}, \
                 l={self.analysis.max_loss:.2f} b={self.analysis.breakeven[0] :.2f}')
+        else:
+            _logger.warning(f'{__name__}: Unable to analyze strategy for {self.ticker}: {self.error}')
 
         self.task_state = 'Done'
 
@@ -110,14 +113,14 @@ class Strategy(ABC, Threaded):
         else:
             raise ValueError('Invalid pricing method')
 
-    def fetch_contracts(self, strike: float = -1.0, distance: int = 1, weeks: int = -1) -> tuple[str, int, list[str]]:
+    def fetch_contracts(self, strike: float = -1.0, distance: int = 0, weeks: int = -1) -> list[str]:
         # Works for one-legged strategies. Override for others
         if distance < 0:
             raise ValueError('Invalid distance')
 
-        contract = ''
         expiry = self.chain.get_expiry()
 
+        # Calculate expiry
         if not expiry:
             raise ValueError('No option expiry dates')
         elif weeks < 0:
@@ -129,23 +132,29 @@ class Strategy(ABC, Threaded):
         else:
             self.chain.expire = expiry[0]
 
+        # Get the option chain
+        contract = ''
+        chain_index = -1
         product = self.legs[0].option.product
         options = self.chain.get_chain(product)
 
+        # Calculate the index into the option chain
         if options.empty:
-            chain_index = -1
             _logger.warning(f'{__name__}: Error fetching option chain for {self.ticker}')
         elif strike <= 0.0:
             chain_index = self.chain.get_index_itm()
         else:
             chain_index = self.chain.get_index_strike(strike)
 
-        if chain_index >= 0:
-            contract = options.iloc[chain_index]['contractSymbol']
-        else:
+        # Add the option contract
+        if chain_index < 0:
             _logger.warning(f'{__name__}: Error fetching default contract for {self.ticker}')
+        elif chain_index >= len(options):
+            _logger.warning(f'{__name__}: Insufficient options for {self.ticker}')
+        else:
+            contract = options.iloc[chain_index]['contractSymbol']
 
-        return product, chain_index, [contract]
+        return [contract]
 
     @abc.abstractmethod
     def calculate_gain_loss(self) -> tuple[float, float, float, str]:
@@ -168,10 +177,12 @@ class Strategy(ABC, Threaded):
         return pop
 
     def get_errors(self) -> str:
-        return ''
+        if self.error:
+            pass # Return existing error
+        elif len(self.legs) < 1:
+            self.error = 'Incorrect number of legs'
 
-    def validate(self):
-        return len(self.legs) > 0
+        return self.error
 
 
 if __name__ == '__main__':

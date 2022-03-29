@@ -41,21 +41,28 @@ class IronCondor(Strategy):
             self.add_leg(self.quantity, 'put', 'short', self.strike - (self.width1 + self.width2), expiry)
 
         if load_contracts:
-            _, _, contracts = self.fetch_contracts(self.strike)
+            contracts = self.fetch_contracts(self.strike)
             if len(contracts) == 4:
-                self.legs[0].option.load_contract(contracts[0])
-                self.legs[1].option.load_contract(contracts[1])
-                self.legs[2].option.load_contract(contracts[2])
-                self.legs[3].option.load_contract(contracts[3])
+                if not self.legs[0].option.load_contract(contracts[0]):
+                    self.error = f'Unable to load leg 0 contract for {self.legs[0].company.ticker}'
+                elif not self.legs[1].option.load_contract(contracts[1]):
+                    self.error = f'Unable to load leg 1 contract for {self.legs[1].company.ticker}'
+                elif not self.legs[2].option.load_contract(contracts[2]):
+                    self.error = f'Unable to load leg 2 contract for {self.legs[2].company.ticker}'
+                elif not self.legs[3].option.load_contract(contracts[3]):
+                    self.error = f'Unable to load leg 3 contract for {self.legs[3].company.ticker}'
 
-                self.analysis.volatility = 'implied'
+                if not self.error:
+                    self.analysis.volatility = 'implied'
+                else:
+                    _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}: {self.error}')
             else:
                 _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}. Using calculated values')
 
     def __str__(self):
         return f'{self.analysis.credit_debit} {self.name}'
 
-    def fetch_contracts(self, strike: float = -1.0, distance: int = 1, weeks: int = -1) -> tuple[str, int, list[str]]:
+    def fetch_contracts(self, strike: float = -1.0, distance: int = 0, weeks: int = -1) -> list[str]:
         if distance < 0:
             raise ValueError('Invalid distance')
 
@@ -72,57 +79,61 @@ class IronCondor(Strategy):
         else:
             self.chain.expire = expiry[0]
 
-        # Get baseline chain index
+        # Get the option chain. Need to track call and put indexes seperately because there may be differences in chain structures
         contracts = []
+        chain_index_c = -1
+        chain_index_p = -1
 
-        # Need to track call and put indexes seperately because there may be differences in structures
+        # Calculate the index into the call option chain
         options_c = self.chain.get_chain('call')
-
         if options_c.empty:
-            chain_index_c = -1
             _logger.warning(f'{__name__}: Error fetching call option chain for {self.ticker}')
         elif strike <= 0.0:
             chain_index_c = self.chain.get_index_itm()
         else:
             chain_index_c = self.chain.get_index_strike(strike)
 
-        options_p = self.chain.get_chain('put')
+        # Calculate the index into the put option chain
+        if chain_index_c >= 0:
+            options_p = self.chain.get_chain('put')
+            if options_p.empty:
+                _logger.warning(f'{__name__}: Error fetching put option chain for {self.ticker}')
+            elif strike <= 0.0:
+                chain_index_p = self.chain.get_index_itm()
+            else:
+                chain_index_p = self.chain.get_index_strike(strike)
 
-        if options_p.empty:
-            chain_index_p = -1
+        # Add the call option contracts
+        if chain_index_c < 0:
+            _logger.warning(f'{__name__}: Error fetching call option chain for {self.ticker}')
+        elif chain_index_p < 0:
             _logger.warning(f'{__name__}: Error fetching put option chain for {self.ticker}')
-        elif strike <= 0.0:
-            chain_index_p = self.chain.get_index_itm()
-        else:
-            chain_index_p = self.chain.get_index_strike(strike)
-
-        # Make sure the chain is large enough to work with
-        if len(options_c) < (self.width1 + self.width2 + 1):
+        elif len(options_c) < (self.width1 + self.width2 + 1):
             chain_index_c = -1 # Chain too small
         elif (len(options_c) - chain_index_c) <= (self.width1 + self.width2 + 1):
             chain_index_c = -1 # Index too close to end of chain
+        else:
+            contracts += [options_c.iloc[chain_index_c + self.width1 + self.width2]['contractSymbol']]
+            contracts += [options_c.iloc[chain_index_c + self.width1]['contractSymbol']]
 
+        # Add the put option contracts
+        if chain_index_c < 0:
+            _logger.warning(f'{__name__}: Error fetching call option chain for {self.ticker}')
+        elif chain_index_p < 0:
+            _logger.warning(f'{__name__}: Error fetching put option chain for {self.ticker}')
         elif len(options_p) < (self.width1 + self.width2 + 1):
             chain_index_p = -1 # Chain too small
         elif (len(options_p) - chain_index_p) <= (self.width1 + self.width2 + 1):
             chain_index_p = -1 # Index too close to beginning of chain
-
-        # Get the option contracts
-        if chain_index_c < 0:
-            _logger.warning(f'{__name__}: Option call chain not large enough for {self.ticker}')
-        elif chain_index_p < 0:
-            _logger.warning(f'{__name__}: Option put chain not large enough for {self.ticker}')
         else:
-            contracts  = [options_c.iloc[chain_index_c + self.width1 + self.width2]['contractSymbol']]
-            contracts += [options_c.iloc[chain_index_c + self.width1]['contractSymbol']]
             contracts += [options_p.iloc[chain_index_p - self.width1]['contractSymbol']]
             contracts += [options_p.iloc[chain_index_p - self.width1 - self.width2]['contractSymbol']]
 
-        return s.PRODUCTS[2], chain_index_c, contracts
+        return contracts
 
     @Threaded.threaded
     def analyze(self) -> None:
-        if self.validate():
+        if not self.get_errors():
             self.task_state = 'None'
             self.task_message = self.legs[0].option.ticker
 
@@ -159,6 +170,9 @@ class IronCondor(Strategy):
 
             _logger.info(f'{__name__}: {self.ticker}: g={self.analysis.max_gain:.2f}, l={self.analysis.max_loss:.2f} \
                 b1={self.analysis.breakeven[0] :.2f} b2={self.analysis.breakeven[1] :.2f}')
+        else:
+            _logger.warning(f'{__name__}: Unable to analyze strategy for {self.ticker}: {self.error}')
+
         self.task_state = 'Done'
 
     def calculate_gain_loss(self) -> tuple[float, float, float, str]:
@@ -209,19 +223,18 @@ class IronCondor(Strategy):
         return pop if pop > 0.0 else 0.0
 
     def get_errors(self) -> str:
-        error = ''
-
-        if self.legs[0].option.strike <= self.legs[1].option.strike:
-            error = f'Bad option configuration ({self.legs[0].option.strike:.2f} <= {self.legs[1].option.strike:.2f})'
+        if self.error:
+            pass # Return existing error
+        elif len(self.legs) != 4:
+            self.error = 'Insufficient number of legs'
+        elif self.legs[0].option.strike <= self.legs[1].option.strike:
+            self.error = f'Bad option leg configuration ({self.legs[0].option.strike:.2f} <= {self.legs[1].option.strike:.2f})'
         elif self.legs[1].option.strike <= self.legs[2].option.strike:
-            error = f'Bad option configuration ({self.legs[1].option.strike:.2f} <= {self.legs[2].option.strike:.2f})'
+            self.error = f'Bad option leg configuration ({self.legs[1].option.strike:.2f} <= {self.legs[2].option.strike:.2f})'
         elif self.legs[2].option.strike <= self.legs[3].option.strike:
-            error = f'Bad option configuration ({self.legs[2].option.strike:.2f} <= {self.legs[3].option.strike:.2f})'
+            self.error = f'Bad option leg configuration ({self.legs[2].option.strike:.2f} <= {self.legs[3].option.strike:.2f})'
 
-        return error
-
-    def validate(self) -> bool:
-        return len(self.legs) == 4
+        return self.error
 
 
 if __name__ == '__main__':
