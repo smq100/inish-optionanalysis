@@ -133,7 +133,7 @@ class IronCondor(Strategy):
 
     @Threaded.threaded
     def analyze(self) -> None:
-        if not self.get_errors():
+        if self.validate():
             self.task_state = 'None'
             self.task_message = self.legs[0].option.ticker
 
@@ -174,6 +174,24 @@ class IronCondor(Strategy):
             _logger.warning(f'{__name__}: Unable to analyze strategy for {self.ticker}: {self.error}')
 
         self.task_state = 'Done'
+
+    def validate(self) -> bool:
+        if self.error:
+            pass # Return existing error
+        elif len(self.legs) != 4:
+            self.error = 'Incorrect number of legs'
+        elif self.legs[0].option.strike <= self.legs[1].option.strike:
+            self.error = f'Bad option leg configuration ({self.legs[0].option.strike:.2f} <= {self.legs[1].option.strike:.2f})'
+        elif self.legs[1].option.strike <= self.legs[2].option.strike:
+            self.error = f'Bad option leg configuration ({self.legs[1].option.strike:.2f} <= {self.legs[2].option.strike:.2f})'
+        elif self.legs[2].option.strike <= self.legs[3].option.strike:
+            self.error = f'Bad option leg configuration ({self.legs[2].option.strike:.2f} <= {self.legs[3].option.strike:.2f})'
+
+        return not bool(self.error)
+
+    def calculate_pop(self) -> float:
+        pop = 1.0 - (self.analysis.max_gain / (self.legs[0].option.strike - self.legs[1].option.strike))
+        return pop if pop > 0.0 else 0.0
 
     def calculate_gain_loss(self) -> tuple[float, float, float, str]:
         max_gain = max_loss = 0.0
@@ -217,24 +235,6 @@ class IronCondor(Strategy):
         breakeven += [self.legs[2].option.strike - self.analysis.total]
 
         return breakeven
-
-    def calculate_pop(self) -> float:
-        pop = 1.0 - (self.analysis.max_gain / (self.legs[0].option.strike - self.legs[1].option.strike))
-        return pop if pop > 0.0 else 0.0
-
-    def get_errors(self) -> str:
-        if self.error:
-            pass # Return existing error
-        elif len(self.legs) != 4:
-            self.error = 'Insufficient number of legs'
-        elif self.legs[0].option.strike <= self.legs[1].option.strike:
-            self.error = f'Bad option leg configuration ({self.legs[0].option.strike:.2f} <= {self.legs[1].option.strike:.2f})'
-        elif self.legs[1].option.strike <= self.legs[2].option.strike:
-            self.error = f'Bad option leg configuration ({self.legs[1].option.strike:.2f} <= {self.legs[2].option.strike:.2f})'
-        elif self.legs[2].option.strike <= self.legs[3].option.strike:
-            self.error = f'Bad option leg configuration ({self.legs[2].option.strike:.2f} <= {self.legs[3].option.strike:.2f})'
-
-        return self.error
 
 
 if __name__ == '__main__':

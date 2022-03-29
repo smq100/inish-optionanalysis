@@ -73,7 +73,7 @@ class Leg:
     def calculate(self, value_table: bool = True, greeks: bool = True) -> float:
         price = 0.0
 
-        if self._validate():
+        if self.validate():
             # Build the pricer
             if self.pricing_method == pricing.PRICING_METHODS[0]:
                 self.pricer = BlackScholes(self.company.ticker, self.option.expiry, self.option.strike)
@@ -167,7 +167,7 @@ class Leg:
         value = pd.DataFrame()
 
         if self.option.calc_price > 0.0:
-            cols, step = self._calculate_date_step()
+            cols, step = self.calculate_date_step()
             if cols > 1:
                 row = []
                 table = []
@@ -222,13 +222,13 @@ class Leg:
 
         return value
 
-    def _calculate_date_step(self) -> tuple[int, int]:
+    def calculate_date_step(self) -> tuple[int, int]:
         cols = int(math.ceil(self.option.time_to_maturity * 365))
         step = 1
 
         return cols, step
 
-    def _validate(self) -> bool:
+    def validate(self) -> bool:
 
         valid = bool(self.company.ticker)
 

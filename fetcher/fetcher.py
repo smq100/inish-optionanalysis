@@ -96,9 +96,9 @@ def _get_history_yfinance(ticker: str, days: int = -1, uselast: bool = False) ->
     if not _connected:
         raise ConnectionError('No internet connection')
 
-    history = None
+    history: pd.DataFrame = pd.DataFrame()
     company = get_company_live(ticker, uselast)
-    if company is not None:
+    if not company.empty:
         if days < 0:
             days = 7300  # 20 years
 
@@ -140,7 +140,7 @@ def _get_history_yfinance(ticker: str, days: int = -1, uselast: bool = False) ->
 
 
 def _get_history_quandl(ticker: str, days: int = -1) -> pd.DataFrame:
-    history = pd.DataFrame()
+    history: pd.DataFrame = pd.DataFrame()
 
     if days < 0:
         days = 7300  # 20 years

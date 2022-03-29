@@ -72,6 +72,8 @@ class Interface():
             ui.print_error('Invalid width specified')
         elif strategy == 'ic' and (width1 < 1 or width2 < 1):
             ui.print_error('Invalid width specified')
+        elif strategy == 'ib' and width1 < 1:
+            ui.print_error('Invalid width specified')
         elif self.load_strategy(self.ticker, strategy, self.product, self.direction, self.strike, self.width1, self.width2, self.quantity, default, analyze or exit):
             if not exit:
                 self.main_menu()
@@ -188,8 +190,8 @@ class Interface():
         return modified
 
     def analyze(self) -> bool:
-        errors = self.strategy.get_errors()
-        if not errors:
+        valid = self.strategy.validate()
+        if valid:
             self.task = threading.Thread(target=self.strategy.analyze)
             self.task.start()
 
@@ -201,9 +203,9 @@ class Interface():
             self.show_analysis(style=1)
             self.show_analysis(style=2)
         else:
-            ui.print_error(errors)
+            ui.print_error(self.strategy.error)
 
-        return not bool(errors)
+        return valid
 
     def reset(self) -> None:
         self.strategy.reset()
@@ -256,6 +258,7 @@ class Interface():
             if analysis is not None:
                 if style == 0:
                     style = ui.input_integer('(1) Summary, (2) Table, (3) Chart, (4) Contour, (5) Surface, or (0) Cancel: ', 0, 5)
+
                 if style > 0:
                     title = f'{self.strategy.name.title()}: {self.strategy.ticker} (${self.strike:.2f})'
 

@@ -60,7 +60,7 @@ class Strategy(ABC, Threaded):
     @Threaded.threaded
     def analyze(self) -> None:
         # Works for one-legged strategies. Override for others
-        if not self.get_errors():
+        if self.validate():
             self.task_state = 'None'
             self.task_message = self.legs[0].option.ticker
 
@@ -156,6 +156,23 @@ class Strategy(ABC, Threaded):
 
         return [contract]
 
+    def validate(self) -> bool:
+        # Works for one-legged strategies. Override for others
+        if self.error:
+            pass # Return existing error
+        elif len(self.legs) < 1:
+            self.error = 'Incorrect number of legs'
+
+        return not bool(self.error)
+
+    def calculate_pop(self) -> float:
+        # Works for one-legged strategies. Override for others
+        pop = abs(self.legs[0].option.delta)
+        if self.legs[0].direction == 'short':
+            pop = 1.0 - pop
+
+        return pop
+
     @abc.abstractmethod
     def calculate_gain_loss(self) -> tuple[float, float, float, str]:
         return (0.0, 0.0, 0.0, '')
@@ -167,22 +184,6 @@ class Strategy(ABC, Threaded):
     @abc.abstractmethod
     def calculate_breakeven(self) -> list[float]:
         return [0.0]
-
-    def calculate_pop(self) -> float:
-        # Works for one-legged strategies. Override for others
-        pop = abs(self.legs[0].option.delta)
-        if self.legs[0].direction == 'short':
-            pop = 1.0 - pop
-
-        return pop
-
-    def get_errors(self) -> str:
-        if self.error:
-            pass # Return existing error
-        elif len(self.legs) < 1:
-            self.error = 'Incorrect number of legs'
-
-        return self.error
 
 
 if __name__ == '__main__':
