@@ -1,3 +1,5 @@
+import datetime as dt
+
 import pandas as pd
 
 import strategies as s
@@ -10,18 +12,27 @@ _logger = logger.get_logger()
 
 
 class Put(Strategy):
-    def __init__(self, ticker: str, product: str, direction: str, strike: float, width1: int, width2: int, quantity: int = 1, load_contracts: bool = False):
+    def __init__(self,
+            ticker: str,
+            product: str,
+            direction: str,
+            strike: float,
+            width1: int,
+            width2: int,
+            *,
+            quantity: int = 1,
+            expiry: dt.datetime | None = None,
+            volatility: float = -1.0,
+            load_contracts: bool = False):
+
         product = s.PRODUCTS[1]
 
         # Initialize the base strategy
-        super().__init__(ticker, product, direction, strike, width1, 0, quantity, load_contracts)
+        super().__init__(ticker, product, direction, strike, width1, 0, quantity=quantity, expiry=expiry, volatility=volatility, load_contracts=load_contracts)
 
         self.name = s.STRATEGIES_BROAD[1]
 
-        # Default expiry to third Friday of next month
-        expiry = m.third_friday()
-
-        self.add_leg(self.quantity, product, direction, self.strike, expiry)
+        self.add_leg(self.quantity, product, direction, self.strike, self.expiry)
 
         if load_contracts:
             contract = self.fetch_contracts(strike=self.strike)

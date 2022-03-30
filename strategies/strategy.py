@@ -20,7 +20,19 @@ _logger = logger.get_logger()
 
 
 class Strategy(ABC, Threaded):
-    def __init__(self, ticker: str, product: str, direction: str, strike: float, width1: int, width2: int, quantity: int = 1, load_contracts: bool = False):
+    def __init__(self,
+            ticker: str,
+            product: str,
+            direction: str,
+            strike: float,
+            width1: int,
+            width2: int,
+            *,
+            quantity: int,
+            expiry: dt.datetime | None, # None = use next month's expiry. Otherwise use specified
+            volatility: float,   # < 0.0 use latest implied volatility, = 0.0 use calculated, > 0.0 use specified
+            load_contracts: bool):
+
         if not store.is_ticker(ticker):
             raise ValueError('Invalid ticker')
         if product not in s.PRODUCTS:
@@ -31,22 +43,37 @@ class Strategy(ABC, Threaded):
             raise ValueError('Invalid strike')
         if quantity < 1:
             raise ValueError('Invalid quantity')
+        if not (isinstance(expiry, dt.datetime) or expiry is None):
+            raise TypeError('Expiry must be a datetime or None')
 
         self.name = ''
         self.ticker = ticker.upper()
         self.product = product
         self.direction = direction
         self.strike = strike
-        self.quantity = quantity
         self.width1 = width1
         self.width2 = width2
-        self.pricing_method = 'black-scholes'
+        self.quantity = quantity
+        self.expiry = expiry
+        self.volatility = volatility
+        self.load = load_contracts
+
+        self.pricing_method = p.PRICING_METHODS[0] # black-scholes
         self.chain: Chain = Chain(self.ticker)
         self.analysis = Analysis(ticker=self.ticker)
         self.legs: list[Leg] = []
         self.initial_spot = 0.0
         self.initial_spot = self.get_current_spot(roundup=True)
         self.error = ''
+
+        # Default expiry is third Friday of next month, otherwise set it and check validity
+        if expiry is None:
+            self.expiry = m.third_friday()
+        else:
+            self.expiry.replace(hour=0, minute=0, second=0, microsecond=0)
+            tomorrow = dt.datetime.today() + dt.timedelta(days=1)
+            if self.expiry < tomorrow:
+                raise ValueError('Invalid option expiry')
 
         self.analysis.credit_debit = 'debit' if direction == 'long' else 'credit'
 
@@ -113,24 +140,18 @@ class Strategy(ABC, Threaded):
         else:
             raise ValueError('Invalid pricing method')
 
-    def fetch_contracts(self, strike: float = -1.0, distance: int = 0, weeks: int = -1) -> list[str]:
+    def fetch_contracts(self, expiry: dt.datetime, strike: float = -1.0) -> list[str]:
         # Works for one-legged strategies. Override for others
-        if distance < 0:
-            raise ValueError('Invalid distance')
-
-        expiry = self.chain.get_expiry()
+        expiry_tuple = self.chain.get_expiry()
 
         # Calculate expiry
-        if not expiry:
+        if not expiry_tuple:
             raise ValueError('No option expiry dates')
-        elif weeks < 0:
-            # Default to next month's option date
-            third = f'{m.third_friday():%Y-%m-%d}'
-            self.chain.expire = third if third in expiry else expiry[0]
-        elif len(expiry) > weeks:
-            self.chain.expire = expiry[weeks]
-        else:
-            self.chain.expire = expiry[0]
+
+        # Get the closest date to expiry
+        expiry_list = [dt.datetime.strptime(item, '%Y-%m-%d') for item in expiry_tuple]
+        self.expiry = min(expiry_list, key=lambda d: abs(d - expiry))
+        self.chain.expire = self.expiry
 
         # Get the option chain
         contract = ''

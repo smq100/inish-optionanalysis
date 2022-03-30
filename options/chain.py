@@ -1,10 +1,10 @@
-import pandas as pd
+import datetime as dt
 
 import pandas as pd
 
 from data import store as store
 from data import store as store
-from utils import ui, logger
+from utils import logger
 
 _logger = logger.get_logger()
 
@@ -15,8 +15,8 @@ class Chain:
             raise ValueError('Not a valid ticker')
 
         self.ticker: str = ticker.upper()
-        self.expire: str = ''
         self.product: str = ''
+        self.expire: dt.datetime = None
         self.chain: pd.DataFrame = pd.DataFrame()
 
         # Fetch the company info so we can used a cached version on subsequent calls (uselast=True)
@@ -27,7 +27,7 @@ class Chain:
 
     def get_chain(self, product: str) -> pd.DataFrame:
         self.product = product
-        value = store.get_option_chain(self.ticker, uselast=True)(date=self.expire)
+        value = store.get_option_chain(self.ticker, uselast=True)(date=self.expire.strftime('%Y-%m-%d'))
 
         if product == 'call':
             self.chain = value.calls

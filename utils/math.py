@@ -7,7 +7,7 @@ import pandas as pd
 
 MIN_MAX_PERCENT = 0.20
 VALUETABLE_ROWS = 50
-VALUETABLE_COLS = 11
+VALUETABLE_COLS = 9
 
 range_type = collections.namedtuple('range', ['min', 'max', 'step'])
 
@@ -61,14 +61,14 @@ def compress_table(table: pd.DataFrame, rows: int, cols: int) -> pd.DataFrame:
     # Thin out cols
     srows, scols = table.shape
     if cols > 0 and cols < scols:
-        step = int(math.ceil(scols/cols))
-        end = table[table.columns[-2::]]  # Save the last two cols
+        step = math.ceil(scols/cols) + 1
+        end = table[table.columns[-2::]]  # Save the last two cols (last date & expiry)
         compressed = table[table.columns[:-2:step]]  # Thin the table, less the last two cols
         compressed = pd.concat([compressed, end], axis=1)  # Add back the last two cols
 
     # Thin out rows
     if rows > 0 and rows < srows:
-        step = int(math.ceil(srows/rows))
+        step = math.ceil(srows/rows)
         compressed = compressed.iloc[::step]
 
     return compressed
@@ -84,6 +84,8 @@ def third_friday() -> dt.datetime:
     w = third.weekday()
     if w != 4:
         third = third.replace(day=(15 + (4 - w) % 7))
+
+    third.replace(hour=0, minute=0, second=0, microsecond=0)
 
     # Contracts seem to list Thursday as last day for monthly options (last day to trade)
     third -= dt.timedelta(days=1)

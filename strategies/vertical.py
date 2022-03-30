@@ -1,3 +1,5 @@
+import datetime as dt
+
 import pandas as pd
 
 from base import Threaded
@@ -11,17 +13,26 @@ _logger = logger.get_logger()
 
 
 class Vertical(Strategy):
-    def __init__(self, ticker: str, product: str, direction: str, strike: float, width1: int, width2: int, quantity: int = 1, load_contracts: bool = False):
+    def __init__(self,
+            ticker: str,
+            product: str,
+            direction: str,
+            strike: float,
+            width1: int,
+            width2: int,
+            *,
+            quantity: int = 1,
+            expiry: dt.datetime | None = None,
+            volatility: float = -1.0,
+            load_contracts: bool = False):
+
         if width1 < 1:
             raise ValueError('Invalid width')
 
         # Initialize the base strategy
-        super().__init__(ticker, product, direction, strike, width1, 0, quantity, load_contracts)
+        super().__init__(ticker, product, direction, strike, width1, 0, quantity=quantity, expiry=expiry, volatility=volatility, load_contracts=load_contracts)
 
         self.name = s.STRATEGIES_BROAD[2]
-
-        # Default expiry to tird Friday of next month
-        expiry = m.third_friday()
 
         # Add legs. Long leg is always first
         # Width1 is dollar amounts when not loading contracts
@@ -30,20 +41,20 @@ class Vertical(Strategy):
         if product == 'call':
             if direction == 'long':
                 self.add_leg(self.quantity, product, 'long', self.strike, expiry)
-                self.add_leg(self.quantity, product, 'short', self.strike + self.width1, expiry)
+                self.add_leg(self.quantity, product, 'short', self.strike + self.width1, self.expiry)
             else:
-                self.add_leg(self.quantity, product, 'long', self.strike + self.width1, expiry)
+                self.add_leg(self.quantity, product, 'long', self.strike + self.width1, self.expiry)
                 self.add_leg(self.quantity, product, 'short', self.strike, expiry)
         else:
             if direction == 'long':
-                self.add_leg(self.quantity, product, 'long', self.strike + self.width1, expiry)
+                self.add_leg(self.quantity, product, 'long', self.strike + self.width1, self.expiry)
                 self.add_leg(self.quantity, product, 'short', self.strike, expiry)
             else:
                 self.add_leg(self.quantity, product, 'long', self.strike, expiry)
-                self.add_leg(self.quantity, product, 'short', self.strike + self.width1, expiry)
+                self.add_leg(self.quantity, product, 'short', self.strike + self.width1, self.expiry)
 
         if load_contracts:
-            contracts = self.fetch_contracts(strike=self.strike)
+            contracts = self.fetch_contracts(self.expiry, strike=self.strike)
             if len(contracts) == 2:
                 if not self.legs[0].option.load_contract(contracts[0]):
                     self.error = f'Unable to load leg 0 {product} contract for {self.legs[0].company.ticker}'
@@ -61,23 +72,17 @@ class Vertical(Strategy):
     def __str__(self):
         return f'{self.name} {self.product} {self.analysis.credit_debit} spread'
 
-    def fetch_contracts(self, strike: float = -1.0, distance: int = 0, weeks: int = -1) -> list[str]:
-        if distance < 0:
-            raise ValueError('Invalid distance')
-
-        expiry = self.chain.get_expiry()
+    def fetch_contracts(self, expiry: dt.datetime, strike: float = -1.0) -> list[str]:
+        expiry_tuple = self.chain.get_expiry()
 
         # Calculate expiry
-        if not expiry:
+        if not expiry_tuple:
             raise ValueError('No option expiry dates')
-        elif weeks < 0:
-            # Default to next month's option expiration date
-            third = f'{m.third_friday():%Y-%m-%d}'
-            self.chain.expire = third if third in expiry else expiry[0]
-        elif len(expiry) > weeks:
-            self.chain.expire = expiry[weeks]
-        else:
-            self.chain.expire = expiry[0]
+
+        # Get the closest date to expiry
+        expiry_list = [dt.datetime.strptime(item, '%Y-%m-%d') for item in expiry_tuple]
+        self.expiry = min(expiry_list, key=lambda d: abs(d - expiry))
+        self.chain.expire = self.expiry
 
         # Get the option chain
         contracts = []

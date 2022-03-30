@@ -213,10 +213,10 @@ class Leg:
                 # Strip the time from the datetime string
                 for index, item in enumerate(col_index):
                     day = dt.datetime.strptime(item, '%Y-%m-%d %H:%M:%S').date()
-                    col_index[index] = f'{str(day.strftime("%b"))}-{str(day.day)}'
+                    col_index[index] = f'{str(day.strftime("%b"))}-{str(day.day)}-{str(day.year)}'
 
                 # Finally, create the dataframe then reverse the row order
-                col_index[-1] = 'Exp'
+                col_index[-1] = 'Expiry'
                 value = pd.DataFrame(table, index=row_index, columns=col_index)
                 value = value.iloc[::-1]
 
