@@ -40,6 +40,7 @@ class Interface():
         width2: int = 0,
         quantity: int = 1,
         expiry: str = '',
+        volatility: float = -1.0,
         load_contracts: bool = False,
         analyze: bool = False,
         exit: bool = False):
@@ -53,6 +54,7 @@ class Interface():
         self.width2 = width2
         self.quantity = quantity
         self.expiry = expiry
+        self.volatility = volatility
         self.load_contracts = load_contracts
 
         self.dirty_analyze = True
@@ -88,7 +90,19 @@ class Interface():
             ui.print_error('Invalid width specified')
         elif strategy == 'ib' and width1 < 1:
             ui.print_error('Invalid width specified')
-        elif self.load_strategy(self.ticker, strategy, self.product, self.direction, self.strike, self.width1, self.width2, self.quantity, self.expiry, load_contracts, analyze or exit):
+        elif self.load_strategy(
+                self.ticker,
+                strategy,
+                self.product,
+                self.direction,
+                self.strike,
+                self.width1,
+                self.width2,
+                self.quantity,
+                self.expiry,
+                self.volatility,
+                load_contracts,
+                analyze or exit):
             if not exit:
                 self.main_menu()
         else:
@@ -161,6 +175,7 @@ class Interface():
             width2: int,
             quantity: int,
             expiry: str,
+            volatility: float,
             load_contracts: bool = False,
             analyze: bool = False) -> bool:
 
@@ -191,19 +206,24 @@ class Interface():
             if strategy.lower() == 'call':
                 self.width1 = 0
                 self.width2 = 0
-                self.strategy = Call(self.ticker, 'call', direction, strike, width1=0, width2=0, quantity=quantity, expiry=expiry_dt, volatility=-1.0, load_contracts=load_contracts)
+                self.strategy = Call(self.ticker, 'call', direction, strike, width1=0, width2=0, quantity=quantity,
+                    expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
             elif strategy.lower() == 'put':
                 self.width1 = 0
                 self.width2 = 0
-                self.strategy = Put(self.ticker, 'put', direction, strike, width1=0, width2=0, quantity=quantity, expiry=expiry_dt, volatility=-1.0, load_contracts=load_contracts)
+                self.strategy = Put(self.ticker, 'put', direction, strike, width1=0, width2=0, quantity=quantity,
+                    expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
             elif strategy.lower() == 'vert':
                 self.width2 = 0
-                self.strategy = Vertical(self.ticker, product, direction, strike, width1=width1, width2=0, quantity=quantity, expiry=expiry_dt, volatility=-1.0, load_contracts=load_contracts)
+                self.strategy = Vertical(self.ticker, product, direction, strike, width1=width1, width2=0, quantity=quantity,
+                    expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
             elif strategy.lower() == 'ic':
-                self.strategy = IronCondor(self.ticker, 'hybrid', direction, strike, width1=width1, width2=width2, quantity=quantity, expiry=expiry_dt, volatility=-1.0, load_contracts=load_contracts)
+                self.strategy = IronCondor(self.ticker, 'hybrid', direction, strike, width1=width1, width2=width2, quantity=quantity,
+                    expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
             elif strategy.lower() == 'ib':
                 self.width2 = 0
-                self.strategy = IronButterfly(self.ticker, 'hybrid', direction, strike, width1=width1, width2=0, quantity=quantity, expiry=expiry_dt, volatility=-1.0, load_contracts=load_contracts)
+                self.strategy = IronButterfly(self.ticker, 'hybrid', direction, strike, width1=width1, width2=0, quantity=quantity,
+                    expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
             else:
                 modified = False
                 ui.print_error('Unknown argument')
@@ -736,10 +756,11 @@ def main():
     parser.add_argument('-d', '--direction', help='Specify the direction', required=False, choices=['long', 'short'], default='long')
     parser.add_argument('-p', '--product', help='Specify the product', required=False, choices=['call', 'put'], default='call')
     parser.add_argument('-k', '--strike', help='Specify the strike price', required=False, default='-1.0')
-    parser.add_argument('-w1', '--width1', help='Specify the inner width', required=False, default='1')
-    parser.add_argument('-w2', '--width2', help='Specify the outer width', required=False, default='1')
+    parser.add_argument('-1', '--width1', help='Specify the inner width', required=False, default='1')
+    parser.add_argument('-2', '--width2', help='Specify the outer width', required=False, default='1')
     parser.add_argument('-q', '--quantity', help='Specify the quantity', required=False, default='1')
     parser.add_argument('-e', '--expiry', help='Specify the expiry date (ex: "2022-03-29")', required=False, default='')
+    parser.add_argument('-v', '--volatility', help='Specify the option volatility', required=False, default=-1.0)
     parser.add_argument('-f', '--default', help='Load the default options', required=False, action='store_true')
     parser.add_argument('-a', '--analyze', help='Analyze the strategy', required=False, action='store_true')
     parser.add_argument('-x', '--exit', help='Run and exit', required=False, action='store_true')
@@ -747,7 +768,7 @@ def main():
     command = vars(parser.parse_args())
     Interface(ticker=command['ticker'], strategy=command['strategy'], product=command['product'], direction=command['direction'],
         width1=int(command['width1']), width2=int(command['width2']), quantity=int(command['quantity']), load_contracts=command['default'],
-        expiry=command['expiry'], analyze=command['analyze'], exit=command['exit'], strike=float(command['strike']))
+        expiry=command['expiry'], analyze=command['analyze'], exit=command['exit'], strike=float(command['strike']), volatility=float(command['volatility']))
 
 
 if __name__ == '__main__':

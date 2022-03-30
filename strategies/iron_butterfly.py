@@ -42,15 +42,15 @@ class IronButterfly(Strategy):
         # Width1 is an indexe into the chain when loading contracts
         # Strike price will be overriden when loading contracts
         if direction == 'short':
-            self.add_leg(self.quantity, 'call', 'long', self.strike + self.width1, expiry)
-            self.add_leg(self.quantity, 'call', 'short', self.strike, expiry)
-            self.add_leg(self.quantity, 'put', 'short', self.strike, expiry)
-            self.add_leg(self.quantity, 'put', 'long', self.strike - self.width1, expiry)
+            self.add_leg(self.quantity, 'call', 'long', self.strike + self.width1, expiry, volatility)
+            self.add_leg(self.quantity, 'call', 'short', self.strike, expiry, volatility)
+            self.add_leg(self.quantity, 'put', 'short', self.strike, expiry, volatility)
+            self.add_leg(self.quantity, 'put', 'long', self.strike - self.width1, expiry, volatility)
         else:
-            self.add_leg(self.quantity, 'call', 'short', self.strike + self.width1, expiry)
-            self.add_leg(self.quantity, 'call', 'long', self.strike, expiry)
-            self.add_leg(self.quantity, 'put', 'long', self.strike, expiry)
-            self.add_leg(self.quantity, 'put', 'short', self.strike - self.width1, expiry)
+            self.add_leg(self.quantity, 'call', 'short', self.strike + self.width1, expiry, volatility)
+            self.add_leg(self.quantity, 'call', 'long', self.strike, expiry, volatility)
+            self.add_leg(self.quantity, 'put', 'long', self.strike, expiry, volatility)
+            self.add_leg(self.quantity, 'put', 'short', self.strike - self.width1, expiry, volatility)
 
         if load_contracts:
             contracts = self.fetch_contracts(self.expiry, strike=self.strike)
@@ -149,16 +149,9 @@ class IronButterfly(Strategy):
             self.legs[0].range = self.legs[1].range = self.legs[2].range = self.legs[3].range = range
 
             self.legs[0].calculate()
-            self.legs[0].option.eff_price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
-
             self.legs[1].calculate()
-            self.legs[1].option.eff_price = self.legs[1].option.last_price if self.legs[1].option.last_price > 0.0 else self.legs[1].option.calc_price
-
             self.legs[2].calculate()
-            self.legs[2].option.eff_price = self.legs[2].option.last_price if self.legs[2].option.last_price > 0.0 else self.legs[2].option.calc_price
-
             self.legs[3].calculate()
-            self.legs[3].option.eff_price = self.legs[3].option.last_price if self.legs[3].option.last_price > 0.0 else self.legs[3].option.calc_price
 
             if self.direction == 'short':
                 self.analysis.credit_debit = 'credit'

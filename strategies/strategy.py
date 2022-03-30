@@ -96,7 +96,6 @@ class Strategy(ABC, Threaded):
             self.task_message = self.legs[0].option.ticker
 
             self.legs[0].calculate()
-            self.legs[0].option.eff_price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
 
             self.analysis.credit_debit = 'debit' if self.direction == 'long' else 'credit'
             self.analysis.total = self.legs[0].option.eff_price * self.quantity
@@ -121,8 +120,8 @@ class Strategy(ABC, Threaded):
         for leg in self.legs:
             leg.option.expiry = date
 
-    def add_leg(self, quantity: int, product: str, direction: str, strike: float, expiry: dt.datetime) -> int:
-        leg = Leg(self.ticker, quantity, product, direction, strike, expiry)
+    def add_leg(self, quantity: int, product: str, direction: str, strike: float, expiry: dt.datetime, volatility: float) -> int:
+        leg = Leg(self.ticker, quantity, product, direction, strike, expiry, volatility)
         self.legs += [leg]
 
         return len(self.legs)

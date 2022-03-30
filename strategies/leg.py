@@ -19,7 +19,7 @@ _IV_CUTOFF = 0.020
 
 _logger = logger.get_logger()
 class Leg:
-    def __init__(self, ticker: str, quantity: int, product: str, direction: str, strike: float, expiry: dt.datetime):
+    def __init__(self, ticker: str, quantity: int, product: str, direction: str, strike: float, expiry: dt.datetime, volatility: float):
         if product not in s.PRODUCTS:
             raise ValueError('Invalid product')
         if direction not in s.DIRECTIONS:
@@ -28,7 +28,7 @@ class Leg:
             raise ValueError('Invalid quantity')
 
         self.company = Company(ticker, days=1)
-        self.option = Option(ticker, product, strike, expiry)
+        self.option = Option(ticker, product, strike, expiry, volatility)
         self.quantity = quantity
         self.product = product
         self.direction = direction
@@ -37,24 +37,31 @@ class Leg:
         self.value_table = pd.DataFrame()
         self.range = m.range_type(0.0, 0.0, 0.0)
 
+
     def __str__(self):
         if self.option.calc_price > 0.0:
-            d1 = 'bs' if self.pricing_method == pricing.PRICING_METHODS[0] else pricing.PRICING_METHODS[1]
-            d2 = 'cv' if self.option.implied_volatility < _IV_CUTOFF else 'iv'
-            d3 = '*' if self.option.implied_volatility < _IV_CUTOFF else ''
+            d2 = 'bs' if self.pricing_method == pricing.PRICING_METHODS[0] else pricing.PRICING_METHODS[1]
+            if self.option.volatility_user > 0.0:
+                d3 = 'uv'
+            elif self.option.volatility_implied < _IV_CUTOFF:
+                d3 = 'cv'
+            else:
+                d3 = 'iv'
+
             output = f'{self.quantity:2d} '\
                 f'{self.company.ticker}@${self.company.price:.2f} '\
                 f'{self.direction} '\
                 f'{self.product} '\
-                f'${self.option.strike:.2f} for '\
-                f'{str(self.option.expiry)[:10]}'\
-                f'=${self.option.last_price:.2f}{d3} each (${self.option.calc_price:.2f} {d1}/{d2})'
+                f'${self.option.strike:.2f} '\
+                f'({str(self.option.expiry)[:10]}) for '\
+                f'${self.option.eff_price:.2f} '\
+                f'(c={self.option.calc_price:.2f} l={self.option.last_price:.2f}) {d2}/{d3} ev={self.option.volatility_eff:.2f}'
 
             if not self.option.contract:
                 output += ' *option not selected'
 
             if self.option.last_price > 0.0:
-                if self.option.implied_volatility < _IV_CUTOFF and self.option.implied_volatility > 0.0:
+                if self.option.volatility_implied < _IV_CUTOFF and self.option.volatility_implied > 0.0:
                     output += '\n    *** The iv is unsually low, perhaps due to after-hours. Using cv.'
 
                 diff = self.option.calc_price / self.option.last_price
@@ -85,23 +92,39 @@ class Leg:
             _logger.info(f'{__name__}: Calculating price using {self.pricing_method}')
 
             # Calculate prices
-            if self.option.implied_volatility < _IV_CUTOFF:
-                self.pricer.calculate_price()
+            if self.option.volatility_user > 0.0:
+                self.option.volatility_eff = self.option.volatility_user
+                _logger.info(f'{__name__}: Using requested volatility = {self.option.volatility_user:.4f}')
+            elif self.option.volatility_user == 0.0:
+                self.option.volatility_eff = self.option.volatility_calc
+                _logger.info(f'{__name__}: Using calculated volatility')
+            elif self.option.volatility_implied < _IV_CUTOFF:
+                self.option.volatility_eff = self.option.volatility_calc
                 _logger.info(f'{__name__}: Using calculated volatility')
             else:
-                self.pricer.calculate_price(volatility=self.option.implied_volatility)
-                _logger.info(f'{__name__}: Using implied volatility = {self.option.implied_volatility:.4f}')
+                self.option.volatility_eff = self.option.volatility_implied
+                _logger.info(f'{__name__}: Using implied volatility = {self.option.volatility_implied:.4f}')
+
+            self.pricer.calculate_price(volatility=self.option.volatility_eff)
 
             if self.product == 'call':
                 self.option.calc_price = price = self.pricer.price_call
             else:
                 self.option.calc_price = price = self.pricer.price_put
 
+            # Determine effective price
+            if self.option.volatility_user > 0.0:
+                self.option.eff_price = self.option.calc_price
+            elif self.option.last_price > 0.0:
+                self.option.eff_price = self.option.last_price
+            else:
+                self.option.eff_price = self.option.calc_price
+
             self.company.price = self.pricer.spot_price
             self.company.volatility = self.pricer.volatility
             self.option.spot = self.pricer.spot_price
             self.option.rate = self.pricer.risk_free_rate
-            self.option.calc_volatility = self.pricer.volatility
+            self.option.volatility_calc = self.pricer.volatility
             self.option.time_to_maturity = self.pricer.time_to_maturity
 
             # Generate the value table
@@ -113,16 +136,16 @@ class Leg:
             _logger.info(f'{__name__}: Price {price:.4f}')
             _logger.info(f'{__name__}: Spot {self.option.spot:.2f}')
             _logger.info(f'{__name__}: Rate {self.option.rate:.4f}')
-            _logger.info(f'{__name__}: Cvol {self.option.calc_volatility:.4f}')
-            _logger.info(f'{__name__}: Ivol {self.option.implied_volatility:.4f}')
+            _logger.info(f'{__name__}: Cvol {self.option.volatility_calc:.4f}')
+            _logger.info(f'{__name__}: Ivol {self.option.volatility_implied:.4f}')
             _logger.info(f'{__name__}: TTM {self.option.time_to_maturity:.4f}')
 
             # Calculate Greeks
             if greeks:
-                if self.option.implied_volatility < _IV_CUTOFF:
+                if self.option.volatility_implied < _IV_CUTOFF:
                     self.pricer.calculate_greeks()
                 else:
-                    self.pricer.calculate_greeks(volatility=self.option.implied_volatility)
+                    self.pricer.calculate_greeks(volatility=self.option.volatility_implied)
 
                 if self.product == 'call':
                     self.option.delta = self.pricer.delta_call
@@ -149,10 +172,10 @@ class Leg:
 
     def recalculate(self, spot_price: float, time_to_maturity: int) -> tuple[float, float]:
         if self.pricer is not None:
-            if self.option.implied_volatility < _IV_CUTOFF:
+            if self.option.volatility_implied < _IV_CUTOFF:
                 call, put = self.pricer.calculate_price(spot_price, time_to_maturity)
             else:
-                call, put = self.pricer.calculate_price(spot_price, time_to_maturity, volatility=self.option.implied_volatility)
+                call, put = self.pricer.calculate_price(spot_price, time_to_maturity, volatility=self.option.volatility_implied)
         else:
             raise AssertionError('Must call calculate() prior to recalculate()')
 

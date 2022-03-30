@@ -32,7 +32,7 @@ class Call(Strategy):
 
         self.name = s.STRATEGIES_BROAD[0]
 
-        self.add_leg(self.quantity, product, direction, self.strike, self.expiry)
+        self.add_leg(self.quantity, product, direction, self.strike, self.expiry, volatility)
 
         if load_contracts:
             contract = self.fetch_contracts(self.expiry, strike=self.strike)

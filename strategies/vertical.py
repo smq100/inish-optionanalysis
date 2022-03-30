@@ -40,18 +40,18 @@ class Vertical(Strategy):
         # Strike price will be overriden when loading contracts
         if product == 'call':
             if direction == 'long':
-                self.add_leg(self.quantity, product, 'long', self.strike, expiry)
-                self.add_leg(self.quantity, product, 'short', self.strike + self.width1, self.expiry)
+                self.add_leg(self.quantity, product, 'long', self.strike, expiry, volatility)
+                self.add_leg(self.quantity, product, 'short', self.strike + self.width1, self.expiry, volatility)
             else:
-                self.add_leg(self.quantity, product, 'long', self.strike + self.width1, self.expiry)
-                self.add_leg(self.quantity, product, 'short', self.strike, expiry)
+                self.add_leg(self.quantity, product, 'long', self.strike + self.width1, self.expiry, volatility)
+                self.add_leg(self.quantity, product, 'short', self.strike, expiry, volatility)
         else:
             if direction == 'long':
-                self.add_leg(self.quantity, product, 'long', self.strike + self.width1, self.expiry)
-                self.add_leg(self.quantity, product, 'short', self.strike, expiry)
+                self.add_leg(self.quantity, product, 'long', self.strike + self.width1, self.expiry, volatility)
+                self.add_leg(self.quantity, product, 'short', self.strike, expiry, volatility)
             else:
-                self.add_leg(self.quantity, product, 'long', self.strike, expiry)
-                self.add_leg(self.quantity, product, 'short', self.strike + self.width1, self.expiry)
+                self.add_leg(self.quantity, product, 'long', self.strike, expiry, volatility)
+                self.add_leg(self.quantity, product, 'short', self.strike + self.width1, self.expiry, volatility)
 
         if load_contracts:
             contracts = self.fetch_contracts(self.expiry, strike=self.strike)
@@ -139,16 +139,14 @@ class Vertical(Strategy):
             self.task_state = 'None'
             self.task_message = self.legs[0].option.ticker
 
+            # Ensure all legs use the same min, max, step centered around the strike
+            range = m.calculate_min_max_step(self.strike)
+            self.legs[0].range = self.legs[1].range = range
+
             self.legs[0].calculate()
-
-            # Ensure both legs use the same min, max, step
-            self.legs[1].range =  self.legs[0].range
-
             self.legs[1].calculate()
 
             # Important: Assumes the long leg is the index-0 leg
-            self.legs[0].option.eff_price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
-            self.legs[1].option.eff_price = self.legs[1].option.last_price if self.legs[1].option.last_price > 0.0 else self.legs[1].option.calc_price
 
             self.analysis.credit_debit = 'debit' if self.direction == 'long' else 'credit'
             self.analysis.total = abs(self.legs[0].option.eff_price - self.legs[1].option.eff_price) * self.quantity
@@ -192,9 +190,6 @@ class Vertical(Strategy):
 
     def calculate_gain_loss(self) -> tuple[float, float, float, str]:
         max_gain = max_loss = 0.0
-
-        self.legs[0].option.eff_price = self.legs[0].option.last_price if self.legs[0].option.last_price > 0.0 else self.legs[0].option.calc_price
-        self.legs[1].option.eff_price = self.legs[1].option.last_price if self.legs[1].option.last_price > 0.0 else self.legs[1].option.calc_price
 
         debit = self.analysis.credit_debit == 'debit'
         if self.product == 'call':
