@@ -2,6 +2,7 @@ import abc
 from abc import ABC
 import datetime as dt
 import math
+from numpy import load
 
 import pandas as pd
 
@@ -25,9 +26,9 @@ class Strategy(ABC, Threaded):
             product: str,
             direction: str,
             strike: float,
+            *,
             width1: int,
             width2: int,
-            *,
             quantity: int,
             expiry: dt.datetime | None, # None = use next month's expiry. Otherwise use specified
             volatility: float,   # < 0.0 use latest implied volatility, = 0.0 use calculated, > 0.0 use specified
@@ -46,6 +47,9 @@ class Strategy(ABC, Threaded):
         if not (isinstance(expiry, dt.datetime) or expiry is None):
             raise TypeError('Expiry must be a datetime or None')
 
+        if not load_contracts and volatility < 0.0:
+            volatility = 0.0
+
         self.name = ''
         self.ticker = ticker.upper()
         self.product = product
@@ -56,7 +60,7 @@ class Strategy(ABC, Threaded):
         self.quantity = quantity
         self.expiry = expiry
         self.volatility = volatility
-        self.load = load_contracts
+        self.load_contracts = load_contracts
 
         self.pricing_method = p.PRICING_METHODS[0] # black-scholes
         self.chain: Chain = Chain(self.ticker)

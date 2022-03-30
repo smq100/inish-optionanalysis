@@ -17,9 +17,9 @@ class IronButterfly(Strategy):
             product: str,
             direction: str,
             strike: float,
+            *,
             width1: int,
             width2: int,
-            *,
             quantity: int = 1,
             expiry: dt.datetime | None = None,
             volatility: float = -1.0,
@@ -30,7 +30,7 @@ class IronButterfly(Strategy):
 
         # Initialize the base strategy
         product = s.PRODUCTS[2]
-        super().__init__(ticker, product, direction, strike, width1, 0, quantity=quantity, expiry=expiry, volatility=volatility, load_contracts=load_contracts)
+        super().__init__(ticker, product, direction, strike, width1=width1, width2=0, quantity=quantity, expiry=expiry, volatility=volatility, load_contracts=load_contracts)
 
         self.name = s.STRATEGIES_BROAD[4]
 

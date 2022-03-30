@@ -5,7 +5,6 @@ import collections
 import pandas as pd
 
 
-MIN_MAX_PERCENT = 0.20
 VALUETABLE_ROWS = 50
 VALUETABLE_COLS = 9
 
@@ -62,9 +61,9 @@ def compress_table(table: pd.DataFrame, rows: int, cols: int) -> pd.DataFrame:
     srows, scols = table.shape
     if cols > 0 and cols < scols:
         step = math.ceil(scols/cols) + 1
-        end = table[table.columns[-2::]]  # Save the last two cols (last date & expiry)
-        compressed = table[table.columns[:-2:step]]  # Thin the table, less the last two cols
-        compressed = pd.concat([compressed, end], axis=1)  # Add back the last two cols
+        end = table[table.columns[-1::]]  # Save the last col (expiry)
+        compressed = table[table.columns[:-1:step]]  # Thin the table, less the last two cols
+        compressed = pd.concat([compressed, end], axis=1)  # Add back the last col
 
     # Thin out rows
     if rows > 0 and rows < srows:

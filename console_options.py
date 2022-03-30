@@ -190,16 +190,20 @@ class Interface():
         try:
             if strategy.lower() == 'call':
                 self.width1 = 0
-                self.strategy = Call(self.ticker, 'call', direction, strike, 0, 0, quantity=quantity, expiry=expiry_dt, volatility=-1.0, load_contracts=load_contracts)
+                self.width2 = 0
+                self.strategy = Call(self.ticker, 'call', direction, strike, width1=0, width2=0, quantity=quantity, expiry=expiry_dt, volatility=-1.0, load_contracts=load_contracts)
             elif strategy.lower() == 'put':
                 self.width1 = 0
-                self.strategy = Put(self.ticker, 'put', direction, strike, 0, 0, quantity=quantity, expiry=expiry_dt, volatility=-1.0, load_contracts=load_contracts)
+                self.width2 = 0
+                self.strategy = Put(self.ticker, 'put', direction, strike, width1=0, width2=0, quantity=quantity, expiry=expiry_dt, volatility=-1.0, load_contracts=load_contracts)
             elif strategy.lower() == 'vert':
-                self.strategy = Vertical(self.ticker, product, direction, strike, width1, 0, quantity=quantity, expiry=expiry_dt, volatility=-1.0, load_contracts=load_contracts)
+                self.width2 = 0
+                self.strategy = Vertical(self.ticker, product, direction, strike, width1=width1, width2=0, quantity=quantity, expiry=expiry_dt, volatility=-1.0, load_contracts=load_contracts)
             elif strategy.lower() == 'ic':
-                self.strategy = IronCondor(self.ticker, 'hybrid', direction, strike, width1, width2, quantity=quantity, expiry=expiry_dt, volatility=-1.0, load_contracts=load_contracts)
+                self.strategy = IronCondor(self.ticker, 'hybrid', direction, strike, width1=width1, width2=width2, quantity=quantity, expiry=expiry_dt, volatility=-1.0, load_contracts=load_contracts)
             elif strategy.lower() == 'ib':
-                self.strategy = IronButterfly(self.ticker, 'hybrid', direction, strike, width1, 0, quantity=quantity, expiry=expiry_dt, volatility=-1.0, load_contracts=load_contracts)
+                self.width2 = 0
+                self.strategy = IronButterfly(self.ticker, 'hybrid', direction, strike, width1=width1, width2=0, quantity=quantity, expiry=expiry_dt, volatility=-1.0, load_contracts=load_contracts)
             else:
                 modified = False
                 ui.print_error('Unknown argument')
@@ -286,8 +290,6 @@ class Interface():
                     style = ui.input_integer('(1) Summary, (2) Table, (3) Chart, (4) Contour, (5) Surface, or (0) Cancel: ', 0, 5)
 
                 if style > 0:
-                    title = f'{self.strategy.name.title()}: {self.strategy.ticker} (${self.strike:.2f})'
-
                     rows, cols = analysis.shape
                     if rows > m.VALUETABLE_ROWS:
                         rows = m.VALUETABLE_ROWS
@@ -301,6 +303,9 @@ class Interface():
 
                     if rows > 0 or cols > 0:
                         analysis = m.compress_table(analysis, rows, cols)
+
+                    expiry = analysis.columns[-1]
+                    title = f'{self.strategy.name.title()}: {self.strategy.ticker} ({expiry})'
 
                     if style == 1:
                         ui.print_message(title, pre_creturn=2)

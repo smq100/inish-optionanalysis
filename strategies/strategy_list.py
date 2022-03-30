@@ -60,19 +60,19 @@ def analyze(strategies: list[strategy_type]) -> None:
                 decorator = ' *' if s.load else ''
                 if s.strategy == STRATEGIES[0]: # Call
                     strategy_msg = f'{s.ticker}: ${s.strike:.2f} {s.direction} {s.product}{decorator}'
-                    items += [Call(s.ticker, 'call', s.direction, s.strike, 0, 0, quantity=1, expiry=None, volatility=-1.0, load_contracts=s.load)]
+                    items += [Call(s.ticker, 'call', s.direction, s.strike, width1=0, width2=0, quantity=1, expiry=None, volatility=-1.0, load_contracts=s.load)]
                 elif s.strategy == STRATEGIES[1]: # Put
                     strategy_msg = f'{s.ticker}: ${s.strike:.2f} {s.direction} {s.product}{decorator}'
-                    items += [Put(s.ticker, 'put', s.direction, s.strike, 0, 0, quantity=1, expiry=None, volatility=-1.0, load_contracts=s.load)]
+                    items += [Put(s.ticker, 'put', s.direction, s.strike, width1=0, width2=0, quantity=1, expiry=None, volatility=-1.0, load_contracts=s.load)]
                 elif s.strategy == STRATEGIES[2]: # Vertical
                     strategy_msg = f'{s.ticker}: ${s.strike:.2f} {s.direction} {s.product}{decorator}'
-                    items += [Vertical(s.ticker, s.product, s.direction, s.strike, 1, 0, quantity=1, expiry=None, volatility=-1.0, load_contracts=s.load)]
+                    items += [Vertical(s.ticker, s.product, s.direction, s.strike, width1=1, width2=0, quantity=1, expiry=None, volatility=-1.0, load_contracts=s.load)]
                 elif s.strategy == STRATEGIES[3]: # Iron condor
                     strategy_msg = f'{s.ticker}: ${s.strike:.2f}{decorator}'
-                    items += [IronCondor(s.ticker, 'hybrid', s.direction, s.strike, 1, 1, quantity=1, expiry=None, volatility=-1.0, load_contracts=s.load)]
+                    items += [IronCondor(s.ticker, 'hybrid', s.direction, s.strike, width1=1, width2=1, quantity=1, expiry=None, volatility=-1.0, load_contracts=s.load)]
                 elif s.strategy == STRATEGIES[4]: # Iron butterfly
                     strategy_msg = f'{s.ticker}: ${s.strike:.2f}{decorator}'
-                    items += [IronButterfly(s.ticker, 'hybrid', s.direction, s.strike, 1, 0, quantity=1, expiry=None, volatility=-1.0, load_contracts=s.load)]
+                    items += [IronButterfly(s.ticker, 'hybrid', s.direction, s.strike, width1=1, width2=0, quantity=1, expiry=None, volatility=-1.0, load_contracts=s.load)]
 
         except Exception as e:
             strategy_state = f'{__name__}: {items[-1].ticker}: {str(sys.exc_info()[1])}'
