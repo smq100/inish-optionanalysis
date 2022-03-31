@@ -14,17 +14,18 @@ MIN_CONTRACT_SIZE = 16
 
 
 class Option:
-    def __init__(self, ticker: str, product: str, strike: str, expiry: dt.datetime, volatility: float):
+    def __init__(self, ticker: str, product: str, strike: str, expiry: dt.datetime, volatility: tuple[float, float]):
         # Specified
         self.ticker = ticker
         self.product = product
         self.strike = strike
         self.expiry = expiry
-        self.volatility_user = volatility
+        self.volatility_user = volatility[0]
+        self.volatility_delta = volatility[1]
 
         # Calculated
-        self.calc_price = 0.0
-        self.eff_price = 0.0
+        self.price_calc = 0.0
+        self.price_eff = 0.0
         self.volatility_calc = 0.0
         self.volatility_eff = 0.0
         self.time_to_maturity = 0.0
@@ -35,10 +36,10 @@ class Option:
         self.vega = 0.0
         self.rho = 0.0
 
-        # Fetched online with YFinance
+        # Fetched online
         self.contract = ''
         self.last_trade_date = ''
-        self.last_price = 0.0
+        self.price_last = 0.0
         self.bid = 0.0
         self.ask = 0.0
         self.change = 0.0
@@ -59,16 +60,17 @@ class Option:
             f'Strike: {self.strike:.2f}\n'\
             f'Rate: {self.rate:.3f}\n'\
             f'Last Trade: {self.last_trade_date}\n'\
-            f'Calc Price: {self.calc_price:.2f}\n'\
-            f'Last Price: {self.last_price:.2f}\n'\
-            f'Eff Price: {self.eff_price:.2f}\n'\
+            f'Calc Price: {self.price_calc:.2f}\n'\
+            f'Last Price: {self.price_last:.2f}\n'\
+            f'Eff Price: {self.price_eff:.2f}\n'\
             f'Bid: {self.bid:.2f}\n'\
             f'Ask: {self.ask:.2f}\n'\
             f'Change: {self.change}\n'\
             f'Change%: {self.percent_change}\n'\
             f'Volume: {self.volume}\n'\
             f'Open Interest: {self.open_interest}\n'\
-            f'Requested Volitility: {self.volatility_user:.4f}\n'\
+            f'User Volitility: {self.volatility_user:.4f}\n'\
+            f'Delta Volitility: {self.volatility_delta:.4f}\n'\
             f'Calc Volitility: {self.volatility_calc:.4f}\n'\
             f'Impl Volitility: {self.volatility_implied:.4f}\n'\
             f'Effective Volitility: {self.volatility_eff:.4f}\n'\
@@ -91,7 +93,7 @@ class Option:
                 self.contract = contract['contractSymbol']
                 self.last_trade_date = contract['lastTradeDate']
                 self.strike = contract['strike']
-                self.last_price = contract['lastPrice']
+                self.price_last = contract['lastPrice']
                 self.bid = contract['bid']
                 self.ask = contract['ask']
                 self.change = contract['change']
@@ -105,8 +107,8 @@ class Option:
 
                 _logger.info(f'{__name__}: Loaded contract {contract_name}')
 
-                if self.last_price > 0.0:
-                    diff = self.calc_price / self.last_price
+                if self.price_last > 0.0:
+                    diff = self.price_calc / self.price_last
                     if diff > 1.25 or diff < 0.75:
                         _logger.info(f'{__name__}: The calculated price is significantly different than the last traded price')
 

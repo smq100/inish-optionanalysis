@@ -31,7 +31,7 @@ class Strategy(ABC, Threaded):
             width2: int,
             quantity: int,
             expiry: dt.datetime | None, # None = use next month's expiry. Otherwise use specified
-            volatility: float,   # < 0.0 use latest implied volatility, = 0.0 use calculated, > 0.0 use specified
+            volatility: tuple[float, float], # < 0.0 use latest implied volatility, = 0.0 use calculated, > 0.0 use specified
             load_contracts: bool):
 
         if not store.is_ticker(ticker):
@@ -47,8 +47,8 @@ class Strategy(ABC, Threaded):
         if not (isinstance(expiry, dt.datetime) or expiry is None):
             raise TypeError('Expiry must be a datetime or None')
 
-        if not load_contracts and volatility < 0.0:
-            volatility = 0.0
+        if not load_contracts and volatility[0] < 0.0:
+            volatility = (0.0, volatility[1])
 
         self.name = ''
         self.ticker = ticker.upper()
@@ -98,7 +98,7 @@ class Strategy(ABC, Threaded):
             self.legs[0].calculate()
 
             self.analysis.credit_debit = 'debit' if self.direction == 'long' else 'credit'
-            self.analysis.total = self.legs[0].option.eff_price * self.quantity
+            self.analysis.total = self.legs[0].option.price_eff * self.quantity
 
             self.analysis.max_gain, self.analysis.max_loss, self.analysis.upside, self.analysis.sentiment = self.calculate_gain_loss()
             self.analysis.table = self.generate_profit_table()
@@ -106,7 +106,7 @@ class Strategy(ABC, Threaded):
             self.analysis.pop = self.calculate_pop()
             self.analysis.summarize()
 
-            _logger.info(f'{__name__}: {self.ticker}: p={self.legs[0].option.eff_price:.2f}, g={self.analysis.max_gain:.2f}, \
+            _logger.info(f'{__name__}: {self.ticker}: p={self.legs[0].option.price_eff:.2f}, g={self.analysis.max_gain:.2f}, \
                 l={self.analysis.max_loss:.2f} b={self.analysis.breakeven[0] :.2f}')
         else:
             _logger.warning(f'{__name__}: Unable to analyze strategy for {self.ticker}: {self.error}')
@@ -120,7 +120,7 @@ class Strategy(ABC, Threaded):
         for leg in self.legs:
             leg.option.expiry = date
 
-    def add_leg(self, quantity: int, product: str, direction: str, strike: float, expiry: dt.datetime, volatility: float) -> int:
+    def add_leg(self, quantity: int, product: str, direction: str, strike: float, expiry: dt.datetime, volatility: tuple[float, float]) -> int:
         leg = Leg(self.ticker, quantity, product, direction, strike, expiry, volatility)
         self.legs += [leg]
 

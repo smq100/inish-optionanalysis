@@ -16,7 +16,6 @@ class Analysis:
     loss: str = ''
     upside: float = 0.0
     pop: float = 0.0
-    volatility: str = 'calculated'
     breakeven: list[float] = field(default_factory=list)
 
     def __str__(self):
@@ -29,7 +28,6 @@ class Analysis:
                 f'Max Loss:   {self.loss}\n'\
                 f'Return:     {self.upside * 100.0:.2f}%\n'\
                 f'POP:        {self.pop * 100.0:.2f}%\n'\
-                f'Volatility: {self.volatility}\n'
 
             for breakeven in self.breakeven:
                 output += f'Breakeven:  ${breakeven:.2f} at expiry\n'
@@ -51,7 +49,6 @@ class Analysis:
                 'max_loss': self.max_loss*100 if self.max_loss >= 0.0 else 'unlimited',
                 'return': self.upside if self.upside >= 0.0 else 'unlimited',
                 'pop': self.pop,
-                'volatility': self.volatility,
             }
 
             if len(self.breakeven) > 1:

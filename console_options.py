@@ -40,7 +40,7 @@ class Interface():
         width2: int = 0,
         quantity: int = 1,
         expiry: str = '',
-        volatility: float = -1.0,
+        volatility: str = '-1.0',
         load_contracts: bool = False,
         analyze: bool = False,
         exit: bool = False):
@@ -54,7 +54,6 @@ class Interface():
         self.width2 = width2
         self.quantity = quantity
         self.expiry = expiry
-        self.volatility = volatility
         self.load_contracts = load_contracts
 
         self.dirty_analyze = True
@@ -70,7 +69,28 @@ class Interface():
         else:
             self.strike = strike if strike > 0.0 else float(math.ceil(store.get_last_price(self.ticker)))
 
-        if not store.is_live_connection():
+        # decode volatility
+        proceed = True
+        percent = False
+        if '%' in volatility:
+            volatility = volatility.replace('%', '')
+            volatility = volatility.replace(' ', '')
+            percent = True
+
+        try:
+            if not percent:
+                self.volatility = (float(volatility), 0.0)
+            elif self.load_contracts:
+                self.volatility = (-1.0, float(volatility) / 100.0)
+            else:
+                self.volatility = (0.0, float(volatility) / 100.0)
+        except ValueError:
+            self.volatility = (0.0, 0.0)
+            proceed = False
+
+        if not proceed:
+            ui.print_error('Invalid volatility specified')
+        elif not store.is_live_connection():
             ui.print_error('Internet connection required')
         elif not store.is_ticker(ticker):
             ui.print_error('Invalid ticker specified')
@@ -122,7 +142,7 @@ class Interface():
                 '0': 'Exit'
             }
 
-            loaded = '' if self.strategy.legs[0].option.last_price > 0 else '*'
+            loaded = '' if self.strategy.legs[0].option.price_last > 0 else '*'
             expire = f'{self.strategy.legs[0].option.expiry:%Y-%m-%d}'
 
             if self.strategy.name == s.STRATEGIES_BROAD[2]: # Vertical
@@ -175,7 +195,7 @@ class Interface():
             width2: int,
             quantity: int,
             expiry: str,
-            volatility: float,
+            volatility: tuple[float, float],
             load_contracts: bool = False,
             analyze: bool = False) -> bool:
 
@@ -228,7 +248,7 @@ class Interface():
                 modified = False
                 ui.print_error('Unknown argument')
         except Exception as e:
-            ui.print_error(f'{__name__}: {str(sys.exc_info()[1])}')
+            ui.print_error(f'{str(sys.exc_info()[1])}')
             modified = False
 
         if modified:
@@ -488,7 +508,7 @@ class Interface():
                     '0': 'Done'
                 }
 
-                loaded = '' if self.strategy.legs[0].option.last_price > 0 else '*'
+                loaded = '' if self.strategy.legs[0].option.price_last > 0 else '*'
 
                 if self.strategy.name == 'vertical':
                     menu_items['4'] += f's '\
@@ -768,7 +788,7 @@ def main():
     command = vars(parser.parse_args())
     Interface(ticker=command['ticker'], strategy=command['strategy'], product=command['product'], direction=command['direction'],
         width1=int(command['width1']), width2=int(command['width2']), quantity=int(command['quantity']), load_contracts=command['default'],
-        expiry=command['expiry'], analyze=command['analyze'], exit=command['exit'], strike=float(command['strike']), volatility=float(command['volatility']))
+        expiry=command['expiry'], analyze=command['analyze'], exit=command['exit'], strike=float(command['strike']), volatility=str(command['volatility']))
 
 
 if __name__ == '__main__':

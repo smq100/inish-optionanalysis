@@ -22,7 +22,7 @@ class IronButterfly(Strategy):
             width2: int,
             quantity: int = 1,
             expiry: dt.datetime | None = None,
-            volatility: float = -1.0,
+            volatility: tuple[float, float] = (-1.0, 0.0),
             load_contracts: bool = False):
 
         if width1 < 1:
@@ -42,15 +42,15 @@ class IronButterfly(Strategy):
         # Width1 is an indexe into the chain when loading contracts
         # Strike price will be overriden when loading contracts
         if direction == 'short':
-            self.add_leg(self.quantity, 'call', 'long', self.strike + self.width1, expiry, volatility)
-            self.add_leg(self.quantity, 'call', 'short', self.strike, expiry, volatility)
-            self.add_leg(self.quantity, 'put', 'short', self.strike, expiry, volatility)
-            self.add_leg(self.quantity, 'put', 'long', self.strike - self.width1, expiry, volatility)
+            self.add_leg(self.quantity, 'call', 'long', self.strike + self.width1, self.expiry, self.volatility)
+            self.add_leg(self.quantity, 'call', 'short', self.strike, self.expiry, self.volatility)
+            self.add_leg(self.quantity, 'put', 'short', self.strike, self.expiry, self.volatility)
+            self.add_leg(self.quantity, 'put', 'long', self.strike - self.width1, self.expiry, self.volatility)
         else:
-            self.add_leg(self.quantity, 'call', 'short', self.strike + self.width1, expiry, volatility)
-            self.add_leg(self.quantity, 'call', 'long', self.strike, expiry, volatility)
-            self.add_leg(self.quantity, 'put', 'long', self.strike, expiry, volatility)
-            self.add_leg(self.quantity, 'put', 'short', self.strike - self.width1, expiry, volatility)
+            self.add_leg(self.quantity, 'call', 'short', self.strike + self.width1, self.expiry, self.volatility)
+            self.add_leg(self.quantity, 'call', 'long', self.strike, expiry, self.volatility)
+            self.add_leg(self.quantity, 'put', 'long', self.strike, expiry, self.volatility)
+            self.add_leg(self.quantity, 'put', 'short', self.strike - self.width1, expiry, self.volatility)
 
         if load_contracts:
             contracts = self.fetch_contracts(self.expiry, strike=self.strike)
@@ -64,9 +64,7 @@ class IronButterfly(Strategy):
                 elif not self.legs[3].option.load_contract(contracts[3]):
                     self.error = f'Unable to load leg 3 contract for {self.legs[3].company.ticker}'
 
-                if not self.error:
-                    self.analysis.volatility = 'implied'
-                else:
+                if self.error:
                     _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}: {self.error}')
             else:
                 _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}. Using calculated values')
@@ -158,8 +156,8 @@ class IronButterfly(Strategy):
             else:
                 self.analysis.credit_debit = 'debit'
 
-            total_c = abs(self.legs[0].option.eff_price - self.legs[1].option.eff_price) * self.quantity
-            total_p = abs(self.legs[3].option.eff_price - self.legs[2].option.eff_price) * self.quantity
+            total_c = abs(self.legs[0].option.price_eff - self.legs[1].option.price_eff) * self.quantity
+            total_p = abs(self.legs[3].option.price_eff - self.legs[2].option.price_eff) * self.quantity
             self.analysis.total = total_c + total_p
 
             self.analysis.max_gain, self.analysis.max_loss, self.analysis.upside, self.analysis.sentiment = self.calculate_gain_loss()

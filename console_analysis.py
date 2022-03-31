@@ -324,7 +324,8 @@ class Interface:
             else:
                 strike = float(math.ceil(store.get_last_price(ticker)))
 
-            strategies += [sl.strategy_type(ticker, strategy, product, direction, strike, True)]
+            strategies += [sl.strategy_type(ticker=ticker, strategy=strategy, product=product,
+                direction=direction, strike=strike, width1=0, width2=0, expiry=None, volatility=-1, load_contracts=True)]
 
         if len(strategies) > 0:
             sl.reset()

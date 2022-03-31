@@ -23,7 +23,7 @@ class Vertical(Strategy):
             width2: int,
             quantity: int = 1,
             expiry: dt.datetime | None = None,
-            volatility: float = -1.0,
+            volatility: tuple[float, float] = (-1.0, 0.0),
             load_contracts: bool = False):
 
         if width1 < 1:
@@ -40,18 +40,18 @@ class Vertical(Strategy):
         # Strike price will be overriden when loading contracts
         if product == 'call':
             if direction == 'long':
-                self.add_leg(self.quantity, product, 'long', self.strike, expiry, volatility)
-                self.add_leg(self.quantity, product, 'short', self.strike + self.width1, self.expiry, volatility)
+                self.add_leg(self.quantity, self.product, 'long', self.strike, self.expiry, self.volatility)
+                self.add_leg(self.quantity, self.product, 'short', self.strike + self.width1, self.expiry, self.volatility)
             else:
-                self.add_leg(self.quantity, product, 'long', self.strike + self.width1, self.expiry, volatility)
-                self.add_leg(self.quantity, product, 'short', self.strike, expiry, volatility)
+                self.add_leg(self.quantity, self.product, 'long', self.strike + self.width1, self.expiry, self.volatility)
+                self.add_leg(self.quantity, self.product, 'short', self.strike, self.expiry, self.volatility)
         else:
             if direction == 'long':
-                self.add_leg(self.quantity, product, 'long', self.strike + self.width1, self.expiry, volatility)
-                self.add_leg(self.quantity, product, 'short', self.strike, expiry, volatility)
+                self.add_leg(self.quantity, self.product, 'long', self.strike + self.width1, self.expiry, self.volatility)
+                self.add_leg(self.quantity, self.product, 'short', self.strike, self.expiry, self.volatility)
             else:
-                self.add_leg(self.quantity, product, 'long', self.strike, expiry, volatility)
-                self.add_leg(self.quantity, product, 'short', self.strike + self.width1, self.expiry, volatility)
+                self.add_leg(self.quantity, self.product, 'long', self.strike, expiry, self.volatility)
+                self.add_leg(self.quantity, self.product, 'short', self.strike + self.width1, self.expiry, self.volatility)
 
         if load_contracts:
             contracts = self.fetch_contracts(self.expiry, strike=self.strike)
@@ -61,9 +61,7 @@ class Vertical(Strategy):
                 elif not self.legs[1].option.load_contract(contracts[1]):
                     self.error = f'Unable to load leg 1 {product} contract for {self.legs[1].company.ticker}'
 
-                if not self.error:
-                    self.analysis.volatility = 'implied'
-                else:
+                if self.error:
                     _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}: {self.error}')
             else:
                 # Not a fatal error
@@ -149,7 +147,7 @@ class Vertical(Strategy):
             # Important: Assumes the long leg is the index-0 leg
 
             self.analysis.credit_debit = 'debit' if self.direction == 'long' else 'credit'
-            self.analysis.total = abs(self.legs[0].option.eff_price - self.legs[1].option.eff_price) * self.quantity
+            self.analysis.total = abs(self.legs[0].option.price_eff - self.legs[1].option.price_eff) * self.quantity
 
             self.analysis.max_gain, self.analysis.max_loss, self.analysis.upside, self.analysis.sentiment = self.calculate_gain_loss()
             self.analysis.table = self.generate_profit_table()

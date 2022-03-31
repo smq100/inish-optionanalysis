@@ -22,7 +22,7 @@ class Put(Strategy):
             width2: int,
             quantity: int = 1,
             expiry: dt.datetime | None = None,
-            volatility: float = -1.0,
+            volatility: tuple[float, float] = (-1.0, 0.0),
             load_contracts: bool = False):
 
         product = s.PRODUCTS[1]
@@ -32,14 +32,12 @@ class Put(Strategy):
 
         self.name = s.STRATEGIES_BROAD[1]
 
-        self.add_leg(self.quantity, product, direction, self.strike, self.expiry, volatility)
+        self.add_leg(self.quantity, self.product, self.direction, self.strike, self.expiry, self.volatility)
 
         if load_contracts:
-            contract = self.fetch_contracts(strike=self.strike)
+            contract = self.fetch_contracts(self.expiry, strike=self.strike)
             if contract:
-                if self.legs[0].option.load_contract(contract[0]):
-                    self.analysis.volatility = 'implied'
-                else:
+                if not self.legs[0].option.load_contract(contract[0]):
                     self.error = f'Unable to load put contract for {self.legs[0].company.ticker}'
                     _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}: {self.error}')
             else:
@@ -47,12 +45,12 @@ class Put(Strategy):
 
     def calculate_gain_loss(self) -> tuple[float, float, float, str]:
         if self.legs[0].direction == 'long':
-            max_gain = (self.legs[0].option.strike - self.legs[0].option.eff_price) * self.quantity
-            max_loss = self.legs[0].option.eff_price * self.quantity
+            max_gain = (self.legs[0].option.strike - self.legs[0].option.price_eff) * self.quantity
+            max_loss = self.legs[0].option.price_eff * self.quantity
             sentiment = 'bearish'
         else:
-            max_gain = self.legs[0].option.eff_price * self.quantity
-            max_loss = (self.legs[0].option.strike - self.legs[0].option.eff_price) * self.quantity
+            max_gain = self.legs[0].option.price_eff * self.quantity
+            max_loss = (self.legs[0].option.strike - self.legs[0].option.price_eff) * self.quantity
             sentiment = 'bullish'
 
         upside = max_gain / max_loss if max_loss > 0.0 else 0.0
@@ -62,11 +60,11 @@ class Put(Strategy):
         profit = pd.DataFrame()
 
         if self.legs[0].direction == 'long':
-            profit = self.legs[0].value_table - self.legs[0].option.eff_price
-            profit = profit.applymap(lambda x: x if x > -self.legs[0].option.eff_price else -self.legs[0].option.eff_price)
+            profit = self.legs[0].value_table - self.legs[0].option.price_eff
+            profit = profit.applymap(lambda x: x if x > -self.legs[0].option.price_eff else -self.legs[0].option.price_eff)
         else:
             profit = self.legs[0].value_table
-            profit = profit.applymap(lambda x: (self.legs[0].option.eff_price - x) if x < self.legs[0].option.eff_price else -(x - self.legs[0].option.eff_price))
+            profit = profit.applymap(lambda x: (self.legs[0].option.price_eff - x) if x < self.legs[0].option.price_eff else -(x - self.legs[0].option.price_eff))
 
         return profit
 
