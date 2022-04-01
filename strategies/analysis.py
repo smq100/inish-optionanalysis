@@ -12,21 +12,22 @@ class Analysis:
     total: float = 0.0
     max_gain: float = 0.0
     max_loss: float = 0.0
-    gain: str = ''
-    loss: str = ''
     upside: float = 0.0
     pop: float = 0.0
     breakeven: list[float] = field(default_factory=list)
 
     def __str__(self):
         if not self.table.empty:
+            gain = 'Unlimited' if self.max_gain < 0.0 else f'${self.max_gain*100:.2f}'
+            loss = 'Unlimited' if self.max_loss < 0.0 else f'${self.max_loss*100:.2f}'
+            return_text = f'{self.upside * 100.0:.2f}%' if self.upside >= 0.0 else 'Unlimited'
             output = \
                 f'Type:       {self.credit_debit.title()}\n'\
                 f'Sentiment:  {self.sentiment.title()}\n'\
                 f'Total:      ${abs(self.total*100):.2f} {self.credit_debit}\n'\
-                f'Max Gain:   {self.gain}\n'\
-                f'Max Loss:   {self.loss}\n'\
-                f'Return:     {self.upside * 100.0:.2f}%\n'\
+                f'Max Gain:   {gain}\n'\
+                f'Max Loss:   {loss}\n'\
+                f'Return:     {return_text}\n'\
                 f'POP:        {self.pop * 100.0:.2f}%\n'\
 
             for breakeven in self.breakeven:
@@ -38,9 +39,6 @@ class Analysis:
 
     def summarize(self) -> pd.DataFrame:
         if not self.table.empty:
-            self.gain = 'Unlimited' if self.max_gain < 0.0 else f'${self.max_gain*100:.2f}'
-            self.loss = 'Unlimited' if self.max_loss < 0.0 else f'${self.max_loss*100:.2f}'
-
             data = {
                 'credit_debit': self.credit_debit,
                 'sentiment': self.sentiment,

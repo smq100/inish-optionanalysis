@@ -14,7 +14,7 @@ from options.chain import Chain
 import pricing as p
 from data import store
 from utils import math as m
-from utils import logger
+from utils import ui, logger
 
 
 _logger = logger.get_logger()
@@ -152,7 +152,7 @@ class Strategy(ABC, Threaded):
             raise ValueError('No option expiry dates')
 
         # Get the closest date to expiry
-        expiry_list = [dt.datetime.strptime(item, '%Y-%m-%d') for item in expiry_tuple]
+        expiry_list = [dt.datetime.strptime(item, ui.DATE_FORMAT) for item in expiry_tuple]
         self.expiry = min(expiry_list, key=lambda d: abs(d - expiry))
         self.chain.expire = self.expiry
 

@@ -6,7 +6,7 @@ from base import Threaded
 import strategies as s
 from strategies.strategy import Strategy
 from utils import math as m
-from utils import logger
+from utils import ui, logger
 
 
 _logger = logger.get_logger()
@@ -50,7 +50,7 @@ class Vertical(Strategy):
                 self.add_leg(self.quantity, self.product, 'long', self.strike + self.width1, self.expiry, self.volatility)
                 self.add_leg(self.quantity, self.product, 'short', self.strike, self.expiry, self.volatility)
             else:
-                self.add_leg(self.quantity, self.product, 'long', self.strike, expiry, self.volatility)
+                self.add_leg(self.quantity, self.product, 'long', self.strike, self.expiry, self.volatility)
                 self.add_leg(self.quantity, self.product, 'short', self.strike + self.width1, self.expiry, self.volatility)
 
         if load_contracts:
@@ -78,7 +78,7 @@ class Vertical(Strategy):
             raise ValueError('No option expiry dates')
 
         # Get the closest date to expiry
-        expiry_list = [dt.datetime.strptime(item, '%Y-%m-%d') for item in expiry_tuple]
+        expiry_list = [dt.datetime.strptime(item, ui.DATE_FORMAT) for item in expiry_tuple]
         self.expiry = min(expiry_list, key=lambda d: abs(d - expiry))
         self.chain.expire = self.expiry
 

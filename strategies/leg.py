@@ -49,13 +49,8 @@ class Leg:
             else:
                 d3 = 'iv'
 
-            if self.option.volatility_delta > 0.0:
-                d3 += '*'
-            elif self.option.volatility_delta < 0.0:
-                d3 += '*'
-
             output = f'{self.quantity:2d} '\
-                f'{self.company.ticker}@${self.company.price:.2f} '\
+                f'{self.company.ticker} (${self.company.price:.2f}) '\
                 f'{self.direction} '\
                 f'{self.option.product} '\
                 f'${self.option.strike:.2f} '\
@@ -108,8 +103,9 @@ class Leg:
             # Calculate volatility (self.pricer must be valid)
             self.calculate_volatility()
 
-            # Calculate prices using the proper volatility
-            self.pricer.calculate_price(volatility=self.option.volatility_eff)
+            # Calculate initial price using implied volatility if known. Any delta will be used for subsequent calculations
+            volatility = self.option.volatility_implied if self.option.volatility_implied > 0.0 else self.option.volatility_calc
+            self.pricer.calculate_price(volatility=volatility)
 
             if self.option.product == 'call':
                 self.option.price_calc = price = self.pricer.price_call

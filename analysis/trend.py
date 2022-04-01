@@ -234,7 +234,7 @@ class SupportResistance(Threaded):
         for line in lines:
             for point in line.points:
                 date = self.history['date'].iloc[point['index']]
-                point['date'] = [date.strftime('%Y-%m-%d')]
+                point['date'] = [date.strftime(ui.DATE_FORMAT)]
 
         # Calculate end point extension (y = mx + b)
         for line in lines:
@@ -418,7 +418,7 @@ class SupportResistance(Threaded):
 
         # Highs & Lows
         length = len(self.history)
-        dates = [self.history.iloc[index]['date'].strftime('%Y-%m-%d') for index in range(length)]
+        dates = [self.history.iloc[index]['date'].strftime(ui.DATE_FORMAT) for index in range(length)]
 
         plt.xticks(range(0, length+1, int(length/12)))
         plt.xticks(rotation=45)
@@ -435,7 +435,7 @@ class SupportResistance(Threaded):
             for point in line.points:
                 index = point['index']
                 date = self.history.iloc[index]['date']
-                dates += [date.strftime('%Y-%m-%d')]
+                dates += [date.strftime(ui.DATE_FORMAT)]
                 values += [self.history.iloc[index]['high']]
         ax1.plot(dates, values, '.r')
 
@@ -445,7 +445,7 @@ class SupportResistance(Threaded):
             for point in line.points:
                 index = point['index']
                 date = self.history.iloc[index]['date']
-                dates += [date.strftime('%Y-%m-%d')]
+                dates += [date.strftime(ui.DATE_FORMAT)]
                 values += [self.history.iloc[index]['low']]
         ax1.plot(dates, values, '.g')
 
@@ -455,11 +455,11 @@ class SupportResistance(Threaded):
         for line in resistance.itertuples():
             index = line.points[0]['index']
             date = self.history.iloc[index]['date']
-            dates = [date.strftime('%Y-%m-%d')]
+            dates = [date.strftime(ui.DATE_FORMAT)]
             values = [self.history.iloc[index]['high']]
             index = line.points[-1]['index']
             date = self.history.iloc[index]['date']
-            dates += [date.strftime('%Y-%m-%d')]
+            dates += [date.strftime(ui.DATE_FORMAT)]
             values += [self.history.iloc[index]['high']]
 
             ax1.plot(dates, values, '-r', linewidth=line_width)
@@ -469,11 +469,11 @@ class SupportResistance(Threaded):
         for line in support.itertuples():
             index = line.points[0]['index']
             date = self.history.iloc[index]['date']
-            dates = [date.strftime('%Y-%m-%d')]
+            dates = [date.strftime(ui.DATE_FORMAT)]
             values = [self.history.iloc[index]['low']]
             index = line.points[-1]['index']
             date = self.history.iloc[index]['date']
-            dates += [date.strftime('%Y-%m-%d')]
+            dates += [date.strftime(ui.DATE_FORMAT)]
             values += [self.history.iloc[index]['low']]
 
             ax1.plot(dates, values, '-g', linewidth=line_width)
@@ -484,11 +484,11 @@ class SupportResistance(Threaded):
         for line in resistance.itertuples():
             index = line.points[-1]['index']
             date = self.history.iloc[index]['date']
-            dates = [date.strftime('%Y-%m-%d')]
+            dates = [date.strftime(ui.DATE_FORMAT)]
             values = [self.history.iloc[index]['high']]
             index = self.points-1
             date = self.history.iloc[index]['date']
-            dates += [date.strftime('%Y-%m-%d')]
+            dates += [date.strftime(ui.DATE_FORMAT)]
             values += [line.end_point]
 
             ax1.plot(dates, values, ':r', linewidth=line_width)
@@ -498,11 +498,11 @@ class SupportResistance(Threaded):
         for line in support.itertuples():
             index = line.points[-1]['index']
             date = self.history.iloc[index]['date']
-            dates = [date.strftime('%Y-%m-%d')]
+            dates = [date.strftime(ui.DATE_FORMAT)]
             values = [self.history.iloc[index]['low']]
             index = self.points-1
             date = self.history.iloc[index]['date']
-            dates += [date.strftime('%Y-%m-%d')]
+            dates += [date.strftime(ui.DATE_FORMAT)]
             values += [line.end_point]
 
             ax1.plot(dates, values, ':g', linewidth=line_width)
@@ -515,7 +515,7 @@ class SupportResistance(Threaded):
             ep = m.mround(line.end_point, _rounding)
             if ep not in values:
                 date = self.history['date'].iloc[-1]
-                dates += [date.strftime('%Y-%m-%d')]
+                dates += [date.strftime(ui.DATE_FORMAT)]
                 values += [ep]
                 text += [{'text': f'{line.end_point:.2f}:{index+1}', 'value': line.end_point, 'color': 'red'}]
         ax1.plot(dates, values, '.r')
@@ -526,7 +526,7 @@ class SupportResistance(Threaded):
             ep = m.mround(line.end_point, _rounding)
             if ep not in values:
                 date = self.history['date'].iloc[-1]
-                dates += [date.strftime('%Y-%m-%d')]
+                dates += [date.strftime(ui.DATE_FORMAT)]
                 values += [ep]
                 text += [{'text': f'{line.end_point:.2f}:{index+1}', 'value': line.end_point, 'color': 'green'}]
         ax1.plot(dates, values, '.g')
@@ -563,22 +563,22 @@ class SupportResistance(Threaded):
         if trendlines:
             index = 0
             date = self.history.iloc[index]['date']
-            dates = [date.strftime('%Y-%m-%d')]
+            dates = [date.strftime(ui.DATE_FORMAT)]
             values = [self.stats.res_intercept]
             index = self.points-1
             date = self.history.iloc[index]['date']
-            dates += [date.strftime('%Y-%m-%d')]
+            dates += [date.strftime(ui.DATE_FORMAT)]
             values += [self.stats.res_slope * self.points + self.stats.res_intercept]
 
             ax1.plot(dates, values, '--', color='darkgreen', label='Avg Resistance', linewidth=1.7)
 
             index = 0
             date = self.history.iloc[index]['date']
-            dates = [date.strftime('%Y-%m-%d')]
+            dates = [date.strftime(ui.DATE_FORMAT)]
             values = [self.stats.sup_intercept]
             index = self.points-1
             date = self.history.iloc[index]['date']
-            dates += [date.strftime('%Y-%m-%d')]
+            dates += [date.strftime(ui.DATE_FORMAT)]
             values += [self.stats.sup_slope * self.points + self.stats.sup_intercept]
 
             ax1.plot(dates, values, '--', color='darkred', label='Avg Support', linewidth=1.7)

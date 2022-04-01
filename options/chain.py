@@ -4,7 +4,7 @@ import pandas as pd
 
 from data import store as store
 from data import store as store
-from utils import logger
+from utils import ui, logger
 
 _logger = logger.get_logger()
 
@@ -27,7 +27,7 @@ class Chain:
 
     def get_chain(self, product: str) -> pd.DataFrame:
         self.product = product
-        value = store.get_option_chain(self.ticker, uselast=True)(date=self.expire.strftime('%Y-%m-%d'))
+        value = store.get_option_chain(self.ticker, uselast=True)(date=self.expire.strftime(ui.DATE_FORMAT))
 
         if product == 'call':
             self.chain = value.calls

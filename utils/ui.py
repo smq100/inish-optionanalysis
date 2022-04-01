@@ -7,6 +7,9 @@ from utils import math as m
 from data import store as store
 
 
+DATE_FORMAT = '%Y-%m-%d'
+
+
 def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int) -> int:
     print(f'\n{header}')
     print('-' * 50)

@@ -267,7 +267,7 @@ class Screener(Threaded):
         return cached
 
     def _build_cache_filename(self) -> str:
-        date_time = dt.now().strftime('%Y-%m-%d')
+        date_time = dt.now().strftime(ui.DATE_FORMAT)
         head_tail = os.path.split(self.screen)
         head, sep, tail = head_tail[1].partition('.')
         filename = f'{CACHE_BASEPATH}/{date_time}_{self.table}_{head.upper()}.{CACHE_SUFFIX}'

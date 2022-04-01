@@ -325,7 +325,7 @@ class Interface:
                 strike = float(math.ceil(store.get_last_price(ticker)))
 
             strategies += [sl.strategy_type(ticker=ticker, strategy=strategy, product=product,
-                direction=direction, strike=strike, width1=0, width2=0, expiry=None, volatility=-1, load_contracts=True)]
+                direction=direction, strike=strike, width1=0, width2=0, expiry=None, volatility=(-1.0, 0.0), load_contracts=True)]
 
         if len(strategies) > 0:
             sl.reset()
@@ -553,7 +553,7 @@ class Interface:
                     else:
                         ui.print_message(f'Cache {screen} deleted')
                 elif selection == 2:
-                    date_time = dt.now().strftime('%Y-%m-%d')
+                    date_time = dt.now().strftime(ui.DATE_FORMAT)
                     new_screen = f'{date_time}{screen[10:]}'
                     new_file = f'{CACHE_BASEPATH}{new_screen}.{CACHE_SUFFIX}'
                     try:
@@ -570,7 +570,7 @@ class Interface:
         files = _get_cache_files()
         if files:
             old_paths = []
-            date_time = dt.now().strftime('%Y-%m-%d')
+            date_time = dt.now().strftime(ui.DATE_FORMAT)
             for path in files:
                 file_time = f'{path[:10]}'
                 if file_time != date_time:

@@ -5,7 +5,7 @@ import collections
 import pandas as pd
 
 from data import store as store
-from utils import logger
+from utils import ui, logger
 
 _logger = logger.get_logger()
 contract_type = collections.namedtuple('contract', ['ticker', 'expiry', 'product', 'strike'])
@@ -123,7 +123,7 @@ class Option:
 
         self.ticker = parsed.ticker
         self.product = parsed.product
-        self.expiry = dt.datetime.strptime(parsed.expiry, '%Y-%m-%d')
+        self.expiry = dt.datetime.strptime(parsed.expiry, ui.DATE_FORMAT)
         self.strike = parsed.strike
 
         try:

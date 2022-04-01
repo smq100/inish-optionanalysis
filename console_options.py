@@ -53,7 +53,6 @@ class Interface():
         self.width1 = width1
         self.width2 = width2
         self.quantity = quantity
-        self.expiry = expiry
         self.load_contracts = load_contracts
 
         self.dirty_analyze = True
@@ -69,8 +68,8 @@ class Interface():
         else:
             self.strike = strike if strike > 0.0 else float(math.ceil(store.get_last_price(self.ticker)))
 
-        # decode volatility
-        proceed = True
+        # Decode volatility
+        proceed1 = True
         percent = False
         if '%' in volatility:
             volatility = volatility.replace('%', '')
@@ -85,11 +84,22 @@ class Interface():
             else:
                 self.volatility = (0.0, float(volatility) / 100.0)
         except ValueError:
-            self.volatility = (0.0, 0.0)
-            proceed = False
+            proceed1 = False
+        else:
+            self.expiry = expiry
 
-        if not proceed:
+        # Check if expiry date valid
+        proceed2 = True
+        if expiry:
+            try:
+                dt.datetime.strptime(expiry, ui.DATE_FORMAT)
+            except ValueError:
+                proceed2 = False
+
+        if not proceed1:
             ui.print_error('Invalid volatility specified')
+        elif not proceed2:
+            ui.print_error('Invalid expiry date specified')
         elif not store.is_live_connection():
             ui.print_error('Internet connection required')
         elif not store.is_ticker(ticker):
@@ -220,7 +230,7 @@ class Interface():
         self.quantity = quantity
         self.width1 = width1
 
-        expiry_dt = dt.datetime.strptime(expiry, '%Y-%m-%d') if expiry else None
+        expiry_dt = dt.datetime.strptime(expiry, ui.DATE_FORMAT) if expiry else None
 
         try:
             if strategy.lower() == 'call':
@@ -287,23 +297,16 @@ class Interface():
             else:
                 leg = 0
 
-            value = self.strategy.legs[leg].value_table
+            value = self.strategy.legs[leg].value_table * 100.0
             if value is not None:
                 if style == 0:
                     style = ui.input_integer('(1) Table, (2) Chart, (3) Contour, (4) Surface, or (0) Cancel: ', 0, 4)
                 if style > 0:
                     title = f'{self.strategy.legs[leg]}'
+
                     rows, cols = value.shape
-
-                    if rows > m.VALUETABLE_ROWS:
-                        rows = m.VALUETABLE_ROWS
-                    else:
-                        rows = -1
-
-                    if cols > m.VALUETABLE_COLS:
-                        cols = m.VALUETABLE_COLS
-                    else:
-                        cols = -1
+                    rows = m.VALUETABLE_ROWS if rows > m.VALUETABLE_ROWS else -1
+                    cols = m.VALUETABLE_COLS if cols > m.VALUETABLE_COLS else -1
 
                     if rows > 0 or cols > 0:
                         value = m.compress_table(value, rows, cols)
@@ -324,22 +327,15 @@ class Interface():
 
     def show_analysis(self, style: int = 0) -> None:
         if not self.dirty_analyze:
-            analysis = self.strategy.analysis.table
+            analysis = self.strategy.analysis.table * 100.0
             if analysis is not None:
                 if style == 0:
                     style = ui.input_integer('(1) Summary, (2) Table, (3) Chart, (4) Contour, (5) Surface, or (0) Cancel: ', 0, 5)
 
                 if style > 0:
                     rows, cols = analysis.shape
-                    if rows > m.VALUETABLE_ROWS:
-                        rows = m.VALUETABLE_ROWS
-                    else:
-                        rows = -1
-
-                    if cols > m.VALUETABLE_COLS:
-                        cols = m.VALUETABLE_COLS
-                    else:
-                        cols = -1
+                    rows = m.VALUETABLE_ROWS if rows > m.VALUETABLE_ROWS else -1
+                    cols = m.VALUETABLE_COLS if cols > m.VALUETABLE_COLS else -1
 
                     if rows > 0 or cols > 0:
                         analysis = m.compress_table(analysis, rows, cols)
@@ -559,7 +555,7 @@ class Interface():
         select = ui.menu(menu_items, 'Select expiration date, or 0 to cancel: ', 0, i+1)
         if select > 0:
             self.strategy.chain.expire = dates[select-1]
-            expiry = dt.datetime.strptime(self.strategy.chain.expire, '%Y-%m-%d')
+            expiry = dt.datetime.strptime(self.strategy.chain.expire, ui.DATE_FORMAT)
 
             self.dirty_analyze = True
 

@@ -16,7 +16,7 @@ from base import Threaded
 import data as d
 from data import store as store
 from data import models as models
-from utils import logger
+from utils import ui, logger
 
 _logger = logger.get_logger()
 
@@ -838,7 +838,7 @@ class Manager(Threaded):
 
 def _write_tickers_log(tickers: list[str], filename: str = '') -> str:
     if tickers:
-        date_time = dt.now().strftime('%Y-%m-%d')
+        date_time = dt.now().strftime(ui.DATE_FORMAT)
         filename = f'{LOG_DIR}/{date_time}.{LOG_SUFFIX}'
 
         with open(filename, 'w') as f:
