@@ -8,6 +8,7 @@ from data import store as store
 
 
 DATE_FORMAT = '%Y-%m-%d'
+TABULATE_FORMAT = 'simple'
 
 
 def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int) -> int:
@@ -23,7 +24,7 @@ def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int) -> int:
     return input_integer('Please select: ', minvalue, maxvalue)
 
 
-def delimeter(message, pre_creturn: int = 0, post_creturn: int = 0) -> str:
+def delimeter(message, pre_creturn: int, post_creturn: int) -> str:
     if pre_creturn > 0:
         output = '\n' * pre_creturn
     else:

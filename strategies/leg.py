@@ -36,52 +36,11 @@ class Leg:
         self.value_table = pd.DataFrame()
         self.range = m.range_type(0.0, 0.0, 0.0)
 
-
     def __str__(self):
-        if self.option.price_calc > 0.0:
-            d2 = 'bs' if self.pricing_method == pricing.PRICING_METHODS[0] else pricing.PRICING_METHODS[1]
-            if self.option.volatility_user > 0.0:
-                d3 = 'uv'
-            elif self.option.volatility_user == 0.0:
-                d3 = 'cv'
-            elif self.option.volatility_implied < _IV_CUTOFF:
-                d3 = 'cv'
-            else:
-                d3 = 'iv'
-
-            output = f'{self.quantity:2d} '\
-                f'{self.company.ticker} (${self.company.price:.2f}) '\
-                f'{self.direction} '\
-                f'{self.option.product} '\
-                f'${self.option.strike:.2f} '\
-                f'({str(self.option.expiry)[:10]}) '\
-                f'${self.option.price_eff:.2f} '\
-                f'(c={self.option.price_calc:.2f} l={self.option.price_last:.2f}) {d3}/{d2} '\
-                f'cv={self.option.volatility_calc:.2f} iv={self.option.volatility_implied:.2f} uv={self.option.volatility_user:.2f} '\
-                f'∆={self.option.volatility_delta:.2f} ev={self.option.volatility_eff:.2f}'
-
-            if not self.option.contract:
-                output += ' *option not selected'
-
-            if self.option.price_last > 0.0:
-                if self.option.volatility_implied < _IV_CUTOFF and self.option.volatility_implied > 0.0:
-                    output += '\n    *** The iv is unsually low, perhaps due to after-hours. Using cv.'
-
-                diff = self.option.price_calc / self.option.price_last
-                if diff > 1.50 or diff < 0.50:
-                    output += '\n    *** The calculated price is significantly different than the last traded price.'
-        else:
-            output = f'{self.quantity:2d} '\
-                f'{self.company.ticker}@${self.company.price:.2f} '\
-                f'{self.direction} '\
-                f'{self.option.product} '\
-                f'${self.option.strike:.2f} for '\
-                f'{str(self.option.expiry)[:10]}'
-
-        return output
+        return self.description()
 
     def calculate(self, greeks: bool = True) -> float:
-        price = 0.0
+        self.option.price_calc = 0.0
 
         if self.validate():
             # Build the pricer
@@ -90,7 +49,7 @@ class Leg:
             elif self.pricing_method == pricing.PRICING_METHODS[1]:
                 self.pricer = MonteCarlo(self.company.ticker, self.option.expiry, self.option.strike)
             else:
-                raise ValueError('Unknown pricing model')
+                raise ValueError(f'Unknown pricing model {self.pricing_method.upper()}')
 
             _logger.info(f'{__name__}: Calculating price using {self.pricing_method}')
 
@@ -108,9 +67,9 @@ class Leg:
             self.pricer.calculate_price(volatility=volatility)
 
             if self.option.product == 'call':
-                self.option.price_calc = price = self.pricer.price_call
+                self.option.price_calc = self.pricer.price_call
             else:
-                self.option.price_calc = price = self.pricer.price_put
+                self.option.price_calc = self.pricer.price_put
 
             # Determine effective price
             if self.option.volatility_user > 0.0:
@@ -125,7 +84,7 @@ class Leg:
 
             _logger.info(f'{__name__}: Strike {self.option.strike:.2f}')
             _logger.info(f'{__name__}: Expiry {self.option.expiry}')
-            _logger.info(f'{__name__}: Price {price:.4f}')
+            _logger.info(f'{__name__}: Price {self.option.price_calc:.4f}')
             _logger.info(f'{__name__}: Rate {self.option.rate:.4f}')
             _logger.info(f'{__name__}: Vol {self.option.volatility_eff:.4f}')
             _logger.info(f'{__name__}: TTM {self.option.time_to_maturity:.4f}')
@@ -155,7 +114,7 @@ class Leg:
         else:
             _logger.error(f'{__name__}: Validation error')
 
-        return price
+        return self.option.price_calc
 
     def recalculate(self, spot_price: float, time_to_maturity: int) -> tuple[float, float]:
         if self.pricer is not None:
@@ -186,10 +145,7 @@ class Leg:
         _logger.info(f'{__name__}: Effective volatility = {self.option.volatility_eff:.2f}')
 
         # Compensate with delta if specified
-        if self.option.volatility_delta > 0.0:
-            self.option.volatility_eff += (self.option.volatility_eff * self.option.volatility_delta)
-        elif self.option.volatility_delta < 0.0:
-            self.option.volatility_eff -= (self.option.volatility_eff * self.option.volatility_delta)
+        self.option.volatility_eff += (self.option.volatility_eff * self.option.volatility_delta)
 
     def generate_value_table(self) -> pd.DataFrame:
         value = pd.DataFrame()
@@ -203,8 +159,7 @@ class Leg:
                 row_index = []
 
                 # Create list of dates to be used as the df columns
-                today = dt.datetime.today()
-                today = today.replace(hour=0, minute=0, second=0, microsecond=0)
+                today = dt.datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
 
                 col_index += [str(today)]
                 while today < self.option.expiry:
@@ -255,6 +210,51 @@ class Leg:
         step = 1
 
         return cols, step
+
+    def description(self, greeks: bool = False) -> str:
+        if greeks:
+            output = f'Delta={self.option.delta:.3f}, gamma={self.option.gamma:.3f}, theta={self.option.theta:.3f}, vega={self.option.vega:.3f}, rho={self.option.rho:.3f}'
+        elif self.option.price_calc > 0.0:
+            d2 = 'bs' if self.pricing_method == pricing.PRICING_METHODS[0] else pricing.PRICING_METHODS[1]
+            if self.option.volatility_user > 0.0:
+                d3 = 'uv'
+            elif self.option.volatility_user == 0.0:
+                d3 = 'cv'
+            elif self.option.volatility_implied < _IV_CUTOFF:
+                d3 = 'cv'
+            else:
+                d3 = 'iv'
+
+            output = f'{self.quantity} '\
+                f'{self.company.ticker} (${self.company.price:.2f}) '\
+                f'{self.direction} '\
+                f'{self.option.product} '\
+                f'${self.option.strike:.2f} '\
+                f'({str(self.option.expiry)[:10]}) '\
+                f'${self.option.price_eff:.2f} '\
+                f'(c={self.option.price_calc:.2f} l={self.option.price_last:.2f}) {d3}/{d2} '\
+                f'cv={self.option.volatility_calc:.2f} iv={self.option.volatility_implied:.2f} uv={self.option.volatility_user:.2f} '\
+                f'∆={self.option.volatility_delta:.2f} ev={self.option.volatility_eff:.2f}'
+
+            if not self.option.contract:
+                output += ' * option not selected'
+
+            if self.option.price_last > 0.0:
+                if self.option.volatility_implied < _IV_CUTOFF and self.option.volatility_implied > 0.0:
+                    output += '\n    * The iv is unsually low, perhaps due to after-hours. Using cv.'
+
+                diff = self.option.price_calc / self.option.price_last
+                if diff > 1.50 or diff < 0.50:
+                    output += '\n    * The calculated price is significantly different than the last traded price.'
+        else:
+            output = f'{self.quantity} '\
+                f'{self.company.ticker} (${self.company.price:.2f}) '\
+                f'{self.direction} '\
+                f'{self.option.product} '\
+                f'${self.option.strike:.2f} for '\
+                f'{str(self.option.expiry)[:10]}'
+
+        return output
 
     def reset(self) -> None:
         self.value_table = None

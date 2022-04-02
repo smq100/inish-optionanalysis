@@ -20,7 +20,7 @@ _logger = logger.get_logger()
 class Pricing(ABC):
     LOOK_BACK_WINDOW = 365
 
-    def __init__(self, ticker, expiry, strike, dividend=0.0):
+    def __init__(self, ticker: str, expiry: dt.datetime, strike: float, dividend: float):
         if strike <= 0.0:
             raise ValueError(f'Invalid strike price for {ticker.upper()}')
 
@@ -50,17 +50,14 @@ class Pricing(ABC):
         self.rho_call = 0.0
         self.rho_put = 0.0
 
-        self._underlying_asset_data = pd.DataFrame()
+        self.underlying_asset_data = pd.DataFrame()
 
-        self.initialize_variables()
-
-    def initialize_variables(self) -> None:
         self.expiry = self.expiry.replace(hour=0, minute=0, second=0, microsecond=0) # Convert time to midnight
 
-        self._calc_risk_free_rate()
-        self._calc_time_to_maturity()
-        self._calc_volatility()
-        self._calc_spot_price()
+        self.calculate_risk_free_rate()
+        self.calculate_time_to_maturity()
+        self.calculate_volatility()
+        self.calculate_spot_price()
 
     @abc.abstractmethod
     def calculate_price(self, spot_price: float = -1.0, time_to_maturity: float = -1.0, volatility: float = -1.0) -> tuple[float, float]:
@@ -112,54 +109,56 @@ class Pricing(ABC):
         Scan through the web to get historical prices of the underlying asset.
         Please check module stock_analyzer.data_fetcher for details
         '''
-        if self._underlying_asset_data.empty:
+        if self.underlying_asset_data.empty:
             history = store.get_history(self.ticker, days=self.LOOK_BACK_WINDOW)
-            self._underlying_asset_data = pd.DataFrame(history)
+            self.underlying_asset_data = pd.DataFrame(history)
 
-            if self._underlying_asset_data.empty:
-                _logger.error(f'{__name__}: Unable to get historical stock data')
-                raise IOError(f'Unable to get historical stock data for {self.ticker}')
+            if self.underlying_asset_data.empty:
+                s = f'{__name__}: Unable to get historical stock data for {self.ticker}'
+                _logger.error(s)
+                raise IOError(s)
 
-    def _calc_risk_free_rate(self) -> None:
+    def calculate_risk_free_rate(self) -> None:
         '''
         Fetch 3-month Treasury Bill Rate from the web. Please check module stock_analyzer.data_fetcher for details
         '''
         self.risk_free_rate = store.get_treasury_rate()
         _logger.info(f'{__name__}: Risk-free rate = {self.risk_free_rate:.4f}')
 
-    def _calc_time_to_maturity(self) -> None:
+    def calculate_time_to_maturity(self) -> None:
         '''
         Calculate TimeToMaturity in Years. It is calculated in terms of years using below formula,
 
             (ExpiryDate - CurrentDate).days / 365
         '''
         if self.expiry < dt.datetime.today():
-            _logger.error(f'{__name__}: Expiry/Maturity Date is in the past. Please check')
-            raise ValueError('Expiry/Maturity Date is in the past. Please check')
+            s = f'{__name__}: Expiry/Maturity Date is in the past. Please check'
+            _logger.error(s)
+            raise ValueError(s)
 
         self.time_to_maturity = (self.expiry - dt.datetime.today()).days / 365.0
         _logger.info(f'{__name__}: Time to maturity = {self.time_to_maturity:.5f}')
 
-    def _calc_volatility(self) -> None:
+    def calculate_volatility(self) -> None:
         '''
         Using historical prices of the underlying asset, calculate volatility.
         '''
         self._calc_underlying_asset_data()
-        self._underlying_asset_data.reset_index(inplace=True)
-        self._underlying_asset_data.set_index('date', inplace=True)
-        self._underlying_asset_data['log_returns'] = np.log(self._underlying_asset_data['close'] / self._underlying_asset_data['close'].shift(1))
+        self.underlying_asset_data.reset_index(inplace=True)
+        self.underlying_asset_data.set_index('date', inplace=True)
+        self.underlying_asset_data['log_returns'] = np.log(self.underlying_asset_data['close'] / self.underlying_asset_data['close'].shift(1))
 
-        d_std = np.std(self._underlying_asset_data.log_returns)
+        d_std = np.std(self.underlying_asset_data.log_returns)
         std = d_std * 252 ** 0.5
 
         self.volatility = std
         _logger.info(f'{__name__}: Calculated volatility = {self.volatility:.4f}')
 
-    def _calc_spot_price(self) -> None:
+    def calculate_spot_price(self) -> None:
         '''
         Get latest price of the underlying asset.
         '''
         self._calc_underlying_asset_data()
-        self.spot_price = self._underlying_asset_data['close'][-1]
+        self.spot_price = self.underlying_asset_data['close'][-1]
 
         _logger.info(f'{__name__}: Spot price = {self.spot_price:.2f}')

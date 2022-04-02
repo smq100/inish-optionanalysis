@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 import pandas as pd
 
 
-@dataclass
+@dataclass(order=True)
 class Analysis:
     ticker: str = ''
     table: pd.DataFrame = pd.DataFrame()
@@ -15,6 +15,9 @@ class Analysis:
     upside: float = 0.0
     pop: float = 0.0
     breakeven: list[float] = field(default_factory=list)
+
+    def __post_init__(self):
+         self.sort_index = self.upside
 
     def __str__(self):
         if not self.table.empty:

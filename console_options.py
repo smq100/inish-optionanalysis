@@ -15,9 +15,9 @@ from tabulate import tabulate
 
 import strategies as s
 from strategies.strategy import Strategy
-from strategies.vertical import Vertical
 from strategies.call import Call
 from strategies.put import Put
+from strategies.vertical import Vertical
 from strategies.iron_condor import IronCondor
 from strategies.iron_butterfly import IronButterfly
 from data import store
@@ -71,18 +71,28 @@ class Interface():
         # Decode volatility
         proceed1 = True
         percent = False
+        neg = False
         if '%' in volatility:
+            if 'n' in volatility:
+                neg = True
+
             volatility = volatility.replace('%', '')
             volatility = volatility.replace(' ', '')
+            volatility = volatility.replace('N', '')
+            volatility = volatility.replace('n', '')
+            volatility = volatility.replace('P', '')
+            volatility = volatility.replace('p', '')
             percent = True
+
+        volatility = float(volatility) if not neg else -float(volatility)
 
         try:
             if not percent:
-                self.volatility = (float(volatility), 0.0)
+                self.volatility = (volatility, 0.0)
             elif self.load_contracts:
-                self.volatility = (-1.0, float(volatility) / 100.0)
+                self.volatility = (-1.0, volatility / 100.0)
             else:
-                self.volatility = (0.0, float(volatility) / 100.0)
+                self.volatility = (0.0, volatility / 100.0)
         except ValueError:
             proceed1 = False
         else:
@@ -302,7 +312,8 @@ class Interface():
                 if style == 0:
                     style = ui.input_integer('(1) Table, (2) Chart, (3) Contour, (4) Surface, or (0) Cancel: ', 0, 4)
                 if style > 0:
-                    title = f'{self.strategy.legs[leg]}'
+                    title = f'{self.strategy.legs[leg].description()}'
+                    greeks = f'{self.strategy.legs[leg].description(greeks=True)}'
 
                     rows, cols = value.shape
                     rows = m.VALUETABLE_ROWS if rows > m.VALUETABLE_ROWS else -1
@@ -312,8 +323,11 @@ class Interface():
                         value = m.compress_table(value, rows, cols)
 
                     if style == 1:
-                        ui.print_message(title, 2)
-                        print(value)
+                        headers = ['Price']
+                        headers += value.columns.to_list()
+                        ui.print_message(title)
+                        ui.print_message(greeks, pre_creturn=0, post_creturn=1)
+                        print(tabulate(value, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
                     elif style == 2:
                         self._show_chart(value, title, charttype='chart')
                     elif style == 3:
@@ -341,7 +355,7 @@ class Interface():
                         analysis = m.compress_table(analysis, rows, cols)
 
                     expiry = analysis.columns[-1]
-                    title = f'{self.strategy.name.title()}: {self.strategy.ticker} ({expiry})'
+                    title = f'Profit Summary for {self.strategy.name.title()}: {self.strategy.ticker} ({expiry})'
 
                     if style == 1:
                         ui.print_message(title, pre_creturn=2)
@@ -353,8 +367,10 @@ class Interface():
 
                         self.show_legs()
                     elif style == 2:
+                        headers = ['Price']
+                        headers += analysis.columns.to_list()
                         ui.print_message(title, post_creturn=1)
-                        print(tabulate(analysis, headers=analysis.columns, tablefmt='simple', floatfmt='.2f'))
+                        print(tabulate(analysis, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
                     elif style == 3:
                         self._show_chart(analysis, title, charttype='chart')
                     elif style == 4:

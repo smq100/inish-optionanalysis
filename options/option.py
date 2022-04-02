@@ -1,3 +1,4 @@
+from dataclasses import dataclass, field
 import datetime as dt
 import re
 import collections
@@ -13,9 +14,44 @@ contract_type = collections.namedtuple('contract', ['ticker', 'expiry', 'product
 MIN_CONTRACT_SIZE = 16
 
 
+@dataclass(order=True)
 class Option:
+    ticker: str = ''
+    product: str = ''
+    strike: str = ''
+    expiry: dt.datetime = field(init=False)
+    volatility_user: float = 0.0
+    volatility_delta: float = 0.0
+
+    # Calculated
+    price_calc: float = 0.0
+    price_eff: float = 0.0
+    volatility_calc: float = 0.0
+    volatility_eff: float = 0.0
+    time_to_maturity: float = 0.0
+    rate: float = 0.0
+    delta: float = 0.0
+    gamma: float = 0.0
+    theta: float = 0.0
+    vega: float = 0.0
+    rho: float = 0.0
+
+    # Fetched online
+    contract: str = ''
+    last_trade_date: str = ''
+    price_last: float = 0.0
+    bid: float = 0.0
+    ask: float = 0.0
+    change: float = 0.0
+    percent_change: float = 0.0
+    volume: float = 0.0
+    open_interest: float = 0.0
+    volatility_implied: float = 0.0
+    itm: bool = False
+    contract_size: str = ''
+    currency: str = ''
+
     def __init__(self, ticker: str, product: str, strike: str, expiry: dt.datetime, volatility: tuple[float, float]):
-        # Specified
         self.ticker = ticker
         self.product = product
         self.strike = strike
@@ -23,65 +59,8 @@ class Option:
         self.volatility_user = volatility[0]
         self.volatility_delta = volatility[1]
 
-        # Calculated
-        self.price_calc = 0.0
-        self.price_eff = 0.0
-        self.volatility_calc = 0.0
-        self.volatility_eff = 0.0
-        self.time_to_maturity = 0.0
-        self.rate = 0.0
-        self.delta = 0.0
-        self.gamma = 0.0
-        self.theta = 0.0
-        self.vega = 0.0
-        self.rho = 0.0
-
-        # Fetched online
-        self.contract = ''
-        self.last_trade_date = ''
-        self.price_last = 0.0
-        self.bid = 0.0
-        self.ask = 0.0
-        self.change = 0.0
-        self.percent_change = 0.0
-        self.volume = 0.0
-        self.open_interest = 0.0
-        self.volatility_implied = 0.0
-        self.itm = False
-        self.contract_size = ''
-        self.currency = ''
-
-    def __str__(self):
-        name = self.contract if self.contract else 'No contract selected'
-        return f'Contract:{name}\n'\
-            f'Ticker: {self.ticker}\n'\
-            f'Product: {self.product.title()}\n'\
-            f'Expiry: {self.expiry:%Y-%m-%d} ({self.time_to_maturity*365:.0f}/{self.time_to_maturity:.5f})\n'\
-            f'Strike: {self.strike:.2f}\n'\
-            f'Rate: {self.rate:.3f}\n'\
-            f'Last Trade: {self.last_trade_date}\n'\
-            f'Calc Price: {self.price_calc:.2f}\n'\
-            f'Last Price: {self.price_last:.2f}\n'\
-            f'Eff Price: {self.price_eff:.2f}\n'\
-            f'Bid: {self.bid:.2f}\n'\
-            f'Ask: {self.ask:.2f}\n'\
-            f'Change: {self.change}\n'\
-            f'Change%: {self.percent_change}\n'\
-            f'Volume: {self.volume}\n'\
-            f'Open Interest: {self.open_interest}\n'\
-            f'User Volitility: {self.volatility_user:.4f}\n'\
-            f'Delta Volitility: {self.volatility_delta:.4f}\n'\
-            f'Calc Volitility: {self.volatility_calc:.4f}\n'\
-            f'Impl Volitility: {self.volatility_implied:.4f}\n'\
-            f'Effective Volitility: {self.volatility_eff:.4f}\n'\
-            f'ITM: {self.itm}\n'\
-            f'Size: {self.contract_size}\n'\
-            f'Currency: {self.currency}\n'\
-            f'Delta: {self.delta:.5f}\n'\
-            f'Gamma: {self.gamma:.5f}\n'\
-            f'Theta: {self.theta:.5f}\n'\
-            f'Vega: {self.vega:.5f}\n'\
-            f'Rho: {self.rho:.5f}'
+    def __post_init__(self):
+         self.sort_index = self.price_eff
 
     def load_contract(self, contract_name: str) -> bool:
         ret = False
@@ -116,7 +95,6 @@ class Option:
 
         return ret
 
-
     def get_contract(self, contract_name: str) -> pd.Series:
         contract = pd.Series(dtype=float)
         parsed = parse_contract_name(contract_name)
@@ -143,7 +121,7 @@ class Option:
 
 
 def parse_contract_name(contract_name: str) -> tuple[str, str, str, float]:
-    regex = r'([\d]{6})([PC])' # ex: MSFT210305C00237500
+    regex = r'([\d]{6})([PC])'  # ex: MSFT210305C00237500
     parsed = re.split(regex, contract_name)
 
     ticker = parsed[0]

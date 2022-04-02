@@ -1,5 +1,7 @@
 '''European Pricing Class'''
 
+import datetime as dt
+
 import numpy as np
 import scipy.stats as stats
 
@@ -21,7 +23,7 @@ class BlackScholes(Pricing):
     :param dividend: <float> If the underlying asset is paying dividend to stock-holders.
     '''
 
-    def __init__(self, ticker, expiry, strike, dividend=0.0):
+    def __init__(self, ticker: str, expiry: dt.datetime, strike: float, dividend: float=0.0):
         super().__init__(ticker, expiry, strike, dividend=dividend)
 
         self.name = pricing.PRICING_METHODS[0]
@@ -52,6 +54,8 @@ class BlackScholes(Pricing):
 
         self.price_put = (self.strike_price * np.exp(-1 * self.risk_free_rate * time_to_maturity) * stats.norm.cdf(-1 * d2, 0.0, 1.0) -
                           (spot_price * np.exp(-1 * self.dividend * time_to_maturity)) * stats.norm.cdf(-1 * d1, 0.0, 1.0))
+
+        _logger.info(f'{__name__}: Call={self.price_call:.2f}, Put={self.price_put:.2f}, Vol={volatility:.2f}')
 
         return self.price_call, self.price_put
 

@@ -1,5 +1,6 @@
 '''American Pricing Class'''
 
+import datetime as dt
 from random import gauss
 
 import numpy as np
@@ -26,7 +27,7 @@ class MonteCarlo(Pricing):
 
     SIMULATION_COUNT = 100000  # Number of Simulations to be performed for Brownian motion
 
-    def __init__(self, ticker, expiry, strike, dividend=0.0):
+    def __init__(self, ticker: str, expiry: dt.datetime, strike: float, dividend: float=0.0):
         super().__init__(ticker, expiry, strike, dividend=dividend)
 
         self.name = pricing.PRICING_METHODS[1]

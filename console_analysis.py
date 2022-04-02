@@ -344,7 +344,7 @@ class Interface:
                 ui.print_message(f'Strategy Analysis ({task_time:.1f}s)', pre_creturn=1, post_creturn=1)
 
                 headers = [header.replace('_', ' ').title() for header in sl.strategy_results.columns]
-                print(tabulate(sl.strategy_results, headers=headers, tablefmt='simple', floatfmt='.2f'))
+                print(tabulate(sl.strategy_results, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
             else:
                 ui.print_warning(f'No results returned: {sl.strategy_state}', pre_creturn=2, post_creturn=1)
 
