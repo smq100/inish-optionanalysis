@@ -84,6 +84,11 @@ class Option:
                 self.contract_size = contract['contractSize']
                 self.currency = contract['currency']
 
+                # Reset volatilities to use implied
+                self.volatility_user = -1.0
+                self.volatility_delta = 0.0
+                self.volatility_eff = self.volatility_implied
+
                 _logger.info(f'{__name__}: Loaded contract {contract_name}')
 
                 if self.price_last > 0.0:

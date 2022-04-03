@@ -18,8 +18,6 @@ class Call(Strategy):
             direction: str,
             strike: float,
             *,
-            width1: int,
-            width2: int,
             quantity: int = 1,
             expiry: dt.datetime | None = None,
             volatility: tuple[float, float] = (-1.0, 0.0),
@@ -28,7 +26,7 @@ class Call(Strategy):
         product = s.PRODUCTS[0]
 
         # Initialize the base strategy
-        super().__init__(ticker, product, direction, strike, width1=width1, width2=0, quantity=quantity, expiry=expiry, volatility=volatility, load_contracts=load_contracts)
+        super().__init__(ticker, product, direction, strike, width1=0, width2=0, quantity=quantity, expiry=expiry, volatility=volatility, load_contracts=load_contracts)
 
         self.name = s.STRATEGIES_BROAD[0]
 

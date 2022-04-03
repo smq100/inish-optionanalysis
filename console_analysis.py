@@ -107,7 +107,7 @@ class Interface:
                 '6':  'Run Coorelation',
                 '7':  'Show Top Results',
                 '8':  'Show All Results',
-                '9':  'Show Ticker Summary',
+                '9':  'Show Ticker Screen Summary',
                 '10': 'Manage Cache Files',
                 '11': 'Delete Old Cache Files',
                 '0':  'Exit'
@@ -438,6 +438,7 @@ class Interface:
     def show_ticker_results(self):
         ticker = ui.input_text('Enter ticker: ').upper()
         if ticker:
+            ui.print_message('Ticker Screen Results')
             for result in self.screener.results:
                 [print(r) for r in result.results if ticker.ljust(6, ' ') == r[:6]]
 

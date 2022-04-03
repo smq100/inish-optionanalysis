@@ -19,18 +19,17 @@ class Vertical(Strategy):
             direction: str,
             strike: float,
             *,
-            width1: int,
-            width2: int,
+            width: int = 1,
             quantity: int = 1,
             expiry: dt.datetime | None = None,
             volatility: tuple[float, float] = (-1.0, 0.0),
             load_contracts: bool = False):
 
-        if width1 < 1:
+        if width < 1:
             raise ValueError('Invalid width')
 
         # Initialize the base strategy
-        super().__init__(ticker, product, direction, strike, width1=width1, width2=0, quantity=quantity, expiry=expiry, volatility=volatility, load_contracts=load_contracts)
+        super().__init__(ticker, product, direction, strike, width1=width, width2=0, quantity=quantity, expiry=expiry, volatility=volatility, load_contracts=load_contracts)
 
         self.name = s.STRATEGIES_BROAD[2]
 

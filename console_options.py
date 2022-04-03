@@ -45,14 +45,8 @@ class Interface():
         analyze: bool = False,
         exit: bool = False):
 
-        self.ticker = ticker.upper()
         self.strategy: Strategy = None
-        self.product = product
-        self.direction = direction
-        self.strike = strike
-        self.width1 = width1
-        self.width2 = width2
-        self.quantity = quantity
+        self.strategy_name: str = strategy
         self.load_contracts = load_contracts
 
         self.dirty_analyze = True
@@ -60,13 +54,13 @@ class Interface():
 
         pd.options.display.float_format = '{:,.2f}'.format
 
-        # Set self.strike to closest ITM if strike < 0.0
+        # Set strike to closest ITM if strike < 0.0
         if direction == 'long':
-            self.strike = strike if strike > 0.0 else float(math.floor(store.get_last_price(self.ticker)))
-            if self.strike <= 0.0:
-                self.strike = 0.50
+            strike = strike if strike > 0.0 else float(math.floor(store.get_last_price(ticker)))
+            if strike <= 0.0:
+                strike = 0.50
         else:
-            self.strike = strike if strike > 0.0 else float(math.ceil(store.get_last_price(self.ticker)))
+            strike = strike if strike > 0.0 else float(math.ceil(store.get_last_price(ticker)))
 
         # Decode volatility
         proceed1 = True
@@ -88,11 +82,11 @@ class Interface():
 
         try:
             if not percent:
-                self.volatility = (volatility, 0.0)
+                volatility = (volatility, 0.0)
             elif self.load_contracts:
-                self.volatility = (-1.0, volatility / 100.0)
+                volatility = (-1.0, volatility / 100.0)
             else:
-                self.volatility = (0.0, volatility / 100.0)
+                volatility = (0.0, volatility / 100.0)
         except ValueError:
             proceed1 = False
         else:
@@ -131,16 +125,16 @@ class Interface():
         elif strategy == 'ib' and width1 < 1:
             ui.print_error('Invalid width specified')
         elif self.load_strategy(
-                self.ticker,
-                strategy,
-                self.product,
-                self.direction,
-                self.strike,
-                self.width1,
-                self.width2,
-                self.quantity,
-                self.expiry,
-                self.volatility,
+                ticker,
+                self.strategy_name,
+                product,
+                direction,
+                strike,
+                width1,
+                width2,
+                quantity,
+                expiry,
+                volatility,
                 load_contracts,
                 analyze or exit):
             if not exit:
@@ -165,11 +159,11 @@ class Interface():
             loaded = '' if self.strategy.legs[0].option.price_last > 0 else '*'
             expire = f'{self.strategy.legs[0].option.expiry:%Y-%m-%d}'
 
-            if self.strategy.name == s.STRATEGIES_BROAD[2]: # Vertical
+            if self.strategy_name == s.STRATEGIES_BROAD[2]: # Vertical
                 menu_items['3'] += f's ({expire}, '\
                     f'L:${self.strategy.legs[0].option.strike:.2f}{loaded}, '\
                     f'S:${self.strategy.legs[1].option.strike:.2f}{loaded})'
-            elif self.strategy.name == s.STRATEGIES_BROAD[3]: # Iron Condor
+            elif self.strategy_name == s.STRATEGIES_BROAD[3]: # Iron Condor
                 menu_items['3'] += f's ({expire}, '\
                     f'${self.strategy.legs[0].option.strike:.2f}{loaded}, '\
                     f'${self.strategy.legs[1].option.strike:.2f}{loaded}, '\
@@ -184,14 +178,11 @@ class Interface():
             selection = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
 
             if selection == 1:
-                if self.select_ticker():
-                    self.analyze()
+                self.select_ticker()
             elif selection == 2:
-                if self.select_strategy():
-                    self.analyze()
+                self.select_strategy()
             elif selection == 3:
-                if self.select_chain():
-                    self.analyze()
+                self.select_chain()
             elif selection == 4:
                 self.show_options()
             elif selection == 5:
@@ -234,35 +225,23 @@ class Interface():
         if strategy == 'vert' and width1 < 1:
             raise ValueError('Invalid width specified')
 
-        self.ticker = ticker.upper()
-        self.direction = direction
-        self.strike = strike
-        self.quantity = quantity
-        self.width1 = width1
-
         expiry_dt = dt.datetime.strptime(expiry, ui.DATE_FORMAT) if expiry else None
 
         try:
             if strategy.lower() == 'call':
-                self.width1 = 0
-                self.width2 = 0
-                self.strategy = Call(self.ticker, 'call', direction, strike, width1=0, width2=0, quantity=quantity,
+                self.strategy = Call(ticker, 'call', direction, strike, quantity=quantity,
                     expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
             elif strategy.lower() == 'put':
-                self.width1 = 0
-                self.width2 = 0
-                self.strategy = Put(self.ticker, 'put', direction, strike, width1=0, width2=0, quantity=quantity,
+                self.strategy = Put(ticker, 'put', direction, strike, quantity=quantity,
                     expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
             elif strategy.lower() == 'vert':
-                self.width2 = 0
-                self.strategy = Vertical(self.ticker, product, direction, strike, width1=width1, width2=0, quantity=quantity,
+                self.strategy = Vertical(ticker, product, direction, strike, width=width1, quantity=quantity,
                     expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
             elif strategy.lower() == 'ic':
-                self.strategy = IronCondor(self.ticker, 'hybrid', direction, strike, width1=width1, width2=width2, quantity=quantity,
+                self.strategy = IronCondor(ticker, 'hybrid', direction, strike, width1=width1, width2=width2, quantity=quantity,
                     expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
             elif strategy.lower() == 'ib':
-                self.width2 = 0
-                self.strategy = IronButterfly(self.ticker, 'hybrid', direction, strike, width1=width1, width2=0, quantity=quantity,
+                self.strategy = IronButterfly(ticker, 'hybrid', direction, strike, width1=width1, width2=0, quantity=quantity,
                     expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
             else:
                 modified = False
@@ -433,12 +412,14 @@ class Interface():
                 break
 
         if valid:
-            self.ticker = ticker
+            strike = float(math.floor(store.get_last_price(ticker)))
+            volatility = (-1.0, 0.0)
             self.dirty_analyze = True
             modified = True
+            expiry = None
 
-            self.load_strategy(ticker, 'call', 'long', 1, analyze=True)
-            ui.print_message('The strategy has been reset to a long call', False)
+            self.load_strategy(ticker, self.strategy_name, self.strategy.product, self.strategy.direction, strike, 0, 0, self.strategy.quantity, expiry, volatility)
+            # ui.print_message('The strategy has been reset to a long call', pre_creturn=1)
 
         return modified
 
@@ -448,43 +429,45 @@ class Interface():
             '2': 'Put',
             '3': 'Vertical',
             '4': 'Iron Condor',
+            '5': 'Iron Butterfly',
             '0': 'Done/Cancel',
         }
 
-        modified = True
+        modified = False
         selection = ui.menu(menu_items, 'Select Strategy', 0, len(menu_items)-1)
 
-        self.width1 = 0
-        self.width2 = 0
-        price = store.get_current_price(self.strategy.ticker)
+        if selection > 0:
+            price = store.get_current_price(self.strategy.ticker)
+            expiry = None
+            volatility = (0.0, 0.0)
 
-        if selection == 1:
-            d = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
-            direction = 'long' if d == 1 else 'short'
-            self.strike = ui.input_float_range(f'Enter strike ({price:.2f}): ', price, 20.0)
-            self.load_strategy(self.strategy.ticker, 'call', 'call', direction, self.strike, 0, 0, self.quantity)
-        elif selection == 2:
-            d = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
-            direction = 'long' if d == 1 else 'short'
-            self.strike = ui.input_float_range(f'Enter strike ({price:.2f}): ', price, 20.0)
-            self.load_strategy(self.strategy.ticker, 'put', 'put', direction, self.strike, 0, 0, self.quantity)
-        elif selection == 3:
-            p = ui.input_integer('(1) Call, or (2) Put: ', 1, 2)
-            product = 'call' if p == 1 else 'put'
-            d = ui.input_integer('(1) Debit, or (2) Credit: ', 1, 2)
-            direction = 'long' if d == 1 else 'short'
-            self.strike = ui.input_float_range(f'Enter strike ({price:.2f}): ', price, 20.0)
-            self.width1 = self.width1 if self.width1 > 0 else 1
-            self.load_strategy(self.strategy.ticker, 'vert', product, direction, self.strike, self.width1, 0, self.quantity)
-        elif selection == 4:
-            d = ui.input_integer('(1) Debit, or (2) Credit: ', 1, 2)
-            direction = 'long' if d == 1 else 'short'
-            self.strike = ui.input_float_range(f'Enter strike ({price:.2f}): ', price, 20.0)
-            self.width1 = self.width1 if self.width1 > 0 else 1
-            self.width2 = self.width2 if self.width2 > 0 else 1
-            self.load_strategy(self.strategy.ticker, 'ic', 'hybrid', direction, self.strike, self.width1, self.width2, self.quantity)
-        else:
-            modified = False
+            if selection == 1:
+                d = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
+                direction = 'long' if d == 1 else 'short'
+                strike = ui.input_float_range(f'Enter strike ({price:.2f}): ', price, 20.0)
+                modified = self.load_strategy(self.strategy.ticker, 'call', 'call', direction, strike, 0, 0, self.strategy.quantity, expiry, volatility)
+            elif selection == 2:
+                d = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
+                direction = 'long' if d == 1 else 'short'
+                strike = ui.input_float_range(f'Enter strike ({price:.2f}): ', price, 20.0)
+                modified = self.load_strategy(self.strategy.ticker, 'put', 'put', direction, strike, 0, 0, self.strategy.quantity, expiry, volatility)
+            elif selection == 3:
+                p = ui.input_integer('(1) Call, or (2) Put: ', 1, 2)
+                product = 'call' if p == 1 else 'put'
+                d = ui.input_integer('(1) Debit, or (2) Credit: ', 1, 2)
+                direction = 'long' if d == 1 else 'short'
+                strike = ui.input_float_range(f'Enter strike ({price:.2f}): ', price, 20.0)
+                modified = self.load_strategy(self.strategy.ticker, 'vert', product, direction, strike, 1, 0, self.strategy.quantity, expiry, volatility)
+            elif selection == 4:
+                d = ui.input_integer('(1) Debit, or (2) Credit: ', 1, 2)
+                direction = 'long' if d == 1 else 'short'
+                strike = ui.input_float_range(f'Enter strike ({price:.2f}): ', price, 20.0)
+                modified = self.load_strategy(self.strategy.ticker, 'ic', 'hybrid', direction, strike, 1, 1, self.strategy.quantity, expiry, volatility)
+            elif selection == 5:
+                d = ui.input_integer('(1) Debit, or (2) Credit: ', 1, 2)
+                direction = 'long' if d == 1 else 'short'
+                strike = ui.input_float_range(f'Enter strike ({price:.2f}): ', price, 20.0)
+                modified = self.load_strategy(self.strategy.ticker, 'ib', 'hybrid', direction, strike, 1, 0, self.strategy.quantity, expiry, volatility)
 
         return modified
 
@@ -498,9 +481,9 @@ class Interface():
             if self.strategy.name != 'vertical':
                 # Go directly to choose option if only one leg in strategy
                 if self.strategy.legs[0].option.product == 'call':
-                    contracts = self.select_chain_options('call')
+                    contracts = self.select_chain_options('call', 1)
                 else:
-                    contracts = self.select_chain_options('put')
+                    contracts = self.select_chain_options('put', 1)
 
                 if contracts:
                     self.strategy.legs[0].option.load_contract(contracts[0])
@@ -510,12 +493,14 @@ class Interface():
             done = False
             while not done:
                 expiry = self.strategy.chain.expire if self.strategy.chain.expire else 'None selected'
+                width = 1
+                quantity = 1
                 success = True
 
                 menu_items = {
-                    '1': f'Select Expiry Date ({expiry})',
-                    '2': f'Quantity ({self.quantity})',
-                    '3': f'Width ({self.width1})',
+                    '1': f'Select Expiry Date ({expiry.strftime((ui.DATE_FORMAT))})',
+                    '2': f'Quantity ({self.strategy.quantity})',
+                    '3': f'Width ({self.strategy.width1})',
                     '4': f'Select Option',
                     '0': 'Done'
                 }
@@ -535,16 +520,16 @@ class Interface():
                     exp = self.select_chain_expiry()
                     self.strategy.update_expiry(exp)
                 elif selection == 2:
-                    self.quantity = ui.input_integer('Enter quantity (1 - 10): ', 1, 10)
+                    quantity = ui.input_integer('Enter quantity (1 - 10): ', 1, 10)
                 elif selection == 3:
-                    self.width1 = ui.input_integer('Enter width (1 - 5): ', 1, 5)
+                    width = ui.input_integer('Enter width (1 - 5): ', 1, 5)
                 elif selection == 4:
                     if self.strategy.chain.expire:
                         leg = 0
                         if self.strategy.legs[leg].option.product == 'call':
-                            contracts = self.select_chain_options('call')
+                            contracts = self.select_chain_options('call', width)
                         else:
-                            contracts = self.select_chain_options('put')
+                            contracts = self.select_chain_options('put', width)
 
                         if contracts:
                             for leg, contract in enumerate(contracts):
@@ -570,14 +555,14 @@ class Interface():
 
         select = ui.menu(menu_items, 'Select expiration date, or 0 to cancel: ', 0, i+1)
         if select > 0:
-            self.strategy.chain.expire = dates[select-1]
-            expiry = dt.datetime.strptime(self.strategy.chain.expire, ui.DATE_FORMAT)
+            expiry = dt.datetime.strptime(dates[select-1], ui.DATE_FORMAT)
+            self.strategy.chain.expire = expiry
 
             self.dirty_analyze = True
 
         return expiry
 
-    def select_chain_options(self, product: str) -> list[str]:
+    def select_chain_options(self, product: str, width: int) -> list[str]:
         options = None
         contracts = []
         if not self.strategy.chain.expire:
@@ -600,16 +585,16 @@ class Interface():
                 sel_row = options.iloc[select]
                 contracts = [sel_row['contractSymbol']]  # First contract
 
-                if self.width1 > 0:
+                if width > 0:
                     if product == 'call':
                         if self.strategy.direction == 'long':
-                            sel_row = options.iloc[select+self.width1] if (select+self.width1) < options.shape[0] else None
+                            sel_row = options.iloc[select+width] if (select+width) < options.shape[0] else None
                         else:
-                            sel_row = options.iloc[select-self.width1] if (select-self.width1) >= 0 else None
+                            sel_row = options.iloc[select-width] if (select-width) >= 0 else None
                     elif self.strategy.direction == 'long':
-                        sel_row = options.iloc[select-self.width1] if (select-self.width1) >= 0 else None
+                        sel_row = options.iloc[select-width] if (select-width) >= 0 else None
                     else:
-                        sel_row = options.iloc[select+self.width1] if (select+self.width1) < options.shape[0] else None
+                        sel_row = options.iloc[select+width] if (select+width) < options.shape[0] else None
 
                     if sel_row is not None:
                         contracts += [sel_row['contractSymbol']]  # Second contract
@@ -663,11 +648,11 @@ class Interface():
             ui.print_error('Unknown method selected')
 
     def show_progress(self) -> None:
-        ui.progress_bar(0, 0, prefix='Analyzing', suffix=self.ticker, reset=True)
+        ui.progress_bar(0, 0, prefix='Analyzing', suffix=self.strategy.ticker, reset=True)
 
         while self.task.is_alive():
             time.sleep(0.20)
-            ui.progress_bar(0, 0, prefix='Analyzing', suffix=self.ticker)
+            ui.progress_bar(0, 0, prefix='Analyzing', suffix=self.strategy.ticker)
 
     def _show_chart(self, table: str, title: str, charttype: str) -> None:
         if not isinstance(table, pd.DataFrame):

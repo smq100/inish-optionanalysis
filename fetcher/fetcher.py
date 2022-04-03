@@ -98,7 +98,7 @@ def _get_history_yfinance(ticker: str, days: int = -1, uselast: bool = False) ->
 
     history: pd.DataFrame = pd.DataFrame()
     company = get_company_live(ticker, uselast)
-    if not company.empty:
+    if company is not None:
         if days < 0:
             days = 7300  # 20 years
 
