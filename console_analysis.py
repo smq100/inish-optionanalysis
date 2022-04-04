@@ -367,8 +367,6 @@ class Interface:
                     self.trend = SupportResistance(ticker, methods=methods, extmethods=extmethods, days=self.days)
 
                 self.task = threading.Thread(target=self.trend.calculate)
-
-                # Show thread progress. Blocking while thread is active
                 self.task.start()
 
                 # Show thread progress. Blocking while thread is active
@@ -511,7 +509,7 @@ class Interface:
                 ui.progress_bar(0, 0, prefix=prefix, suffix=self.trend.task_message)
 
             if self.trend.task_state == 'Done':
-                ui.print_message(f'{self.trend.task_state}: {self.trend.task_total} lines extracted in {self.trend.task_time:.1f} seconds', pre_creturn=1)
+                ui.print_message(f'{self.trend.task_state}: {self.trend.task_total} lines extracted in {self.trend.task_time:.1f} seconds', pre_creturn=2)
             else:
                 ui.print_error(f'{self.trend.task_state}: Error extracting lines', pre_creturn=1)
         else:

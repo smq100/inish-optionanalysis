@@ -141,7 +141,6 @@ class SupportResistance(Threaded):
     @Threaded.threaded
     def calculate(self) -> None:
         self.task_message = self.ticker
-        self.task_state = 'History'
 
         self.history = store.get_history(self.ticker, self.days)
         if not self.history.empty:
@@ -401,7 +400,7 @@ class SupportResistance(Threaded):
         resistance = self._get_resistance(method_price=False)
         support = self._get_support(method_price=False)
 
-        plt.style.use('seaborn-bright')
+        plt.style.use(ui.CHART_STYLE)
         figure, ax1 = plt.subplots(figsize=(17, 10))
         plt.grid()
         plt.margins(x=0.1)
@@ -599,8 +598,9 @@ class SupportResistance(Threaded):
 if __name__ == '__main__':
     import sys
     import logging
+    from utils import logger
 
-    ui.get_logger(logging.DEBUG)
+    logger.get_logger(logging.DEBUG)
 
     if len(sys.argv) > 1:
         methods = ['NSQUREDLOGN', 'NCUBED', 'HOUGHLINES', 'PROBHOUGH']

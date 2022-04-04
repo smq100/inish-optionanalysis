@@ -9,7 +9,7 @@ from data import store as store
 
 DATE_FORMAT = '%Y-%m-%d'
 TABULATE_FORMAT = 'simple'
-
+CHART_STYLE = 'seaborn-bright'
 
 def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int) -> int:
     print(f'\n{header}')

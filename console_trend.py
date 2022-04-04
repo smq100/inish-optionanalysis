@@ -10,7 +10,7 @@ from data import store as store
 from utils import ui, logger
 
 
-logger.get_logger(logging.WARNING, logfile='')
+logger.get_logger(logging.DEBUG, logfile='')
 
 
 class Interface:
@@ -36,7 +36,7 @@ class Interface:
         else:
             self.main_menu()
 
-    def main_menu(self):
+    def main_menu(self) -> None:
         while True:
             menu_items = {
                 '1': 'Change Ticker',
@@ -68,7 +68,7 @@ class Interface:
             if self.exit:
                 break
 
-    def select_ticker(self):
+    def select_ticker(self) -> None:
         valid = False
 
         while not valid:
@@ -82,7 +82,7 @@ class Interface:
             else:
                 break
 
-    def add_ticker(self):
+    def add_ticker(self) -> None:
         valid = False
 
         while not valid:
@@ -101,10 +101,8 @@ class Interface:
         while self.days < 30:
             self.days = ui.input_integer('Enter number of days: ', 30, 9999)
 
-    def calculate_support_and_resistance(self):
+    def calculate_support_and_resistance(self) -> None:
         if self.tickers:
-            ui.progress_bar(0, 0, reset=True)
-
             for ticker in self.tickers:
                 if self.quick:
                     self.trend = SupportResistance(ticker, days=self.days)
@@ -122,7 +120,6 @@ class Interface:
                 figure = self.trend.plot()
                 plt.figure(figure)
 
-            print()
             plt.show()
         else:
             ui.print_error('Enter a ticker before calculating')

@@ -2,7 +2,7 @@ import os.path
 import webbrowser
 import configparser
 import pickle
-import datetime
+import datetime as dt
 import logging
 
 from requests_oauthlib import OAuth1Session
@@ -14,6 +14,7 @@ from etrade.quotes.quotes import Quotes
 from etrade.options.options import Options
 from etrade.lookup.lookup import Lookup
 from etrade.alerts.alerts import Alerts
+from utils import math as m
 from utils import ui, logger
 
 
@@ -22,7 +23,7 @@ logger.get_logger(logging.WARNING, logfile='')
 
 class Client:
     def __init__(self):
-        self.session = None
+        self.session: OAuth1Session | None = None
         self.config = configparser.ConfigParser()
         self.config.read('etrade/config.ini')
         self.picklefile = 'session.pickle'
@@ -97,7 +98,7 @@ class Client:
         success, listing = self.accounts.list()
 
         if success == 'success':
-            menu_items = {n+1: listing[n] for n in range(len(listing))}
+            menu_items = {str(n+1): listing[n] for n in range(len(listing))}
             menu_items['0'] = 'Cancel'
 
             selection = ui.menu(menu_items, 'Select Accounts', 0, len(menu_items)-1)
@@ -185,7 +186,7 @@ class Client:
                 if item is not None and 'id' in item:
                     alert += f'ID: {item["id"]}'
                 if item is not None and 'createTime' in item:
-                    timestamp = datetime.datetime.fromtimestamp(item['createTime']).strftime('%Y-%m-%d %H:%M:%S')
+                    timestamp = dt.datetime.fromtimestamp(item['createTime']).strftime('%Y-%m-%d %H:%M:%S')
                     alert += f', Time: {timestamp}'
                 if item is not None and 'subject' in item:
                     alert += f', Subject: {item["subject"]}'
@@ -252,10 +253,20 @@ class Client:
 
     def options(self) -> None:
         symbol = ui.input_text('Please enter symbol: ').upper()
-        options = Options(self.session, self.base_url)
-        message, chain_data = options.chain(symbol, strikes=3)
 
-        if chain_data is not None:
+        date = m.third_friday()
+        options = Options(self.session, self.base_url)
+        message, chain_data = options.chain(symbol, date.month, date.year)
+
+        if 'error' in message.lower():
+            message = message.replace('Error ', '')
+            message = message.replace('\n', '')
+            ui.print_error(message)
+        elif chain_data is None:
+            message = message.replace('Error ', '')
+            message = message.replace('\n', '')
+            ui.print_error(message)
+        else:
             ui.print_message('Options Chain')
             for pair in chain_data['OptionChainResponse']['OptionPair']:
                 if pair['Call'] is not None:
@@ -299,8 +310,6 @@ class Client:
                     if 'inTheMoney' in put:
                         out += f' ITM:{put["inTheMoney"]}'
                     print(out)
-        else:
-            ui.print_error(message)
 
     def authorize(self) -> OAuth1Session:
         if et.SANDBOX:

@@ -257,7 +257,7 @@ class Leg:
         return output
 
     def reset(self) -> None:
-        self.value_table = None
+        self.value_table = pd.DataFrame()
         self.pricer = None
         self.calculate()
 

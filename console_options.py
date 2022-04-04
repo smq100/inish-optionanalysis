@@ -227,20 +227,26 @@ class Interface():
 
         expiry_dt = dt.datetime.strptime(expiry, ui.DATE_FORMAT) if expiry else None
 
+        name = strategy.lower()
         try:
-            if strategy.lower() == 'call':
+            if name == 'call':
+                self.strategy_name = name
                 self.strategy = Call(ticker, 'call', direction, strike, quantity=quantity,
                     expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
-            elif strategy.lower() == 'put':
+            elif name == 'put':
+                self.strategy_name = name
                 self.strategy = Put(ticker, 'put', direction, strike, quantity=quantity,
                     expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
-            elif strategy.lower() == 'vert':
+            elif name == 'vert':
+                self.strategy_name = name
                 self.strategy = Vertical(ticker, product, direction, strike, width=width1, quantity=quantity,
                     expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
-            elif strategy.lower() == 'ic':
+            elif name == 'ic':
+                self.strategy_name = name
                 self.strategy = IronCondor(ticker, 'hybrid', direction, strike, width1=width1, width2=width2, quantity=quantity,
                     expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
-            elif strategy.lower() == 'ib':
+            elif name == 'ib':
+                self.strategy_name = name
                 self.strategy = IronButterfly(ticker, 'hybrid', direction, strike, width1=width1, width2=0, quantity=quantity,
                     expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
             else:
@@ -419,7 +425,6 @@ class Interface():
             expiry = None
 
             self.load_strategy(ticker, self.strategy_name, self.strategy.product, self.strategy.direction, strike, 0, 0, self.strategy.quantity, expiry, volatility)
-            # ui.print_message('The strategy has been reset to a long call', pre_creturn=1)
 
         return modified
 
@@ -437,7 +442,7 @@ class Interface():
         selection = ui.menu(menu_items, 'Select Strategy', 0, len(menu_items)-1)
 
         if selection > 0:
-            price = store.get_current_price(self.strategy.ticker)
+            price = store.get_last_price(self.strategy.ticker)
             expiry = None
             volatility = (0.0, 0.0)
 

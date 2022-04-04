@@ -1,28 +1,31 @@
 import json
 
-from utils import ui, logger
+from requests_oauthlib import OAuth1Session
+
+from utils import logger
 
 _logger = logger.get_logger()
 
 
 class Options:
     def __init__(self, session, base_url):
-        self.session = session
-        self.base_url = base_url
+        self.session: OAuth1Session = session
+        self.base_url: str = base_url
 
     def chain(self,
-              symbol: str = '',
-              otype: str = 'CALLPUT',
-              strikes: int = 5,
-              expiry_month: int = 2,
-              expiry_year: int = 2022) -> tuple[str, dict]:
+              symbol: str,
+              expiry_month: int,
+              expiry_year: int,
+              strikes: int = 10,
+              weekly: bool = False,
+              otype: str = 'CALLPUT') -> tuple[str, dict]:
 
         message = 'success'
         url = self.base_url + '/v1/market/optionchains.json'
         params = {
             'chainType': f'{otype}',
             'noOfStrikes': f'{strikes}',
-            'includeWeekly': 'true',
+            'includeWeekly': f'{str(weekly)}',
             'expiryMonth': f'{expiry_month}',
             'expiryYear': f'{expiry_year}',
             'symbol': f'{symbol}'
