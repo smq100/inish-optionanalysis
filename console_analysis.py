@@ -16,6 +16,7 @@ from strategies.strategy import Strategy
 from screener.screener import Screener, Result, SCREEN_INIT_NAME, SCREEN_BASEPATH, SCREEN_SUFFIX, CACHE_BASEPATH, CACHE_SUFFIX
 from analysis.trend import SupportResistance
 from analysis.correlate import Correlate
+from analysis.charts import Charts
 from data import store as store
 from utils import ui, logger
 
@@ -47,6 +48,8 @@ def _get_cache_files() -> list[str]:
 
 
 class Interface:
+    # trend: SupportResistance
+
     def __init__(self, table: str = '', screen: str = '', quick: bool = False, exit: bool = False):
         self.table = table.upper()
         self.screen = screen
@@ -60,6 +63,7 @@ class Interface:
         self.trend: SupportResistance = None
         self.screener: Screener = None
         self.correlate: Correlate = None
+        self.chart: Charts = None
         self.strategy: Strategy = None
         self.task: threading.Thread = None
         self.ignore_cache = False
@@ -108,8 +112,9 @@ class Interface:
                 '7':  'Show Top Results',
                 '8':  'Show All Results',
                 '9':  'Show Ticker Screen Summary',
-                '10': 'Manage Cache Files',
-                '11': 'Delete Old Cache Files',
+                '10': 'Show Chart',
+                '11': 'Manage Cache Files',
+                '12': 'Delete Old Cache Files',
                 '0':  'Exit'
             }
 
@@ -156,8 +161,10 @@ class Interface:
             elif selection == 9:
                 self.show_ticker_results()
             elif selection == 10:
-                self.manage_cache_files()
+                self.show_chart()
             elif selection == 11:
+                self.manage_cache_files()
+            elif selection == 12:
                 self.clear_old_cache_files()
             elif selection == 0:
                 self.exit = True
@@ -325,7 +332,7 @@ class Interface:
                 strike = float(math.ceil(store.get_last_price(ticker)))
 
             strategies += [sl.strategy_type(ticker=ticker, strategy=strategy, product=product,
-                direction=direction, strike=strike, width1=0, width2=0, expiry=None, volatility=(-1.0, 0.0), load_contracts=True)]
+                                            direction=direction, strike=strike, width1=0, width2=0, expiry=None, volatility=(-1.0, 0.0), load_contracts=True)]
 
         if len(strategies) > 0:
             sl.reset()
@@ -433,6 +440,23 @@ class Interface:
                     break
         print()
 
+    def show_chart(self):
+        ticker = ui.input_text("Enter ticker: ").upper()
+        if store.is_ticker(ticker):
+            self.chart = Charts()
+
+            self.task = threading.Thread(target=self.chart.fetch_history, args=[ticker])
+            self.task.start()
+
+            # Show thread progress. Blocking while thread is active
+            self.show_progress_chart()
+
+            figure = self.chart.plot_history(ticker)
+            plt.figure(figure)
+            plt.show()
+        else:
+            ui.print_error('Not a valid ticker')
+
     def show_ticker_results(self):
         ticker = ui.input_text('Enter ticker: ').upper()
         if ticker:
@@ -530,6 +554,18 @@ class Interface:
                 success = completed
                 ticker = self.coorelate.task_ticker
                 ui.progress_bar(completed, total, prefix=prefix, ticker=ticker, success=success)
+
+    def show_progress_chart(self) -> None:
+        while not self.chart.task_state:
+            pass
+
+        if self.chart.task_state == 'None':
+            prefix = 'Fetching history'
+            ui.progress_bar(0, 0, prefix=prefix, reset=True)
+
+            while self.chart.task_state == 'None':
+                time.sleep(0.20)
+                ui.progress_bar(0, 0, prefix=prefix, suffix=self.chart.task_ticker)
 
     def manage_cache_files(self) -> None:
         paths = _get_cache_files()
