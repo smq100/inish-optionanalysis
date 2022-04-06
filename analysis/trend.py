@@ -400,11 +400,12 @@ class SupportResistance(Threaded):
         resistance = self._get_resistance(method_price=False)
         support = self._get_support(method_price=False)
 
+        figure, ax1 = plt.subplots(figsize=ui.CHART_SIZE)
+
         plt.style.use(ui.CHART_STYLE)
-        figure, ax1 = plt.subplots(figsize=(17, 10))
-        plt.grid()
         plt.margins(x=0.1)
-        plt.title(f'{self.company["name"]}')
+        plt.subplots_adjust(bottom=0.15)
+
         figure.canvas.manager.set_window_title(f'{self.ticker}')
         line_width = 1.0
 
@@ -413,15 +414,17 @@ class SupportResistance(Threaded):
         else:
             ax1.yaxis.set_major_formatter('{x:.0f}')
 
+        ax1.set_title(f'{self.company["name"]}')
         ax1.secondary_yaxis('right')
 
         # Highs & Lows
         length = len(self.history)
-        dates = [self.history.iloc[index]['date'].strftime(ui.DATE_FORMAT) for index in range(length)]
+        dates = [self.history.iloc[i]['date'].strftime(ui.DATE_FORMAT) for i in range(length)]
 
-        plt.xticks(range(0, length+1, int(length/12)))
-        plt.xticks(rotation=45)
-        plt.subplots_adjust(bottom=0.15)
+        # Grid and ticks
+        ax1.grid(which='major', axis='both')
+        ax1.set_xticks(range(0, length+1, int(length/12)))
+        ax1.tick_params(axis='x', labelrotation=45)
 
         ax1.plot(dates, self.history['high'], '-g', linewidth=0.5)
         ax1.plot(dates, self.history['low'], '-r', linewidth=0.5)
@@ -603,12 +606,12 @@ if __name__ == '__main__':
     logger.get_logger(logging.DEBUG)
 
     if len(sys.argv) > 1:
-        methods = ['NSQUREDLOGN', 'NCUBED', 'HOUGHLINES', 'PROBHOUGH']
-        extmethods = ['NAIVE', 'NAIVECONSEC', 'NUMDIFF']
-        sr = SupportResistance(sys.argv[1])
+        # methods = ['NSQUREDLOGN', 'NCUBED', 'HOUGHLINES', 'PROBHOUGH']
+        # extmethods = ['NAIVE', 'NAIVECONSEC', 'NUMDIFF']
         # sr = SupportResistance(sys.argv[1], methods=methods, extmethods=extmethods)
+        sr = SupportResistance(sys.argv[1], days=500)
     else:
-        sr = SupportResistance('AAPL')
+        sr = SupportResistance('AAPL', days=500)
 
     sr.calculate()
     sr.plot(show=True)

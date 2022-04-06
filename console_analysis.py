@@ -443,15 +443,15 @@ class Interface:
     def show_chart(self):
         ticker = ui.input_text("Enter ticker: ").upper()
         if store.is_ticker(ticker):
-            self.chart = Charts()
+            self.chart = Charts(ticker)
 
-            self.task = threading.Thread(target=self.chart.fetch_history, args=[ticker])
+            self.task = threading.Thread(target=self.chart.fetch_history)
             self.task.start()
 
             # Show thread progress. Blocking while thread is active
             self.show_progress_chart()
 
-            figure = self.chart.plot_history(ticker)
+            figure = self.chart.plot_ohlc()
             plt.figure(figure)
             plt.show()
         else:
@@ -493,6 +493,8 @@ class Interface:
 
                 ui.progress_bar(completed, total, prefix=prefix, ticker=ticker, success=success, tasks=tasks)
 
+        print()
+
     def show_progress_options(self) -> None:
         while not sl.strategy_state:
             pass
@@ -502,7 +504,7 @@ class Interface:
         if sl.strategy_state == 'None':
             while sl.strategy_state == 'None':
                 time.sleep(0.20)
-                ui.progress_bar(0, 0, prefix=prefix, suffix=sl.strategy_msg)
+                ui.progress_bar(0, 0, prefix=prefix)
 
             if sl.strategy_state == 'Next':
                 prefix = 'Analyzing Strategies'
@@ -539,6 +541,8 @@ class Interface:
         else:
             ui.print_message(f'{self.trend.task_state}')
 
+        print()
+
     def show_progress_correlate(self):
         while not self.coorelate.task_state:
             pass
@@ -555,6 +559,8 @@ class Interface:
                 ticker = self.coorelate.task_ticker
                 ui.progress_bar(completed, total, prefix=prefix, ticker=ticker, success=success)
 
+        print()
+
     def show_progress_chart(self) -> None:
         while not self.chart.task_state:
             pass
@@ -566,6 +572,8 @@ class Interface:
             while self.chart.task_state == 'None':
                 time.sleep(0.20)
                 ui.progress_bar(0, 0, prefix=prefix, suffix=self.chart.task_ticker)
+
+        print()
 
     def manage_cache_files(self) -> None:
         paths = _get_cache_files()
