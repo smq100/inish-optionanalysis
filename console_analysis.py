@@ -332,7 +332,8 @@ class Interface:
                 strike = float(math.ceil(store.get_last_price(ticker)))
 
             strategies += [sl.strategy_type(ticker=ticker, strategy=strategy, product=product,
-                                            direction=direction, strike=strike, width1=0, width2=0, expiry=None, volatility=(-1.0, 0.0), load_contracts=True)]
+                                            direction=direction, strike=strike, width1=0, width2=0,
+                                            expiry=None, volatility=(-1.0, 0.0), load_contracts=True)]
 
         if len(strategies) > 0:
             sl.reset()
@@ -350,7 +351,7 @@ class Interface:
             if not sl.strategy_results.empty:
                 ui.print_message(f'Strategy Analysis ({task_time:.1f}s)', pre_creturn=1, post_creturn=1)
 
-                headers = [header.replace('_', ' ').title() for header in sl.strategy_results.columns]
+                headers = [header.replace('_', ' ').upper() for header in sl.strategy_results.columns]
                 print(tabulate(sl.strategy_results, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
             else:
                 ui.print_warning(f'No results returned: {sl.strategy_state}', pre_creturn=2, post_creturn=1)

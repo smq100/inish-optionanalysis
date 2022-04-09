@@ -100,10 +100,11 @@ class Strategy(ABC, Threaded):
             self.analysis.credit_debit = 'debit' if self.direction == 'long' else 'credit'
             self.analysis.total = self.legs[0].option.price_eff * self.quantity
 
-            self.analysis.max_gain, self.analysis.max_loss, self.analysis.upside, self.analysis.sentiment = self.calculate_gain_loss()
-            self.analysis.table = self.generate_profit_table()
-            self.analysis.breakeven = self.calculate_breakeven()
-            self.analysis.pop = self.calculate_pop()
+            self.generate_profit_table()
+            self.calculate_metrics()
+            self.calculate_breakeven()
+            self.calculate_pop()
+            self.calculate_score()
             self.analysis.summarize()
 
             _logger.info(f'{__name__}: {self.ticker}: p={self.legs[0].option.price_eff:.2f}, g={self.analysis.max_gain:.2f}, \
@@ -180,6 +181,34 @@ class Strategy(ABC, Threaded):
 
         return [contract]
 
+    @abc.abstractmethod
+    def generate_profit_table(self) -> bool:
+        return False
+
+    @abc.abstractmethod
+    def calculate_metrics(self) -> bool:
+        return False
+
+    @abc.abstractmethod
+    def calculate_breakeven(self) -> bool:
+        return False
+
+    def calculate_pop(self) -> bool:
+        # Works for one-legged strategies. Override for others
+        pop = abs(self.legs[0].option.delta)
+        if self.legs[0].direction == 'short':
+            pop = 1.0 - pop
+
+        self.analysis.pop = pop
+
+        return True
+
+    def calculate_score(self) -> bool:
+        # Works for one-legged strategies. Override for others
+        self.analysis.score = self.analysis.pop
+
+        return True
+
     def validate(self) -> bool:
         # Works for one-legged strategies. Override for others
         if self.error:
@@ -188,26 +217,6 @@ class Strategy(ABC, Threaded):
             self.error = 'Incorrect number of legs'
 
         return not bool(self.error)
-
-    def calculate_pop(self) -> float:
-        # Works for one-legged strategies. Override for others
-        pop = abs(self.legs[0].option.delta)
-        if self.legs[0].direction == 'short':
-            pop = 1.0 - pop
-
-        return pop
-
-    @abc.abstractmethod
-    def calculate_gain_loss(self) -> tuple[float, float, float, str]:
-        return (0.0, 0.0, 0.0, '')
-
-    @abc.abstractmethod
-    def generate_profit_table(self) -> pd.DataFrame:
-        return pd.DataFrame()
-
-    @abc.abstractmethod
-    def calculate_breakeven(self) -> list[float]:
-        return [0.0]
 
 
 if __name__ == '__main__':

@@ -41,20 +41,7 @@ class Put(Strategy):
             else:
                 _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}. Using calculated values')
 
-    def calculate_gain_loss(self) -> tuple[float, float, float, str]:
-        if self.legs[0].direction == 'long':
-            max_gain = (self.legs[0].option.strike - self.legs[0].option.price_eff) * self.quantity
-            max_loss = self.legs[0].option.price_eff * self.quantity
-            sentiment = 'bearish'
-        else:
-            max_gain = self.legs[0].option.price_eff * self.quantity
-            max_loss = (self.legs[0].option.strike - self.legs[0].option.price_eff) * self.quantity
-            sentiment = 'bullish'
-
-        upside = max_gain / max_loss if max_loss > 0.0 else 0.0
-        return max_gain, max_loss, upside, sentiment
-
-    def generate_profit_table(self) -> pd.DataFrame:
+    def generate_profit_table(self) -> bool:
         profit = pd.DataFrame()
 
         if self.legs[0].direction == 'long':
@@ -64,15 +51,34 @@ class Put(Strategy):
             profit = self.legs[0].value_table
             profit = profit.applymap(lambda x: (self.legs[0].option.price_eff - x) if x < self.legs[0].option.price_eff else -(x - self.legs[0].option.price_eff))
 
-        return profit
+        self.analysis.table = profit
 
-    def calculate_breakeven(self) -> list[float]:
+        return True
+
+    def calculate_metrics(self) -> bool:
+        if self.legs[0].direction == 'long':
+            self.analysis.max_gain = (self.legs[0].option.strike - self.legs[0].option.price_eff) * self.quantity
+            self.analysis.max_loss = self.legs[0].option.price_eff * self.quantity
+            self.analysis.sentiment = 'bearish'
+        else:
+            self.analysis.max_gain = self.legs[0].option.price_eff * self.quantity
+            self.analysis.max_loss = (self.legs[0].option.strike - self.legs[0].option.price_eff) * self.quantity
+            self.analysis.sentiment = 'bullish'
+
+        self.analysis.upside = self.analysis.max_gain / self.analysis.max_loss if self.analysis.max_loss > 0.0 else 0.0
+        self.analysis.score = 0.0
+
+        return True
+
+    def calculate_breakeven(self) -> bool:
         if self.legs[0].direction == 'long':
             breakeven = self.legs[0].option.strike - self.analysis.total
         else:
             breakeven = self.legs[0].option.strike + self.analysis.total
 
-        return [breakeven]
+        self.analysis.breakeven = [breakeven]
+
+        return True
 
 
 if __name__ == '__main__':

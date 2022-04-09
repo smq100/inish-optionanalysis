@@ -356,6 +356,7 @@ class Interface():
                         headers += analysis.columns.to_list()
                         ui.print_message(title, post_creturn=1)
                         print(tabulate(analysis, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
+                        print()
                     elif style == 3:
                         self._show_chart(analysis, title, charttype='chart')
                     elif style == 4:

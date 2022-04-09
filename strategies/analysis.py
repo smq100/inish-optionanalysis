@@ -14,10 +14,11 @@ class Analysis:
     max_loss: float = 0.0
     upside: float = 0.0
     pop: float = 0.0
+    score: float = 0.0
     breakeven: list[float] = field(default_factory=list)
 
     def __post_init__(self):
-         self.sort_index = self.upside
+         self.sort_index = self.score
 
     def __str__(self):
         if not self.table.empty:
@@ -32,9 +33,7 @@ class Analysis:
                 f'Max Loss:   {loss}\n'\
                 f'Return:     {return_text}\n'\
                 f'POP:        {self.pop * 100.0:.2f}%\n'\
-
-            for breakeven in self.breakeven:
-                output += f'Breakeven:  ${breakeven:.2f} at expiry\n'
+                f'Score:      {self.score:.2f}\n'
         else:
             output = 'Not yet analyzed\n'
 
@@ -57,5 +56,7 @@ class Analysis:
                 data['breakeven2'] = self.breakeven[1]
             else:
                 data['breakeven'] = self.breakeven[0]
+
+            data['score'] = self.score
 
             self.summary = pd.DataFrame(data, index=[self.ticker])

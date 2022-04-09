@@ -34,6 +34,7 @@ class Charts(Threaded):
         plt.subplots_adjust(bottom=0.15)
 
         self.figure.canvas.manager.set_window_title(f'{self.ticker}')
+        self.ax.grid(which='major', axis='both')
 
     @Threaded.threaded
     def fetch_history(self):
@@ -45,6 +46,8 @@ class Charts(Threaded):
         self.history = store.get_history(self.ticker, days=self.days)
         self.company = store.get_company(self.ticker)
 
+        self.ax.set_title(f'{self.company["name"]}')
+
         self.task_state = 'Done'
 
     def plot_history(self) -> plt.Figure:
@@ -53,7 +56,6 @@ class Charts(Threaded):
             self.fetch_history()
 
         self.ax.secondary_yaxis('right')
-        self.ax.set_title(f'{self.company["name"]}')
 
         if self.history.iloc[-1]['close'] < 30.0:
             self.ax.yaxis.set_major_formatter('{x:.2f}')
@@ -64,7 +66,6 @@ class Charts(Threaded):
         dates = [self.history.iloc[index]['date'].strftime(ui.DATE_FORMAT) for index in range(length)]
 
         # Grid and ticks
-        self.ax.grid(which='major', axis='both')
         self.ax.set_xticks(range(0, length+1, int(length/12)))
         self.ax.tick_params(axis='x', labelrotation=45)
 
@@ -81,15 +82,11 @@ class Charts(Threaded):
             self.fetch_history()
 
         self.ax.secondary_yaxis('right')
-        self.ax.set_title(f'{self.company["name"]}')
 
         if self.history.iloc[-1]['close'] < 30.0:
             self.ax.yaxis.set_major_formatter('{x:.2f}')
         else:
             self.ax.yaxis.set_major_formatter('{x:.0f}')
-
-        # Grid
-        self.ax.grid(which='major', axis='both')
 
         # Setup values
         width1 = 0.4
@@ -108,12 +105,12 @@ class Charts(Threaded):
         up = self.history[self.history['close'] >= self.history['open']].copy()
         dn = self.history[self.history['close'] < self.history['open']].copy()
 
-        # Plot up prices
+        # Up prices
         self.ax.bar(up.index, up.high - up.close, width2, bottom=up.close, color='green')
         self.ax.bar(up.index, up.close - up.open, width1, bottom=up.open,  color='green')
         self.ax.bar(up.index, up.low - up.open,   width2, bottom=up.open,  color='green')
 
-        # Plot down prices
+        # Down prices
         self.ax.bar(dn.index, dn.high - dn.open,  width2, bottom=dn.open,  color='red')
         self.ax.bar(dn.index, dn.close - dn.open, width1, bottom=dn.open,  color='red')
         self.ax.bar(dn.index, dn.low - dn.close,  width2, bottom=dn.close, color='red')

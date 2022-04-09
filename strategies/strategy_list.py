@@ -92,7 +92,7 @@ def analyze(strategies: list[strategy_type]) -> None:
                         _logger.info(f'{__name__}: Thread completed: {future.result()}')
 
                 if not strategy_results.empty:
-                    strategy_results.sort_values('pop', ascending=False, inplace=True)
+                    strategy_results.sort_values('score', ascending=False, inplace=True)
 
             strategy_state = 'Done'
     else:

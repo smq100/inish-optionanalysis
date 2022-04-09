@@ -159,10 +159,11 @@ class IronCondor(Strategy):
             total_p = abs(self.legs[3].option.price_eff - self.legs[2].option.price_eff) * self.quantity
             self.analysis.total = total_c + total_p
 
-            self.analysis.max_gain, self.analysis.max_loss, self.analysis.upside, self.analysis.sentiment = self.calculate_gain_loss()
-            self.analysis.table = self.generate_profit_table()
-            self.analysis.breakeven = self.calculate_breakeven()
-            self.analysis.pop = self.calculate_pop()
+            self.calculate_metrics()
+            self.generate_profit_table()
+            self.calculate_breakeven()
+            self.calculate_pop()
+            self.calculate_score()
             self.analysis.summarize()
 
             _logger.info(f'{__name__}: {self.ticker}: g={self.analysis.max_gain:.2f}, l={self.analysis.max_loss:.2f} \
@@ -172,44 +173,7 @@ class IronCondor(Strategy):
 
         self.task_state = 'Done'
 
-    def validate(self) -> bool:
-        if self.error:
-            pass # Return existing error
-        elif len(self.legs) != 4:
-            self.error = 'Incorrect number of legs'
-        elif self.legs[0].option.strike <= self.legs[1].option.strike:
-            self.error = f'Bad option leg configuration ({self.legs[0].option.strike:.2f} <= {self.legs[1].option.strike:.2f})'
-        elif self.legs[1].option.strike <= self.legs[2].option.strike:
-            self.error = f'Bad option leg configuration ({self.legs[1].option.strike:.2f} <= {self.legs[2].option.strike:.2f})'
-        elif self.legs[2].option.strike <= self.legs[3].option.strike:
-            self.error = f'Bad option leg configuration ({self.legs[2].option.strike:.2f} <= {self.legs[3].option.strike:.2f})'
-
-        return not bool(self.error)
-
-    def calculate_pop(self) -> float:
-        pop = 1.0 - (self.analysis.max_gain / (self.legs[0].option.strike - self.legs[1].option.strike))
-        return pop if pop > 0.0 else 0.0
-
-    def calculate_gain_loss(self) -> tuple[float, float, float, str]:
-        max_gain = max_loss = 0.0
-
-        if self.direction == 'short':
-            max_gain = self.analysis.total
-            max_loss = (self.quantity * (self.legs[0].option.strike - self.legs[1].option.strike)) - max_gain
-            if max_loss < 0.0:
-                max_loss = 0.0 # Credit is more than possible loss!
-            sentiment = 'low volatility'
-        else:
-            max_loss = self.analysis.total
-            max_gain = (self.quantity * (self.legs[0].option.strike - self.legs[1].option.strike)) - max_loss
-            if max_gain < 0.0:
-                max_gain = 0.0 # Debit is more than possible gain!
-            sentiment = 'high volatility'
-
-        upside = max_gain / max_loss if max_loss > 0.0 else 0.0
-        return max_gain, max_loss, upside, sentiment
-
-    def generate_profit_table(self) -> pd.DataFrame:
+    def generate_profit_table(self) -> bool:
         if self.direction == 'short':
             profit_c = self.legs[0].value_table - self.legs[1].value_table
             profit_p = self.legs[3].value_table - self.legs[2].value_table
@@ -225,13 +189,65 @@ class IronCondor(Strategy):
         else:
             profit -= self.analysis.max_loss
 
-        return profit
+        self.analysis.table = profit
 
-    def calculate_breakeven(self) -> list[float]:
+        return True
+
+    def calculate_metrics(self) -> bool:
+        max_gain = max_loss = 0.0
+
+        if self.direction == 'short':
+            max_gain = self.analysis.total
+            max_loss = (self.quantity * (self.legs[0].option.strike - self.legs[1].option.strike)) - max_gain
+            if max_loss < 0.0:
+                max_loss = 0.0 # Credit is more than possible loss!
+            self.analysis.sentiment = 'low volatility'
+        else:
+            max_loss = self.analysis.total
+            max_gain = (self.quantity * (self.legs[0].option.strike - self.legs[1].option.strike)) - max_loss
+            if max_gain < 0.0:
+                max_gain = 0.0 # Debit is more than possible gain!
+            self.analysis.sentiment = 'high volatility'
+
+        self.analysis.max_gain = max_gain
+        self.analysis.max_loss = max_loss
+        self.analysis.upside = max_gain / max_loss if max_loss > 0.0 else 0.0
+        self.analysis.score = 0.0
+
+        return True
+
+    def calculate_breakeven(self) -> bool:
         breakeven  = [self.legs[1].option.strike + self.analysis.total]
         breakeven += [self.legs[2].option.strike - self.analysis.total]
 
-        return breakeven
+        self.analysis.breakeven = breakeven
+
+        return True
+
+    def calculate_pop(self) -> float:
+        pop = 1.0 - (self.analysis.max_gain / (self.legs[0].option.strike - self.legs[1].option.strike))
+        self.analysis.pop = pop if pop > 0.0 else 0.0
+
+        return True
+
+    def calculate_score(self) -> bool:
+        self.analysis.score = 0.0
+
+        return True
+
+    def validate(self) -> bool:
+        if self.error:
+            pass # Return existing error
+        elif len(self.legs) != 4:
+            self.error = 'Incorrect number of legs'
+        elif self.legs[0].option.strike <= self.legs[1].option.strike:
+            self.error = f'Bad option leg configuration ({self.legs[0].option.strike:.2f} <= {self.legs[1].option.strike:.2f})'
+        elif self.legs[1].option.strike <= self.legs[2].option.strike:
+            self.error = f'Bad option leg configuration ({self.legs[1].option.strike:.2f} <= {self.legs[2].option.strike:.2f})'
+        elif self.legs[2].option.strike <= self.legs[3].option.strike:
+            self.error = f'Bad option leg configuration ({self.legs[2].option.strike:.2f} <= {self.legs[3].option.strike:.2f})'
+
+        return not bool(self.error)
 
 
 if __name__ == '__main__':
