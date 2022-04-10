@@ -66,7 +66,7 @@ class Interface:
         self.chart: Charts = None
         self.strategy: Strategy = None
         self.task: threading.Thread = None
-        self.ignore_cache = False
+        self.use_cache = True
 
         abort = False
 
@@ -135,7 +135,7 @@ class Interface:
                 menu_items['8'] += f' ({len(self.results_valids)})'
 
             if selection == 0:
-                self.ignore_cache = True
+                self.use_cache = False
                 selection = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
 
             if selection == 1:
@@ -297,7 +297,7 @@ class Interface:
             except ValueError as e:
                 ui.print_error(f'{__name__}: {str(e)}')
             else:
-                self.task = threading.Thread(target=self.screener.run_script, kwargs={'ignore_cache': self.ignore_cache})
+                self.task = threading.Thread(target=self.screener.run_script, kwargs={'use_cache': self.use_cache})
                 self.task.start()
 
                 # Show thread progress. Blocking while thread is active
@@ -305,7 +305,9 @@ class Interface:
 
                 if self.screener.task_state == 'Done':
                     self.results_valids = self.screener.valids
+                    self.use_cache = True
                     success = True
+
 
                     if self.screener.cache_used:
                         ui.print_message(f'{len(self.results_valids)} symbols identified. Cached results used')

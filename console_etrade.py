@@ -39,12 +39,16 @@ class Client:
         # Get a new session, or use existing
         if os.path.exists(self.picklefile):
             with open(self.picklefile, 'rb') as session_file:
-                self.session = pickle.load(session_file)
-
-            # Test session with a dummy call to get a quote and authorize if required
-            url = f'{self.base_url}/v1/market/quote/aapl'
-            if not _validate_session(self.session, url):
-                self.session = None
+                try:
+                    self.session = pickle.load(session_file)
+                except Exception as e:
+                    ui.print_error(f'{__name__}: Exception for session file load: {str(e)}')
+                    self.session = None
+                else:
+                    # Test session with a dummy call to get a quote and authorize if required
+                    url = f'{self.base_url}/v1/market/quote/aapl'
+                    if not _validate_session(self.session, url):
+                        self.session = None
 
         if self.session is None:
             self.session = self.authorize()
@@ -351,9 +355,12 @@ class Client:
 
             # Store session for later use
             with open(self.picklefile, 'wb') as session_file:
-                pickle.dump(session, session_file)
+                    pickle.dump(session, session_file, protocol=pickle.HIGHEST_PROTOCOL)
         except TokenRequestDenied:
             session = None
+        except Exception as e:
+            session = None
+            ui.print_error(f'{__name__}: Exception for session file dump: {str(e)}')
 
         return session
 

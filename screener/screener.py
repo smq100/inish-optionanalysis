@@ -100,10 +100,10 @@ class Screener(Threaded):
         return f'{self.table}/{self.screen}'
 
     @Threaded.threaded
-    def run_script(self, ignore_cache: bool = False, dump_cache: bool = True) -> None:
+    def run_script(self, use_cache: bool = True, dump_cache: bool = True) -> None:
         self.task_total = len(self.companies)
 
-        if self.cache_available and not ignore_cache:
+        if use_cache and self.cache_available:
             self.valids = [result for result in self.results if result]
             self.valids = sorted(self.valids, reverse=True, key=lambda r: float(r))
             self.task_completed = self.task_total
@@ -143,8 +143,9 @@ class Screener(Threaded):
                 self.task_futures = [executor.submit(self._run, list) for list in companies]
 
                 for future in futures.as_completed(self.task_futures):
-                    _logger.info(f'{__name__}: Thread completed: {future.result()}.')
+                    _logger.info(f'{__name__}: Thread completed: {future.result()}')
 
+            # Extract the successful screens and sort based on score
             self.valids = [result for result in self.results if result]
             self.valids = sorted(self.valids, reverse=True, key=lambda r: float(r))
 
@@ -251,7 +252,10 @@ class Screener(Threaded):
             filename = self._build_cache_filename()
 
             with open(filename, 'wb') as f:
-                pickle.dump(self.results, f)
+                try:
+                    pickle.dump(self.results, f, protocol=pickle.HIGHEST_PROTOCOL) # TODO dump() sends LF's to console for some reason
+                except Exception as e:
+                    _logger.error(f'{__name__}: Exception for pickle dump: {str(e)}')
 
             self.cache_available = True
 
@@ -261,8 +265,12 @@ class Screener(Threaded):
         cached = False
         if os.path.exists(filename):
             with open(filename, 'rb') as f:
-                self.results = pickle.load(f)
-                cached = True
+                try:
+                    self.results = pickle.load(f)
+                except Exception as e:
+                    _logger.error(f'{__name__}: Exception for pickle load: {str(e)}')
+                else:
+                    cached = True
 
         return cached
 

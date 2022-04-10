@@ -228,7 +228,8 @@ class Vertical(Strategy):
         return True
 
     def calculate_score(self) -> bool:
-        self.analysis.score = 0.0
+        score = self.analysis.pop + self.analysis.upside
+        self.analysis.score = score if score >= 0.0 else 0.0
 
         return True
 
