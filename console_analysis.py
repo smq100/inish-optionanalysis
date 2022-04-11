@@ -48,7 +48,21 @@ def _get_cache_files() -> list[str]:
 
 
 class Interface:
-    # trend: SupportResistance
+    table: str
+    screen: str
+    quick: bool
+    exit: bool
+    days: int
+    auto: bool
+    path_screen: str
+    results_corr: list[tuple[str, pd.Series]]
+    trend: SupportResistance | None
+    screener: Screener | None
+    correlate: Correlate | None
+    chart: Charts | None
+    strategy: Strategy | None
+    task: threading.Thread | None
+    use_cache: bool
 
     def __init__(self, table: str = '', screen: str = '', quick: bool = False, exit: bool = False):
         self.table = table.upper()
@@ -58,13 +72,13 @@ class Interface:
         self.days = 1000
         self.auto = False
         self.path_screen = ''
-        self.results_corr: list[tuple[str, pd.DataFrame.Series]] = []
-        self.trend: SupportResistance = None
-        self.screener: Screener = None
-        self.correlate: Correlate = None
-        self.chart: Charts = None
-        self.strategy: Strategy = None
-        self.task: threading.Thread = None
+        self.results_corr = []
+        self.trend = None
+        self.screener = None
+        self.correlate = None
+        self.chart = None
+        self.strategy = None
+        self.task = None
         self.use_cache = True
 
         abort = False
@@ -304,7 +318,6 @@ class Interface:
                     self.screener.valids = self.screener.valids
                     self.use_cache = True
                     success = True
-
 
                     if self.screener.cache_used:
                         ui.print_message(f'{len(self.screener.valids)} symbols identified. Cached results used')

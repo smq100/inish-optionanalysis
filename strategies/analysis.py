@@ -14,8 +14,8 @@ class Analysis:
     max_loss: float = 0.0
     upside: float = 0.0
     pop: float = 0.0
-    score_options: float = 0.0
-    score_screen: float = 0.0
+    score_options: float = -1.0
+    score_screen: float = -1.0
     breakeven: list[float] = field(default_factory=list)
 
     def __post_init__(self):
@@ -51,15 +51,9 @@ class Analysis:
                 'max_loss': self.max_loss*100.0 if self.max_loss >= 0.0 else 'unlimited',
                 'return': self.upside if self.upside >= 0.0 else 'unlimited',
                 'pop': self.pop,
+                'score_option': self.score_options,
+                'score_screen': self.score_screen
             }
 
-            # if len(self.breakeven) > 1:
-            #     data['breakeven1'] = self.breakeven[0]
-            #     data['breakeven2'] = self.breakeven[1]
-            # else:
-            #     data['breakeven'] = self.breakeven[0]
-
-            data['score_option'] = self.score_options
-            data['score_screen'] = self.score_screen
 
             self.summary = pd.DataFrame(data, index=[self.ticker])

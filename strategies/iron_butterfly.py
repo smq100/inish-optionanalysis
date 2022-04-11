@@ -23,7 +23,6 @@ class IronButterfly(Strategy):
             quantity: int = 1,
             expiry: dt.datetime | None = None,
             volatility: tuple[float, float] = (-1.0, 0.0),
-            score_screen: float = -1.0,
             load_contracts: bool = False):
 
         if width1 < 1:
@@ -41,7 +40,6 @@ class IronButterfly(Strategy):
             quantity=quantity,
             expiry=expiry,
             volatility=volatility,
-            score_screen=score_screen,
             load_contracts=load_contracts)
 
         self.name = s.STRATEGIES_BROAD[4]
