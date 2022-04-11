@@ -32,6 +32,7 @@ class Strategy(ABC, Threaded):
             quantity: int,
             expiry: dt.datetime | None, # None = use next month's expiry. Otherwise use specified
             volatility: tuple[float, float], # < 0.0 use latest implied volatility, = 0.0 use calculated, > 0.0 use specified
+            score_screen: float,
             load_contracts: bool):
 
         if not store.is_ticker(ticker):
@@ -60,11 +61,12 @@ class Strategy(ABC, Threaded):
         self.quantity = quantity
         self.expiry = expiry
         self.volatility = volatility
+        self.score_screen = score_screen
         self.load_contracts = load_contracts
 
         self.pricing_method = p.PRICING_METHODS[0] # black-scholes
         self.chain: Chain = Chain(self.ticker)
-        self.analysis = Analysis(ticker=self.ticker)
+        self.analysis = Analysis(ticker=self.ticker, score_screen=self.score_screen)
         self.legs: list[Leg] = []
         self.initial_spot = 0.0
         self.initial_spot = self.get_current_spot(roundup=True)
@@ -205,7 +207,7 @@ class Strategy(ABC, Threaded):
 
     def calculate_score(self) -> bool:
         # Works for one-legged strategies. Override for others
-        self.analysis.score = self.analysis.pop
+        self.analysis.score_options = self.analysis.pop
 
         return True
 

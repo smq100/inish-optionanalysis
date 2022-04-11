@@ -23,13 +23,25 @@ class Vertical(Strategy):
             quantity: int = 1,
             expiry: dt.datetime | None = None,
             volatility: tuple[float, float] = (-1.0, 0.0),
+            score_screen: float = -1.0,
             load_contracts: bool = False):
 
         if width < 1:
             raise ValueError('Invalid width')
 
         # Initialize the base strategy
-        super().__init__(ticker, product, direction, strike, width1=width, width2=0, quantity=quantity, expiry=expiry, volatility=volatility, load_contracts=load_contracts)
+        super().__init__(
+            ticker,
+            product,
+            direction,
+            strike,
+            width1=width,
+            width2=0,
+            quantity=quantity,
+            expiry=expiry,
+            volatility=volatility,
+            score_screen=score_screen,
+            load_contracts=load_contracts)
 
         self.name = s.STRATEGIES_BROAD[2]
 
@@ -208,7 +220,7 @@ class Vertical(Strategy):
         self.analysis.max_gain = max_gain
         self.analysis.max_loss = max_loss
         self.analysis.upside = max_gain / max_loss if max_loss > 0.0 else 0.0
-        self.analysis.score = 0.0
+        self.analysis.score_options = 0.0
 
         return True
 
@@ -229,7 +241,7 @@ class Vertical(Strategy):
 
     def calculate_score(self) -> bool:
         score = self.analysis.pop + self.analysis.upside
-        self.analysis.score = score if score >= 0.0 else 0.0
+        self.analysis.score_options = score if score >= 0.0 else 0.0
 
         return True
 

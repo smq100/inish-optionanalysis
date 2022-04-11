@@ -23,6 +23,7 @@ class IronCondor(Strategy):
             quantity: int = 1,
             expiry: dt.datetime | None = None,
             volatility: tuple[float, float] = (-1.0, 0.0),
+            score_screen: float = -1.0,
             load_contracts: bool = False):
 
         if width1 < 1:
@@ -32,7 +33,18 @@ class IronCondor(Strategy):
 
         # Initialize the base strategy
         product = s.PRODUCTS[2]
-        super().__init__(ticker, product, direction, strike, width1=width1, width2=width2, quantity=quantity, expiry=expiry, volatility=volatility, load_contracts=load_contracts)
+        super().__init__(
+            ticker,
+            product,
+            direction,
+            strike,
+            width1=width1,
+            width2=width2,
+            quantity=quantity,
+            expiry=expiry,
+            volatility=volatility,
+            score_screen=score_screen,
+            load_contracts=load_contracts)
 
         self.name = s.STRATEGIES_BROAD[3]
 
@@ -212,7 +224,7 @@ class IronCondor(Strategy):
         self.analysis.max_gain = max_gain
         self.analysis.max_loss = max_loss
         self.analysis.upside = max_gain / max_loss if max_loss > 0.0 else 0.0
-        self.analysis.score = 0.0
+        self.analysis.score_options = 0.0
 
         return True
 
@@ -232,7 +244,7 @@ class IronCondor(Strategy):
 
     def calculate_score(self) -> bool:
         score = self.analysis.pop + self.analysis.upside
-        self.analysis.score = score if score >= 0.0 else 0.0
+        self.analysis.score_options = score if score >= 0.0 else 0.0
 
         return True
 

@@ -154,6 +154,16 @@ class Screener(Threaded):
 
             self.task_state = 'Done'
 
+    def get_score(self, ticker: str) -> float:
+        ticker = ticker.upper()
+        score = -1.0
+        for result in self.results:
+            if ticker == result.company.ticker:
+                score = float(result)
+                break
+
+        return score
+
     def _run(self, companies: list[Company]) -> None:
         for ticker in companies:
             success = []
@@ -253,7 +263,7 @@ class Screener(Threaded):
 
             with open(filename, 'wb') as f:
                 try:
-                    pickle.dump(self.results, f, protocol=pickle.HIGHEST_PROTOCOL) # TODO dump() sends LF's to console for some reason
+                    pickle.dump(self.results, f, protocol=pickle.HIGHEST_PROTOCOL)  # TODO dump() sends LF's to console for some reason
                 except Exception as e:
                     _logger.error(f'{__name__}: Exception for pickle dump: {str(e)}')
 

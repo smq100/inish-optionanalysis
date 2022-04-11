@@ -21,12 +21,24 @@ class Call(Strategy):
             quantity: int = 1,
             expiry: dt.datetime | None = None,
             volatility: tuple[float, float] = (-1.0, 0.0),
+            score_screen: float = -1.0,
             load_contracts: bool = False):
 
         product = s.PRODUCTS[0]
 
         # Initialize the base strategy
-        super().__init__(ticker, product, direction, strike, width1=0, width2=0, quantity=quantity, expiry=expiry, volatility=volatility, load_contracts=load_contracts)
+        super().__init__(
+            ticker,
+            product,
+            direction,
+            strike,
+            width1=0,
+            width2=0,
+            quantity=quantity,
+            expiry=expiry,
+            volatility=volatility,
+            score_screen=score_screen,
+            load_contracts=load_contracts)
 
         self.name = s.STRATEGIES_BROAD[0]
 
@@ -65,7 +77,7 @@ class Call(Strategy):
             self.analysis.sentiment = 'bearish'
 
         self.analysis.upside = -1.0
-        self.analysis.score = 0.0
+        self.analysis.score_options = 0.0
 
         return True
 

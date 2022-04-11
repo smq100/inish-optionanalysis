@@ -16,7 +16,7 @@ from utils import logger
 
 _logger = logger.get_logger()
 
-strategy_type = collections.namedtuple('strategy', ['ticker', 'strategy', 'product', 'direction', 'strike', 'width1', 'width2', 'expiry', 'volatility','load_contracts'])
+strategy_type = collections.namedtuple('strategy', ['ticker', 'strategy', 'product', 'direction', 'strike', 'width1', 'width2', 'expiry', 'volatility','score_screen', 'load_contracts'])
 strategy_state = ''
 strategy_msg = ''
 strategy_results = pd.DataFrame()
@@ -62,23 +62,23 @@ def analyze(strategies: list[strategy_type]) -> None:
                 if s.strategy == STRATEGIES[0]: # Call
                     strategy_msg = f'{s.ticker}: ${s.strike:.2f} {s.direction} {s.product}{decorator}'
                     items += [Call(s.ticker, 'call', s.direction, s.strike, quantity=1,
-                        expiry=s.expiry, volatility=s.volatility, load_contracts=s.load_contracts)]
+                        expiry=s.expiry, volatility=s.volatility, score_screen=s.score_screen, load_contracts=s.load_contracts)]
                 elif s.strategy == STRATEGIES[1]: # Put
                     strategy_msg = f'{s.ticker}: ${s.strike:.2f} {s.direction} {s.product}{decorator}'
                     items += [Put(s.ticker, 'put', s.direction, s.strike, quantity=1,
-                        expiry=s.expiry, volatility=s.volatility, load_contracts=s.load_contracts)]
+                        expiry=s.expiry, volatility=s.volatility, score_screen=s.score_screen, load_contracts=s.load_contracts)]
                 elif s.strategy == STRATEGIES[2]: # Vertical
                     strategy_msg = f'{s.ticker}: ${s.strike:.2f} {s.direction} {s.product}{decorator}'
                     items += [Vertical(s.ticker, s.product, s.direction, s.strike, width=1, quantity=1,
-                        expiry=s.expiry, volatility=s.volatility, load_contracts=s.load_contracts)]
+                        expiry=s.expiry, volatility=s.volatility, score_screen=s.score_screen, load_contracts=s.load_contracts)]
                 elif s.strategy == STRATEGIES[3]: # Iron condor
                     strategy_msg = f'{s.ticker}: ${s.strike:.2f}{decorator}'
                     items += [IronCondor(s.ticker, 'hybrid', s.direction, s.strike, width1=1, width2=1, quantity=1,
-                        expiry=s.expiry, volatility=s.volatility, load_contracts=s.load_contracts)]
+                        expiry=s.expiry, volatility=s.volatility, score_screen=s.score_screen, load_contracts=s.load_contracts)]
                 elif s.strategy == STRATEGIES[4]: # Iron butterfly
                     strategy_msg = f'{s.ticker}: ${s.strike:.2f}{decorator}'
                     items += [IronButterfly(s.ticker, 'hybrid', s.direction, s.strike, width1=1, width2=0, quantity=1,
-                        expiry=s.expiry, volatility=s.volatility, load_contracts=s.load_contracts)]
+                        expiry=s.expiry, volatility=s.volatility, score_screen=s.score_screen, load_contracts=s.load_contracts)]
         except Exception as e:
             strategy_state = f'{__name__}: {items[-1].ticker}: {str(sys.exc_info()[1])}'
             items = []
@@ -92,7 +92,7 @@ def analyze(strategies: list[strategy_type]) -> None:
                         _logger.info(f'{__name__}: Thread completed: {future.result()}')
 
                 if not strategy_results.empty:
-                    strategy_results.sort_values('score', ascending=False, inplace=True)
+                    strategy_results.sort_values('score_option', ascending=False, inplace=True)
 
             strategy_state = 'Done'
     else:

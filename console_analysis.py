@@ -58,7 +58,6 @@ class Interface:
         self.days = 1000
         self.auto = False
         self.path_screen = ''
-        self.results_valids: list[Result] = []
         self.results_corr: list[tuple[str, pd.DataFrame.Series]] = []
         self.trend: SupportResistance = None
         self.screener: Screener = None
@@ -127,12 +126,12 @@ class Interface:
             if self.quick:
                 menu_items['5'] += ' (quick)'
 
-            if len(self.results_valids) > 0:
-                top = len(self.results_valids) if len(self.results_valids) < LISTTOP_SCREEN else LISTTOP_SCREEN
+            if self.screener is not None and len(self.screener.valids) > 0:
+                top = len(self.screener.valids) if len(self.screener.valids) < LISTTOP_SCREEN else LISTTOP_SCREEN
                 menu_items['7'] += f' ({top})'
 
-            if len(self.results_valids) > 0:
-                menu_items['8'] += f' ({len(self.results_valids)})'
+            if self.screener is not None and len(self.screener.valids) > 0:
+                menu_items['8'] += f' ({len(self.screener.valids)})'
 
             if selection == 0:
                 self.use_cache = False
@@ -144,7 +143,7 @@ class Interface:
                 self.select_screen()
             elif selection == 3:
                 self.run_screen()
-                if len(self.results_valids) > 0:
+                if len(self.screener.valids) > 0:
                     self.show_valids(top=LISTTOP_SCREEN)
             elif selection == 4:
                 self.select_option_strategy()
@@ -189,7 +188,7 @@ class Interface:
 
     def select_screen(self) -> None:
         self.script = []
-        self.results_valids = []
+        self.screener = None
         paths = []
         with os.scandir(SCREEN_BASEPATH) as entries:
             for entry in entries:
@@ -222,7 +221,7 @@ class Interface:
             ui.print_message('No screener files found')
 
     def select_option_strategy(self) -> None:
-        if len(self.results_valids) > 0:
+        if len(self.screener.valids) > 0:
             menu_items = {
                 '1': 'Call',
                 '2': 'Put',
@@ -273,8 +272,8 @@ class Interface:
             tickers = [ticker]
         elif ticker != 'VALIDS':
             pass
-        elif len(self.results_valids) > 0:
-            tickers = [str(result) for result in self.results_valids[:LISTTOP_TREND]]
+        elif len(self.screener.valids) > 0:
+            tickers = [str(result) for result in self.screener.valids[:LISTTOP_TREND]]
         else:
             ui.print_error('Not a valid ticker')
 
@@ -290,8 +289,6 @@ class Interface:
         elif not self.path_screen:
             ui.print_error('No screen specified')
         else:
-            self.results_valids = []
-
             try:
                 self.screener = Screener(self.table, screen=self.path_screen)
             except ValueError as e:
@@ -304,15 +301,15 @@ class Interface:
                 self.show_progress_screen()
 
                 if self.screener.task_state == 'Done':
-                    self.results_valids = self.screener.valids
+                    self.screener.valids = self.screener.valids
                     self.use_cache = True
                     success = True
 
 
                     if self.screener.cache_used:
-                        ui.print_message(f'{len(self.results_valids)} symbols identified. Cached results used')
+                        ui.print_message(f'{len(self.screener.valids)} symbols identified. Cached results used')
                     else:
-                        ui.print_message(f'{len(self.results_valids)} symbols identified in {self.screener.task_time:.1f} seconds')
+                        ui.print_message(f'{len(self.screener.valids)} symbols identified in {self.screener.task_time:.1f} seconds')
 
         return success
 
@@ -324,7 +321,7 @@ class Interface:
         if product not in s.PRODUCTS:
             raise ValueError('Invalid product')
 
-        tickers = [str(result) for result in self.results_valids[:LISTTOP_SCREEN]]
+        tickers = [str(result) for result in self.screener.valids[:LISTTOP_SCREEN]]
 
         strategies = []
         for ticker in tickers:
@@ -333,9 +330,10 @@ class Interface:
             else:
                 strike = float(math.ceil(store.get_last_price(ticker)))
 
+            score_screen = self.screener.get_score(ticker)
             strategies += [sl.strategy_type(ticker=ticker, strategy=strategy, product=product,
-                                            direction=direction, strike=strike, width1=0, width2=0,
-                                            expiry=None, volatility=(-1.0, 0.0), load_contracts=True)]
+                                            direction=direction, strike=strike, width1=0, width2=0, expiry=None,
+                                            volatility=(-1.0, 0.0), score_screen=score_screen, load_contracts=True)]
 
         if len(strategies) > 0:
             sl.reset()
@@ -390,7 +388,7 @@ class Interface:
             ui.print_error('No valid results to analyze')
 
     def run_coorelate(self) -> None:
-        if len(self.results_valids) == 0:
+        if len(self.screener.valids) == 0:
             ui.print_error('Please run screen before correlating')
         elif not store.is_list(self.table):
             ui.print_error('List is not valid')
@@ -406,7 +404,7 @@ class Interface:
             self.show_progress_correlate()
 
             self.results_corr = []
-            for valid in self.results_valids:
+            for valid in self.screener.valids:
                 ticker = valid.company.ticker
                 df = self.coorelate.get_ticker_coorelation(ticker)
                 self.results_corr += [(ticker, df.iloc[-1])]
@@ -416,7 +414,7 @@ class Interface:
             ui.print_error('No table specified')
         elif not self.screen:
             ui.print_error('No screen specified')
-        elif len(self.results_valids) == 0:
+        elif len(self.screener.valids) == 0:
             ui.print_message('No results were located')
         else:
             if top <= 0:
@@ -430,7 +428,7 @@ class Interface:
                 ui.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen}/{self.table})')
 
             index = 1
-            for result in self.results_valids:
+            for result in self.screener.valids:
                 if ticker:
                     [print(r) for r in result.results if ticker.upper().ljust(6, ' ') == r[:6]]
                 elif verbose:
