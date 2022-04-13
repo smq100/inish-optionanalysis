@@ -4,6 +4,8 @@ import collections
 
 import pandas as pd
 
+from utils import ui
+
 
 VALUETABLE_ROWS = 50
 VALUETABLE_COLS = 9
@@ -31,16 +33,18 @@ def calculate_min_max_step(strike: float) -> tuple[float, float, float]:
     max_ = 0.0
     step = 0.0
 
-    if strike > 500.0:
+    if strike >= 500.0:
+        step = 20.0
+    elif strike >= 100.0:
         step = 10.0
-    elif strike > 100.0:
-        step = 1.0
-    elif strike > 50.0:
-        step = 0.50
-    elif strike > 20.0:
-        step = 0.10
+    elif strike >= 50.0:
+        step = 2.50
+    elif strike >= 20.0:
+        step = 1.00
+    elif strike >= 5.0:
+        step = 0.25
     else:
-        step = 0.05
+        step = 0.10
 
     min_ = strike - ((VALUETABLE_ROWS / 2.0) * step)
     max_ = strike + ((VALUETABLE_ROWS / 2.0) * step)
@@ -51,18 +55,22 @@ def calculate_min_max_step(strike: float) -> tuple[float, float, float]:
     return range_type(min_, max_, step)
 
 
-def compress_table(table: pd.DataFrame, rows: int, cols: int) -> pd.DataFrame:
+def compress_table(table: pd.DataFrame, rows: int, cols: int, auto: bool = True) -> pd.DataFrame:
     if not isinstance(table, pd.DataFrame):
         raise ValueError("'table' must be a Pandas DataFrame")
 
     compressed = pd.DataFrame()
+
+    if auto:
+        cols = ui.TERMINAL_SIZE.columns - 10 # Subtract approx price column width
+        cols = cols // 15 # Divide by approx col size
 
     # Thin out cols
     srows, scols = table.shape
     if cols > 0 and cols < scols:
         step = math.ceil(scols/cols) + 1
         end = table[table.columns[-1::]]  # Save the last col (expiry)
-        compressed = table[table.columns[:-1:step]]  # Thin the table, less the last two cols
+        compressed = table[table.columns[:-1:step]].copy()  # Thin the table, less the last col
         compressed = pd.concat([compressed, end], axis=1)  # Add back the last col
 
     # Thin out rows

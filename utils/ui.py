@@ -12,6 +12,8 @@ TABULATE_FORMAT = 'simple'
 CHART_STYLE = 'seaborn-bright'
 CHART_SIZE = (17, 10)
 
+TERMINAL_SIZE = os.get_terminal_size()
+
 def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int) -> int:
     print(f'\n{header}')
     print('-' * 50)
@@ -75,8 +77,7 @@ def print_tickers(tickers: list[str], group: int = 15) -> None:
 def erase_line():
     global position, forward
 
-    size = os.get_terminal_size()
-    erase = size.columns * ' '
+    erase = TERMINAL_SIZE.columns * ' '
     position = 0
     forward = True
     print(f'{erase}', end='\r')

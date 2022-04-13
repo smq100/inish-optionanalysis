@@ -28,25 +28,6 @@ LISTTOP_TREND = 5
 LISTTOP_CORR = 3
 
 
-def _get_cache_files() -> list[str]:
-    paths = []
-    with os.scandir(CACHE_BASEPATH) as entries:
-        for entry in entries:
-            if entry.is_file():
-                head, sep, tail = entry.name.partition('.')
-                if tail != CACHE_SUFFIX:
-                    pass
-                elif head == SCREEN_INIT_NAME:
-                    pass
-                else:
-                    paths += [head]
-
-    if paths:
-        paths.sort()
-
-    return paths
-
-
 class Interface:
     table: str
     screen: str
@@ -64,7 +45,7 @@ class Interface:
     task: threading.Thread | None
     use_cache: bool
 
-    def __init__(self, table: str = '', screen: str = '', quick: bool = False, exit: bool = False):
+    def __init__(self, *, table: str = '', screen: str = '', quick: bool = False, exit: bool = False):
         self.table = table.upper()
         self.screen = screen
         self.quick = quick
@@ -106,7 +87,7 @@ class Interface:
                 self.screen = ''
 
         if abort:
-            pass
+            pass  # We're done
         elif self.table and self.path_screen:
             self.auto = True
             self.main_menu(selection=3)
@@ -352,10 +333,10 @@ class Interface:
             sl.reset()
             self.task = threading.Thread(target=sl.analyze, args=[strategies])
 
-            # Show thread progress. Blocking while thread is active
             tic = time.perf_counter()
             self.task.start()
 
+            # Show thread progress. Blocking while thread is active
             self.show_progress_options()
 
             toc = time.perf_counter()
@@ -364,7 +345,8 @@ class Interface:
             if not sl.strategy_results.empty:
                 ui.print_message(f'Strategy Analysis ({task_time:.1f}s)', pre_creturn=1, post_creturn=1)
 
-                headers = [header.replace('_', ' ').upper() for header in sl.strategy_results.columns]
+                sl.strategy_results.drop(['breakeven', 'breakeven1', 'breakeven2'], axis=1, errors='ignore', inplace=True)
+                headers = [header.replace('_', '\n').title() for header in sl.strategy_results.columns]
                 print(tabulate(sl.strategy_results, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
             else:
                 ui.print_warning(f'No results returned: {sl.strategy_state}', pre_creturn=2, post_creturn=1)
@@ -590,7 +572,7 @@ class Interface:
         print()
 
     def manage_cache_files(self) -> None:
-        paths = _get_cache_files()
+        paths = _get_screener_cache_files()
         if paths:
             menu_items = {}
             for index, item in enumerate(paths):
@@ -624,7 +606,7 @@ class Interface:
             ui.print_message('No cache files found')
 
     def clear_old_cache_files(self):
-        files = _get_cache_files()
+        files = _get_screener_cache_files()
         if files:
             old_paths = []
             date_time = dt.now().strftime(ui.DATE_FORMAT)
@@ -652,6 +634,25 @@ class Interface:
                 ui.print_message('All files up to date')
         else:
             ui.print_message('No files to delete')
+
+
+def _get_screener_cache_files() -> list[str]:
+    paths = []
+    with os.scandir(CACHE_BASEPATH) as entries:
+        for entry in entries:
+            if entry.is_file():
+                head, sep, tail = entry.name.partition('.')
+                if tail != CACHE_SUFFIX:
+                    pass
+                elif head == SCREEN_INIT_NAME:
+                    pass
+                else:
+                    paths += [head]
+
+    if paths:
+        paths.sort()
+
+    return paths
 
 
 def main():
