@@ -199,7 +199,7 @@ class IronCondor(Strategy):
         else:
             profit -= self.analysis.max_loss
 
-        self.analysis.table = profit
+        self.analysis.profit_table = profit
 
         return True
 
@@ -291,4 +291,4 @@ if __name__ == '__main__':
     # print(ic.legs[3].value_table)
 
     print(f'{ic.strike=:.2f}, {ic.analysis.max_gain=:.2f}, {ic.analysis.max_loss=:.2f}, {ic.analysis.total=:.2f}')
-    print(ic.analysis.table)
+    print(ic.analysis.profit_table)

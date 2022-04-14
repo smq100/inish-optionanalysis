@@ -210,8 +210,7 @@ class Screener(Threaded):
                 self.scripts = []
                 _logger.error(f'{__name__}: File format error')
             else:
-                if init:
-                    self._add_init_script(init)
+                self._add_init_script(init)
         else:
             _logger.error(f'{__name__}: File "{script}" not found')
 
@@ -245,7 +244,9 @@ class Screener(Threaded):
         return len(self.companies) > 0
 
     def _add_init_script(self, script: str) -> bool:
-        if os.path.exists(script):
+        if not script:
+            pass
+        elif os.path.exists(script):
             try:
                 with open(script) as f:
                     self.scripts += json.load(f)

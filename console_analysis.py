@@ -13,7 +13,7 @@ from tabulate import tabulate
 import strategies as s
 import strategies.strategy_list as sl
 from strategies.strategy import Strategy
-from screener.screener import Screener, Result, SCREEN_INIT_NAME, SCREEN_BASEPATH, SCREEN_SUFFIX, CACHE_BASEPATH, CACHE_SUFFIX
+from screener.screener import Screener, SCREEN_INIT_NAME, SCREEN_BASEPATH, SCREEN_SUFFIX, CACHE_BASEPATH, CACHE_SUFFIX
 from analysis.trend import SupportResistance
 from analysis.correlate import Correlate
 from analysis.charts import Charts
@@ -105,7 +105,7 @@ class Interface:
                 '6':  'Run Coorelation',
                 '7':  'Show Top Results',
                 '8':  'Show All Results',
-                '9':  'Show Ticker Screen Summary',
+                '9':  'Show Ticker Screen Results',
                 '10': 'Show Chart',
                 '11': 'Manage Cache Files',
                 '12': 'Delete Old Cache Files',
@@ -345,9 +345,9 @@ class Interface:
             if not sl.strategy_results.empty:
                 ui.print_message(f'Strategy Analysis ({task_time:.1f}s)', pre_creturn=1, post_creturn=1)
 
-                sl.strategy_results.drop(['breakeven', 'breakeven1', 'breakeven2'], axis=1, errors='ignore', inplace=True)
-                headers = [header.replace('_', '\n').title() for header in sl.strategy_results.columns]
-                print(tabulate(sl.strategy_results, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
+                summary = sl.strategy_results.drop(['breakeven', 'breakeven1', 'breakeven2'], axis=1, errors='ignore')
+                headers = [header.replace('_', '\n').title() for header in summary]
+                print(tabulate(summary, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
             else:
                 ui.print_warning(f'No results returned: {sl.strategy_state}', pre_creturn=2, post_creturn=1)
 

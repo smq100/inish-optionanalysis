@@ -326,7 +326,7 @@ class Interface():
 
     def show_analysis(self, style: int = 0) -> None:
         if not self.dirty_analyze:
-            analysis = self.strategy.analysis.table * 100.0
+            analysis = self.strategy.analysis.profit_table * 100.0
             if analysis is not None:
                 if style == 0:
                     style = ui.input_integer('(1) Summary, (2) Table, (3) Chart, (4) Contour, (5) Surface, or (0) Cancel: ', 0, 5)

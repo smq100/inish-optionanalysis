@@ -60,7 +60,7 @@ class Call(Strategy):
             profit = self.legs[0].value_table
             profit = profit.applymap(lambda x: (self.legs[0].option.price_eff - x) if x < self.legs[0].option.price_eff else -(x - self.legs[0].option.price_eff))
 
-        self.analysis.table = profit
+        self.analysis.profit_table = profit
 
         return True
 

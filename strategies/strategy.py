@@ -209,7 +209,7 @@ class Strategy(ABC, Threaded):
 
         return True
 
-    def set_screen_score(self, score: float):
+    def set_score_screen(self, score: float):
         self.analysis.score_screen = score
 
     def validate(self) -> bool:
@@ -240,5 +240,5 @@ if __name__ == '__main__':
     # print(strategy.analysis)
     # print(strategy.legs[0].value)
     # print(strategy.legs[1].value)
-    print(strategy.analysis.table)
+    print(strategy.analysis.profit_table)
     print(strategy.analysis.summary)

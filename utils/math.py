@@ -33,18 +33,30 @@ def calculate_min_max_step(strike: float) -> tuple[float, float, float]:
     max_ = 0.0
     step = 0.0
 
-    if strike >= 500.0:
-        step = 20.0
-    elif strike >= 100.0:
-        step = 10.0
-    elif strike >= 50.0:
-        step = 2.50
-    elif strike >= 20.0:
-        step = 1.00
-    elif strike >= 5.0:
-        step = 0.25
-    else:
+    if strike < 1.0:
+        step = 0.05
+    elif strike < 2.5:
         step = 0.10
+    elif strike < 5.0:
+        step = 0.25
+    elif strike < 10.0:
+        step = 0.10
+    elif strike < 25.0:
+        step = 0.2
+    elif strike < 50.0:
+        step = 0.50
+    elif strike < 100.0:
+        step = 1.0
+    elif strike < 250.0:
+        step = 2.0
+    elif strike < 500.0:
+        step = 4.0
+    elif strike < 1000.0:
+        step = 8.0
+    elif strike < 2000.0:
+        step = 16.0
+    else:
+        step = 30.0
 
     min_ = strike - ((VALUETABLE_ROWS / 2.0) * step)
     max_ = strike + ((VALUETABLE_ROWS / 2.0) * step)

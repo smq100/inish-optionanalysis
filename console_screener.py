@@ -81,20 +81,20 @@ class Interface:
                 '3': 'Select Screener',
                 '4': 'Run Screen',
                 '5': 'Run Backtest',
-                '6': 'Show All',
+                '6': 'Show Ticker Screener Results',
                 '7': 'Show Top',
-                '8': 'Show Ticker',
+                '8': 'Show All',
                 '0': 'Exit'
             }
 
             if self.table:
-                menu_items['2'] = f'Select List ({self.table})'
+                menu_items['2'] += f' ({self.table})'
 
             if self.screen_base:
-                menu_items['3'] = f'Select Screener ({self.screen_base})'
+                menu_items['3'] += f' ({self.screen_base})'
 
             if len(self.valids) > 0:
-                menu_items['6'] = f'Show All ({len(self.valids)})'
+                menu_items['8'] += f' ({len(self.valids)})'
 
             if selection == 0:
                 selection = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
@@ -114,11 +114,11 @@ class Interface:
                     if len(self.valids) > 0:
                         self.print_backtest(top=20)
             elif selection == 6:
-                self.print_results()
+                self.print_ticker_results()
             elif selection == 7:
                 self.print_results(top=20)
             elif selection == 8:
-                self.print_ticker_results()
+                self.print_results()
             elif selection == 0:
                 self.exit = True
 
@@ -208,7 +208,7 @@ class Interface:
                 ui.print_error(f'{__name__}: {str(e)}')
             else:
                 self.valids = []
-                self.task = threading.Thread(target=self.screener.run_script)
+                self.task = threading.Thread(target=self.screener.run_script, kwargs={'use_cache': False})
                 self.task.start()
 
                 # Show thread progress. Blocking while thread is active

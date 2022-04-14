@@ -180,7 +180,7 @@ class Vertical(Strategy):
         else:
             profit -= self.analysis.total
 
-        self.analysis.table = profit
+        self.analysis.profit_table = profit
 
         return True
 

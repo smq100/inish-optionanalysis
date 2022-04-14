@@ -32,8 +32,8 @@ class Interpreter:
         self.criteria_stop = 0
         self.criteria_series = 'none'
         self.criteria_factor = 0.0
+
         self.success = False
-        self.enable_score = True
         self.score = 1.0
         self.result = ''
 
@@ -75,7 +75,6 @@ class Interpreter:
 
     def _calculate(self) -> tuple:
         self.base = pd.Series(dtype=float)
-        self.enable_score = False
         calculate = True
 
         # Base value
@@ -83,7 +82,6 @@ class Interpreter:
             value = self._get_base_close()
             if not value.empty:
                 self.base = value
-                self.enable_score = True
 
         elif self.base_technical == VALID_TECHNICALS[3]:  # volume
             value = self._get_base_volume()
@@ -94,31 +92,26 @@ class Interpreter:
             value = self._get_base_sma()
             if not value.empty:
                 self.base = value
-                self.enable_score = True
 
         elif self.base_technical == VALID_TECHNICALS[5]:  # rsi
             value = self._get_base_rsi()
             if not value.empty:
                 self.base = value
-                self.enable_score = True
 
         elif self.base_technical == VALID_TECHNICALS[6]:  # beta
             value = self._get_base_beta()
             if not value.empty:
                 self.base = value
-                self.enable_score = True
 
         elif self.base_technical == VALID_TECHNICALS[7]:  # rating
             value = self._get_base_rating()
             if not value.empty:
                 self.base = value
-                self.enable_score = True
 
         elif self.base_technical == VALID_TECHNICALS[8]:  # mcap
             value = self._get_base_mcap()
             if not value.empty:
                 self.base = value
-                self.enable_score = True
 
         elif self.base_technical == VALID_TECHNICALS[10]:  # true
             calculate = False
@@ -199,21 +192,23 @@ class Interpreter:
                         if base >= criteria:
                             self.success = True
 
-            self.score = self.score * self.weight if self.enable_score else 1.0
+            self.score = self.score * self.weight if self.weight > 0.0 else 1.0
 
-            self.result = f'{self.company.ticker:6s}: {str(self.success)[:1]}: {self.score:6.2f}: {self.note:18s}: ' + \
-                f'{self.base_technical}({self.base_length})/{base:.2f}@{self.base_factor:.2f} ' + \
+            basef = f'{base:.2f}' if base < 1e5 else f'{base:.1e}'
+            criteriaf = f'{criteria:.2f}' if criteria < 1e5 else f'{criteria:.1e}'
+            self.result = f'{self.company.ticker:6s} {str(self.success)[:1]} {self.score:6.2f}: {self.note:18s}: ' + \
+                f'{self.base_technical}({self.base_length})/{basef}@{self.base_factor:.2f} ' + \
                 f'{self.conditional} ' + \
-                f'{self.criteria_technical}({self.criteria_length})/{self.criteria_start}/{self.criteria_series}/{criteria:.2f}@{self.criteria_factor:.2f}' + \
-                f'{self.weight:.1f}'
+                f'{self.criteria_technical}({self.criteria_length})/{self.criteria_start}/{self.criteria_series}/{criteriaf}@{self.criteria_factor:.2f} ' + \
+                f'w={self.weight:.1f}'
         else:
             _logger.warning(f'{__name__}: No technical information for {self.company}')
 
-            self.result = f'{self.company.ticker:6s}: {str(self.success)[:1]}: {self.score:6.2f}: {self.note:18s}: ' + \
+            self.result = f'{self.company.ticker:6s} {str(self.success)[:1]} {self.score:6.2f}: {self.note:18s}: ' + \
                 f'{self.base_technical}({self.base_length})/***@{self.base_factor:.2f} ' + \
                 f'{self.conditional} ' + \
-                f'{self.criteria_technical}({self.criteria_length})/{self.criteria_start}/{self.criteria_series}/***@{self.criteria_factor:.2f}' + \
-                f'{self.weight:.1f}'
+                f'{self.criteria_technical}({self.criteria_length})/{self.criteria_start}/{self.criteria_series}/***@{self.criteria_factor:.2f} ' + \
+                f'w={self.weight:.1f}'
 
         _logger.info(self.result)
 

@@ -5,8 +5,6 @@ import pandas as pd
 @dataclass(order=True)
 class Analysis:
     ticker: str = ''
-    table: pd.DataFrame = pd.DataFrame()
-    summary: pd.DataFrame = pd.DataFrame()
     credit_debit: str = ''
     sentiment: str = ''
     total: float = 0.0
@@ -18,12 +16,14 @@ class Analysis:
     score_screen: float = -1.0
     score_total: float = -1.0
     breakeven: list[float] = field(default_factory=list)
+    profit_table: pd.DataFrame = pd.DataFrame()
+    summary: pd.DataFrame = pd.DataFrame()
 
     def __post_init__(self):
          self.sort_index = self.score_total
 
     def __str__(self):
-        if not self.table.empty:
+        if not self.profit_table.empty:
             gain = 'Unlimited' if self.max_gain < 0.0 else f'${self.max_gain*100:.2f}'
             loss = 'Unlimited' if self.max_loss < 0.0 else f'${self.max_loss*100:.2f}'
             return_text = f'{self.upside * 100.0:.2f}%' if self.upside >= 0.0 else 'Unlimited'
@@ -51,15 +51,17 @@ class Analysis:
         return output
 
     def summarize(self) -> pd.DataFrame:
-        if not self.table.empty:
-            self.score_total = self.score_options + self.score_screen
+        if not self.profit_table.empty:
+            self.score_total = self.score_options
+            if self.score_screen > 0.0:
+                self.score_total += self.score_screen
 
             data = {
                 'credit_debit': self.credit_debit,
                 'sentiment': self.sentiment,
-                'total': self.total*100,
-                'max_gain': self.max_gain*100.0 if self.max_gain >= 0.0 else 'unlimited',
-                'max_loss': self.max_loss*100.0 if self.max_loss >= 0.0 else 'unlimited',
+                'total': self.total * 100.0,
+                'max_gain': self.max_gain * 100.0 if self.max_gain >= 0.0 else 'unlimited',
+                'max_loss': self.max_loss * 100.0 if self.max_loss >= 0.0 else 'unlimited',
                 'return': self.upside if self.upside >= 0.0 else 'unlimited',
                 'pop': self.pop,
                 'score_option': self.score_options,

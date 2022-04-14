@@ -224,6 +224,12 @@ class BlackScholes(Pricing):
         if volatility <= 0.0:
             volatility = self.volatility
 
+        if volatility <= 0.0:
+            _logger.error(f'{__name__}: D1: {volatility=}')
+
+        if self.strike_price <= 0.0:
+            _logger.error(f'{__name__}: D1: {self.strike_price=}')
+
         d1 = (np.log(spot_price / self.strike_price) +
               (self.risk_free_rate - self.dividend + 0.5 * volatility ** 2) * time_to_maturity) / (volatility * np.sqrt(time_to_maturity))
 
@@ -245,6 +251,12 @@ class BlackScholes(Pricing):
 
         if volatility <= 0.0:
             volatility = self.volatility
+
+        if volatility <= 0.0:
+            _logger.error(f'{__name__}: D1: {volatility=}')
+
+        if self.strike_price <= 0.0:
+            _logger.error(f'{__name__}: D1: {self.strike_price=}')
 
         d2 = (np.log(spot_price / self.strike_price) +
               (self.risk_free_rate - self.dividend - 0.5 * volatility ** 2) * time_to_maturity) / (volatility * np.sqrt(time_to_maturity))
