@@ -16,11 +16,23 @@ from utils import logger
 
 _logger = logger.get_logger()
 
-strategy_type = collections.namedtuple('strategy', ['ticker', 'strategy', 'product', 'direction', 'strike', 'width1', 'width2', 'expiry', 'volatility', 'score_screen', 'load_contracts'])
+strategy_type = collections.namedtuple('strategy', [
+    'ticker',
+    'strategy',
+    'product',
+    'direction',
+    'strike',
+    'width1',
+    'width2',
+    'expiry',
+    'volatility',
+    'score_screen',
+    'load_contracts'])
+
 strategy_state = ''
 strategy_msg = ''
+strategy_parameters = pd.DataFrame()
 strategy_results = pd.DataFrame()
-strategy_legs = []
 strategy_total = 0
 strategy_completed = 0
 strategy_errors = []
@@ -30,21 +42,26 @@ strategy_futures = []
 def analyze(strategies: list[strategy_type]) -> None:
     global strategy_state
     global strategy_msg
+    global strategy_parameters
     global strategy_results
-    global strategy_legs
     global strategy_total
     global strategy_completed
     global strategy_errors
     global strategy_futures
 
     def process(strategy: Strategy) -> None:
-        global strategy_results, strategy_legs, strategy_msg, strategy_completed, strategy_errors
+        global strategy_results, strategy_msg, strategy_completed, strategy_errors
 
         if not strategy.error:
             strategy_msg = strategy.ticker
+            name = f'{strategy.direction} {strategy.name}'
+            strikes = [leg.option.strike for leg in strategy.legs]
+            strategy.analysis.set_strategy(name, strikes, strategy.expiry)
+
             strategy.analyze()
-            strategy_results = pd.concat([strategy_results, strategy.analysis.summary])
-            strategy_legs += [f'{str(leg)}' for leg in strategy.legs]
+
+            strategy = pd.concat([strategy.analysis.strategy, strategy.analysis.analysis], axis=1)
+            strategy_results = pd.concat([strategy_results, strategy], axis=0)
         else:
             strategy_errors += [strategy.error]
             _logger.warning(f'{__name__}: Error analyzing strategy: {strategy.error}')
@@ -96,7 +113,7 @@ def analyze(strategies: list[strategy_type]) -> None:
             if len(items) > 0:
                 strategy_state = 'Next'
                 with futures.ThreadPoolExecutor(max_workers=strategy_total) as executor:
-                    strategy_futures = [executor.submit(process, item) for item in items]
+                    strategy_futures = [executor.submit(process, item) for item in items if not item.error]
 
                     for future in futures.as_completed(strategy_futures):
                         _logger.info(f'{__name__}: Thread completed: {future.result()}')

@@ -241,4 +241,4 @@ if __name__ == '__main__':
     # print(strategy.legs[0].value)
     # print(strategy.legs[1].value)
     print(strategy.analysis.profit_table)
-    print(strategy.analysis.summary)
+    print(strategy.analysis.analysis)

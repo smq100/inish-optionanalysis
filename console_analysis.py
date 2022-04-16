@@ -23,7 +23,7 @@ from utils import ui, logger
 logger.get_logger(logging.WARNING, logfile='')
 
 COOR_CUTOFF = 0.85
-LISTTOP_SCREEN = 10
+LISTTOP_SCREEN = 3
 LISTTOP_TREND = 5
 LISTTOP_CORR = 3
 
@@ -327,7 +327,7 @@ class Interface:
             score_screen = self.screener.get_score(ticker)
             strategies += [sl.strategy_type(ticker=ticker, strategy=strategy, product=product,
                                             direction=direction, strike=strike, width1=0, width2=0, expiry=None,
-                                            volatility=(-1.0, 0.0), score_screen=score_screen, load_contracts=True)]
+                                            volatility=(-1.0, 0.0), score_screen=score_screen, load_contracts=False)]
 
         if len(strategies) > 0:
             sl.reset()
@@ -495,7 +495,7 @@ class Interface:
         while not sl.strategy_state:
             pass
 
-        prefix = 'Collecting Option Data'
+        prefix = 'Creating Strategies'
         ui.progress_bar(0, 0, prefix=prefix, reset=True)
         if sl.strategy_state == 'None':
             while sl.strategy_state == 'None':

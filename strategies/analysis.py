@@ -1,8 +1,13 @@
 from dataclasses import dataclass, field
+import datetime as dt
+
+import numpy as np
 import pandas as pd
 
+from utils import ui
 
-@dataclass(order=True)
+
+@dataclass()
 class Analysis:
     ticker: str = ''
     credit_debit: str = ''
@@ -17,10 +22,11 @@ class Analysis:
     score_total: float = -1.0
     breakeven: list[float] = field(default_factory=list)
     profit_table: pd.DataFrame = pd.DataFrame()
-    summary: pd.DataFrame = pd.DataFrame()
+    analysis: pd.DataFrame = pd.DataFrame()
+    strategy: pd.DataFrame = pd.DataFrame()
 
     def __post_init__(self):
-         self.sort_index = self.score_total
+        self.sort_index = self.score_total
 
     def __str__(self):
         if not self.profit_table.empty:
@@ -39,7 +45,6 @@ class Analysis:
                 f'Score Screen:     {self.score_screen:.2f}\n'\
                 f'Score:            {self.score_total:.2f}\n'
 
-
             if len(self.breakeven) > 1:
                 output += f'Breakeven1:       {self.breakeven[0]:.2f}\n'
                 output += f'Breakeven2:       {self.breakeven[1]:.2f}\n'
@@ -50,7 +55,7 @@ class Analysis:
 
         return output
 
-    def summarize(self) -> pd.DataFrame:
+    def summarize(self) -> None:
         if not self.profit_table.empty:
             self.score_total = self.score_options
             if self.score_screen > 0.0:
@@ -75,4 +80,13 @@ class Analysis:
             else:
                 data['breakeven'] = self.breakeven[0]
 
-            self.summary = pd.DataFrame(data, index=[self.ticker])
+            self.analysis = pd.DataFrame(data, index=[self.ticker])
+
+    def set_strategy(self, name: str, strikes: list[float], expiry: dt.datetime) -> None:
+        data = {
+            'strategy': name,
+            'strikes': np.array2string(np.array(strikes), precision=2, floatmode='fixed'),
+            'expiry': expiry.strftime(ui.DATE_FORMAT)
+        }
+
+        self.strategy = pd.DataFrame(data, index=[self.ticker])

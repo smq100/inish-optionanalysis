@@ -220,7 +220,7 @@ class Screener(Threaded):
         tickers = []
 
         if self.type == 'all':
-            tickers = store.get_tickers()
+            tickers = store.get_tickers('all')
         elif self.type == 'exchange':
             tickers = store.get_exchange_tickers(self.table)
         elif self.type == 'index':
