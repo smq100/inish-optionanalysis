@@ -23,7 +23,7 @@ from utils import ui, logger
 logger.get_logger(logging.WARNING, logfile='')
 
 COOR_CUTOFF = 0.85
-LISTTOP_SCREEN = 3
+LISTTOP_SCREEN = 10
 LISTTOP_TREND = 5
 LISTTOP_CORR = 3
 
@@ -256,7 +256,7 @@ class Interface:
                 modified = False
 
             if modified:
-                self.run_option_strategy(strategy, product, direction)
+                self.run_strategies(strategy, product, direction, False)
         else:
             ui.print_error('No valid results to analyze')
 
@@ -307,7 +307,7 @@ class Interface:
 
         return success
 
-    def run_option_strategy(self, strategy: str, product: str, direction: str) -> None:
+    def run_strategies(self, strategy: str, product: str, direction: str, load_contracts: bool) -> None:
         if strategy not in s.STRATEGIES:
             raise ValueError('Invalid strategy')
         if direction not in s.DIRECTIONS:
@@ -327,7 +327,7 @@ class Interface:
             score_screen = self.screener.get_score(ticker)
             strategies += [sl.strategy_type(ticker=ticker, strategy=strategy, product=product,
                                             direction=direction, strike=strike, width1=0, width2=0, expiry=None,
-                                            volatility=(-1.0, 0.0), score_screen=score_screen, load_contracts=False)]
+                                            volatility=(-1.0, 0.0), score_screen=score_screen, load_contracts=load_contracts)]
 
         if len(strategies) > 0:
             sl.reset()
@@ -500,17 +500,21 @@ class Interface:
         if sl.strategy_state == 'None':
             while sl.strategy_state == 'None':
                 time.sleep(0.20)
-                ui.progress_bar(0, 0, prefix=prefix)
+                ui.progress_bar(0, 0, prefix=prefix, suffix=sl.strategy_msg)
 
             if sl.strategy_state == 'Next':
                 prefix = 'Analyzing Strategies'
                 ui.erase_line()
                 ui.progress_bar(0, 0, prefix=prefix)
 
-                tasks = len([True for future in sl.strategy_futures if future.running()])
                 while sl.strategy_state == 'Next':
                     time.sleep(0.20)
+
+                    # Catch case of a task exception not allowing normal completion
                     tasks = len([True for future in sl.strategy_futures if future.running()])
+                    if tasks == 0:
+                        break
+
                     ui.progress_bar(sl.strategy_completed, sl.strategy_total, prefix=prefix, suffix='', tasks=tasks)
 
     def show_progress_support_resistance(self) -> None:

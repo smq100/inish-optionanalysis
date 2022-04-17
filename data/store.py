@@ -256,12 +256,12 @@ def get_history(ticker: str, days: int = -1, end: int = 0, use_last: bool = Fals
         if end > 0:
             _logger.info(f'{__name__}: "end" value ignored for live queries')
     else:
-        _logger.info(f'{__name__}: Fetching {days} days of price history for {ticker}...')
         with _session() as session:
             if inactive:
                 symbols = session.query(models.Security.id).filter(models.Security.ticker == ticker).one_or_none()
             else:
                 symbols = session.query(models.Security.id).filter(and_(models.Security.ticker == ticker, models.Security.active)).one_or_none()
+
             if symbols is not None:
                 q = None
                 if days < 0:

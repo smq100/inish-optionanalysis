@@ -67,7 +67,7 @@ class Strategy(ABC, Threaded):
         self.analysis = Analysis(ticker=self.ticker)
         self.legs: list[Leg] = []
         self.initial_spot = 0.0
-        self.initial_spot = self.get_current_spot(roundup=True)
+        self.initial_spot = float(math.ceil(store.get_last_price(self.ticker)))
         self.error = ''
 
         # Default expiry is third Friday of next month, otherwise set it and check validity
@@ -126,15 +126,6 @@ class Strategy(ABC, Threaded):
         self.legs += [leg]
 
         return len(self.legs)
-
-    def get_current_spot(self, roundup: bool = False) -> float:
-        history = store.get_history(self.ticker, days=30)
-        spot = history.iloc[-1]['close']
-
-        if roundup:
-            spot = math.ceil(spot)
-
-        return spot
 
     def set_pricing_method(self, method: str):
         if method in p.PRICING_METHODS:

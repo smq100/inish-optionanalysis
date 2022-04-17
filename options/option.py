@@ -111,9 +111,9 @@ class Option:
 
         try:
             if self.product == 'call':
-                chain = store.get_option_chain(self.ticker, uselast=True)(str(self.expiry.date())).calls
+                chain = store.get_option_chain(self.ticker)(str(self.expiry.date())).calls
             else:
-                chain = store.get_option_chain(self.ticker, uselast=True)(str(self.expiry.date())).puts
+                chain = store.get_option_chain(self.ticker)(str(self.expiry.date())).puts
 
             if not chain.empty:
                 contract = chain.loc[chain['contractSymbol'] == contract_name].iloc[0]

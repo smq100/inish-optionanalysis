@@ -53,7 +53,6 @@ def analyze(strategies: list[strategy_type]) -> None:
         global strategy_results, strategy_msg, strategy_completed, strategy_errors
 
         if not strategy.error:
-            strategy_msg = strategy.ticker
             name = f'{strategy.direction} {strategy.name}'
             strikes = [leg.option.strike for leg in strategy.legs]
             strategy.analysis.set_strategy(name, strikes, strategy.expiry)

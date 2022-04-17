@@ -19,15 +19,12 @@ class Chain:
         self.expire: dt.datetime = None
         self.chain: pd.DataFrame = pd.DataFrame()
 
-        # Fetch the company info so we can used a cached version on subsequent calls (uselast=True)
-        store.get_company(ticker, live=True, test=True)
-
     def get_expiry(self) -> tuple[str]:
         return store.get_option_expiry(self.ticker, uselast=True)
 
     def get_chain(self, product: str) -> pd.DataFrame:
         self.product = product
-        value = store.get_option_chain(self.ticker, uselast=True)(date=self.expire.strftime(ui.DATE_FORMAT))
+        value = store.get_option_chain(self.ticker)(date=self.expire.strftime(ui.DATE_FORMAT))
 
         if product == 'call':
             self.chain = value.calls
