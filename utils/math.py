@@ -12,8 +12,12 @@ VALUETABLE_COLS = 9
 
 range_type = collections.namedtuple('range', ['min', 'max', 'step'])
 
-def mround(n: float, precision: float) -> float:
-    val = float(round(n / precision) * precision)
+
+def mround(n: float, precision: float, floor: bool = False) -> float:
+    if floor:
+        val = float((n // precision) * precision)
+    else:
+        val = float(round(n / precision) * precision)
     if val < 0.01:
         val = 0.01
 
@@ -67,15 +71,55 @@ def calculate_min_max_step(strike: float) -> tuple[float, float, float]:
     return range_type(min_, max_, step)
 
 
+def calculate_strike_and_widths(strategy: str, sentiment: str, strike: float) -> tuple[float, float, float]:
+    width1 = 0.0
+    width2 = 0.0
+
+    if strike < 1.0:
+        width1 = 0.10
+    elif strike < 2.5:
+        width1 = 0.25
+    elif strike < 5.0:
+        width1 = 0.50
+    elif strike < 10.0:
+        width1 = 1.00
+    elif strike < 25.0:
+        width1 = 2.00
+    elif strike < 50.0:
+        width1 = 2.50
+    elif strike < 100.0:
+        width1 = 5.00
+    elif strike < 250.0:
+        width1 = 10.00
+    elif strike < 500.0:
+        width1 = 20.00
+    elif strike < 1000.0:
+        width1 = 50.00
+    elif strike < 2000.0:
+        width1 = 100.00
+    else:
+        width1 = 30.0
+
+    # Calculate to closest value ITM using width as multiple
+    strike = mround(strike, width1, floor=True)
+    if sentiment == 'bearish':
+        strike += width1
+
+    if strategy == 'ic':
+        width2 = width1
+
+    return strike, width1, width2
+
+
 def compress_table(table: pd.DataFrame, rows: int, cols: int, auto: bool = True) -> pd.DataFrame:
     if not isinstance(table, pd.DataFrame):
-        raise ValueError("'table' must be a Pandas DataFrame")
+        raise ValueError('"table" must be a Pandas DataFrame')
 
     compressed = pd.DataFrame()
 
     if auto:
-        cols = ui.TERMINAL_SIZE.columns - 10 # Subtract approx price column width
-        cols = cols // 15 # Divide by approx col size
+        cols = ui.TERMINAL_SIZE.columns - 10  # Subtract approx price column width
+        cols = cols // 15  # Floor-divide by approx col size
 
     # Thin out cols
     srows, scols = table.shape

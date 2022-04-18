@@ -19,11 +19,12 @@ from analysis.correlate import Correlate
 from analysis.charts import Charts
 from data import store as store
 from utils import ui, logger
+from utils import math as m
 
 logger.get_logger(logging.WARNING, logfile='')
 
 COOR_CUTOFF = 0.85
-LISTTOP_SCREEN = 10
+LISTTOP_SCREEN = 3
 LISTTOP_TREND = 5
 LISTTOP_CORR = 3
 
@@ -45,9 +46,10 @@ class Interface:
     task: threading.Thread | None
     use_cache: bool
 
-    def __init__(self, *, table: str = '', screen: str = '', quick: bool = False, exit: bool = False):
+    def __init__(self, *, table: str = '', screen: str = '', load_contracts: bool = False, quick: bool = False, exit: bool = False):
         self.table = table.upper()
         self.screen = screen
+        self.load_contracts = load_contracts
         self.quick = quick
         self.exit = exit
         self.days = 1000
@@ -256,7 +258,7 @@ class Interface:
                 modified = False
 
             if modified:
-                self.run_strategies(strategy, product, direction, False)
+                self.run_strategies(strategy, product, direction)
         else:
             ui.print_error('No valid results to analyze')
 
@@ -307,7 +309,7 @@ class Interface:
 
         return success
 
-    def run_strategies(self, strategy: str, product: str, direction: str, load_contracts: bool) -> None:
+    def run_strategies(self, strategy: str, product: str, direction: str) -> None:
         if strategy not in s.STRATEGIES:
             raise ValueError('Invalid strategy')
         if direction not in s.DIRECTIONS:
@@ -319,15 +321,17 @@ class Interface:
 
         strategies = []
         for ticker in tickers:
-            if direction == 'long':
+            if self.load_contracts:
                 strike = float(math.floor(store.get_last_price(ticker)))
+                width1 = width2 = 1
             else:
-                strike = float(math.ceil(store.get_last_price(ticker)))
+                sentiment = Strategy.calculate_sentiment(strategy, product, direction)
+                strike, width1, width2 = m.calculate_strike_and_widths(strategy, sentiment, store.get_last_price(ticker))
 
             score_screen = self.screener.get_score(ticker)
             strategies += [sl.strategy_type(ticker=ticker, strategy=strategy, product=product,
-                                            direction=direction, strike=strike, width1=0, width2=0, expiry=None,
-                                            volatility=(-1.0, 0.0), score_screen=score_screen, load_contracts=load_contracts)]
+                                            direction=direction, strike=strike, width1=width1, width2=width2, expiry=None,
+                                            volatility=(-1.0, 0.0), score_screen=score_screen, load_contracts=self.load_contracts)]
 
         if len(strategies) > 0:
             sl.reset()
@@ -663,6 +667,7 @@ def main():
     parser = argparse.ArgumentParser(description='Screener')
     parser.add_argument('-t', '--table', help='Specify a symbol or table', required=False, default='')
     parser.add_argument('-s', '--screen', help='Specify a screening script', required=False, default='')
+    parser.add_argument('-f', '--default', help='Load the default options', required=False, action='store_true')
     parser.add_argument('-q', '--quick', help='Run a quick analysis', action='store_true')
     parser.add_argument('-v', '--verbose', help='Show verbose output', action='store_true')
     parser.add_argument('-x', '--exit', help='Run the script and quit (only valid with -t and -s) then exit', action='store_true')
@@ -671,7 +676,7 @@ def main():
     table = ''
     screen = ''
 
-    Interface(table=command['table'], screen=command['screen'], quick=command['quick'], exit=command['exit'])
+    Interface(table=command['table'], screen=command['screen'], load_contracts=command['default'], quick=command['quick'], exit=command['exit'])
 
 
 if __name__ == '__main__':

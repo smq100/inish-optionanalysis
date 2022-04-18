@@ -19,7 +19,6 @@ class IronButterfly(Strategy):
             strike: float,
             *,
             width1: int,
-            width2: int,
             quantity: int = 1,
             expiry: dt.datetime | None = None,
             volatility: tuple[float, float] = (-1.0, 0.0),

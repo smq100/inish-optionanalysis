@@ -116,6 +116,8 @@ class Interface():
             ui.print_error('Invalid product specified')
         elif width1 < 0:
             ui.print_error('Invalid width specified')
+        elif width2 < 0:
+            ui.print_error('Invalid width specified')
         elif quantity < 1:
             ui.print_error('Invalid quantity specified')
         elif strategy == 'vert' and width1 < 1:
@@ -124,7 +126,15 @@ class Interface():
             ui.print_error('Invalid width specified')
         elif strategy == 'ib' and width1 < 1:
             ui.print_error('Invalid width specified')
-        elif self.load_strategy(
+        else:
+            if self.load_contracts:
+                strike = float(math.floor(store.get_last_price(ticker)))
+                width1 = width2 = 1
+            else:
+                sentiment = Strategy.calculate_sentiment(self.strategy_name, product, direction)
+                strike, width1, width2 = m.calculate_strike_and_widths(self.strategy_name, sentiment, store.get_last_price(ticker))
+
+            if self.load_strategy(
                 ticker,
                 self.strategy_name,
                 product,
@@ -137,10 +147,11 @@ class Interface():
                 volatility,
                 load_contracts,
                 analyze or exit):
-            if not exit:
-                self.main_menu()
-        else:
-            ui.print_error('Problem loading strategy')
+
+                if not exit:
+                    self.main_menu()
+            else:
+                ui.print_error('Problem loading strategy')
 
     def main_menu(self) -> None:
         while True:
@@ -220,10 +231,18 @@ class Interface():
             raise ValueError('Invalid direction')
         if strike < 0.0:
             raise ValueError('Invalid strike')
+        if width1 < 0:
+            raise ValueError('Invalid width')
+        if width2 < 0:
+            raise ValueError('Invalid width')
         if quantity < 1:
             raise ValueError('Invalid quantity')
         if strategy == 'vert' and width1 < 1:
-            raise ValueError('Invalid width specified')
+            raise ValueError(f'Invalid width specified: {width1}')
+        if strategy == 'ic' and (width1 < 1 or width2 < 1):
+            raise ValueError(f'Invalid width specified: {width1}, {width2}')
+        if strategy == 'ib' and width1 < 1:
+            raise ValueError(f'Invalid width specified: {width1}')
 
         expiry_dt = dt.datetime.strptime(expiry, ui.DATE_FORMAT) if expiry else None
 
@@ -247,7 +266,7 @@ class Interface():
                     expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
             elif name == 'ib':
                 self.strategy_name = name
-                self.strategy = IronButterfly(ticker, 'hybrid', direction, strike, width1=width1, width2=0, quantity=quantity,
+                self.strategy = IronButterfly(ticker, 'hybrid', direction, strike, width1=width1, quantity=quantity,
                     expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
             else:
                 modified = False
@@ -419,13 +438,19 @@ class Interface():
                 break
 
         if valid:
-            strike = float(math.floor(store.get_last_price(ticker)))
             volatility = (-1.0, 0.0)
             self.dirty_analyze = True
             modified = True
             expiry = None
 
-            self.load_strategy(ticker, self.strategy_name, self.strategy.product, self.strategy.direction, strike, 0, 0, self.strategy.quantity, expiry, volatility)
+            if self.load_contracts:
+                strike = float(math.floor(store.get_last_price(ticker)))
+                width1 = width2 = 1
+            else:
+                sentiment = Strategy.calculate_sentiment(self.strategy_name, self.strategy.product, self.strategy.direction)
+                strike, width1, width2 = m.calculate_strike_and_widths(self.strategy_name, sentiment, store.get_last_price(ticker))
+
+            self.load_strategy(ticker, self.strategy_name, self.strategy.product, self.strategy.direction, strike, width1, width2, self.strategy.quantity, expiry, volatility)
 
         return modified
 
@@ -443,37 +468,61 @@ class Interface():
         selection = ui.menu(menu_items, 'Select Strategy', 0, len(menu_items)-1)
 
         if selection > 0:
+            self.load_contracts = False
             price = store.get_last_price(self.strategy.ticker)
             expiry = None
             volatility = (0.0, 0.0)
 
             if selection == 1:
+                strategy = product = 'call'
                 d = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
                 direction = 'long' if d == 1 else 'short'
                 strike = ui.input_float_range(f'Enter strike ({price:.2f}): ', price, 20.0)
-                modified = self.load_strategy(self.strategy.ticker, 'call', 'call', direction, strike, 0, 0, self.strategy.quantity, expiry, volatility)
+                modified = self.load_strategy(self.strategy.ticker, strategy, product, direction, strike, 0, 0, self.strategy.quantity, expiry, volatility)
+
             elif selection == 2:
+                strategy = product = 'put'
                 d = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
                 direction = 'long' if d == 1 else 'short'
                 strike = ui.input_float_range(f'Enter strike ({price:.2f}): ', price, 20.0)
-                modified = self.load_strategy(self.strategy.ticker, 'put', 'put', direction, strike, 0, 0, self.strategy.quantity, expiry, volatility)
+                modified = self.load_strategy(self.strategy.ticker, strategy, product, direction, strike, 0, 0, self.strategy.quantity, expiry, volatility)
+
             elif selection == 3:
+                strategy = 'vert'
                 p = ui.input_integer('(1) Call, or (2) Put: ', 1, 2)
                 product = 'call' if p == 1 else 'put'
                 d = ui.input_integer('(1) Debit, or (2) Credit: ', 1, 2)
                 direction = 'long' if d == 1 else 'short'
                 strike = ui.input_float_range(f'Enter strike ({price:.2f}): ', price, 20.0)
-                modified = self.load_strategy(self.strategy.ticker, 'vert', product, direction, strike, 1, 0, self.strategy.quantity, expiry, volatility)
+
+                sentiment = Strategy.calculate_sentiment(strategy, product, direction)
+                _, width1, _ = m.calculate_strike_and_widths(strategy, sentiment, store.get_last_price(self.strategy.ticker))
+
+                modified = self.load_strategy(self.strategy.ticker, strategy, product, direction, strike, width1, 0, self.strategy.quantity, expiry, volatility)
+
             elif selection == 4:
+                strategy = 'ic'
+                product = 'hybrid'
                 d = ui.input_integer('(1) Debit, or (2) Credit: ', 1, 2)
                 direction = 'long' if d == 1 else 'short'
                 strike = ui.input_float_range(f'Enter strike ({price:.2f}): ', price, 20.0)
-                modified = self.load_strategy(self.strategy.ticker, 'ic', 'hybrid', direction, strike, 1, 1, self.strategy.quantity, expiry, volatility)
+
+                sentiment = Strategy.calculate_sentiment(strategy, product, direction)
+                _, width1, width2 = m.calculate_strike_and_widths(strategy, sentiment, store.get_last_price(self.strategy.ticker))
+
+                modified = self.load_strategy(self.strategy.ticker, strategy, product, direction, strike, width1, width2, self.strategy.quantity, expiry, volatility)
+
             elif selection == 5:
+                strategy = 'ib'
+                product = 'hybrid'
                 d = ui.input_integer('(1) Debit, or (2) Credit: ', 1, 2)
                 direction = 'long' if d == 1 else 'short'
                 strike = ui.input_float_range(f'Enter strike ({price:.2f}): ', price, 20.0)
-                modified = self.load_strategy(self.strategy.ticker, 'ib', 'hybrid', direction, strike, 1, 0, self.strategy.quantity, expiry, volatility)
+
+                sentiment = Strategy.calculate_sentiment(strategy, product, direction)
+                _, width1, _ = m.calculate_strike_and_widths(strategy, sentiment, store.get_last_price(self.strategy.ticker))
+
+                modified = self.load_strategy(self.strategy.ticker, strategy, product, direction, strike, width1, 0, self.strategy.quantity, expiry, volatility)
 
         return modified
 

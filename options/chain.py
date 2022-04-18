@@ -20,7 +20,7 @@ class Chain:
         self.chain: pd.DataFrame = pd.DataFrame()
 
     def get_expiry(self) -> tuple[str]:
-        return store.get_option_expiry(self.ticker, uselast=True)
+        return store.get_option_expiry(self.ticker, uselast=False)
 
     def get_chain(self, product: str) -> pd.DataFrame:
         self.product = product

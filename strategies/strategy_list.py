@@ -11,6 +11,7 @@ from strategies.put import Put
 from strategies.vertical import Vertical
 from strategies.iron_condor import IronCondor
 from strategies.iron_butterfly import IronButterfly
+from utils import math as m
 from utils import logger
 
 
@@ -55,7 +56,7 @@ def analyze(strategies: list[strategy_type]) -> None:
         if not strategy.error:
             name = f'{strategy.direction} {strategy.name}'
             strikes = [leg.option.strike for leg in strategy.legs]
-            strategy.analysis.set_strategy(name, strikes, strategy.expiry)
+            strategy.analysis.set_strategy(name, strikes, strategy.expiry, strategy.initial_spot)
 
             strategy.analyze()
 
@@ -88,20 +89,20 @@ def analyze(strategies: list[strategy_type]) -> None:
                     item.set_score_screen(s.score_screen)
                     items += [item]
                 elif s.strategy == STRATEGIES[2]: # Vertical
-                    strategy_msg = f'{s.ticker}: ${s.strike:.2f} {s.direction} {s.product}{decorator}'
-                    item = Vertical(s.ticker, s.product, s.direction, s.strike, width=1, quantity=1,
+                    strategy_msg = f'{s.ticker}: ${s.strike:.2f} {s.direction} {s.strategy} {s.product}{decorator}'
+                    item = Vertical(s.ticker, s.product, s.direction, s.strike, width=s.width1, quantity=1,
                         expiry=s.expiry, volatility=s.volatility, load_contracts=s.load_contracts)
                     item.set_score_screen(s.score_screen)
                     items += [item]
                 elif s.strategy == STRATEGIES[3]: # Iron condor
                     strategy_msg = f'{s.ticker}: ${s.strike:.2f}{decorator}'
-                    item = IronCondor(s.ticker, 'hybrid', s.direction, s.strike, width1=1, width2=1, quantity=1,
+                    item = IronCondor(s.ticker, 'hybrid', s.direction, s.strike, width1=s.width1, width2=s.width2, quantity=1,
                         expiry=s.expiry, volatility=s.volatility, load_contracts=s.load_contracts)
                     item.set_score_screen(s.score_screen)
                     items += [item]
                 elif s.strategy == STRATEGIES[4]: # Iron butterfly
                     strategy_msg = f'{s.ticker}: ${s.strike:.2f}{decorator}'
-                    item = IronButterfly(s.ticker, 'hybrid', s.direction, s.strike, width1=1, width2=0, quantity=1,
+                    item = IronButterfly(s.ticker, 'hybrid', s.direction, s.strike, width1=s.width1, width2=s.width2, quantity=1,
                         expiry=s.expiry, volatility=s.volatility, load_contracts=s.load_contracts)
                     item.set_score_screen(s.score_screen)
                     items += [item]

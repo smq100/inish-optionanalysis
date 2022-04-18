@@ -64,7 +64,7 @@ class Analysis:
             data = {
                 'credit_debit': self.credit_debit,
                 'sentiment': self.sentiment,
-                'total': self.total * 100.0,
+                'total': self.total * 100.0 if self.credit_debit == 'credit' else self.total * -100.0,
                 'max_gain': self.max_gain * 100.0 if self.max_gain >= 0.0 else 'unlimited',
                 'max_loss': self.max_loss * 100.0 if self.max_loss >= 0.0 else 'unlimited',
                 'return': self.upside if self.upside >= 0.0 else 'unlimited',
@@ -82,11 +82,12 @@ class Analysis:
 
             self.analysis = pd.DataFrame(data, index=[self.ticker])
 
-    def set_strategy(self, name: str, strikes: list[float], expiry: dt.datetime) -> None:
+    def set_strategy(self, name: str, strikes: list[float], expiry: dt.datetime, spot: float) -> None:
         data = {
             'strategy': name,
+            'spot': f'{spot:.02f}',
             'strikes': np.array2string(np.array(strikes), precision=2, floatmode='fixed'),
-            'expiry': expiry.strftime(ui.DATE_FORMAT)
+            'expiry': expiry.strftime(ui.DATE_FORMAT),
         }
 
         self.strategy = pd.DataFrame(data, index=[self.ticker])

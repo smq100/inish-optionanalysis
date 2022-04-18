@@ -19,7 +19,7 @@ class Vertical(Strategy):
             direction: str,
             strike: float,
             *,
-            width: int = 1,
+            width: int,
             quantity: int = 1,
             expiry: dt.datetime | None = None,
             volatility: tuple[float, float] = (-1.0, 0.0),

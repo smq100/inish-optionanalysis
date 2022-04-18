@@ -7,6 +7,7 @@ from numpy import load
 import pandas as pd
 
 from base import Threaded
+from . import STRATEGIES
 import strategies as s
 from strategies.leg import Leg
 from strategies.analysis import Analysis
@@ -66,8 +67,7 @@ class Strategy(ABC, Threaded):
         self.chain: Chain = Chain(self.ticker)
         self.analysis = Analysis(ticker=self.ticker)
         self.legs: list[Leg] = []
-        self.initial_spot = 0.0
-        self.initial_spot = float(math.ceil(store.get_last_price(self.ticker)))
+        self.initial_spot = store.get_last_price(self.ticker)
         self.error = ''
 
         # Default expiry is third Friday of next month, otherwise set it and check validity
@@ -212,6 +212,32 @@ class Strategy(ABC, Threaded):
 
         return not bool(self.error)
 
+    @staticmethod
+    def calculate_sentiment(strategy: str, product: str, direction: str) -> str:
+        sentiment = 'bullish'
+        if strategy == STRATEGIES[0]: # Call
+            if direction == 'short':
+                sentiment = 'bearish'
+        elif strategy == STRATEGIES[1]: # Put
+            if direction == 'long':
+                sentiment = 'bearish'
+        elif strategy == STRATEGIES[2]: # Vertical
+            if product == 'put' and direction == 'long':
+                sentiment = 'bearish'
+            if product == 'call' and direction == 'short':
+                sentiment = 'bearish'
+        elif strategy == STRATEGIES[3]: # Iron condor
+            if direction == 'long':
+                sentiment = 'high volatility'
+            else:
+                sentiment = 'low volatility'
+        elif strategy == STRATEGIES[4]: # Iron butterfly
+            if direction == 'long':
+                sentiment = 'high volatility'
+            else:
+                sentiment = 'low volatility'
+
+        return sentiment
 
 if __name__ == '__main__':
     import logging
