@@ -363,6 +363,15 @@ def get_company(ticker: str, live: bool = False, extra: bool = False, uselast: b
     return results
 
 
+def get_company_name(ticker: str) -> str:
+    name = '< error >'
+    results = get_company(ticker)
+    if results:
+        name = results['name']
+
+    return name
+
+
 def get_exchange_tickers_master(exchange: str, type: str = 'google') -> list[str]:
     global _master_exchanges
     symbols = []

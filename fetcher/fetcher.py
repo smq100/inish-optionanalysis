@@ -338,6 +338,23 @@ if __name__ == '__main__':
     :return: <object> YFinance Ticker object
     '''
 
+    ''' Example option_chain object:
+            'contractSymbol',
+            'lastTradeDate',
+            'strike',
+            'lastPrice',
+            'bid',
+            'ask',
+            'change',
+            'percentChange',
+            'volume',
+            'openInterest',
+            'impliedVolatility',
+            'inTheMoney',
+            'contractSize',
+            'currency'])
+    '''
+
     ''' Example .info object:
     {
         "zip":"98052-6399",

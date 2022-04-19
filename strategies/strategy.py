@@ -212,33 +212,6 @@ class Strategy(ABC, Threaded):
 
         return not bool(self.error)
 
-    @staticmethod
-    def calculate_sentiment(strategy: str, product: str, direction: str) -> str:
-        sentiment = 'bullish'
-        if strategy == STRATEGIES[0]: # Call
-            if direction == 'short':
-                sentiment = 'bearish'
-        elif strategy == STRATEGIES[1]: # Put
-            if direction == 'long':
-                sentiment = 'bearish'
-        elif strategy == STRATEGIES[2]: # Vertical
-            if product == 'put' and direction == 'long':
-                sentiment = 'bearish'
-            if product == 'call' and direction == 'short':
-                sentiment = 'bearish'
-        elif strategy == STRATEGIES[3]: # Iron condor
-            if direction == 'long':
-                sentiment = 'high volatility'
-            else:
-                sentiment = 'low volatility'
-        elif strategy == STRATEGIES[4]: # Iron butterfly
-            if direction == 'long':
-                sentiment = 'high volatility'
-            else:
-                sentiment = 'low volatility'
-
-        return sentiment
-
 if __name__ == '__main__':
     import logging
     from strategies.call import Call

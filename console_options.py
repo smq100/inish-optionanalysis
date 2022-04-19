@@ -131,8 +131,7 @@ class Interface():
                 strike = float(math.floor(store.get_last_price(ticker)))
                 width1 = width2 = 1
             else:
-                sentiment = Strategy.calculate_sentiment(self.strategy_name, product, direction)
-                strike, width1, width2 = m.calculate_strike_and_widths(self.strategy_name, sentiment, store.get_last_price(ticker))
+                strike, width1, width2 = m.calculate_strike_and_widths(self.strategy_name, product, direction, store.get_last_price(ticker))
 
             if self.load_strategy(
                 ticker,
@@ -170,11 +169,17 @@ class Interface():
             loaded = '' if self.strategy.legs[0].option.price_last > 0 else '*'
             expire = f'{self.strategy.legs[0].option.expiry:%Y-%m-%d}'
 
-            if self.strategy_name == s.STRATEGIES_BROAD[2]: # Vertical
+            if self.strategy_name == s.STRATEGIES[2]: # Vertical
                 menu_items['3'] += f's ({expire}, '\
                     f'L:${self.strategy.legs[0].option.strike:.2f}{loaded}, '\
                     f'S:${self.strategy.legs[1].option.strike:.2f}{loaded})'
-            elif self.strategy_name == s.STRATEGIES_BROAD[3]: # Iron Condor
+            elif self.strategy_name == s.STRATEGIES[3]: # Iron Condor
+                menu_items['3'] += f's ({expire}, '\
+                    f'${self.strategy.legs[0].option.strike:.2f}{loaded}, '\
+                    f'${self.strategy.legs[1].option.strike:.2f}{loaded}, '\
+                    f'${self.strategy.legs[2].option.strike:.2f}{loaded}, '\
+                    f'${self.strategy.legs[3].option.strike:.2f}{loaded})'
+            elif self.strategy_name == s.STRATEGIES[4]: # Iron Butterfly
                 menu_items['3'] += f's ({expire}, '\
                     f'${self.strategy.legs[0].option.strike:.2f}{loaded}, '\
                     f'${self.strategy.legs[1].option.strike:.2f}{loaded}, '\
@@ -358,8 +363,9 @@ class Interface():
                     if rows > 0 or cols > 0:
                         analysis = m.compress_table(analysis, rows, cols)
 
-                    expiry = analysis.columns[-1]
-                    title = f'Profit Summary for {self.strategy.name.title()}: {self.strategy.ticker} ({expiry})'
+                    name = store.get_company_name(self.strategy.ticker)
+                    expiry = analysis.columns[-1] # Expiry is the last column name
+                    title = f'Profit Summary for {self.strategy.name.title()}: {name} ({self.strategy.ticker}/{expiry})'
 
                     if style == 1:
                         ui.print_message(title, pre_creturn=2)
@@ -442,13 +448,13 @@ class Interface():
             self.dirty_analyze = True
             modified = True
             expiry = None
+            price = float(math.floor(store.get_last_price(ticker)))
 
             if self.load_contracts:
-                strike = float(math.floor(store.get_last_price(ticker)))
+                strike = price
                 width1 = width2 = 1
             else:
-                sentiment = Strategy.calculate_sentiment(self.strategy_name, self.strategy.product, self.strategy.direction)
-                strike, width1, width2 = m.calculate_strike_and_widths(self.strategy_name, sentiment, store.get_last_price(ticker))
+                strike, width1, width2 = m.calculate_strike_and_widths(self.strategy_name, self.strategy.product, self.strategy.direction, price)
 
             self.load_strategy(ticker, self.strategy_name, self.strategy.product, self.strategy.direction, strike, width1, width2, self.strategy.quantity, expiry, volatility)
 
@@ -495,8 +501,7 @@ class Interface():
                 direction = 'long' if d == 1 else 'short'
                 strike = ui.input_float_range(f'Enter strike ({price:.2f}): ', price, 20.0)
 
-                sentiment = Strategy.calculate_sentiment(strategy, product, direction)
-                _, width1, _ = m.calculate_strike_and_widths(strategy, sentiment, store.get_last_price(self.strategy.ticker))
+                _, width1, _ = m.calculate_strike_and_widths(strategy, product, direction, store.get_last_price(self.strategy.ticker))
 
                 modified = self.load_strategy(self.strategy.ticker, strategy, product, direction, strike, width1, 0, self.strategy.quantity, expiry, volatility)
 
@@ -507,8 +512,7 @@ class Interface():
                 direction = 'long' if d == 1 else 'short'
                 strike = ui.input_float_range(f'Enter strike ({price:.2f}): ', price, 20.0)
 
-                sentiment = Strategy.calculate_sentiment(strategy, product, direction)
-                _, width1, width2 = m.calculate_strike_and_widths(strategy, sentiment, store.get_last_price(self.strategy.ticker))
+                _, width1, width2 = m.calculate_strike_and_widths(strategy, product, direction, store.get_last_price(self.strategy.ticker))
 
                 modified = self.load_strategy(self.strategy.ticker, strategy, product, direction, strike, width1, width2, self.strategy.quantity, expiry, volatility)
 
@@ -519,8 +523,7 @@ class Interface():
                 direction = 'long' if d == 1 else 'short'
                 strike = ui.input_float_range(f'Enter strike ({price:.2f}): ', price, 20.0)
 
-                sentiment = Strategy.calculate_sentiment(strategy, product, direction)
-                _, width1, _ = m.calculate_strike_and_widths(strategy, sentiment, store.get_last_price(self.strategy.ticker))
+                _, width1, _ = m.calculate_strike_and_widths(strategy, product, direction, store.get_last_price(self.strategy.ticker))
 
                 modified = self.load_strategy(self.strategy.ticker, strategy, product, direction, strike, width1, 0, self.strategy.quantity, expiry, volatility)
 
@@ -533,29 +536,34 @@ class Interface():
         if not self.strategy.chain.expire:
             exp = self.select_chain_expiry()
             self.strategy.update_expiry(exp)
-            if self.strategy.name != 'vertical':
-                # Go directly to choose option if only one leg in strategy
+
+            # Go directly to choose option if only one leg in strategy
+            if self.strategy.name == 'call' or self.strategy.name == 'put':
                 if self.strategy.legs[0].option.product == 'call':
-                    contracts = self.select_chain_options('call', 1)
+                    contracts = self.select_chain_options('call')
                 else:
-                    contracts = self.select_chain_options('put', 1)
+                    contracts = self.select_chain_options('put')
 
                 if contracts:
                     self.strategy.legs[0].option.load_contract(contracts[0])
                     print()
 
+        # Reset widths to integer indexes
+        self.strategy.width1 = 1
+        self.strategy.width2 = 1 if self.strategy.name == s.STRATEGIES_BROAD[3] else 0
+
         if not contracts:
             done = False
+
             while not done:
-                expiry = self.strategy.chain.expire if self.strategy.chain.expire else 'None selected'
-                width = 1
-                quantity = 1
                 success = True
+                if not self.strategy.chain.expire:
+                    self.strategy.chain.expire = m.third_friday()
 
                 menu_items = {
-                    '1': f'Select Expiry Date ({expiry.strftime((ui.DATE_FORMAT))})',
+                    '1': f'Select Expiry Date ({self.strategy.chain.expire.strftime((ui.DATE_FORMAT))})',
                     '2': f'Quantity ({self.strategy.quantity})',
-                    '3': f'Width ({self.strategy.width1})',
+                    '3': f'Width ({self.strategy.width1}, {self.strategy.width2})',
                     '4': f'Select Option',
                     '0': 'Done'
                 }
@@ -574,29 +582,37 @@ class Interface():
                 if selection == 1:
                     exp = self.select_chain_expiry()
                     self.strategy.update_expiry(exp)
+
                 elif selection == 2:
-                    quantity = ui.input_integer('Enter quantity (1 - 10): ', 1, 10)
+                    self.strategy.quantity = ui.input_integer('Enter quantity (1 - 10): ', 1, 10)
+
                 elif selection == 3:
-                    width = ui.input_integer('Enter width (1 - 5): ', 1, 5)
+                    self.strategy.width1 = ui.input_integer('Enter width (1 - 5): ', 1, 5)
+                    self.strategy.width2 = 1 if self.strategy.name == s.STRATEGIES_BROAD[3] else 0
+
                 elif selection == 4:
                     if self.strategy.chain.expire:
-                        leg = 0
-                        if self.strategy.legs[leg].option.product == 'call':
-                            contracts = self.select_chain_options('call', width)
+                        if self.strategy.legs[0].option.product == 'call':
+                            contracts = self.select_chain_options('call')
                         else:
-                            contracts = self.select_chain_options('put', width)
+                            contracts = self.select_chain_options('put')
 
                         if contracts:
                             for leg, contract in enumerate(contracts):
-                                success = self.strategy.legs[leg].option.load_contract(contract)
+                                if not self.strategy.legs[leg].option.load_contract(contract):
+                                    success = False
+                                    break
+
                             done = True
                     else:
                         ui.print_error('Please first select expiry date')
+
                 elif selection == 0:
                     done = True
 
                 if not success:
-                    ui.print_error('Error loading option. Please try again')
+                    contracts = []
+                    ui.print_error('Error loading options. Please try again')
 
         return contracts
 
@@ -617,7 +633,7 @@ class Interface():
 
         return expiry
 
-    def select_chain_options(self, product: str, width: int) -> list[str]:
+    def select_chain_options(self, product: str) -> list[str]:
         options = None
         contracts = []
         if not self.strategy.chain.expire:
@@ -631,30 +647,14 @@ class Interface():
             menu_items = {}
             for i, row in enumerate(options.itertuples()):
                 itm = 'ITM' if bool(row.inTheMoney) else 'OTM'
-                menu_items[f'{i+1}'] = f'${row.strike:7.2f} ${row.lastPrice:6.2f} {itm}'
+                menu_items[f'{i+1}'] = f'${row.strike:7.2f} {itm} (${row.lastPrice:.2f})'
 
             prompt = 'Select long option, or 0 to cancel: ' if self.strategy.name == 'vertical' else 'Select option, or 0 to cancel: '
             select = ui.menu(menu_items, prompt, 0, i+1)
             if select > 0:
-                select -= 1
-                sel_row = options.iloc[select]
-                contracts = [sel_row['contractSymbol']]  # First contract
-
-                if width > 0:
-                    if product == 'call':
-                        if self.strategy.direction == 'long':
-                            sel_row = options.iloc[select+width] if (select+width) < options.shape[0] else None
-                        else:
-                            sel_row = options.iloc[select-width] if (select-width) >= 0 else None
-                    elif self.strategy.direction == 'long':
-                        sel_row = options.iloc[select-width] if (select-width) >= 0 else None
-                    else:
-                        sel_row = options.iloc[select+width] if (select+width) < options.shape[0] else None
-
-                    if sel_row is not None:
-                        contracts += [sel_row['contractSymbol']]  # Second contract
-                    else:
-                        contracts = []
+                option = options.iloc[select-1]
+                strike = option['strike']
+                contracts = self.strategy.fetch_contracts(self.strategy.chain.expire, strike)
 
                 self.dirty_analyze = True
         else:

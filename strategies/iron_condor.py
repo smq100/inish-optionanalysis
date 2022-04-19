@@ -119,9 +119,9 @@ class IronCondor(Strategy):
 
         # Add the leg 1 & 2 option contracts
         if chain_index_c < 0:
-            _logger.warning(f'{__name__}: No option index found for {self.ticker} calls')
+            _logger.warning(f'{__name__}: No option index found for {self.ticker} calls, legs 1 & 2')
         elif chain_index_p < 0:
-            _logger.warning(f'{__name__}: No option index found for {self.ticker} puts')
+            _logger.warning(f'{__name__}: No option index found for {self.ticker} puts, legs 1 & 2')
         elif len(options_c) < (self.width1 + self.width2 + 1):
             chain_index_c = -1 # Chain too small
         elif (len(options_c) - chain_index_c) <= (self.width1 + self.width2 + 1):
@@ -132,9 +132,9 @@ class IronCondor(Strategy):
 
         # Add the leg 3 & 4 option contracts
         if chain_index_c < 0:
-            _logger.warning(f'{__name__}: No option index found for {self.ticker} calls')
+            _logger.warning(f'{__name__}: No option index found for {self.ticker} calls, legs 3 & 4')
         elif chain_index_p < 0:
-            _logger.warning(f'{__name__}: No option index found for {self.ticker} puts')
+            _logger.warning(f'{__name__}: No option index found for {self.ticker} puts, legs 3 & 4')
         elif len(options_p) < (self.width1 + self.width2 + 1):
             chain_index_p = -1 # Chain too small
         elif (len(options_p) - chain_index_p) <= (self.width1 + self.width2 + 1):

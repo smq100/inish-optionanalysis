@@ -325,8 +325,7 @@ class Interface:
                 strike = float(math.floor(store.get_last_price(ticker)))
                 width1 = width2 = 1
             else:
-                sentiment = Strategy.calculate_sentiment(strategy, product, direction)
-                strike, width1, width2 = m.calculate_strike_and_widths(strategy, sentiment, store.get_last_price(ticker))
+                strike, width1, width2 = m.calculate_strike_and_widths(strategy, product, direction, store.get_last_price(ticker))
 
             score_screen = self.screener.get_score(ticker)
             strategies += [sl.strategy_type(ticker=ticker, strategy=strategy, product=product,

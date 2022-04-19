@@ -24,14 +24,14 @@ class Chain:
 
     def get_chain(self, product: str) -> pd.DataFrame:
         self.product = product
+        self.chain = pd.DataFrame()
+
         value = store.get_option_chain(self.ticker)(date=self.expire.strftime(ui.DATE_FORMAT))
 
         if product == 'call':
             self.chain = value.calls
         elif product == 'put':
             self.chain = value.puts
-        else:
-            self.chain = pd.DataFrame()
 
         return self.chain
 

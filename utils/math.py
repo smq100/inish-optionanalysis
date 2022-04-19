@@ -4,6 +4,7 @@ import collections
 
 import pandas as pd
 
+from strategies.analysis import calculate_sentiment
 from utils import ui
 
 
@@ -71,7 +72,7 @@ def calculate_min_max_step(strike: float) -> tuple[float, float, float]:
     return range_type(min_, max_, step)
 
 
-def calculate_strike_and_widths(strategy: str, sentiment: str, strike: float) -> tuple[float, float, float]:
+def calculate_strike_and_widths(strategy: str, product: str, direction: str, strike: float) -> tuple[float, float, float]:
     width1 = 0.0
     width2 = 0.0
 
@@ -102,6 +103,7 @@ def calculate_strike_and_widths(strategy: str, sentiment: str, strike: float) ->
 
     # Calculate to closest value ITM using width as multiple
     strike = mround(strike, width1, floor=True)
+    sentiment = calculate_sentiment(strategy, product, direction)
     if sentiment == 'bearish':
         strike += width1
 
@@ -149,9 +151,6 @@ def third_friday() -> dt.datetime:
         third = third.replace(day=(15 + (4 - w) % 7))
 
     third.replace(hour=0, minute=0, second=0, microsecond=0)
-
-    # Contracts seem to list Thursday as last day for monthly options (last day to trade)
-    third -= dt.timedelta(days=1)
 
     return third
 
