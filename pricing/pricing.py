@@ -19,11 +19,11 @@ _logger = logger.get_logger()
 
 class Pricing(ABC):
     def __init__(self, ticker: str, expiry: dt.datetime, strike: float, dividend: float):
-        if strike <= 0.0:
-            raise ValueError(f'Invalid strike price for {ticker.upper()}')
-
         if not store.is_ticker(ticker):
             raise ValueError(f'Invalid ticker {ticker.upper()}')
+
+        if strike <= 0.0:
+            raise ValueError(f'Invalid strike price for {ticker.upper()}')
 
         self.name = ''
         self.ticker = ticker.upper()
@@ -62,7 +62,7 @@ class Pricing(ABC):
         pass
 
     def is_call_put_parity_maintained(self, call_price: float, put_price: float) -> bool:
-        ''' Verify is the Put-Call Pairty is maintained by the two option prices calculated by us.
+        ''' Verify is the Put-Call Pairty is maintained by the two option prices calculated
 
         :param call_price: <float>
         :param put_price: <float>
@@ -78,7 +78,6 @@ class Pricing(ABC):
     def calculate_underlying_asset_data(self) -> None:
         '''
         Scan through the web to get historical prices of the underlying asset.
-        Please check module stock_analyzer.data_fetcher for details
         '''
         if self.underlying_asset_data.empty:
             self.underlying_asset_data = store.get_history(self.ticker, days=365)
@@ -90,7 +89,7 @@ class Pricing(ABC):
 
     def calculate_risk_free_rate(self) -> None:
         '''
-        Fetch 3-month Treasury Bill Rate from the web. Please check module stock_analyzer.data_fetcher for details
+        Fetch 3-month Treasury Bill Rate
         '''
         self.risk_free_rate = store.get_treasury_rate()
 
@@ -98,9 +97,7 @@ class Pricing(ABC):
 
     def calculate_time_to_maturity(self) -> None:
         '''
-        Calculate TimeToMaturity in Years. It is calculated in terms of years using below formula,
-
-            (ExpiryDate - CurrentDate).days / 365
+        Calculate TimeToMaturity in decimal Years.
         '''
         if self.expiry < dt.datetime.today():
             s = f'{__name__}: Expiry/Maturity Date is in the past. Please check'

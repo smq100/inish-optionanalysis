@@ -568,8 +568,7 @@ class Interface():
                     '0': 'Done'
                 }
 
-                loaded = '' if self.strategy.legs[0].option.price_last > 0 else '*'
-
+                loaded = '' if self.strategy.legs[0].option.price_last > 0.0 else '*'
                 if self.strategy.name == 'vertical':
                     menu_items['4'] += f's '\
                         f'(L:${self.strategy.legs[0].option.strike:.2f}{loaded}'\

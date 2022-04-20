@@ -1,5 +1,3 @@
-'''European Pricing Class'''
-
 import datetime as dt
 
 import numpy as np

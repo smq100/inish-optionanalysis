@@ -24,9 +24,9 @@ from utils import math as m
 logger.get_logger(logging.WARNING, logfile='')
 
 COOR_CUTOFF = 0.85
-LISTTOP_SCREEN = 3
+LISTTOP_SCREEN = 10
 LISTTOP_TREND = 5
-LISTTOP_CORR = 3
+LISTTOP_CORR = 10
 
 
 class Interface:
@@ -345,10 +345,16 @@ class Interface:
             toc = time.perf_counter()
             task_time = toc - tic
 
+            # Show the results
             if not sl.strategy_results.empty:
                 ui.print_message(f'Strategy Analysis ({task_time:.1f}s)', pre_creturn=1, post_creturn=1)
+                table = sl.strategy_results.drop(['breakeven', 'breakeven1', 'breakeven2'], axis=1, errors='ignore')
 
-                summary = sl.strategy_results.drop(['breakeven', 'breakeven1', 'breakeven2'], axis=1, errors='ignore')
+                strategy = table.iloc[:, :6]
+                headers = [header.replace('_', '\n').title() for header in strategy]
+                print(tabulate(strategy, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
+                print()
+                summary = table.iloc[:, 6:]
                 headers = [header.replace('_', '\n').title() for header in summary]
                 print(tabulate(summary, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
             else:
@@ -464,13 +470,11 @@ class Interface:
                 [print(r) for r in result.results if ticker.ljust(6, ' ') == r[:6]]
 
     def show_coorelations(self):
-        results = [f'{result[0]:<5}/ {result[1]["ticker"]:<5} {result[1]["value"]:.5f}' for result in self.results_corr if result[1]["value"] > COOR_CUTOFF]
+        results = [f'{result[0]:<5}/ {result[1]["ticker"]:<5} {result[1]["value"]:.5f}' for result in self.results_corr if result[1]['value'] > COOR_CUTOFF]
         if results:
             ui.print_message('Coorelation Results')
-            for result in results:
+            for result in results[:LISTTOP_CORR]:
                 print(result)
-            if ui.input_yesno('Run support & resistance analysis on top findings?'):
-                self.run_support_resistance(True)
         else:
             ui.print_message('No significant coorelations found')
 
