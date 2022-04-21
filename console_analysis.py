@@ -16,7 +16,7 @@ from strategies.strategy import Strategy
 from screener.screener import Screener, SCREEN_INIT_NAME, SCREEN_BASEPATH, SCREEN_SUFFIX, CACHE_BASEPATH, CACHE_SUFFIX
 from analysis.trend import SupportResistance
 from analysis.correlate import Correlate
-from analysis.charts import Charts
+from analysis.chart import Chart
 from data import store as store
 from utils import ui, logger
 from utils import math as m
@@ -41,7 +41,7 @@ class Interface:
     trend: SupportResistance | None
     screener: Screener | None
     correlate: Correlate | None
-    chart: Charts | None
+    chart: Chart | None
     strategy: Strategy | None
     task: threading.Thread | None
     use_cache: bool
@@ -347,7 +347,7 @@ class Interface:
 
             # Show the results
             if not sl.strategy_results.empty:
-                ui.print_message(f'Strategy Analysis ({task_time:.1f}s)', pre_creturn=1, post_creturn=1)
+                ui.print_message(f'Strategy Analysis ({task_time:.1f}s)', pre_creturn=2, post_creturn=1)
                 table = sl.strategy_results.drop(['breakeven', 'breakeven1', 'breakeven2'], axis=1, errors='ignore')
 
                 strategy = table.iloc[:, :6]
@@ -448,7 +448,7 @@ class Interface:
     def show_chart(self):
         ticker = ui.input_text("Enter ticker: ").upper()
         if store.is_ticker(ticker):
-            self.chart = Charts(ticker)
+            self.chart = Chart(ticker, days=180)
 
             self.task = threading.Thread(target=self.chart.fetch_history)
             self.task.start()

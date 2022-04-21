@@ -11,13 +11,13 @@ from utils import ui, logger
 _logger = logger.get_logger()
 
 
-class Charts(Threaded):
+class Chart(Threaded):
     figure: plt.Figure
     ax: plt.Axes
     ticker: str
     history: pd.DataFrame
 
-    def __init__(self, ticker: str, days: int = 365):
+    def __init__(self, ticker: str, days: int = 365, live: bool = False):
         if not store.is_ticker(ticker):
             raise ValueError(f'Ticker {ticker} is invalid')
         if days <= 10:
@@ -25,6 +25,7 @@ class Charts(Threaded):
 
         self.ticker = ticker.upper()
         self.days = days
+        self.live = live
         self.history = pd.DataFrame()
         self.company = {}
         self.figure, self.ax = plt.subplots(figsize=ui.CHART_SIZE)
@@ -43,12 +44,55 @@ class Charts(Threaded):
         _logger.info(f'{__name__}: Fetching history for {self.ticker}...')
 
         self.task_ticker = self.ticker
-        self.history = store.get_history(self.ticker, days=self.days)
+        self.history = store.get_history(self.ticker, days=self.days, live=self.live)
         self.company = store.get_company(self.ticker)
 
-        self.ax.set_title(f'{self.company["name"]}')
+        self.ax.set_title(f'{self.company["name"]} Daily')
 
         self.task_state = 'Done'
+
+    def plot_ohlc(self) -> plt.Figure:
+        if self.history.empty:
+            _logger.info(f'{__name__}: Need history for {self.ticker}. Fetching...')
+            self.fetch_history()
+
+        self.ax.secondary_yaxis('right')
+
+        if self.history.iloc[-1]['close'] < 30.0:
+            self.ax.yaxis.set_major_formatter('{x:.2f}')
+        else:
+            self.ax.yaxis.set_major_formatter('{x:.0f}')
+
+        # Setup values
+        interval = 10
+        width1 = 0.5
+        width2 = 0.05
+        color_up = 'green'
+        color_dn = 'red'
+        length = len(self.history)
+
+        # Ticks
+        ticks = self.history.index[::interval]
+        self.ax.set_xticks(ticks)
+        self.ax.tick_params(axis='x', labelrotation=45)
+        labels = [self.history.iloc[i]['date'].strftime(ui.DATE_FORMAT) for i in range(0, length, interval)]
+        self.ax.set_xticklabels(labels)
+
+        # Find up and down days
+        up = self.history[self.history.close >= self.history.open]
+        dn = self.history[self.history.close < self.history.open]
+
+        # Up prices
+        self.ax.bar(up.index, up.high - up.close, width2, bottom=up.close, color=color_up)
+        self.ax.bar(up.index, up.close - up.open, width1, bottom=up.open,  color=color_up)
+        self.ax.bar(up.index, up.low - up.open,   width2, bottom=up.open,  color=color_up)
+
+        # Down prices
+        self.ax.bar(dn.index, dn.high - dn.open,  width2, bottom=dn.open,  color=color_dn)
+        self.ax.bar(dn.index, dn.close - dn.open, width1, bottom=dn.open,  color=color_dn)
+        self.ax.bar(dn.index, dn.low - dn.close,  width2, bottom=dn.close, color=color_dn)
+
+        return self.figure
 
     def plot_history(self) -> plt.Figure:
         if self.history.empty:
@@ -70,50 +114,9 @@ class Charts(Threaded):
         self.ax.tick_params(axis='x', labelrotation=45)
 
         # Plot Highs & Lows using simple lines
-        self.ax.plot(dates, self.history['high'], '-g', linewidth=0.5)
-        self.ax.plot(dates, self.history['low'], '-r', linewidth=0.5)
-        self.ax.fill_between(dates, self.history['high'], self.history['low'], facecolor='gray', alpha=0.4)
-
-        return self.figure
-
-    def plot_ohlc(self) -> plt.Figure:
-        if self.history.empty:
-            _logger.info(f'{__name__}: Need history for {self.ticker}. Fetching...')
-            self.fetch_history()
-
-        self.ax.secondary_yaxis('right')
-
-        if self.history.iloc[-1]['close'] < 30.0:
-            self.ax.yaxis.set_major_formatter('{x:.2f}')
-        else:
-            self.ax.yaxis.set_major_formatter('{x:.0f}')
-
-        # Setup values
-        width1 = 0.4
-        width2 = 0.05
-        interval = 5
-        length = len(self.history)
-
-        # Ticks
-        ticks = self.history.index[::interval]
-        self.ax.set_xticks(ticks)
-        self.ax.tick_params(axis='x', labelrotation=45)
-        labels = [self.history.iloc[i]['date'].strftime(ui.DATE_FORMAT) for i in range(0, length, interval)]
-        self.ax.set_xticklabels(labels)
-
-        # Find up and down days
-        up = self.history[self.history['close'] >= self.history['open']].copy()
-        dn = self.history[self.history['close'] < self.history['open']].copy()
-
-        # Up prices
-        self.ax.bar(up.index, up.high - up.close, width2, bottom=up.close, color='green')
-        self.ax.bar(up.index, up.close - up.open, width1, bottom=up.open,  color='green')
-        self.ax.bar(up.index, up.low - up.open,   width2, bottom=up.open,  color='green')
-
-        # Down prices
-        self.ax.bar(dn.index, dn.high - dn.open,  width2, bottom=dn.open,  color='red')
-        self.ax.bar(dn.index, dn.close - dn.open, width1, bottom=dn.open,  color='red')
-        self.ax.bar(dn.index, dn.low - dn.close,  width2, bottom=dn.close, color='red')
+        self.ax.plot(dates, self.history.high, '-g', linewidth=0.5)
+        self.ax.plot(dates, self.history.low, '-r', linewidth=0.5)
+        self.ax.fill_between(dates, self.history.high, self.history.low, facecolor='gray', alpha=0.4)
 
         return self.figure
 
@@ -123,15 +126,14 @@ if __name__ == '__main__':
     import logging
     from utils import logger
 
-    logger.get_logger(logging.DEBUG)
+    # logger.get_logger(logging.DEBUG)
 
     if len(sys.argv) > 1:
-        chart = Charts(sys.argv[1])
-        figure = chart.plot_ohlc()
+        chart = Chart(sys.argv[1], days=180)
     else:
-        chart = Charts('IBM')
-        chart.fetch_history()
-        figure = chart.plot_ohlc()
+        chart = Chart('IBM')
 
+    figure = chart.plot_ohlc()
+    # figure = chart.plot_history()
     plt.figure(figure)
     plt.show()
