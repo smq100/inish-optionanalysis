@@ -23,18 +23,18 @@ class Alerts:
         if response is not None and response.status_code == 200:
             alert_data = json.loads(response.text)
             parsed = json.dumps(alert_data, indent=2, sort_keys=True)
-            _logger.debug(parsed)
+            _logger.debug(f'{__name__}: {parsed}')
 
             if alert_data is not None and 'AlertsResponse' in alert_data and 'Alert' in alert_data['AlertsResponse']:
                 pass
             else:
-                message = 'None'
+                message = 'No alerts'
         elif response is not None and response.status_code == 204:
             alert_data = []
-            message = 'None'
+            message = 'No alerts'
         else:
             alert_data = []
             message = f'E*TRADE API service error: {response}'
-            _logger.debug(f'Response Body: {response}')
+            _logger.debug(f'{__name__}: Response Body: {response}')
 
         return message, alert_data

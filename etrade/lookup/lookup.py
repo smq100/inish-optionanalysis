@@ -22,7 +22,7 @@ class Lookup:
         if response is not None and response.status_code == 200:
             lookup_data = json.loads(response.text)
             parsed = json.dumps(lookup_data, indent=2, sort_keys=True)
-            _logger.debug(parsed)
+            _logger.debug(f'{__name__}: {parsed}')
 
             if lookup_data is not None and 'LookupResponse' in lookup_data and 'Data' in lookup_data['LookupResponse']:
                 pass
@@ -33,7 +33,7 @@ class Lookup:
             lookup_data = []
             message = 'None'
         else:
-            _logger.debug(f'Response Body: {response}')
+            _logger.debug(f'{__name__}: Response Body: {response}')
             message = 'E*TRADE API service error'
 
         return message, lookup_data

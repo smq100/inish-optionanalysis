@@ -22,7 +22,7 @@ class Quotes:
         if response is not None and response.status_code == 200:
             quote_data = json.loads(response.text)
             parsed = json.dumps(quote_data, indent=2, sort_keys=True)
-            _logger.debug(parsed)
+            _logger.debug(f'{__name__}: {parsed}')
 
             if quote_data is not None and 'QuoteResponse' in quote_data and 'QuoteData' in quote_data['QuoteResponse']:
                 pass
@@ -36,11 +36,11 @@ class Quotes:
             else:
                 message = 'Error: Quote API service error'
         elif response is not None and response.status_code == 400:
-            _logger.debug(f'Response: {response.text}')
+            _logger.debug(f'{__name__}: Response: {response.text}')
             quote_data = json.loads(response.text)
             message = f'\nError ({quote_data["Error"]["code"]}): {quote_data["Error"]["message"]}'
         else:
-            _logger.debug(f'Response: {response.text}')
+            _logger.debug(f'{__name__}: Response: {response.text}')
             message = 'E*TRADE API service error'
 
         return message, quote_data

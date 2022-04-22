@@ -28,7 +28,7 @@ class Accounts:
         if response is not None and response.status_code == 200:
             data = response.json()
             parsed = json.dumps(data, indent=2, sort_keys=True)
-            _logger.info(parsed)
+            _logger.debug(f'{__name__}: {parsed}')
 
             if data is not None and 'AccountListResponse' in data \
                     and 'Accounts' in data['AccountListResponse'] \
@@ -48,7 +48,7 @@ class Accounts:
                     listing += [print_str]
 
             else:
-                _logger.error(f'Response Body: {response.text}')
+                _logger.debug(f'{__name__}: Response Body: {response.text}')
                 self.accounts = []
                 listing = []
                 if response is not None and response.headers['Content-Type'] == 'application/json' \
@@ -58,7 +58,7 @@ class Accounts:
                 else:
                     message = 'E*TRADE API service error'
         else:
-            _logger.error(f'Response Body: {response.text}')
+            _logger.debug(f'{__name__}: Response Body: {response.text}')
             self.accounts = []
             listing = []
             if response is not None and response.headers['Content-Type'] == 'application/json' \
@@ -80,12 +80,12 @@ class Accounts:
         if response is not None and response.status_code == 200:
             data = json.loads(response.text)
             parsed = json.dumps(data, indent=2, sort_keys=True)
-            _logger.debug(parsed)
+            _logger.debug(f'{__name__}: {parsed}')
 
             if data is not None and 'BalanceResponse' in data:
                 balance_data = data['BalanceResponse']
             else:
-                _logger.error(f'Response Body: {response.text}')
+                _logger.debug(f'{__name__}: Response Body: {response.text}')
                 balance_data = []
                 if response is not None and response.headers['Content-Type'] == 'application/json' \
                         and 'Error' in response.json() and 'message' in response.json()['Error'] \
@@ -94,7 +94,7 @@ class Accounts:
                 else:
                     message = 'E*TRADE API service error'
         else:
-            _logger.error(f'Response Body: {response.text}')
+            _logger.debug(f'{__name__}: Response Body: {response.text}')
             balance_data = []
             if response is not None and response.headers['Content-Type'] == 'application/json' \
                     and 'Error' in response.json() and 'message' in response.json()['Error'] \
@@ -113,12 +113,12 @@ class Accounts:
         if response is not None and response.status_code == 200:
             portfolio = json.loads(response.text)
             parsed = json.dumps(portfolio, indent=2, sort_keys=True)
-            _logger.debug(parsed)
+            _logger.debug(f'{__name__}: {parsed}')
 
             if portfolio is not None and 'PortfolioResponse' in portfolio and 'AccountPortfolio' in portfolio['PortfolioResponse']:
                 pass
             else:
-                _logger.error(f'Response Body: {response.text}')
+                _logger.debug(f'{__name__}: Response Body: {response.text}')
                 portfolio = []
                 if response is not None and response.headers['Content-Type'] == 'application/json' \
                         and 'Error' in response.json() and 'message' in response.json()['Error'] \
@@ -131,7 +131,7 @@ class Accounts:
             portfolio = []
             message = 'None'
         else:
-            _logger.error(f'Response Body: {response.text}')
+            _logger.debug(f'{__name__}: Response Body: {response.text}')
             portfolio = []
             message = 'E*TRADE API service error'
 

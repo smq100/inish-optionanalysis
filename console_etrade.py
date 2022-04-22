@@ -41,7 +41,8 @@ class Client:
                 '5': 'Alerts',
                 '6': 'Quotes',
                 '7': 'Options Chain',
-                '8': 'Lookup Symbol',
+                '8': 'Options Expiry',
+                '9': 'Lookup Symbol',
                 '0': 'Exit'
             }
 
@@ -62,8 +63,10 @@ class Client:
             elif selection == 6:
                 self.show_quotes()
             elif selection == 7:
-                self.options()
+                self.show_options_chain()
             elif selection == 8:
+                self.show_options_expiry()
+            elif selection == 9:
                 self.lookup()
             elif selection == 0:
                 break
@@ -172,7 +175,7 @@ class Client:
 
                 print(alert)
         else:
-            ui.print_error(message)
+            ui.print_message(message)
 
     def lookup(self) -> None:
         symbol = ui.input_text('Please enter symbol: ').upper()
@@ -228,7 +231,7 @@ class Client:
         else:
             ui.print_error(message)
 
-    def options(self) -> None:
+    def show_options_chain(self) -> None:
         symbol = ui.input_text('Please enter symbol: ').upper()
 
         date = m.third_friday()
@@ -288,6 +291,24 @@ class Client:
                         out += f' ITM:{put["inTheMoney"]}'
                     print(out)
 
+    def show_options_expiry(self) -> None:
+        symbol = ui.input_text('Please enter symbol: ').upper()
+
+        options = Options(self.session)
+        message, expiry_data = options.expiry(symbol)
+
+        if 'error' in message.lower():
+            message = message.replace('Error ', '')
+            message = message.replace('\n', '')
+            ui.print_error(message)
+        elif expiry_data is None:
+            message = message.replace('Error ', '')
+            message = message.replace('\n', '')
+            ui.print_error(message)
+        else:
+            ui.print_message('Options Chain')
+            for pair in expiry_data['OptionExpireDateResponse']['ExpirationDate']:
+                print(pair)
 
 def main():
     client = Client()

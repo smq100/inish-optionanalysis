@@ -6,6 +6,10 @@ from requests_oauthlib.oauth1_session import TokenRequestDenied
 
 from requests_oauthlib import OAuth1Session
 
+from utils import logger
+
+_logger = logger.get_logger()
+
 SANDBOX = False
 
 config = configparser.ConfigParser()
@@ -28,6 +32,7 @@ def authorize() -> OAuth1Session:
         with open(picklefile, 'rb') as session_file:
             try:
                 session = pickle.load(session_file)
+                _logger.info(f'{__name__}: Loaded existing session')
             except Exception as e:
                 session = None
             else:
@@ -85,6 +90,8 @@ def _authorize() -> OAuth1Session:
         # Store session for later use
         with open(picklefile, 'wb') as session_file:
                 pickle.dump(session, session_file, protocol=pickle.HIGHEST_PROTOCOL)
+
+        _logger.info(f'{__name__}: Created new session')
 
     except TokenRequestDenied:
         session = None

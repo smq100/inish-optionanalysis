@@ -40,24 +40,73 @@ class Options:
         if response is not None and response.status_code == 200:
             chain_data = json.loads(response.text)
             parsed = json.dumps(chain_data, indent=2, sort_keys=True)
-            _logger.debug(parsed)
+            _logger.debug(f'{__name__}: {parsed}')
 
             if chain_data is not None and 'OptionChainResponse' in chain_data and 'OptionPair' in chain_data['OptionChainResponse']:
                 pass
             else:
                 message = 'Chain error'
         elif response is not None and response.status_code == 400:
-            _logger.debug(f'Response Body: {response}')
+            _logger.debug(f'{__name__}: Response Body: {response}')
             chain_data = json.loads(response.text)
             message = f'\nError ({chain_data["Error"]["code"]}): {chain_data["Error"]["message"]}'
         else:
-            _logger.debug(f'Response Body: {response}')
+            _logger.debug(f'{__name__}: Response Body: {response}')
             message = 'E*TRADE API service error'
 
         return message, chain_data
 
+    def expiry(self, symbol: str) -> None:
+        message = 'success'
+        url = auth.base_url + '/v1/market/optionexpiredate.json'
+        params = {
+            'symbol': f'{symbol}'
+        }
+        expiry_data = None
+
+        response = self.session.get(url, params=params)
+        if response is not None and response.status_code == 200:
+            expiry_data = json.loads(response.text)
+            parsed = json.dumps(expiry_data, indent=2, sort_keys=True)
+            _logger.debug(f'{__name__}: {parsed}')
+
+            if expiry_data is not None and 'OptionExpireDateResponse' in expiry_data and 'ExpirationDate' in expiry_data['OptionExpireDateResponse']:
+                pass
+            else:
+                message = 'Expiry error'
+        elif response is not None and response.status_code == 400:
+            _logger.debug(f'{__name__}: Response Body: {response}')
+            expiry_data = json.loads(response.text)
+            message = f'\nError ({expiry_data["Error"]["code"]}): {expiry_data["Error"]["message"]}'
+        else:
+            _logger.debug(f'{__name__}: Response Body: {response}')
+            message = 'E*TRADE API service error'
+
+        return message, expiry_data
+
 '''
-Sample response
+Sample OptionDateResponse response
+
+{
+  "OptionExpireDateResponse": {
+    "ExpirationDate": [
+      {
+        "day": 22,
+        "expiryType": "WEEKLY",
+        "month": 4,
+        "year": 2022
+      },
+      {
+          ...
+      }
+    ]
+  }
+}
+
+'''
+
+'''
+Sample OptionChainResponse response
 
 {
   "OptionChainResponse": {
@@ -99,4 +148,5 @@ Sample response
       }
     ]
   }
+
 '''
