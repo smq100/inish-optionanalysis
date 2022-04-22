@@ -1,7 +1,7 @@
 import json
 import configparser
 
-import etrade.auth.auth as auth
+import etrade.auth as auth
 from utils import logger
 
 _logger = logger.get_logger()

@@ -3,12 +3,12 @@ import logging
 
 from requests_oauthlib import OAuth1Session
 
-import etrade.auth.auth as auth
-from etrade.accounts.accounts import Accounts
-from etrade.quotes.quotes import Quotes
-from etrade.options.options import Options
-from etrade.lookup.lookup import Lookup
-from etrade.alerts.alerts import Alerts
+import etrade.auth as auth
+from etrade.accounts import Accounts
+from etrade.quotes import Quotes
+from etrade.options import Options
+from etrade.lookup import Lookup
+from etrade.alerts import Alerts
 from utils import math as m
 from utils import ui, logger
 
