@@ -3,6 +3,7 @@ import configparser
 import random
 import re
 
+import etrade.auth.auth as auth
 from utils import ui, logger
 
 _logger = logger.get_logger()
@@ -12,17 +13,19 @@ config.read('etrade/config.ini')
 
 
 class Orders:
-    def __init__(self, session, account, base_url):
+    def __init__(self, session, account):
+        if not auth.base_url:
+            raise AssertionError('Etrade session not initialized')
+
         self.session = session
         self.account = account
-        self.base_url = base_url
 
     def preview(self):
         # User's order selection
         order = self.user_select()
 
         # Assemble PUT request
-        url = self.base_url + '/v1/accounts/' + \
+        url = auth.base_url + '/v1/accounts/' + \
             self.account['accountIdKey'] + '/orders/preview.json'
         headers = {'Content-Type': 'application/xml',
                    'consumerKey': config['DEFAULT']['CONSUMER_KEY']}
@@ -133,7 +136,7 @@ class Orders:
 
                 if options_select.isdigit() and 0 < int(options_select) < len(prev_orders) + 1:
                     # URL for the API endpoint
-                    url = self.base_url + '/v1/accounts/' + \
+                    url = auth.base_url + '/v1/accounts/' + \
                         account['accountIdKey'] + '/orders/preview.json'
 
                     # Add parameters and header information
@@ -412,7 +415,7 @@ class Orders:
         while True:
             # Display a list of Open Orders
             # Make API call for GET request
-            url = self.base_url + '/v1/accounts/' + \
+            url = auth.base_url + '/v1/accounts/' + \
                 self.account['accountIdKey'] + '/orders.json'
             params_open = {'status': 'OPEN'}
             response_open = self.session.get(url, params=params_open)
@@ -500,7 +503,7 @@ class Orders:
                     selection = input('Please select an option: ')
                     if selection.isdigit() and 0 < int(selection) < len(order_list) + 1:
                         # Assemble PUT Request
-                        url = self.base_url + '/v1/accounts/' + \
+                        url = auth.base_url + '/v1/accounts/' + \
                             self.account['accountIdKey'] + \
                             '/orders/cancel.json'
                         headers = {'Content-Type': 'application/xml',
@@ -568,7 +571,7 @@ class Orders:
     def view(self):
         while True:
             # URL for the API endpoint
-            url = self.base_url + '/v1/accounts/' + \
+            url = auth.base_url + '/v1/accounts/' + \
                 self.account['accountIdKey'] + '/orders.json'
 
             # Add parameters and header information

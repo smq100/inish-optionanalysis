@@ -1,18 +1,21 @@
 import json
 
-from utils import ui, logger
+import etrade.auth.auth as auth
+from utils import logger
 
 _logger = logger.get_logger()
 
 
 class Lookup:
-    def __init__(self, session, base_url):
+    def __init__(self, session):
+        if not auth.base_url:
+            raise AssertionError('Etrade session not initialized')
+
         self.session = session
-        self.base_url = base_url
 
     def lookup(self, symbol: str) -> tuple[str, dict]:
         message = 'success'
-        url = f'{self.base_url}/v1/market/lookup/{symbol}.json'
+        url = f'{auth.base_url}/v1/market/lookup/{symbol}.json'
         lookup_data = None
 
         response = self.session.get(url)

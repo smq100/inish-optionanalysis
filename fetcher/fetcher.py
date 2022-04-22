@@ -308,8 +308,6 @@ if __name__ == '__main__':
     # print(dates)
 
     '''
-    Retrieves a company object that may be used to gather numerous data about the company and security.
-
     YFinance ticker attributes include:
         .history(start="2010-01-01",  end=”2020-07-21”)
         .analysis
@@ -334,11 +332,9 @@ if __name__ == '__main__':
         .recommendations
         .splits
         .sustainability
-
-    :return: <object> YFinance Ticker object
     '''
 
-    ''' Example option_chain object:
+    ''' Example YFinance .option_chain object:
             'contractSymbol',
             'lastTradeDate',
             'strike',
@@ -355,7 +351,7 @@ if __name__ == '__main__':
             'currency'])
     '''
 
-    ''' Example .info object:
+    ''' Example YFinance .info object:
     {
         "zip":"98052-6399",
         "sector":"Technology",

@@ -1,19 +1,22 @@
 import json
 
-from utils import ui, logger
+import etrade.auth.auth as auth
+from utils import logger
 
 _logger = logger.get_logger()
 
 
 class Alerts:
-    def __init__(self, session, base_url):
+    def __init__(self, session):
+        if not auth.base_url:
+            raise AssertionError('Etrade session not initialized')
+
         self.session = session
-        self.base_url = base_url
 
     def alerts(self) -> tuple[str, list[dict]]:
         message = 'success'
         params = {'status': ['READ', 'UNREAD']}
-        url = f'{self.base_url}/v1/user/alerts.json'
+        url = f'{auth.base_url}/v1/user/alerts.json'
         alert_data = []
 
         response = self.session.get(url, params=params)

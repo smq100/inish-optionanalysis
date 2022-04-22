@@ -1,21 +1,24 @@
 import json
 import configparser
 
-from utils import ui, logger
+import etrade.auth.auth as auth
+from utils import logger
 
 _logger = logger.get_logger()
 
 
 class Accounts:
-    def __init__(self, session, base_url):
+    def __init__(self, session):
+        if not auth.base_url:
+            raise AssertionError('Etrade session not initialized')
+
         self.config = configparser.ConfigParser()
-        self.config.read('etrade/config.ini')
+        self.config.read('./etrade/auth/config.ini')
         self.session = session
-        self.base_url = base_url
         self.accounts = []
 
     def list(self) -> tuple[str, list[str]]:
-        url = self.base_url + '/v1/accounts/list.json'
+        url = auth.base_url + '/v1/accounts/list.json'
         response = self.session.get(url)
         message = 'success'
         listing = []
@@ -69,7 +72,7 @@ class Accounts:
 
     def balance(self, account_index: int) -> tuple[str, dict]:
         message = 'success'
-        url = self.base_url + '/v1/accounts/' + self.accounts[account_index]['accountIdKey'] + '/balance.json'
+        url = auth.base_url + '/v1/accounts/' + self.accounts[account_index]['accountIdKey'] + '/balance.json'
         params = {'instType': self.accounts[account_index]['institutionType'], 'realTimeNAV': 'true'}
         headers = {'consumerkey': self.config['DEFAULT']['CONSUMER_KEY']}
 
@@ -104,7 +107,7 @@ class Accounts:
 
     def portfolio(self, account_index: int) -> tuple[str, dict]:
         message = 'success'
-        url = self.base_url + '/v1/accounts/' + self.accounts[account_index]['accountIdKey'] + '/portfolio.json'
+        url = auth.base_url + '/v1/accounts/' + self.accounts[account_index]['accountIdKey'] + '/portfolio.json'
 
         response = self.session.get(url)
         if response is not None and response.status_code == 200:

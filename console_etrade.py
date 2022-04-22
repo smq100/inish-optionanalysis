@@ -1,14 +1,9 @@
-import os.path
-import webbrowser
-import configparser
-import pickle
 import datetime as dt
 import logging
 
 from requests_oauthlib import OAuth1Session
-from requests_oauthlib.oauth1_session import TokenRequestDenied
 
-import etrade as et
+import etrade.auth.auth as auth
 from etrade.accounts.accounts import Accounts
 from etrade.quotes.quotes import Quotes
 from etrade.options.options import Options
@@ -24,34 +19,12 @@ logger.get_logger(logging.WARNING, logfile='')
 class Client:
     def __init__(self):
         self.session: OAuth1Session | None = None
-        self.config = configparser.ConfigParser()
-        self.config.read('etrade/config.ini')
-        self.picklefile = 'session.pickle'
         self.accounts = None
         self.account_index = -1
         self.account_name = ''
 
-        if et.SANDBOX:
-            self.base_url = self.config['DEFAULT']['BASE_URL_SB']
-        else:
-            self.base_url = self.config['DEFAULT']['BASE_URL']
-
-        # Get a new session, or use existing
-        if os.path.exists(self.picklefile):
-            with open(self.picklefile, 'rb') as session_file:
-                try:
-                    self.session = pickle.load(session_file)
-                except Exception as e:
-                    ui.print_error(f'{__name__}: Exception for session file load: {str(e)}')
-                    self.session = None
-                else:
-                    # Test session with a dummy call to get a quote and authorize if required
-                    url = f'{self.base_url}/v1/market/quote/aapl'
-                    if not _validate_session(self.session, url):
-                        self.session = None
-
         if self.session is None:
-            self.session = self.authorize()
+            self.session = auth.authorize()
 
         if self.session is not None:
             self.main_menu()
@@ -98,7 +71,7 @@ class Client:
                 print('Unknown operation selected')
 
     def show_accounts(self) -> None:
-        self.accounts = Accounts(self.session, self.base_url)
+        self.accounts = Accounts(self.session)
         success, listing = self.accounts.list()
 
         if success == 'success':
@@ -180,7 +153,7 @@ class Client:
             ui.print_error('Must first select an account')
 
     def show_alerts(self):
-        alerts = Alerts(self.session, self.base_url)
+        alerts = Alerts(self.session)
         message, alert_data = alerts.alerts()
 
         if alert_data:
@@ -203,7 +176,7 @@ class Client:
 
     def lookup(self) -> None:
         symbol = ui.input_text('Please enter symbol: ').upper()
-        lookup = Lookup(self.session, self.base_url)
+        lookup = Lookup(self.session)
         message, lookup_data = lookup.lookup(symbol)
 
         if lookup_data is not None:
@@ -222,7 +195,7 @@ class Client:
 
     def show_quotes(self) -> None:
         symbol = ui.input_text('Please enter symbol: ').upper()
-        quotes = Quotes(self.session, self.base_url)
+        quotes = Quotes(self.session)
         message, quote_data = quotes.quote(symbol)
 
         if quote_data is not None:
@@ -259,7 +232,7 @@ class Client:
         symbol = ui.input_text('Please enter symbol: ').upper()
 
         date = m.third_friday()
-        options = Options(self.session, self.base_url)
+        options = Options(self.session)
         message, chain_data = options.chain(symbol, date.month, date.year)
 
         if 'error' in message.lower():
@@ -314,59 +287,6 @@ class Client:
                     if 'inTheMoney' in put:
                         out += f' ITM:{put["inTheMoney"]}'
                     print(out)
-
-    def authorize(self) -> OAuth1Session:
-        if et.SANDBOX:
-            consumer_key = self.config['DEFAULT']['CONSUMER_KEY_SB']
-            consumer_secret = self.config['DEFAULT']['CONSUMER_SECRET_SB']
-        else:
-            consumer_key = self.config['DEFAULT']['CONSUMER_KEY']
-            consumer_secret = self.config['DEFAULT']['CONSUMER_SECRET']
-
-        request_token_url = 'https://api.etrade.com/oauth/request_token'
-        access_token_url = 'https://api.etrade.com/oauth/access_token'
-        authorize_url = 'https://us.etrade.com/e/t/etws/authorize'
-
-        etrade = OAuth1Session(
-            consumer_key,
-            consumer_secret,
-            callback_uri='oob',
-            signature_type='AUTH_HEADER',
-        )
-        token = etrade.fetch_request_token(request_token_url)
-
-        # Construct callback URL and display page to retrieve verifier code
-        formated_auth_url = '%s?key=%s&token=%s' % (authorize_url, consumer_key, token['oauth_token'])
-        webbrowser.open(formated_auth_url)
-
-        # Confirm code and get token
-        code = input('Please accept agreement and enter text code from browser: ')
-
-        try:
-            token = etrade.fetch_access_token(access_token_url, verifier=code)
-
-            # Create authorized session
-            session = OAuth1Session(
-                consumer_key,
-                consumer_secret,
-                token['oauth_token'],
-                token['oauth_token_secret'],
-                signature_type="AUTH_HEADER")
-
-            # Store session for later use
-            with open(self.picklefile, 'wb') as session_file:
-                    pickle.dump(session, session_file, protocol=pickle.HIGHEST_PROTOCOL)
-        except TokenRequestDenied:
-            session = None
-        except Exception as e:
-            session = None
-            ui.print_error(f'{__name__}: Exception for session file dump: {str(e)}')
-
-        return session
-
-def _validate_session(session, url):
-    response = session.get(url)
-    return response is not None and response.status_code == 200
 
 
 def main():

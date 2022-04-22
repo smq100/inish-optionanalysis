@@ -1,18 +1,21 @@
 import json
 
-from utils import ui, logger
+import etrade.auth.auth as auth
+from utils import logger
 
 _logger = logger.get_logger()
 
 
 class Quotes:
-    def __init__(self, session, base_url):
+    def __init__(self, session):
+        if not auth.base_url:
+            raise AssertionError('Etrade session not initialized')
+
         self.session = session
-        self.base_url = base_url
 
     def quote(self, symbol: str) -> tuple[str, dict]:
         message = 'success'
-        url = f'{self.base_url}/v1/market/quote/{symbol}.json'
+        url = f'{auth.base_url}/v1/market/quote/{symbol}.json'
         quote_data = None
 
         response = self.session.get(url)
