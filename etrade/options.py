@@ -1,11 +1,16 @@
 import json
+import datetime as dt
 
+import pandas as pd
 from requests_oauthlib import OAuth1Session
 
 import etrade.auth as auth
 from utils import logger
 
 _logger = logger.get_logger()
+
+URL_CHAIN = '/v1/market/optionchains.json'
+URL_EXPIRY = '/v1/market/optionexpiredate.json'
 
 
 class Options:
@@ -14,7 +19,7 @@ class Options:
             raise AssertionError('Etrade session not initialized')
 
         self.session: OAuth1Session = session
-
+        self.message = ''
 
     def chain(self,
               symbol: str,
@@ -22,10 +27,10 @@ class Options:
               expiry_year: int,
               strikes: int = 10,
               weekly: bool = False,
-              otype: str = 'CALLPUT') -> tuple[str, dict]:
+              otype: str = 'CALLPUT') -> tuple[pd.DataFrame, pd.DataFrame]:
 
-        message = 'success'
-        url = auth.base_url + '/v1/market/optionchains.json'
+        url = auth.base_url + URL_CHAIN
+        self.message = 'error'
         params = {
             'chainType': f'{otype}',
             'noOfStrikes': f'{strikes}',
@@ -37,73 +42,68 @@ class Options:
         chain_data = None
 
         response = self.session.get(url, params=params)
+
         if response is not None and response.status_code == 200:
             chain_data = json.loads(response.text)
-            parsed = json.dumps(chain_data, indent=2, sort_keys=True)
-            _logger.debug(f'{__name__}: {parsed}')
-
             if chain_data is not None and 'OptionChainResponse' in chain_data and 'OptionPair' in chain_data['OptionChainResponse']:
-                pass
-            else:
-                message = 'Chain error'
+                self.message = 'success'
+                parsed = json.dumps(chain_data, indent=2, sort_keys=True)
+                _logger.debug(f'{__name__}: {parsed}')
         elif response is not None and response.status_code == 400:
             _logger.debug(f'{__name__}: Response Body: {response}')
             chain_data = json.loads(response.text)
-            message = f'\nError ({chain_data["Error"]["code"]}): {chain_data["Error"]["message"]}'
+            self.message = f'\nError ({chain_data["Error"]["code"]}): {chain_data["Error"]["message"]}'
         else:
             _logger.debug(f'{__name__}: Response Body: {response}')
-            message = 'E*TRADE API service error'
+            self.message = 'E*TRADE API service error'
 
-        return message, chain_data
+        table_calls = pd.DataFrame()
+        table_puts = pd.DataFrame()
+        if self.message == 'success':
+            data = chain_data['OptionChainResponse']['OptionPair']
 
-    def expiry(self, symbol: str) -> None:
-        message = 'success'
-        url = auth.base_url + '/v1/market/optionexpiredate.json'
+            calls = [item['Call'] for item in data]
+            table_calls = pd.DataFrame(calls)
+            table_calls.drop(['OptionGreeks', 'quoteDetail'], axis=1, inplace=True)
+
+            puts = [item['Put'] for item in data]
+            table_puts = pd.DataFrame(puts)
+            table_puts.drop(['OptionGreeks', 'quoteDetail'], axis=1, inplace=True)
+
+        return table_calls, table_puts
+
+    def expiry(self, symbol: str) -> pd.DataFrame:
+        self.message = 'error'
+        expiry_data = {}
+
+        url = auth.base_url + URL_EXPIRY
         params = {
             'symbol': f'{symbol}'
         }
-        expiry_data = None
 
         response = self.session.get(url, params=params)
+
         if response is not None and response.status_code == 200:
             expiry_data = json.loads(response.text)
-            parsed = json.dumps(expiry_data, indent=2, sort_keys=True)
-            _logger.debug(f'{__name__}: {parsed}')
-
             if expiry_data is not None and 'OptionExpireDateResponse' in expiry_data and 'ExpirationDate' in expiry_data['OptionExpireDateResponse']:
-                pass
-            else:
-                message = 'Expiry error'
+                self.message = 'success'
+                parsed = json.dumps(expiry_data, indent=2, sort_keys=True)
+                _logger.debug(f'{__name__}: {parsed}')
         elif response is not None and response.status_code == 400:
             _logger.debug(f'{__name__}: Response Body: {response}')
             expiry_data = json.loads(response.text)
-            message = f'\nError ({expiry_data["Error"]["code"]}): {expiry_data["Error"]["message"]}'
+            self.message = f'\nError ({expiry_data["Error"]["code"]}): {expiry_data["Error"]["message"]}'
         else:
             _logger.debug(f'{__name__}: Response Body: {response}')
-            message = 'E*TRADE API service error'
+            self.message = 'E*TRADE API service error'
 
-        return message, expiry_data
+        table = pd.DataFrame()
+        if self.message == 'success':
+            expiry_data = expiry_data['OptionExpireDateResponse']['ExpirationDate']
+            data = [(dt.datetime(item['year'], item['month'], item['day'], 0, 0, 0), item['expiryType'].title()) for item in expiry_data]
+            table = pd.DataFrame(data, columns=['date', 'expiryType'])
 
-'''
-Sample OptionDateResponse response
-
-{
-  "OptionExpireDateResponse": {
-    "ExpirationDate": [
-      {
-        "day": 22,
-        "expiryType": "WEEKLY",
-        "month": 4,
-        "year": 2022
-      },
-      {
-          ...
-      }
-    ]
-  }
-}
-
-'''
+        return table
 
 '''
 Sample OptionChainResponse response
@@ -144,9 +144,28 @@ Sample OptionChainResponse response
         }
       },
       {
-          "Put" here
+          "Put": ...
       }
     ]
   }
+'''
 
+'''
+Sample OptionDateResponse response
+
+{
+  "OptionExpireDateResponse": {
+    "ExpirationDate": [
+      {
+        "day": 22,
+        "expiryType": "WEEKLY",
+        "month": 4,
+        "year": 2022
+      },
+      {
+          ...
+      }
+    ]
+  }
+}
 '''

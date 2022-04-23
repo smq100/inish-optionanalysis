@@ -1,7 +1,9 @@
 import datetime as dt
 import logging
 
+import pandas as pd
 from requests_oauthlib import OAuth1Session
+from tabulate import tabulate
 
 import etrade.auth as auth
 from etrade.accounts import Accounts
@@ -40,8 +42,8 @@ class Client:
                 '4': 'Orders',
                 '5': 'Alerts',
                 '6': 'Quotes',
-                '7': 'Options Chain',
-                '8': 'Options Expiry',
+                '7': 'Options Expiry',
+                '8': 'Options Chain',
                 '9': 'Lookup Symbol',
                 '0': 'Exit'
             }
@@ -63,9 +65,9 @@ class Client:
             elif selection == 6:
                 self.show_quotes()
             elif selection == 7:
-                self.show_options_chain()
-            elif selection == 8:
                 self.show_options_expiry()
+            elif selection == 8:
+                self.show_options_chain()
             elif selection == 9:
                 self.lookup()
             elif selection == 0:
@@ -236,82 +238,48 @@ class Client:
 
         date = m.third_friday()
         options = Options(self.session)
-        message, chain_data = options.chain(symbol, date.month, date.year)
+        chain_calls, chain_puts = options.chain(symbol, date.month, date.year)
 
-        if 'error' in message.lower():
-            message = message.replace('Error ', '')
+        if 'error' in options.message.lower():
+            message = options.message.replace('Error ', '')
             message = message.replace('\n', '')
             ui.print_error(message)
-        elif chain_data is None:
-            message = message.replace('Error ', '')
+        elif chain_calls is None:
+            message = options.message.replace('Error ', '')
+            message = message.replace('\n', '')
+            ui.print_error(message)
+        elif chain_puts is None:
+            message = options.message.replace('Error ', '')
             message = message.replace('\n', '')
             ui.print_error(message)
         else:
-            ui.print_message('Options Chain')
-            for pair in chain_data['OptionChainResponse']['OptionPair']:
-                if pair['Call'] is not None:
-                    out = ''
-                    ask_bid = ''
-
-                    call = pair['Call']
-                    if 'displaySymbol' in call:
-                        out += f'{call["displaySymbol"]} '
-                    if 'ask' in call:
-                        ask_bid = f' ask:${call["ask"]:.2f}'
-                    if 'askSize' in call:
-                        ask_bid += f'x{call["askSize"]}'
-                        out += f'{ask_bid:15s}'
-                    if 'bid' in call:
-                        ask_bid = f' bid:${call["bid"]:.2f}'
-                    if 'bidSize' in call:
-                        ask_bid += f'x{call["bidSize"]}'
-                        out += f'{ask_bid:15s}'
-                    if 'inTheMoney' in call:
-                        out += f' ITM:{call["inTheMoney"]}'
-                    print(out)
-
-                if pair['Put'] is not None:
-                    out = ''
-                    ask_bid = ''
-
-                    put = pair['Put']
-                    if 'displaySymbol' in put:
-                        out += f'{put["displaySymbol"]}  '
-                    if 'ask' in put:
-                        ask_bid = f' ask:${put["ask"]:.2f}'
-                    if 'askSize' in put:
-                        ask_bid += f'x{put["askSize"]}'
-                        out += f'{ask_bid:15s}'
-                    if 'bid' in put:
-                        ask_bid = f' bid:${put["bid"]:.2f}'
-                    if 'bidSize' in put:
-                        ask_bid += f'x{put["bidSize"]}'
-                        out += f'{ask_bid:15s}'
-                    if 'inTheMoney' in put:
-                        out += f' ITM:{put["inTheMoney"]}'
-                    print(out)
+            ui.print_message('Options Call Chain', post_creturn=1)
+            print(tabulate(chain_calls, headers=chain_calls.columns, tablefmt=ui.TABULATE_FORMAT))
+            ui.print_message('Options Put Chain', post_creturn=1)
+            print(tabulate(chain_puts, headers=chain_puts.columns, tablefmt=ui.TABULATE_FORMAT))
 
     def show_options_expiry(self) -> None:
         symbol = ui.input_text('Please enter symbol: ').upper()
 
         options = Options(self.session)
-        message, expiry_data = options.expiry(symbol)
+        expiry_data = options.expiry(symbol)
 
-        if 'error' in message.lower():
-            message = message.replace('Error ', '')
+        if 'error' in options.message.lower():
+            message = options.message.replace('Error ', '')
             message = message.replace('\n', '')
             ui.print_error(message)
-        elif expiry_data is None:
-            message = message.replace('Error ', '')
+        elif expiry_data.empty:
+            message = options.message.replace('Error ', '')
             message = message.replace('\n', '')
             ui.print_error(message)
         else:
-            ui.print_message('Options Chain')
-            for pair in expiry_data['OptionExpireDateResponse']['ExpirationDate']:
-                print(pair)
+            ui.print_message('Options Chain', post_creturn=1)
+            expiry_data['date'] = pd.to_datetime(expiry_data['date']).dt.strftime(ui.DATE_FORMAT)
+            print(tabulate(expiry_data, headers=expiry_data.columns, tablefmt=ui.TABULATE_FORMAT))
+
 
 def main():
-    client = Client()
+    Client()
 
 if __name__ == '__main__':
     main()
