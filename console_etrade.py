@@ -149,25 +149,14 @@ class Client:
 
     def show_alerts(self):
         alerts = Alerts(self.session)
-        message, alert_data = alerts.alerts()
+        alert_data = alerts.alerts()
 
         if alert_data:
             alert = ''
             ui.print_message('Alerts')
-            for item in alert_data['AlertsResponse']['Alert']:
-                if item is not None and 'id' in item:
-                    alert += f'ID: {item["id"]}'
-                if item is not None and 'createTime' in item:
-                    timestamp = dt.datetime.fromtimestamp(item['createTime']).strftime('%Y-%m-%d %H:%M:%S')
-                    alert += f', Time: {timestamp}'
-                if item is not None and 'subject' in item:
-                    alert += f', Subject: {item["subject"]}'
-                if item is not None and 'status' in item:
-                    alert += f', Status: {item["status"]}'
-
-                print(alert)
+            print(alert_data)
         else:
-            ui.print_message(message)
+            ui.print_message(alerts.message)
 
     def show_symbol(self) -> None:
         symbol = ui.input_text('Please enter symbol: ').upper()
