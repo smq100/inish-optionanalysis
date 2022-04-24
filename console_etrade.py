@@ -39,12 +39,12 @@ class Client:
                 '1': 'Accounts',
                 '2': 'Balance',
                 '3': 'Portfolio',
-                '4': 'Orders',
-                '5': 'Alerts',
-                '6': 'Quotes',
-                '7': 'Options Expiry',
-                '8': 'Options Chain',
-                '9': 'Lookup Symbol',
+                '4': 'Alerts',
+                '5': 'Quotes',
+                '6': 'Options Expiry',
+                '7': 'Options Chain',
+                '8': 'Lookup Symbol',
+                '9': 'Orders',
                 '0': 'Exit'
             }
 
@@ -59,17 +59,17 @@ class Client:
             elif selection == 3:
                 self.show_portfolio()
             elif selection == 4:
-                self.show_orders()
-            elif selection == 5:
                 self.show_alerts()
-            elif selection == 6:
+            elif selection == 5:
                 self.show_quotes()
-            elif selection == 7:
+            elif selection == 6:
                 self.show_options_expiry()
-            elif selection == 8:
+            elif selection == 7:
                 self.show_options_chain()
-            elif selection == 9:
+            elif selection == 8:
                 self.show_symbol()
+            elif selection == 9:
+                self.show_orders()
             elif selection == 0:
                 break
             else:
@@ -98,7 +98,7 @@ class Client:
             balance = self.accounts.balance(self.account_index)
 
             if balance:
-                ui.print_message(f'Balance for {balance["accountId"]}')
+                ui.print_message(f'Balance for {balance["accountId"]}', pre_creturn=1, post_creturn=1)
                 if 'accountDescription' in balance:
                     print(f'Account Nickname: {balance["accountDescription"]}')
                 if 'accountType' in balance:
@@ -125,7 +125,7 @@ class Client:
             portfolio = self.accounts.portfolio(self.account_index)
 
             if not portfolio.empty:
-                ui.print_message('Portfolio')
+                ui.print_message('Portfolio', pre_creturn=1, post_creturn=1)
                 for position in portfolio.itertuples():
                     print_str = ''
                     if position.symbolDescription:
@@ -151,31 +151,36 @@ class Client:
         alerts = Alerts(self.session)
         alert_data = alerts.alerts()
 
-        if alert_data:
-            alert = ''
-            ui.print_message('Alerts')
-            print(alert_data)
+        if not alert_data.empty:
+            ui.print_message('Alerts', pre_creturn=1, post_creturn=1)
+            for item in alert_data.itertuples():
+                if item:
+                    alert = f'ID: {item.id}'
+                    timestamp = dt.datetime.fromtimestamp(item.createTime).strftime('%Y-%m-%d %H:%M:%S')
+                    alert += f', Time: {timestamp}'
+                    alert += f', Subject: {item.subject}'
+                    alert += f', Status: {item.status}'
+
+                print(alert)
         else:
             ui.print_message(alerts.message)
 
     def show_symbol(self) -> None:
         symbol = ui.input_text('Please enter symbol: ').upper()
         lookup = Lookup(self.session)
-        message, lookup_data = lookup.lookup(symbol)
+        lookup_data = lookup.lookup(symbol)
 
         if lookup_data is not None:
-            out = ''
-            ui.print_message(f'Security information for {symbol}')
-            for item in lookup_data['LookupResponse']['Data']:
-                if item is not None and 'symbol' in item:
-                    out += f'Symbol: {item["symbol"]}'
-                if item is not None and 'type' in item:
-                    out += f', Type: {item["type"]}'
-                if item is not None and 'description' in item:
-                    out += f', Desc: {item["description"]}'
+            ui.print_message(f'Security information for {symbol}', pre_creturn=1, post_creturn=1)
+            for item in lookup_data.itertuples():
+                if item:
+                    out = f'Symbol: {item.symbol}'
+                    out += f', Type: {item.type}'
+                    out += f', Desc: {item.description}'
+
                 print(out)
         else:
-            ui.print_error(message)
+            ui.print_error(lookup.message)
 
     def show_quotes(self) -> None:
         symbol = ui.input_text('Please enter symbol: ').upper()
@@ -183,7 +188,7 @@ class Client:
         message, quote_data = quotes.quote(symbol)
 
         if quote_data is not None:
-            ui.print_message('Quotes')
+            ui.print_message('Quotes', pre_creturn=1, post_creturn=1)
             for quote in quote_data['QuoteResponse']['QuoteData']:
                 if quote is not None:
                     if 'dateTime' in quote:

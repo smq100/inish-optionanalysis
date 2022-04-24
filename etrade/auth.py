@@ -10,7 +10,7 @@ from utils import logger
 
 _logger = logger.get_logger()
 
-SANDBOX = True
+SANDBOX = False
 
 config = configparser.ConfigParser()
 picklefile = './etrade/auth/session.pickle'

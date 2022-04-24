@@ -1,5 +1,8 @@
 import json
 
+import pandas as pd
+from requests_oauthlib import OAuth1Session
+
 import etrade.auth as auth
 from utils import logger
 
@@ -11,29 +14,57 @@ class Lookup:
         if not auth.base_url:
             raise AssertionError('Etrade session not initialized')
 
-        self.session = session
+        self.session: OAuth1Session = session
+        self.message = ''
 
-    def lookup(self, symbol: str) -> tuple[str, dict]:
-        message = 'success'
+    def lookup(self, symbol: str) -> pd.DataFrame:
+        self.message = 'success'
         url = f'{auth.base_url}/v1/market/lookup/{symbol}.json'
-        lookup_data = None
 
         response = self.session.get(url)
-        if response is not None and response.status_code == 200:
-            lookup_data = json.loads(response.text)
-            parsed = json.dumps(lookup_data, indent=2, sort_keys=True)
-            _logger.debug(f'{__name__}: {parsed}')
 
-            if lookup_data is not None and 'LookupResponse' in lookup_data and 'Data' in lookup_data['LookupResponse']:
-                pass
+        if response is not None and response.status_code == 200:
+            alert_data = response.json()
+            if alert_data is not None and 'LookupResponse' in alert_data and 'Data' in alert_data['LookupResponse']:
+                parsed = json.dumps(alert_data, indent=2, sort_keys=True)
+                _logger.debug(f'{__name__}: {parsed}')
             else:
-                lookup_data = []
-                message = 'None'
+                self.message = 'E*TRADE API service error'
         elif response is not None and response.status_code == 204:
-            lookup_data = []
-            message = 'None'
+            self.message = 'No alerts'
         else:
             _logger.debug(f'{__name__}: Response Body: {response}')
-            message = 'E*TRADE API service error'
+            self.message = f'E*TRADE API service error: {response}'
 
-        return message, lookup_data
+        lookup_table = pd.DataFrame()
+        if self.message == 'success':
+            data = alert_data['LookupResponse']['Data']
+            lookup_table = pd.DataFrame.from_dict(data)
+
+        return lookup_table
+
+'''
+Sample LookupResponse
+
+{
+  "LookupResponse": {
+    "Data": [
+      {
+        "description": "APPLE INC COM",
+        "symbol": "AAPL",
+        "type": "EQUITY"
+      },
+      {
+        "description": "AAPL ALPHA IDX",
+        "symbol": "AVSPY",
+        "type": "INDEX"
+      },
+      {
+        "description": "AAPL VS. SPY INDEX",
+        "symbol": "AIX",
+        "type": "INDEX"
+      }
+    ]
+  }
+}
+'''

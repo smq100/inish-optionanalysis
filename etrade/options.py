@@ -29,7 +29,7 @@ class Options:
               weekly: bool = False,
               otype: str = 'CALLPUT') -> tuple[pd.DataFrame, pd.DataFrame]:
 
-        url = auth.base_url + URL_CHAIN
+        url = f'{auth.base_url}{URL_CHAIN}'
         self.message = 'success'
         params = {
             'chainType': f'{otype}',
@@ -58,23 +58,23 @@ class Options:
             _logger.debug(f'{__name__}: Response Body: {response}')
             self.message = 'E*TRADE API service error'
 
-        table_calls = pd.DataFrame()
-        table_puts = pd.DataFrame()
+        calls_table = pd.DataFrame()
+        puts_table = pd.DataFrame()
         if self.message == 'success':
             data = chain_data['OptionChainResponse']['OptionPair']
 
             calls = [item['Call'] for item in data]
-            table_calls = pd.DataFrame(calls)
+            calls_table = pd.DataFrame(calls)
             puts = [item['Put'] for item in data]
-            table_puts = pd.DataFrame(puts)
+            puts_table = pd.DataFrame(puts)
 
-        return table_calls, table_puts
+        return calls_table, puts_table
 
     def expiry(self, symbol: str) -> pd.DataFrame:
         self.message = 'success'
         expiry_data = {}
 
-        url = auth.base_url + URL_EXPIRY
+        url = f'{auth.base_url}{URL_EXPIRY}'
         params = {
             'symbol': f'{symbol}'
         }
@@ -96,13 +96,13 @@ class Options:
             _logger.debug(f'{__name__}: Response Body: {response}')
             self.message = 'E*TRADE API service error'
 
-        table = pd.DataFrame()
+        expiry_table = pd.DataFrame()
         if self.message == 'success':
             expiry_data = expiry_data['OptionExpireDateResponse']['ExpirationDate']
             data = [(dt.datetime(item['year'], item['month'], item['day'], 0, 0, 0), item['expiryType'].title()) for item in expiry_data]
-            table = pd.DataFrame(data, columns=['date', 'expiryType'])
+            expiry_table = pd.DataFrame(data, columns=['date', 'expiryType'])
 
-        return table
+        return expiry_table
 
 '''
 Sample OptionChainResponse response

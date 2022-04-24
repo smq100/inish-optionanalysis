@@ -20,7 +20,7 @@ class Accounts:
         self.message = ''
 
     def list(self) -> pd.DataFrame:
-        url = auth.base_url + URL_ACCTLIST
+        url = f'{auth.base_url}{URL_ACCTLIST}'
         response = self.session.get(url)
         self.message = 'success'
 
@@ -65,11 +65,11 @@ class Accounts:
             _logger.debug(f'{__name__}: Response Body: {response.text}')
             self.message = '\nError: E*TRADE API service error'
 
-        data = {}
+        balance_table = {}
         if self.message == 'success':
-            data = acct_data['BalanceResponse']
+            balance_table = acct_data['BalanceResponse']
 
-        return data
+        return balance_table
 
     def portfolio(self, account_index: int) -> pd.DataFrame:
         self.message = 'success'
@@ -80,20 +80,18 @@ class Accounts:
             portfolio_data = json.loads(response.text)
             parsed = json.dumps(portfolio_data, indent=2, sort_keys=True)
             _logger.debug(f'{__name__}: {parsed}')
-        elif response is not None and response.status_code == 400:
-            _logger.debug(f'{__name__}: Response Body: {response}')
-            portfolio_data = json.loads(response.text)
-            self.message = f'\nError ({portfolio_data["Error"]["code"]}): {portfolio_data["Error"]["message"]}'
+        elif response is not None and response.status_code == 204:
+            self.message = 'No accounts available'
         else:
             _logger.debug(f'{__name__}: Response Body: {response.text}')
             self.message = '\nError: E*TRADE API service error'
 
-        portfolio = pd.DataFrame()
+        portfolio_table = pd.DataFrame()
         if self.message == 'success':
             data = portfolio_data['PortfolioResponse']['AccountPortfolio'][0]['Position']
-            portfolio = pd.DataFrame.from_dict(data)
+            portfolio_table = pd.DataFrame.from_dict(data)
 
-        return portfolio
+        return portfolio_table
 
 '''
 Sample AccountListResponse

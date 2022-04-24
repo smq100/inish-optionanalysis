@@ -20,7 +20,7 @@ class Alerts:
         self.session: OAuth1Session = session
         self.message = ''
 
-    def alerts(self) -> tuple[str, list[dict]]:
+    def alerts(self) -> pd.DataFrame:
         self.message = 'success'
         params = {'status': ['READ', 'UNREAD']}
         url = f'{auth.base_url}{URL_ALERTS}'
@@ -32,16 +32,35 @@ class Alerts:
             alert_data = response.json()
             if alert_data is not None and 'AlertsResponse' in alert_data and 'Alert' in alert_data['AlertsResponse']:
                 parsed = json.dumps(alert_data, indent=2, sort_keys=True)
-                print(parsed)
                 _logger.debug(f'{__name__}: {parsed}')
             else:
                 self.message = 'E*TRADE API service error'
-        elif response is not None and response.status_code == 400:
-            _logger.debug(f'{__name__}: Response Body: {response}')
-            alert_data = json.loads(response.text)
-            self.message = f'\nError ({alert_data["Error"]["code"]}): {alert_data["Error"]["message"]}'
+        elif response is not None and response.status_code == 204:
+            self.message = 'No alerts'
         else:
             _logger.debug(f'{__name__}: Response Body: {response}')
-            self.message = 'E*TRADE API service error'
+            self.message = f'E*TRADE API service error: {response}'
 
-        return alert_data
+        alert_table = pd.DataFrame()
+        if self.message == 'success':
+            data = alert_data['AlertsResponse']['Alert']
+            alert_table = pd.DataFrame.from_dict(data)
+
+        return alert_table
+
+'''
+Sample AlertsResponse
+
+{
+  "AlertsResponse": {
+    "Alert": [
+      {
+        "createTime": 1328115640,
+        "id": 1099,
+        "status": "READ",
+        "subject": "Bank Statement Available for Jan'12"
+      },
+      {
+          ...
+      }
+'''
