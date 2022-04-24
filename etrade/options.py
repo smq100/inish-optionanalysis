@@ -30,7 +30,7 @@ class Options:
               otype: str = 'CALLPUT') -> tuple[pd.DataFrame, pd.DataFrame]:
 
         url = auth.base_url + URL_CHAIN
-        self.message = 'error'
+        self.message = 'success'
         params = {
             'chainType': f'{otype}',
             'noOfStrikes': f'{strikes}',
@@ -46,9 +46,10 @@ class Options:
         if response is not None and response.status_code == 200:
             chain_data = json.loads(response.text)
             if chain_data is not None and 'OptionChainResponse' in chain_data and 'OptionPair' in chain_data['OptionChainResponse']:
-                self.message = 'success'
                 parsed = json.dumps(chain_data, indent=2, sort_keys=True)
                 _logger.debug(f'{__name__}: {parsed}')
+            else:
+                self.message = 'E*TRADE API service error'
         elif response is not None and response.status_code == 400:
             _logger.debug(f'{__name__}: Response Body: {response}')
             chain_data = json.loads(response.text)
@@ -64,16 +65,13 @@ class Options:
 
             calls = [item['Call'] for item in data]
             table_calls = pd.DataFrame(calls)
-            table_calls.drop(['OptionGreeks', 'quoteDetail'], axis=1, inplace=True)
-
             puts = [item['Put'] for item in data]
             table_puts = pd.DataFrame(puts)
-            table_puts.drop(['OptionGreeks', 'quoteDetail'], axis=1, inplace=True)
 
         return table_calls, table_puts
 
     def expiry(self, symbol: str) -> pd.DataFrame:
-        self.message = 'error'
+        self.message = 'success'
         expiry_data = {}
 
         url = auth.base_url + URL_EXPIRY
@@ -86,9 +84,10 @@ class Options:
         if response is not None and response.status_code == 200:
             expiry_data = json.loads(response.text)
             if expiry_data is not None and 'OptionExpireDateResponse' in expiry_data and 'ExpirationDate' in expiry_data['OptionExpireDateResponse']:
-                self.message = 'success'
                 parsed = json.dumps(expiry_data, indent=2, sort_keys=True)
                 _logger.debug(f'{__name__}: {parsed}')
+            else:
+                self.message = 'E*TRADE API service error'
         elif response is not None and response.status_code == 400:
             _logger.debug(f'{__name__}: Response Body: {response}')
             expiry_data = json.loads(response.text)

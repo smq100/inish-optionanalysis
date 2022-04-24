@@ -1,138 +1,237 @@
 import json
-import configparser
+
+from requests_oauthlib import OAuth1Session
+import pandas as pd
 
 import etrade.auth as auth
 from utils import logger
 
 _logger = logger.get_logger()
 
+URL_ACCTLIST = '/v1/accounts/list.json'
 
 class Accounts:
     def __init__(self, session):
         if not auth.base_url:
             raise AssertionError('Etrade session not initialized')
 
-        self.config = configparser.ConfigParser()
-        self.config.read('./etrade/auth/config.ini')
-        self.session = session
-        self.accounts = []
+        self.session: OAuth1Session = session
+        self.accounts: list[pd.DataFrame] = []
+        self.message = ''
 
-    def list(self) -> tuple[str, list[str]]:
-        url = auth.base_url + '/v1/accounts/list.json'
+    def list(self) -> pd.DataFrame:
+        url = auth.base_url + URL_ACCTLIST
         response = self.session.get(url)
-        message = 'success'
-        listing = []
-
-        self.accounts = []
+        self.message = 'success'
 
         if response is not None and response.status_code == 200:
-            data = response.json()
-            parsed = json.dumps(data, indent=2, sort_keys=True)
-            _logger.debug(f'{__name__}: {parsed}')
-
-            if data is not None and 'AccountListResponse' in data \
-                    and 'Accounts' in data['AccountListResponse'] \
-                    and 'Account' in data['AccountListResponse']['Accounts']:
-                accounts = data['AccountListResponse']['Accounts']['Account']
-
-                self.accounts[:] = [d for d in accounts if d.get('accountStatus') != 'CLOSED']
-                for account in self.accounts:
-                    print_str = ''
-                    if account is not None and 'accountId' in account:
-                        print_str += account['accountId']
-                    if account is not None and 'accountDesc' in account and account['accountDesc'].strip() is not None:
-                        print_str += f', {account["accountDesc"].strip()}'
-                    if account is not None and 'institutionType' in account:
-                        print_str += f', {account["institutionType"]}'
-
-                    listing += [print_str]
-
+            acct_data = response.json()
+            if acct_data is not None and 'AccountListResponse' in acct_data and 'Accounts' in acct_data['AccountListResponse']:
+                parsed = json.dumps(acct_data, indent=2, sort_keys=True)
+                _logger.debug(f'{__name__}: {parsed}')
             else:
-                _logger.debug(f'{__name__}: Response Body: {response.text}')
-                self.accounts = []
-                listing = []
-                if response is not None and response.headers['Content-Type'] == 'application/json' \
-                        and 'Error' in response.json() and 'message' in response.json()['Error'] \
-                        and response.json()['Error']['message'] is not None:
-                    message = data['Error']['message']
-                else:
-                    message = 'E*TRADE API service error'
+                self.message = 'E*TRADE API service error'
+        elif response is not None and response.status_code == 400:
+            _logger.debug(f'{__name__}: Response Body: {response}')
+            acct_data = json.loads(response.text)
+            self.message = f'\nError ({acct_data["Error"]["code"]}): {acct_data["Error"]["message"]}'
         else:
-            _logger.debug(f'{__name__}: Response Body: {response.text}')
-            self.accounts = []
-            listing = []
-            if response is not None and response.headers['Content-Type'] == 'application/json' \
-                    and 'Error' in response.json() and 'message' in response.json()['Error'] \
-                    and response.json()['Error']['message'] is not None:
-                message = 'Error: ' + response.json()['Error']['message']
-            else:
-                message = '\nError: E*TRADE API service error'
+            _logger.debug(f'{__name__}: Response Body: {response}')
+            self.message = 'E*TRADE API service error'
 
-        return message, listing
+        self.accounts = []
+        if self.message == 'success':
+            data = acct_data['AccountListResponse']['Accounts']['Account']
+            self.accounts = pd.DataFrame.from_dict(data)
 
-    def balance(self, account_index: int) -> tuple[str, dict]:
-        message = 'success'
-        url = auth.base_url + '/v1/accounts/' + self.accounts[account_index]['accountIdKey'] + '/balance.json'
-        params = {'instType': self.accounts[account_index]['institutionType'], 'realTimeNAV': 'true'}
-        headers = {'consumerkey': self.config['DEFAULT']['CONSUMER_KEY']}
+        return self.accounts
+
+    def balance(self, account_index: int) -> dict:
+        self.message = 'success'
+        url = auth.base_url + '/v1/accounts/' + self.accounts.iloc[account_index]['accountIdKey'] + '/balance.json'
+        params = {'instType': self.accounts.iloc[account_index]['institutionType'], 'realTimeNAV': 'true'}
+        headers = {'consumerkey': auth.key}
 
         response = self.session.get(url, params=params, headers=headers)
         if response is not None and response.status_code == 200:
-            data = json.loads(response.text)
-            parsed = json.dumps(data, indent=2, sort_keys=True)
+            acct_data = json.loads(response.text)
+            parsed = json.dumps(acct_data, indent=2, sort_keys=True)
             _logger.debug(f'{__name__}: {parsed}')
-
-            if data is not None and 'BalanceResponse' in data:
-                balance_data = data['BalanceResponse']
-            else:
-                _logger.debug(f'{__name__}: Response Body: {response.text}')
-                balance_data = []
-                if response is not None and response.headers['Content-Type'] == 'application/json' \
-                        and 'Error' in response.json() and 'message' in response.json()['Error'] \
-                        and response.json()['Error']['message'] is not None:
-                    message = data['Error']['message']
-                else:
-                    message = 'E*TRADE API service error'
+        elif response is not None and response.status_code == 400:
+            _logger.debug(f'{__name__}: Response Body: {response}')
+            acct_data = json.loads(response.text)
+            self.message = f'\nError ({acct_data["Error"]["code"]}): {acct_data["Error"]["message"]}'
         else:
             _logger.debug(f'{__name__}: Response Body: {response.text}')
-            balance_data = []
-            if response is not None and response.headers['Content-Type'] == 'application/json' \
-                    and 'Error' in response.json() and 'message' in response.json()['Error'] \
-                    and response.json()['Error']['message'] is not None:
-                message = 'Error: ' + response.json()['Error']['message']
-            else:
-                message = '\nError: E*TRADE API service error'
+            self.message = '\nError: E*TRADE API service error'
 
-        return message, balance_data
+        data = {}
+        if self.message == 'success':
+            data = acct_data['BalanceResponse']
 
-    def portfolio(self, account_index: int) -> tuple[str, dict]:
-        message = 'success'
-        url = auth.base_url + '/v1/accounts/' + self.accounts[account_index]['accountIdKey'] + '/portfolio.json'
+        return data
+
+    def portfolio(self, account_index: int) -> pd.DataFrame:
+        self.message = 'success'
+        url = auth.base_url + '/v1/accounts/' + self.accounts.iloc[account_index]['accountIdKey'] + '/portfolio.json'
 
         response = self.session.get(url)
         if response is not None and response.status_code == 200:
-            portfolio = json.loads(response.text)
-            parsed = json.dumps(portfolio, indent=2, sort_keys=True)
+            portfolio_data = json.loads(response.text)
+            parsed = json.dumps(portfolio_data, indent=2, sort_keys=True)
             _logger.debug(f'{__name__}: {parsed}')
-
-            if portfolio is not None and 'PortfolioResponse' in portfolio and 'AccountPortfolio' in portfolio['PortfolioResponse']:
-                pass
-            else:
-                _logger.debug(f'{__name__}: Response Body: {response.text}')
-                portfolio = []
-                if response is not None and response.headers['Content-Type'] == 'application/json' \
-                        and 'Error' in response.json() and 'message' in response.json()['Error'] \
-                        and response.json()['Error']['message'] is not None:
-                    message = portfolio['Error']['message']
-                else:
-                    message = 'E*TRADE API service error'
-
-        elif response is not None and response.status_code == 204:
-            portfolio = []
-            message = 'None'
+        elif response is not None and response.status_code == 400:
+            _logger.debug(f'{__name__}: Response Body: {response}')
+            portfolio_data = json.loads(response.text)
+            self.message = f'\nError ({portfolio_data["Error"]["code"]}): {portfolio_data["Error"]["message"]}'
         else:
             _logger.debug(f'{__name__}: Response Body: {response.text}')
-            portfolio = []
-            message = 'E*TRADE API service error'
+            self.message = '\nError: E*TRADE API service error'
 
-        return message, portfolio
+        portfolio = pd.DataFrame()
+        if self.message == 'success':
+            data = portfolio_data['PortfolioResponse']['AccountPortfolio'][0]['Position']
+            portfolio = pd.DataFrame.from_dict(data)
+
+        return portfolio
+
+'''
+Sample AccountListResponse
+
+{
+  "AccountListResponse": {
+    "Accounts": {
+      "Account": [
+        {
+          "accountDesc": "Trading",
+          "accountId": "000",
+          "accountIdKey": "000",
+          "accountMode": "MARGIN",
+          "accountName": "Trading",
+          "accountStatus": "ACTIVE",
+          "accountType": "INDIVIDUAL",
+          "closedDate": 0,
+          "institutionType": "BROKERAGE",
+          "shareWorksAccount": false
+        },
+        {
+            ...
+        }
+      ]
+    }
+  }
+}
+'''
+
+'''
+Sample BalanceResponse
+
+{
+  "BalanceResponse": {
+    "Cash": {
+      "fundsForOpenOrdersCash": 0,
+      "moneyMktBalance": 0.0
+    },
+    "Computed": {
+      "OpenCalls": {
+        "cashCall": 0,
+        "fedCall": 0,
+        "houseCall": 0,
+        "minEquityCall": 0
+      },
+      "RealTimeValues": {
+        "netMv": 0.0,
+        "netMvLong": 0.0,
+        "netMvShort": 0.0,
+        "totalAccountValue": 0.0
+      },
+      "accountBalance": 0.0,
+      "cashAvailableForInvestment": 0.0,
+      "cashAvailableForWithdrawal": 0.0,
+      "cashBalance": 0,
+      "cashBuyingPower": 0.0,
+      "dtCashBuyingPower": 0,
+      "dtMarginBuyingPower": 0,
+      "fundsWithheldFromPurchasePower": 0,
+      "fundsWithheldFromWithdrawal": 0,
+      "marginBalance": 0,
+      "marginBuyingPower": 0.0,
+      "netCash": 0.0,
+      "regtEquity": 0.0,
+      "regtEquityPercent": 0,
+      "settledCashForInvestment": 0,
+      "shortAdjustBalance": 0,
+      "totalAvailableForWithdrawal": 0.0,
+      "unSettledCashForInvestment": 0
+    },
+    "accountDescription": "John Doe",
+    "accountId": "0000000",
+    "accountMode": "MARGIN",
+    "accountType": "MARGIN",
+    "dayTraderStatus": "NO_PDT",
+    "optionLevel": "LEVEL_3",
+    "quoteMode": 0
+  }
+}
+'''
+
+'''
+Sample PortfolioResponse
+
+{
+  "PortfolioResponse": {
+    "AccountPortfolio": [
+      {
+        "accountId": "83359700",
+        "totalPages": 1
+        "Position": [
+          {
+            "Product": {
+              "expiryDay": 0,
+              "expiryMonth": 0,
+              "expiryYear": 0,
+              "productId": {
+                "symbol": "BR"
+              },
+              "securityType": "EQ",
+              "strikePrice": 0,
+              "symbol": "BR"
+            },
+            "Quick": {
+              "change": -0.28,
+              "changePct": -1.3346,
+              "lastTrade": 20.7,
+              "lastTradeTime": 1343160240,
+              "volume": 431591
+            },
+            "commissions": 0,
+            "costPerShare": 0,
+            "dateAcquired": -57600000,
+            "daysGain": -2.7999,
+            "daysGainPct": -1.3346,
+            "lotsDetails": "",
+            "marketValue": 207,
+            "otherFees": 0,
+            "pctOfPortfolio": 0.0018,
+            "positionId": 27005131,
+            "positionIndicator": "TYPE2",
+            "positionType": "LONG",
+            "pricePaid": 0,
+            "quantity": 10,
+            "quoteDetails": "",
+            "symbolDescription": "BR",
+            "todayCommissions": 0,
+            "todayFees": 0,
+            "todayPricePaid": 0,
+            "todayQuantity": 0,
+            "totalCost": 0,
+            "totalGain": 207,
+            "totalGainPct": 0
+          },
+          {
+              ...
+          }
+        ]
+    }
+}
+'''

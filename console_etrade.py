@@ -69,7 +69,7 @@ class Client:
             elif selection == 8:
                 self.show_options_chain()
             elif selection == 9:
-                self.lookup()
+                self.show_symbol()
             elif selection == 0:
                 break
             else:
@@ -77,16 +77,16 @@ class Client:
 
     def show_accounts(self) -> None:
         self.accounts = Accounts(self.session)
-        success, listing = self.accounts.list()
+        acct_table = self.accounts.list()
 
-        if success == 'success':
-            menu_items = {str(n+1): listing[n] for n in range(len(listing))}
+        if self.accounts.message == 'success':
+            menu_items = {str(acct.Index+1): f'{acct.accountId} {acct.accountDesc}' for acct in acct_table.itertuples()}
             menu_items['0'] = 'Cancel'
 
             selection = ui.menu(menu_items, 'Select Accounts', 0, len(menu_items)-1)
             if selection > 0:
                 self.account_index = selection - 1
-                self.account_name = listing[selection-1]
+                self.account_name = menu_items[str(selection-1)]
             else:
                 self.account_index = -1
                 self.account_name = ''
@@ -95,11 +95,10 @@ class Client:
 
     def show_balance(self) -> None:
         if self.account_index >= 0:
-            message, balance = self.accounts.balance(self.account_index)
+            balance = self.accounts.balance(self.account_index)
 
             if balance:
                 ui.print_message(f'Balance for {balance["accountId"]}')
-
                 if 'accountDescription' in balance:
                     print(f'Account Nickname: {balance["accountDescription"]}')
                 if 'accountType' in balance:
@@ -117,43 +116,34 @@ class Client:
                 if 'accountDescription' in balance:
                     print(f'Option Level: {balance["optionLevel"]}')
             else:
-                ui.print_error(message)
+                ui.print_error(self.accounts.message)
         else:
             ui.print_error('Must first select an account')
 
     def show_portfolio(self) -> None:
         if self.account_index >= 0:
-            message, portfolio = self.accounts.portfolio(self.account_index)
+            portfolio = self.accounts.portfolio(self.account_index)
 
-            if portfolio:
+            if not portfolio.empty:
                 ui.print_message('Portfolio')
-                for acct_portfolio in portfolio['PortfolioResponse']['AccountPortfolio']:
-                    if acct_portfolio is not None and 'Position' in acct_portfolio:
-                        for position in acct_portfolio['Position']:
-                            if position is not None:
-                                print_str = ''
-                                if 'symbolDescription' in position:
-                                    print_str += f'{str(position["symbolDescription"])}'
-                                if 'quantity' in position:
-                                    print_str += f', Q: {position["quantity"]}'
-                                if 'Quick' in position and 'lastTrade' in position['Quick']:
-                                    print_str += f', Price: {position["Quick"]["lastTrade"]:,.2f}'
-                                if 'pricePaid' in position:
-                                    print_str += f', Paid: {position["pricePaid"]:,.2f}'
-                                if 'totalGain' in position:
-                                    print_str += f', Gain: {position["totalGain"]:,.2f}'
-                                if 'marketValue' in position:
-                                    print_str += f', Value: {position["marketValue"]:,.2f}'
+                for position in portfolio.itertuples():
+                    print_str = ''
+                    if position.symbolDescription:
+                        print_str += f'{str(position.symbolDescription):<5}'
+                    if position.quantity:
+                        print_str += f'Q={position.quantity:<3}'
+                    if position.Quick and 'lastTrade' in position.Quick:
+                        print_str += f' Price={position.Quick["lastTrade"]:,.02f}'
+                    if position.pricePaid:
+                        print_str += f' Paid={position.pricePaid:,.02f}'
+                    if position.totalGain:
+                        print_str += f' Gain={position.totalGain:,.02f}'
+                    if position.marketValue:
+                        print_str += f' Value={position.marketValue:,.02f}'
 
-                                print(print_str)
+                    print(print_str)
             else:
-                ui.print_error(message)
-        else:
-            ui.print_error('Must first select an account')
-
-    def show_orders(self) -> None:
-        if self.account_index >= 0:
-            ui.print_error('TODO')
+                ui.print_error(self.accounts.message)
         else:
             ui.print_error('Must first select an account')
 
@@ -179,7 +169,7 @@ class Client:
         else:
             ui.print_message(message)
 
-    def lookup(self) -> None:
+    def show_symbol(self) -> None:
         symbol = ui.input_text('Please enter symbol: ').upper()
         lookup = Lookup(self.session)
         message, lookup_data = lookup.lookup(symbol)
@@ -253,10 +243,46 @@ class Client:
             message = message.replace('\n', '')
             ui.print_error(message)
         else:
+            drop = [
+                'OptionGreeks',
+                'adjustedFlag',
+                'ask',
+                'askSize',
+                'bid',
+                'bidSize',
+                'displaySymbol',
+                # 'inTheMoney',
+                # 'lastPrice',
+                'netChange',
+                'openInterest',
+                'optionCategory',
+                'optionRootSymbol',
+                'optionType',
+                'osiKey',
+                'quoteDetail',
+                # 'strikePrice',
+                # 'symbol',
+                'timeStamp',
+                # 'volume'
+            ]
+
+            order = [
+                'symbol',
+                'strikePrice',
+                'lastPrice',
+                'inTheMoney',
+                'volume'
+            ]
+
             ui.print_message('Options Call Chain', post_creturn=1)
-            print(tabulate(chain_calls, headers=chain_calls.columns, tablefmt=ui.TABULATE_FORMAT))
+            chain_calls.drop(drop, axis=1, inplace=True)
+            chain_calls = chain_calls.reindex(columns=order)
+            print(tabulate(chain_calls, headers=chain_calls.columns, tablefmt=ui.TABULATE_FORMAT, floatfmt='.02f'))
+
             ui.print_message('Options Put Chain', post_creturn=1)
-            print(tabulate(chain_puts, headers=chain_puts.columns, tablefmt=ui.TABULATE_FORMAT))
+            chain_puts.drop(drop, axis=1, inplace=True)
+            chain_puts = chain_puts.reindex(columns=order)
+            print(tabulate(chain_puts, headers=chain_puts.columns, tablefmt=ui.TABULATE_FORMAT, floatfmt='.02f'))
 
     def show_options_expiry(self) -> None:
         symbol = ui.input_text('Please enter symbol: ').upper()
@@ -277,6 +303,11 @@ class Client:
             expiry_data['date'] = pd.to_datetime(expiry_data['date']).dt.strftime(ui.DATE_FORMAT)
             print(tabulate(expiry_data, headers=expiry_data.columns, tablefmt=ui.TABULATE_FORMAT))
 
+    def show_orders(self) -> None:
+        if self.account_index >= 0:
+            ui.print_error('TODO')
+        else:
+            ui.print_error('Must first select an account')
 
 def main():
     Client()

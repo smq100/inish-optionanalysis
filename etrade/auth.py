@@ -10,22 +10,25 @@ from utils import logger
 
 _logger = logger.get_logger()
 
-SANDBOX = False
+SANDBOX = True
 
 config = configparser.ConfigParser()
 picklefile = './etrade/auth/session.pickle'
 base_url = ''
+key = ''
 
 def authorize() -> OAuth1Session:
-    global base_url
+    global base_url, key
 
     session = None
 
     config.read('./etrade/auth/config.ini')
     if SANDBOX:
         base_url = config['DEFAULT']['BASE_URL_SB']
+        key = config['DEFAULT']['CONSUMER_KEY_SB']
     else:
         base_url = config['DEFAULT']['BASE_URL']
+        key = config['DEFAULT']['CONSUMER_KEY']
 
     # Get a new session, or use existing
     if os.path.exists(picklefile):
