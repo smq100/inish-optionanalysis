@@ -9,7 +9,7 @@ from utils import logger
 _logger = logger.get_logger()
 
 
-URL_ALERTS = '/v1/user/alerts.json'
+URL_ALERTS = '/v1/user/alerts'
 
 
 class Alerts:
@@ -36,6 +36,7 @@ class Alerts:
             else:
                 self.message = 'E*TRADE API service error'
         elif response is not None and response.status_code == 204:
+            _logger.debug(f'{__name__}: Response Body: {response}')
             self.message = 'No alerts'
         else:
             _logger.debug(f'{__name__}: Response Body: {response}')
@@ -47,6 +48,7 @@ class Alerts:
             alert_table = pd.DataFrame.from_dict(data)
 
         return alert_table
+
 
 '''
 Sample AlertsResponse

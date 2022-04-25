@@ -30,8 +30,6 @@ class Lookup:
                 _logger.debug(f'{__name__}: {parsed}')
             else:
                 self.message = 'E*TRADE API service error'
-        elif response is not None and response.status_code == 204:
-            self.message = 'No alerts'
         else:
             _logger.debug(f'{__name__}: Response Body: {response}')
             self.message = f'E*TRADE API service error: {response}'
@@ -42,6 +40,7 @@ class Lookup:
             lookup_table = pd.DataFrame.from_dict(data)
 
         return lookup_table
+
 
 '''
 Sample LookupResponse

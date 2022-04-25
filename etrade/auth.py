@@ -17,6 +17,7 @@ picklefile = './etrade/auth/session.pickle'
 base_url = ''
 key = ''
 
+
 def authorize() -> OAuth1Session:
     global base_url, key
 
@@ -92,7 +93,7 @@ def _authorize() -> OAuth1Session:
 
         # Store session for later use
         with open(picklefile, 'wb') as session_file:
-                pickle.dump(session, session_file, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(session, session_file, protocol=pickle.HIGHEST_PROTOCOL)
 
         _logger.info(f'{__name__}: Created new session')
 
@@ -102,6 +103,7 @@ def _authorize() -> OAuth1Session:
         session = None
 
     return session
+
 
 def _validate_session(session, url):
     response = session.get(url)

@@ -50,13 +50,9 @@ class Options:
                 _logger.debug(f'{__name__}: {parsed}')
             else:
                 self.message = 'E*TRADE API service error'
-        elif response is not None and response.status_code == 400:
-            _logger.debug(f'{__name__}: Response Body: {response}')
-            chain_data = json.loads(response.text)
-            self.message = f'\nError ({chain_data["Error"]["code"]}): {chain_data["Error"]["message"]}'
         else:
-            _logger.debug(f'{__name__}: Response Body: {response}')
-            self.message = 'E*TRADE API service error'
+            _logger.debug(f'{__name__}: Response Body: {response.text}')
+            self.message = f'Error: E*TRADE API service error: {response.text}'
 
         calls_table = pd.DataFrame()
         puts_table = pd.DataFrame()
@@ -88,13 +84,9 @@ class Options:
                 _logger.debug(f'{__name__}: {parsed}')
             else:
                 self.message = 'E*TRADE API service error'
-        elif response is not None and response.status_code == 400:
-            _logger.debug(f'{__name__}: Response Body: {response}')
-            expiry_data = json.loads(response.text)
-            self.message = f'\nError ({expiry_data["Error"]["code"]}): {expiry_data["Error"]["message"]}'
         else:
-            _logger.debug(f'{__name__}: Response Body: {response}')
-            self.message = 'E*TRADE API service error'
+            _logger.debug(f'{__name__}: Response Body: {response.text}')
+            self.message = f'Error: E*TRADE API service error: {response.text}'
 
         expiry_table = pd.DataFrame()
         if self.message == 'success':
@@ -103,6 +95,7 @@ class Options:
             expiry_table = pd.DataFrame(data, columns=['date', 'expiryType'])
 
         return expiry_table
+
 
 '''
 Sample OptionChainResponse response

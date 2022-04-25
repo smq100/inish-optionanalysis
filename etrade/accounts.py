@@ -10,6 +10,7 @@ _logger = logger.get_logger()
 
 URL_ACCTLIST = '/v1/accounts/list.json'
 
+
 class Accounts:
     def __init__(self, session):
         if not auth.base_url:
@@ -31,13 +32,9 @@ class Accounts:
                 _logger.debug(f'{__name__}: {parsed}')
             else:
                 self.message = 'E*TRADE API service error'
-        elif response is not None and response.status_code == 400:
-            _logger.debug(f'{__name__}: Response Body: {response}')
-            acct_data = json.loads(response.text)
-            self.message = f'\nError ({acct_data["Error"]["code"]}): {acct_data["Error"]["message"]}'
         else:
-            _logger.debug(f'{__name__}: Response Body: {response}')
-            self.message = 'E*TRADE API service error'
+            _logger.debug(f'{__name__}: Response Body: {response.text}')
+            self.message = f'Error: E*TRADE API service error: {response.text}'
 
         self.accounts = []
         if self.message == 'success':
@@ -57,13 +54,9 @@ class Accounts:
             acct_data = json.loads(response.text)
             parsed = json.dumps(acct_data, indent=2, sort_keys=True)
             _logger.debug(f'{__name__}: {parsed}')
-        elif response is not None and response.status_code == 400:
-            _logger.debug(f'{__name__}: Response Body: {response}')
-            acct_data = json.loads(response.text)
-            self.message = f'\nError ({acct_data["Error"]["code"]}): {acct_data["Error"]["message"]}'
         else:
             _logger.debug(f'{__name__}: Response Body: {response.text}')
-            self.message = '\nError: E*TRADE API service error'
+            self.message = f'Error: E*TRADE API service error: {response.text}'
 
         balance_table = {}
         if self.message == 'success':
@@ -80,11 +73,9 @@ class Accounts:
             portfolio_data = json.loads(response.text)
             parsed = json.dumps(portfolio_data, indent=2, sort_keys=True)
             _logger.debug(f'{__name__}: {parsed}')
-        elif response is not None and response.status_code == 204:
-            self.message = 'No accounts available'
         else:
             _logger.debug(f'{__name__}: Response Body: {response.text}')
-            self.message = '\nError: E*TRADE API service error'
+            self.message = f'Error: E*TRADE API service error: {response.text}'
 
         portfolio_table = pd.DataFrame()
         if self.message == 'success':
@@ -92,6 +83,7 @@ class Accounts:
             portfolio_table = pd.DataFrame.from_dict(data)
 
         return portfolio_table
+
 
 '''
 Sample AccountListResponse

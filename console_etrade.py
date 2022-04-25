@@ -113,7 +113,7 @@ class Client:
                 if 'Computed' in balance \
                         and 'cashBuyingPower' in balance['Computed']:
                     print(f'Cash Buying Power: ${balance["Computed"]["cashBuyingPower"]:,.2f}')
-                if 'accountDescription' in balance:
+                if 'optionLevel' in balance:
                     print(f'Option Level: {balance["optionLevel"]}')
             else:
                 ui.print_error(self.accounts.message)
@@ -170,52 +170,43 @@ class Client:
         lookup = Lookup(self.session)
         lookup_data = lookup.lookup(symbol)
 
-        if lookup_data is not None:
+        if not lookup_data.empty:
             ui.print_message(f'Security information for {symbol}', pre_creturn=1, post_creturn=1)
             for item in lookup_data.itertuples():
                 if item:
-                    out = f'Symbol: {item.symbol}'
-                    out += f', Type: {item.type}'
-                    out += f', Desc: {item.description}'
+                    print(f'Symbol: {item.symbol}')
+                    print(f'Type: {item.type}')
+                    print(f'Desc: {item.description}')
 
-                print(out)
+                print()
         else:
-            ui.print_error(lookup.message)
+            ui.print_error(f'No information for {symbol} located')
 
     def show_quotes(self) -> None:
-        symbol = ui.input_text('Please enter symbol: ').upper()
         quotes = Quotes(self.session)
-        message, quote_data = quotes.quote(symbol)
+        symbols = ui.input_list('Please enter symbols separated with commas: ').upper()
+        quote_data = quotes.quote(symbols.split(','))
 
-        if quote_data is not None:
+        if quotes.message == 'success':
             ui.print_message('Quotes', pre_creturn=1, post_creturn=1)
-            for quote in quote_data['QuoteResponse']['QuoteData']:
+            for quote in quote_data:
                 if quote is not None:
-                    if 'dateTime' in quote:
-                        print(f'Date Time: {quote["dateTime"]}')
-                    if 'Product' in quote and 'symbol' in quote['Product']:
-                        print(f'Symbol: {quote["Product"]["symbol"]}')
+                    print(f'Date Time: {quote.get("dateTime", "")}')
+                    print(f'Symbol: {quote.get("Product", "").get("symbol", "")}')
                     if 'Product' in quote and 'securityType' in quote['Product']:
                         print(f'Security Type: {quote["Product"]["securityType"]}')
                     if 'All' in quote:
-                        if 'lastTrade' in quote['All']:
-                            print(f'Last Price: {quote["All"]["lastTrade"]}')
-                        if 'changeClose' in quote['All'] and 'changeClosePercentage' in quote['All']:
-                            print(f"Today's Change: {quote['All']['changeClose']:,.3f} ({quote['All']['changeClosePercentage']}%)")
-                        if 'open' in quote['All']:
-                            print(f'Open: {quote["All"]["open"]:,.2f}')
-                        if 'previousClose' in quote['All']:
-                            print(f'Previous Close: {quote["All"]["previousClose"]:,.2f}')
-                        if 'bid' in quote['All'] and 'bidSize' in quote['All']:
-                            print(f'Bid (Size): {quote["All"]["bid"]:,.2f} x{quote["All"]["bidSize"]}')
-                        if 'ask' in quote['All'] and 'askSize' in quote['All']:
-                            print(f'Ask (Size): {quote["All"]["ask"]:,.2f} x{quote["All"]["askSize"]}')
-                        if 'low' in quote['All'] and 'high' in quote['All']:
-                            print(f"Day's Range: {quote['All']['low']} - {quote['All']['high']}")
-                        if 'totalVolume' in quote['All']:
-                            print(f'Volume: {quote["All"]["totalVolume"]:,}')
+                        print(f'Last Price: {quote["All"].get("lastTrade", "")}')
+                        print(f'Today\'s Change: {quote["All"].get("changeClose", 0.0):,.3f}) ({quote["All"].get("changeClosePercentage", 0.0)}%)')
+                        print(f'Open: {quote["All"].get("open", 0.0):,.2f}')
+                        print(f'Previous Close: {quote["All"].get("previousClose", 0.0):,.2f}')
+                        print(f'Bid (Size): {quote["All"].get("bid", 0.0):,.2f}x{quote["All"].get("bidSize")}')
+                        print(f'Ask (Size): {quote["All"].get("ask", 0.0):,.2f}x{quote["All"].get("askSize")}')
+                        print(f'Day\'s Range: {quote["All"].get("low", 0.0):,.2f} - {quote["All"].get("high", 0.0):,.2f}')
+                        print(f'Volume: {quote["All"].get("totalVolume"):,}')
+                    print()
         else:
-            ui.print_error(message)
+            ui.print_error(quotes.message)
 
     def show_options_chain(self) -> None:
         symbol = ui.input_text('Please enter symbol: ').upper()
@@ -303,8 +294,10 @@ class Client:
         else:
             ui.print_error('Must first select an account')
 
+
 def main():
     Client()
+
 
 if __name__ == '__main__':
     main()
