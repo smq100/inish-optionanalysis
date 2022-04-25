@@ -45,7 +45,7 @@ class Accounts:
 
     def balance(self, account_index: int) -> dict:
         self.message = 'success'
-        url = auth.base_url + '/v1/accounts/' + self.accounts.iloc[account_index]['accountIdKey'] + '/balance.json'
+        url = f'{auth.base_url}/v1/accounts/{self.accounts.iloc[account_index]["accountIdKey"]}/balance.json'
         params = {'instType': self.accounts.iloc[account_index]['institutionType'], 'realTimeNAV': 'true'}
         headers = {'consumerkey': auth.key}
 
@@ -66,7 +66,7 @@ class Accounts:
 
     def portfolio(self, account_index: int) -> pd.DataFrame:
         self.message = 'success'
-        url = auth.base_url + '/v1/accounts/' + self.accounts.iloc[account_index]['accountIdKey'] + '/portfolio.json'
+        url = f'{auth.base_url}/v1/accounts/{self.accounts.iloc[account_index]["accountIdKey"]}/portfolio.json'
 
         response = self.session.get(url)
         if response is not None and response.status_code == 200:

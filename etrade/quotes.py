@@ -19,12 +19,12 @@ class Quotes:
 
     def quote(self, symbols: list[str]) -> list[dict]:
         self.message = 'success'
+        quote_data = None
+
+        url = f'{auth.base_url}/v1/market/quote/{",".join(symbols)}.json'
         params = {
             'detailFlag': ['ALL']
         }
-
-        url = f'{auth.base_url}/v1/market/quote/{",".join(symbols)}.json'
-        quote_data = None
 
         response = self.session.get(url, params=params)
 

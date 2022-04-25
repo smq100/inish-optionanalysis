@@ -22,9 +22,10 @@ class Alerts:
 
     def alerts(self) -> pd.DataFrame:
         self.message = 'success'
-        params = {'status': ['READ', 'UNREAD']}
-        url = f'{auth.base_url}{URL_ALERTS}'
         alert_data = []
+
+        url = f'{auth.base_url}{URL_ALERTS}'
+        params = {'status': ['READ', 'UNREAD']}
 
         response = self.session.get(url, params=params)
 

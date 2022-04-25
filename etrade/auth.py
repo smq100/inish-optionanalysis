@@ -1,8 +1,8 @@
 import os.path
 import pickle
-import webbrowser
 import configparser
 from requests_oauthlib.oauth1_session import TokenRequestDenied
+from typing import Callable
 
 from requests_oauthlib import OAuth1Session
 
@@ -18,7 +18,7 @@ base_url = ''
 key = ''
 
 
-def authorize() -> OAuth1Session:
+def authorize(callback: Callable[[str], str]) -> OAuth1Session:
     global base_url, key
 
     session = None
@@ -46,12 +46,12 @@ def authorize() -> OAuth1Session:
                     session = None
 
     if session is None:
-        session = _authorize()
+        session = _authorize(callback)
 
     return session
 
 
-def _authorize() -> OAuth1Session:
+def _authorize(callback: Callable[[str], str]) -> OAuth1Session:
     session = None
 
     if SANDBOX:
@@ -71,14 +71,12 @@ def _authorize() -> OAuth1Session:
         callback_uri='oob',
         signature_type='AUTH_HEADER',
     )
+
     token = etrade.fetch_request_token(request_token_url)
 
-    # Construct callback URL and display page to retrieve verifier code
-    formated_auth_url = '%s?key=%s&token=%s' % (authorize_url, consumer_key, token['oauth_token'])
-    webbrowser.open(formated_auth_url)
-
-    # Confirm code and get token
-    code = input('Please accept agreement and enter text code from browser: ')
+    # Construct callback URL to get auth code
+    formated_auth_url = f'{authorize_url}?key={consumer_key}&token={token["oauth_token"]}'
+    code = callback(formated_auth_url)
 
     try:
         token = etrade.fetch_access_token(access_token_url, verifier=code)

@@ -29,8 +29,10 @@ class Options:
               weekly: bool = False,
               otype: str = 'CALLPUT') -> tuple[pd.DataFrame, pd.DataFrame]:
 
-        url = f'{auth.base_url}{URL_CHAIN}'
         self.message = 'success'
+        chain_data = None
+
+        url = f'{auth.base_url}{URL_CHAIN}'
         params = {
             'chainType': f'{otype}',
             'noOfStrikes': f'{strikes}',
@@ -39,7 +41,6 @@ class Options:
             'expiryYear': f'{expiry_year}',
             'symbol': f'{symbol}'
         }
-        chain_data = None
 
         response = self.session.get(url, params=params)
 
@@ -71,9 +72,7 @@ class Options:
         expiry_data = {}
 
         url = f'{auth.base_url}{URL_EXPIRY}'
-        params = {
-            'symbol': f'{symbol}'
-        }
+        params = {'symbol': f'{symbol}'}
 
         response = self.session.get(url, params=params)
 

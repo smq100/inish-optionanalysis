@@ -19,6 +19,7 @@ class Lookup:
 
     def lookup(self, symbol: str) -> pd.DataFrame:
         self.message = 'success'
+
         url = f'{auth.base_url}/v1/market/lookup/{symbol}.json'
 
         response = self.session.get(url)

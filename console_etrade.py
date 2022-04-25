@@ -1,5 +1,6 @@
 import datetime as dt
 import logging
+import webbrowser
 
 import pandas as pd
 from requests_oauthlib import OAuth1Session
@@ -18,6 +19,12 @@ from utils import ui, logger
 logger.get_logger(logging.WARNING, logfile='')
 
 
+def _callback(url: str) -> str:
+    webbrowser.open(url)
+    code = ui.input_alphanum('Please accept agreement and enter text code from browser: ')
+    return code
+
+
 class Client:
     def __init__(self):
         self.session: OAuth1Session | None = None
@@ -26,7 +33,7 @@ class Client:
         self.account_name = ''
 
         if self.session is None:
-            self.session = auth.authorize()
+            self.session = auth.authorize(_callback)
 
         if self.session is not None:
             self.main_menu()
@@ -44,7 +51,6 @@ class Client:
                 '6': 'Options Expiry',
                 '7': 'Options Chain',
                 '8': 'Lookup Symbol',
-                '9': 'Orders',
                 '0': 'Exit'
             }
 
@@ -68,8 +74,6 @@ class Client:
                 self.show_options_chain()
             elif selection == 8:
                 self.show_symbol()
-            elif selection == 9:
-                self.show_orders()
             elif selection == 0:
                 break
             else:
@@ -80,7 +84,7 @@ class Client:
         acct_table = self.accounts.list()
 
         if self.accounts.message == 'success':
-            menu_items = {str(acct.Index+1): f'{acct.accountId} {acct.accountDesc}' for acct in acct_table.itertuples()}
+            menu_items = {str(acct.Index+1): f'{acct.accountDesc} ({acct.accountId})' for acct in acct_table.itertuples()}
             menu_items['0'] = 'Cancel'
 
             selection = ui.menu(menu_items, 'Select Accounts', 0, len(menu_items)-1)
@@ -99,22 +103,12 @@ class Client:
 
             if balance:
                 ui.print_message(f'Balance for {balance["accountId"]}', pre_creturn=1, post_creturn=1)
-                if 'accountDescription' in balance:
-                    print(f'Account Nickname: {balance["accountDescription"]}')
-                if 'accountType' in balance:
-                    print(f'Account Type: {balance["accountType"]}')
-                if 'Computed' in balance \
-                        and 'RealTimeValues' in balance['Computed'] \
-                        and 'totalAccountValue' in balance['Computed']['RealTimeValues']:
-                    print(f'Net Account Value: ${balance["Computed"]["RealTimeValues"]["totalAccountValue"]:,.2f}')
-                if 'Computed' in balance \
-                        and 'marginBuyingPower' in balance['Computed']:
-                    print(f'Margin Buying Power: ${balance["Computed"]["marginBuyingPower"]:,.2f}')
-                if 'Computed' in balance \
-                        and 'cashBuyingPower' in balance['Computed']:
-                    print(f'Cash Buying Power: ${balance["Computed"]["cashBuyingPower"]:,.2f}')
-                if 'optionLevel' in balance:
-                    print(f'Option Level: {balance["optionLevel"]}')
+                print(f'Account Nickname: {balance.get("accountDescription", "")}')
+                print(f'Account Type: {balance.get("accountType", 0.0)}')
+                print(f'Net Account Value: ${balance.get("Computed", {}).get("RealTimeValues", {}).get("totalAccountValue", 0.0):,.2f}')
+                print(f'Margin Buying Power: ${balance.get("Computed", {}).get("marginBuyingPower", 0.0):,.2f}')
+                print(f'Cash Buying Power: ${balance.get("Computed", {}).get("cashBuyingPower"):,.2f}')
+                print(f'Option Level: {balance.get("optionLevel", "error")}')
             else:
                 ui.print_error(self.accounts.message)
         else:
@@ -127,21 +121,13 @@ class Client:
             if not portfolio.empty:
                 ui.print_message('Portfolio', pre_creturn=1, post_creturn=1)
                 for position in portfolio.itertuples():
-                    print_str = ''
-                    if position.symbolDescription:
-                        print_str += f'{str(position.symbolDescription):<5}'
-                    if position.quantity:
-                        print_str += f'Q={position.quantity:<3}'
-                    if position.Quick and 'lastTrade' in position.Quick:
-                        print_str += f' Price={position.Quick["lastTrade"]:,.02f}'
-                    if position.pricePaid:
-                        print_str += f' Paid={position.pricePaid:,.02f}'
-                    if position.totalGain:
-                        print_str += f' Gain={position.totalGain:,.02f}'
-                    if position.marketValue:
-                        print_str += f' Value={position.marketValue:,.02f}'
-
-                    print(print_str)
+                    print(f'{str(position.symbolDescription)}')
+                    print(f'Qty={position.quantity}')
+                    print(f'Price={position.Quick["lastTrade"]:,.02f}')
+                    print(f'Paid={position.pricePaid:,.02f}')
+                    print(f'Gain={position.totalGain:,.02f}')
+                    print(f'Value={position.marketValue:,.02f}')
+                    print()
             else:
                 ui.print_error(self.accounts.message)
         else:
@@ -193,17 +179,17 @@ class Client:
                 if quote is not None:
                     print(f'Date Time: {quote.get("dateTime", "")}')
                     print(f'Symbol: {quote.get("Product", "").get("symbol", "")}')
-                    if 'Product' in quote and 'securityType' in quote['Product']:
-                        print(f'Security Type: {quote["Product"]["securityType"]}')
+                    print(f'Security Type: {quote.get("Product", {}).get("securityType", "")}')
                     if 'All' in quote:
-                        print(f'Last Price: {quote["All"].get("lastTrade", "")}')
-                        print(f'Today\'s Change: {quote["All"].get("changeClose", 0.0):,.3f}) ({quote["All"].get("changeClosePercentage", 0.0)}%)')
-                        print(f'Open: {quote["All"].get("open", 0.0):,.2f}')
-                        print(f'Previous Close: {quote["All"].get("previousClose", 0.0):,.2f}')
-                        print(f'Bid (Size): {quote["All"].get("bid", 0.0):,.2f}x{quote["All"].get("bidSize")}')
-                        print(f'Ask (Size): {quote["All"].get("ask", 0.0):,.2f}x{quote["All"].get("askSize")}')
-                        print(f'Day\'s Range: {quote["All"].get("low", 0.0):,.2f} - {quote["All"].get("high", 0.0):,.2f}')
-                        print(f'Volume: {quote["All"].get("totalVolume"):,}')
+                        all = quote["All"]
+                        print(f'Last Price: {all.get("lastTrade", "")}')
+                        print(f'Today\'s Change: {all.get("changeClose", 0.0):,.3f}) ({all.get("changeClosePercentage", 0.0)}%)')
+                        print(f'Open: {all.get("open", 0.0):,.2f}')
+                        print(f'Previous Close: {all.get("previousClose", 0.0):,.2f}')
+                        print(f'Bid (Size): {all.get("bid", 0.0):,.2f}x{all.get("bidSize")}')
+                        print(f'Ask (Size): {all.get("ask", 0.0):,.2f}x{all.get("askSize")}')
+                        print(f'Day\'s Range: {all.get("low", 0.0):,.2f} - {all.get("high", 0.0):,.2f}')
+                        print(f'Volume: {all.get("totalVolume"):,}')
                     print()
         else:
             ui.print_error(quotes.message)
@@ -287,12 +273,6 @@ class Client:
             ui.print_message('Options Chain', post_creturn=1)
             expiry_data['date'] = pd.to_datetime(expiry_data['date']).dt.strftime(ui.DATE_FORMAT)
             print(tabulate(expiry_data, headers=expiry_data.columns, tablefmt=ui.TABULATE_FORMAT))
-
-    def show_orders(self) -> None:
-        if self.account_index >= 0:
-            ui.print_error('TODO')
-        else:
-            ui.print_error('Must first select an account')
 
 
 def main():
