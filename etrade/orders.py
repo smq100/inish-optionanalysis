@@ -3,6 +3,8 @@ import configparser
 import random
 import re
 
+from requests_oauthlib import OAuth1Session
+
 import etrade.auth as auth
 from utils import ui, logger
 
@@ -13,11 +15,11 @@ config.read('etrade/config.ini')
 
 
 class Orders:
-    def __init__(self, session, account):
-        if not auth.base_url:
+    def __init__(self, account):
+        if auth.Session is None:
             raise AssertionError('Etrade session not initialized')
 
-        self.session = session
+        self.session: OAuth1Session = auth.Session
         self.account = account
 
     def preview(self):

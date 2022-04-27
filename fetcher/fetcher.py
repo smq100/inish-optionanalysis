@@ -11,10 +11,10 @@ import socket
 import quandl as qd
 import yfinance as yf
 import pandas as pd
-from requests_oauthlib import OAuth1Session
 
 import fetcher as f
 import data as d
+import etrade.auth as auth
 from etrade.options import Options
 from utils import logger
 
@@ -223,25 +223,25 @@ def _get_option_expiry_yfinance(ticker: str, uselast: bool) -> tuple[str]:
     return expiry
 
 
-def _get_option_expiry_etrade(ticker: str, uselast: bool, session: OAuth1Session) -> tuple[str]:
-    if session is None:
-        raise ValueError('"session" must be valid')
+def _get_option_expiry_etrade(ticker: str, uselast: bool) -> tuple[str]:
+    if auth.Session is None:
+        raise ValueError('Must authorize E*Trade session')
 
-    options = Options(session)
+    options = Options()
     expiry_data = options.expiry(ticker)
     expiry = tuple([f'{item.date:%Y-%m-%d}' for item in expiry_data.itertuples()])
 
     return expiry
 
 
-def get_option_expiry(ticker: str, uselast: bool = False, session: OAuth1Session | None = None) -> tuple[str]:
+def get_option_expiry(ticker: str, uselast: bool = False) -> tuple[str]:
     if not _connected:
         raise ConnectionError('No internet connection')
 
     if d.ACTIVE_OPTIONDATASOURCE == 'yfinance':
         expiry = _get_option_expiry_yfinance(ticker, uselast)
     elif d.ACTIVE_OPTIONDATASOURCE == 'etrade':
-        expiry = _get_option_expiry_etrade(ticker, uselast, session)
+        expiry = _get_option_expiry_etrade(ticker, uselast)
     else:
         raise ValueError('Invalid data source')
 

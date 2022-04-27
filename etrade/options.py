@@ -14,12 +14,40 @@ URL_EXPIRY = '/v1/market/optionexpiredate.json'
 
 
 class Options:
-    def __init__(self, session):
-        if not auth.base_url:
+    def __init__(self):
+        if auth.Session is None:
             raise AssertionError('Etrade session not initialized')
 
-        self.session: OAuth1Session = session
+        self.session: OAuth1Session = auth.Session
         self.message = ''
+
+    def expiry(self, symbol: str) -> pd.DataFrame:
+        self.message = 'success'
+        expiry_data = {}
+
+        url = f'{auth.base_url}{URL_EXPIRY}'
+        params = {'symbol': f'{symbol}'}
+
+        response = self.session.get(url, params=params)
+
+        if response is not None and response.status_code == 200:
+            expiry_data = json.loads(response.text)
+            if expiry_data is not None and 'OptionExpireDateResponse' in expiry_data and 'ExpirationDate' in expiry_data['OptionExpireDateResponse']:
+                parsed = json.dumps(expiry_data, indent=2, sort_keys=True)
+                _logger.debug(f'{__name__}: {parsed}')
+            else:
+                self.message = 'E*TRADE API service error'
+        else:
+            _logger.debug(f'{__name__}: Response Body: {response.text}')
+            self.message = f'Error: E*TRADE API service error: {response.text}'
+
+        expiry_table = pd.DataFrame()
+        if self.message == 'success':
+            expiry_data = expiry_data['OptionExpireDateResponse']['ExpirationDate']
+            data = [(dt.datetime(item['year'], item['month'], item['day'], 0, 0, 0), item['expiryType'].title()) for item in expiry_data]
+            expiry_table = pd.DataFrame(data, columns=['date', 'expiryType'])
+
+        return expiry_table
 
     def chain(self,
               symbol: str,
@@ -66,34 +94,6 @@ class Options:
             puts_table = pd.DataFrame(puts)
 
         return calls_table, puts_table
-
-    def expiry(self, symbol: str) -> pd.DataFrame:
-        self.message = 'success'
-        expiry_data = {}
-
-        url = f'{auth.base_url}{URL_EXPIRY}'
-        params = {'symbol': f'{symbol}'}
-
-        response = self.session.get(url, params=params)
-
-        if response is not None and response.status_code == 200:
-            expiry_data = json.loads(response.text)
-            if expiry_data is not None and 'OptionExpireDateResponse' in expiry_data and 'ExpirationDate' in expiry_data['OptionExpireDateResponse']:
-                parsed = json.dumps(expiry_data, indent=2, sort_keys=True)
-                _logger.debug(f'{__name__}: {parsed}')
-            else:
-                self.message = 'E*TRADE API service error'
-        else:
-            _logger.debug(f'{__name__}: Response Body: {response.text}')
-            self.message = f'Error: E*TRADE API service error: {response.text}'
-
-        expiry_table = pd.DataFrame()
-        if self.message == 'success':
-            expiry_data = expiry_data['OptionExpireDateResponse']['ExpirationDate']
-            data = [(dt.datetime(item['year'], item['month'], item['day'], 0, 0, 0), item['expiryType'].title()) for item in expiry_data]
-            expiry_table = pd.DataFrame(data, columns=['date', 'expiryType'])
-
-        return expiry_table
 
 
 '''

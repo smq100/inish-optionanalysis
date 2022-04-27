@@ -13,11 +13,11 @@ URL_ALERTS = '/v1/user/alerts.json'
 
 
 class Alerts:
-    def __init__(self, session):
-        if not auth.base_url:
+    def __init__(self):
+        if auth.Session is None:
             raise AssertionError('Etrade session not initialized')
 
-        self.session: OAuth1Session = session
+        self.session: OAuth1Session = auth.Session
         self.message = ''
 
     def alerts(self) -> pd.DataFrame:

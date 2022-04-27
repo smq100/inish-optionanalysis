@@ -17,11 +17,11 @@ picklefile = './etrade/auth/session.pickle'
 base_url = ''
 key = ''
 
+Session: OAuth1Session | None = None
+
 
 def authorize(callback: Callable[[str], str]) -> OAuth1Session:
-    global base_url, key
-
-    session = None
+    global Session, base_url, key
 
     config.read('./etrade/auth/config.ini')
     if SANDBOX:
@@ -35,20 +35,20 @@ def authorize(callback: Callable[[str], str]) -> OAuth1Session:
     if os.path.exists(picklefile):
         with open(picklefile, 'rb') as session_file:
             try:
-                session = pickle.load(session_file)
+                Session = pickle.load(session_file)
                 _logger.info(f'{__name__}: Loaded existing session')
             except Exception as e:
-                session = None
+                Session = None
             else:
                 # Test session with a dummy call to get a quote and authorize if required
                 url = f'{base_url}/v1/market/quote/aapl'
-                if not _validate_session(session, url):
-                    session = None
+                if not _validate_session(Session, url):
+                    Session = None
 
-    if session is None:
-        session = _authorize(callback)
+    if Session is None:
+        Session = _authorize(callback)
 
-    return session
+    return Session
 
 
 def _authorize(callback: Callable[[str], str]) -> OAuth1Session:
@@ -103,6 +103,6 @@ def _authorize(callback: Callable[[str], str]) -> OAuth1Session:
     return session
 
 
-def _validate_session(session, url):
+def _validate_session(session, url) -> bool:
     response = session.get(url)
     return (response is not None and response.status_code == 200)

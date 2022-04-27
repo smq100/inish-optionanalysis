@@ -3,7 +3,6 @@ import logging
 import webbrowser
 
 import pandas as pd
-from requests_oauthlib import OAuth1Session
 from tabulate import tabulate
 
 import etrade.auth as auth
@@ -27,15 +26,13 @@ def auth_callback(url: str) -> str:
 
 class Client:
     def __init__(self):
-        self.session: OAuth1Session | None = None
         self.accounts = None
         self.account_index = -1
         self.account_name = ''
 
-        if self.session is None:
-            self.session = auth.authorize(auth_callback)
+        auth.authorize(auth_callback)
 
-        if self.session is not None:
+        if auth.Session is not None:
             self.main_menu()
         else:
             ui.print_error('Invalid authorizaton text')
@@ -80,7 +77,7 @@ class Client:
                 print('Unknown operation selected')
 
     def show_accounts(self) -> None:
-        self.accounts = Accounts(self.session)
+        self.accounts = Accounts()
         acct_table = self.accounts.list()
 
         if self.accounts.message == 'success':
@@ -134,7 +131,7 @@ class Client:
             ui.print_error('Must first select an account')
 
     def show_alerts(self):
-        alerts = Alerts(self.session)
+        alerts = Alerts()
         alert_data = alerts.alerts()
 
         if not alert_data.empty:
@@ -153,7 +150,7 @@ class Client:
 
     def show_symbol(self) -> None:
         symbol = ui.input_text('Please enter symbol: ').upper()
-        lookup = Lookup(self.session)
+        lookup = Lookup()
         lookup_data = lookup.lookup(symbol)
 
         if not lookup_data.empty:
@@ -169,7 +166,7 @@ class Client:
             ui.print_error(f'No information for {symbol} located')
 
     def show_quotes(self) -> None:
-        quotes = Quotes(self.session)
+        quotes = Quotes()
         symbols = ui.input_list('Please enter symbols separated with commas: ').upper()
         quote_data = quotes.quote(symbols.split(','))
 
@@ -194,11 +191,30 @@ class Client:
         else:
             ui.print_error(quotes.message)
 
+    def show_options_expiry(self) -> None:
+        ticker = ui.input_text('Please enter symbol: ').upper()
+
+        options = Options()
+        expiry_data = options.expiry(ticker)
+
+        if 'error' in options.message.lower():
+            message = options.message.replace('Error ', '')
+            message = message.replace('\n', '')
+            ui.print_error(message)
+        elif expiry_data.empty:
+            message = options.message.replace('Error ', '')
+            message = message.replace('\n', '')
+            ui.print_error(message)
+        else:
+            ui.print_message('Options Chain', post_creturn=1)
+            expiry_data['date'] = pd.to_datetime(expiry_data['date']).dt.strftime(ui.DATE_FORMAT)
+            print(tabulate(expiry_data, headers=expiry_data.columns, tablefmt=ui.TABULATE_FORMAT))
+
     def show_options_chain(self) -> None:
         symbol = ui.input_text('Please enter symbol: ').upper()
 
         date = m.third_friday()
-        options = Options(self.session)
+        options = Options()
         chain_calls, chain_puts = options.chain(symbol, date.month, date.year)
 
         if 'error' in options.message.lower():
@@ -254,25 +270,6 @@ class Client:
             chain_puts.drop(drop, axis=1, inplace=True)
             chain_puts = chain_puts.reindex(columns=order)
             print(tabulate(chain_puts, headers=chain_puts.columns, tablefmt=ui.TABULATE_FORMAT, floatfmt='.02f'))
-
-    def show_options_expiry(self) -> None:
-        ticker = ui.input_text('Please enter symbol: ').upper()
-
-        options = Options(self.session)
-        expiry_data = options.expiry(ticker)
-
-        if 'error' in options.message.lower():
-            message = options.message.replace('Error ', '')
-            message = message.replace('\n', '')
-            ui.print_error(message)
-        elif expiry_data.empty:
-            message = options.message.replace('Error ', '')
-            message = message.replace('\n', '')
-            ui.print_error(message)
-        else:
-            ui.print_message('Options Chain', post_creturn=1)
-            expiry_data['date'] = pd.to_datetime(expiry_data['date']).dt.strftime(ui.DATE_FORMAT)
-            print(tabulate(expiry_data, headers=expiry_data.columns, tablefmt=ui.TABULATE_FORMAT))
 
 
 def main():

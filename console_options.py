@@ -13,7 +13,6 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as clrs
 import matplotlib.ticker as mticker
 from tabulate import tabulate
-from requests_oauthlib import OAuth1Session
 
 import data as d
 from data import store
@@ -58,7 +57,6 @@ class Interface():
         self.strategy_name: str = strategy
         self.load_contracts = load_contracts
 
-        self.session: OAuth1Session | None = None
         self.dirty_analyze = True
         self.task: threading.Thread = None
 
@@ -626,12 +624,11 @@ class Interface():
         return contracts
 
     def select_chain_expiry(self) -> dt.datetime:
-        if d.ACTIVE_OPTIONDATASOURCE == 'etrade':
-            if self.session is None:
-                self.session = auth.authorize(_auth_callback)
+        if auth.Session is None:
+            auth.authorize(_auth_callback)
 
         expiry = m.third_friday()
-        dates = self.strategy.chain.get_expiry(self.session)
+        dates = self.strategy.chain.get_expiry()
         print(type(dates[0]))
 
         menu_items = {}

@@ -3,7 +3,6 @@ import datetime as dt
 import pandas as pd
 from sqlalchemy import create_engine, and_, or_
 from sqlalchemy.orm import sessionmaker
-from requests_oauthlib import OAuth1Session
 
 import data as d
 from fetcher import fetcher as fetcher
@@ -425,8 +424,8 @@ def get_index_tickers_master(index: str, type: str = 'google') -> list[str]:
     return symbols
 
 
-def get_option_expiry(ticker: str, uselast: bool = False, session: OAuth1Session | None = None) -> tuple[str]:
-    return fetcher.get_option_expiry(ticker, uselast, session)
+def get_option_expiry(ticker: str, uselast: bool = False) -> tuple[str]:
+    return fetcher.get_option_expiry(ticker, uselast)
 
 
 def get_option_chain(ticker: str, uselast: bool = False) -> dict:

@@ -1,7 +1,7 @@
 import json
 
-from requests_oauthlib import OAuth1Session
 import pandas as pd
+from requests_oauthlib import OAuth1Session
 
 import etrade.auth as auth
 from utils import logger
@@ -12,11 +12,11 @@ URL_ACCTLIST = '/v1/accounts/list.json'
 
 
 class Accounts:
-    def __init__(self, session):
-        if not auth.base_url:
+    def __init__(self):
+        if auth.Session is None:
             raise AssertionError('Etrade session not initialized')
 
-        self.session: OAuth1Session = session
+        self.session: OAuth1Session = auth.Session
         self.accounts: list[pd.DataFrame] = []
         self.message = ''
 

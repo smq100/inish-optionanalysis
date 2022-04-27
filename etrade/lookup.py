@@ -10,11 +10,11 @@ _logger = logger.get_logger()
 
 
 class Lookup:
-    def __init__(self, session):
-        if not auth.base_url:
+    def __init__(self):
+        if auth.Session is None:
             raise AssertionError('Etrade session not initialized')
 
-        self.session: OAuth1Session = session
+        self.session: OAuth1Session = auth.Session
         self.message = ''
 
     def lookup(self, symbol: str) -> pd.DataFrame:

@@ -1,7 +1,6 @@
 import datetime as dt
 
 import pandas as pd
-from requests_oauthlib import OAuth1Session
 
 from data import store as store
 from data import store as store
@@ -20,8 +19,8 @@ class Chain:
         self.expire: dt.datetime = None
         self.chain: pd.DataFrame = pd.DataFrame()
 
-    def get_expiry(self, session: OAuth1Session | None = None) -> tuple[str]:
-        return store.get_option_expiry(self.ticker, uselast=False, session=session)
+    def get_expiry(self) -> tuple[str]:
+        return store.get_option_expiry(self.ticker, uselast=False)
 
     def get_chain(self, product: str) -> pd.DataFrame:
         self.product = product

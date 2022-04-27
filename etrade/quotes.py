@@ -1,6 +1,5 @@
 import json
 
-import pandas as pd
 from requests_oauthlib import OAuth1Session
 
 import etrade.auth as auth
@@ -10,11 +9,11 @@ _logger = logger.get_logger()
 
 
 class Quotes:
-    def __init__(self, session):
-        if not auth.base_url:
+    def __init__(self):
+        if auth.Session is None:
             raise AssertionError('Etrade session not initialized')
 
-        self.session: OAuth1Session = session
+        self.session: OAuth1Session = auth.Session
         self.message = ''
 
     def quote(self, symbols: list[str]) -> list[dict]:
