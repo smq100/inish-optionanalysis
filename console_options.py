@@ -4,6 +4,7 @@ import math
 import threading
 import datetime as dt
 import logging
+import webbrowser
 
 import argparse
 import numpy as np
@@ -12,7 +13,10 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as clrs
 import matplotlib.ticker as mticker
 from tabulate import tabulate
+from requests_oauthlib import OAuth1Session
 
+import data as d
+from data import store
 import strategies as s
 from strategies.strategy import Strategy
 from strategies.call import Call
@@ -20,13 +24,18 @@ from strategies.put import Put
 from strategies.vertical import Vertical
 from strategies.iron_condor import IronCondor
 from strategies.iron_butterfly import IronButterfly
-from data import store
+import etrade.auth as auth
 from utils import math as m
 from utils import ui, logger
 
 
 logger.get_logger(logging.WARNING, logfile='')
 
+
+def _auth_callback(url: str) -> str:
+    webbrowser.open(url)
+    code = ui.input_alphanum('Please accept agreement and enter text code from browser: ')
+    return code
 
 class Interface():
     def __init__(self,
@@ -49,6 +58,7 @@ class Interface():
         self.strategy_name: str = strategy
         self.load_contracts = load_contracts
 
+        self.session: OAuth1Session | None = None
         self.dirty_analyze = True
         self.task: threading.Thread = None
 
@@ -616,19 +626,24 @@ class Interface():
         return contracts
 
     def select_chain_expiry(self) -> dt.datetime:
+        if d.ACTIVE_OPTIONDATASOURCE == 'etrade':
+            if self.session is None:
+                self.session = auth.authorize(_auth_callback)
+
         expiry = m.third_friday()
-        dates = self.strategy.chain.get_expiry()
+        dates = self.strategy.chain.get_expiry(self.session)
+        print(type(dates[0]))
 
         menu_items = {}
         for i, exp in enumerate(dates):
             menu_items[f'{i+1}'] = f'{exp}'
 
-        select = ui.menu(menu_items, 'Select expiration date, or 0 to cancel: ', 0, i+1)
+        select = ui.menu(menu_items, 'Select expiration date, or 0 for the next monthly: ', 0, i+1)
         if select > 0:
             expiry = dt.datetime.strptime(dates[select-1], ui.DATE_FORMAT)
-            self.strategy.chain.expire = expiry
 
-            self.dirty_analyze = True
+        self.strategy.chain.expire = expiry
+        self.dirty_analyze = True
 
         return expiry
 

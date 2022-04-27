@@ -11,10 +11,12 @@ import socket
 import quandl as qd
 import yfinance as yf
 import pandas as pd
+from requests_oauthlib import OAuth1Session
 
 import fetcher as f
 import data as d
-from utils import ui, logger
+from etrade.options import Options
+from utils import logger
 
 
 _THROTTLE_FETCH = 0.10  # Min secs between calls to fetch pricing
@@ -113,11 +115,11 @@ def _get_history_yfinance(ticker: str, days: int = -1, uselast: bool = False) ->
                     days = history.shape[0]
 
                     if history is None:
-                        _logger.info(f'{__name__}: {d.ACTIVE_CLOUDDATASOURCE} history for {ticker} is None ({retry+1})')
+                        _logger.info(f'{__name__}: {d.ACTIVE_HISTORYDATASOURCE} history for {ticker} is None ({retry+1})')
                         time.sleep(_THROTTLE_ERROR)
                     elif history.empty:
                         history = None
-                        _logger.info(f'{__name__}: {d.ACTIVE_CLOUDDATASOURCE} history for {ticker} is empty ({retry+1})')
+                        _logger.info(f'{__name__}: {d.ACTIVE_HISTORYDATASOURCE} history for {ticker} is empty ({retry+1})')
                         time.sleep(_THROTTLE_ERROR)
                     else:
                         history.reset_index(inplace=True)
@@ -130,7 +132,7 @@ def _get_history_yfinance(ticker: str, days: int = -1, uselast: bool = False) ->
                         _logger.info(f'{__name__}: Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
                         break
                 except Exception as e:
-                    _logger.error(f'{__name__}: Exception: {e}: Retry {retry} to fetch history of {ticker} from {d.ACTIVE_CLOUDDATASOURCE}')
+                    _logger.error(f'{__name__}: Exception: {e}: Retry {retry} to fetch history of {ticker} from {d.ACTIVE_HISTORYDATASOURCE}')
                     history = None
                     time.sleep(_THROTTLE_ERROR)
     else:
@@ -156,11 +158,11 @@ def _get_history_quandl(ticker: str, days: int = -1) -> pd.DataFrame:
                 days = history.shape[0]
 
                 if history is None:
-                    _logger.info(f'{__name__}: {d.ACTIVE_CLOUDDATASOURCE} history for {ticker} is None ({retry+1})')
+                    _logger.info(f'{__name__}: {d.ACTIVE_HISTORYDATASOURCE} history for {ticker} is None ({retry+1})')
                     time.sleep(_THROTTLE_ERROR)
                 elif history.empty:
                     history = None
-                    _logger.info(f'{__name__}: {d.ACTIVE_CLOUDDATASOURCE} history for {ticker} is empty ({retry+1})')
+                    _logger.info(f'{__name__}: {d.ACTIVE_HISTORYDATASOURCE} history for {ticker} is empty ({retry+1})')
                     time.sleep(_THROTTLE_ERROR)
                 else:
                     history.reset_index(inplace=True)
@@ -173,7 +175,7 @@ def _get_history_quandl(ticker: str, days: int = -1) -> pd.DataFrame:
                     _logger.info(f'{__name__}: Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
                     break
             except Exception as e:
-                _logger.error(f'{__name__}: Exception: {e}: Retry {retry} to fetch history of {ticker} from {d.ACTIVE_CLOUDDATASOURCE}')
+                _logger.error(f'{__name__}: Exception: {e}: Retry {retry} to fetch history of {ticker} from {d.ACTIVE_HISTORYDATASOURCE}')
                 history = None
                 time.sleep(_THROTTLE_ERROR)
 
@@ -193,12 +195,12 @@ def get_history_live(ticker: str, days: int = -1) -> pd.DataFrame:
         time.sleep(_THROTTLE_FETCH)
     _elapsed = time.perf_counter()
 
-    _logger.info(f'{__name__}: Fetching {ticker} history from {d.ACTIVE_CLOUDDATASOURCE}...')
+    _logger.info(f'{__name__}: Fetching {ticker} history from {d.ACTIVE_HISTORYDATASOURCE}...')
 
     history = pd.DataFrame()
-    if d.ACTIVE_CLOUDDATASOURCE == 'yfinance':
+    if d.ACTIVE_HISTORYDATASOURCE == 'yfinance':
         history = _get_history_yfinance(ticker, days=days)
-    elif d.ACTIVE_CLOUDDATASOURCE == 'quandl':
+    elif d.ACTIVE_HISTORYDATASOURCE == 'quandl':
         history = _get_history_quandl(ticker, days=days)
     else:
         raise ValueError('Invalid data source')
@@ -206,20 +208,44 @@ def get_history_live(ticker: str, days: int = -1) -> pd.DataFrame:
     return history
 
 
-def get_option_expiry(ticker: str, uselast: bool = False) -> tuple[str]:
-    if not _connected:
-        raise ConnectionError('No internet connection')
-
+def _get_option_expiry_yfinance(ticker: str, uselast: bool) -> tuple[str]:
+    expiry = ('',)
     for retry in range(_RETRIES):
         company = get_company_live(ticker, uselast)
         if company is not None:
-            value = company.options
+            expiry = company.options
+            _logger.debug(f'{__name__}: {expiry}')
             break
         else:
-            _logger.warning(f'{__name__}: Retry {retry} to fetch option expiry for {ticker}')
+            _logger.warning(f'{__name__}: Retry {retry} to fetch option expiry for {ticker} using yfinance')
             time.sleep(_THROTTLE_ERROR)
 
-    return value
+    return expiry
+
+
+def _get_option_expiry_etrade(ticker: str, uselast: bool, session: OAuth1Session) -> tuple[str]:
+    if session is None:
+        raise ValueError('"session" must be valid')
+
+    options = Options(session)
+    expiry_data = options.expiry(ticker)
+    expiry = tuple([f'{item.date:%Y-%m-%d}' for item in expiry_data.itertuples()])
+
+    return expiry
+
+
+def get_option_expiry(ticker: str, uselast: bool = False, session: OAuth1Session | None = None) -> tuple[str]:
+    if not _connected:
+        raise ConnectionError('No internet connection')
+
+    if d.ACTIVE_OPTIONDATASOURCE == 'yfinance':
+        expiry = _get_option_expiry_yfinance(ticker, uselast)
+    elif d.ACTIVE_OPTIONDATASOURCE == 'etrade':
+        expiry = _get_option_expiry_etrade(ticker, uselast, session)
+    else:
+        raise ValueError('Invalid data source')
+
+    return expiry
 
 
 def get_option_chain(ticker: str, uselast: bool = False) -> dict:
@@ -227,11 +253,11 @@ def get_option_chain(ticker: str, uselast: bool = False) -> dict:
         raise ConnectionError('No internet connection')
 
     chain = {}
-
     for retry in range(_RETRIES):
         company = get_company_live(ticker, uselast)
         if company is not None:
             chain = company.option_chain
+            _logger.debug(f'{__name__}: {chain}')
             break
         else:
             _logger.warning(f'{__name__}: Retry {retry} to fetch option chain for {ticker}')

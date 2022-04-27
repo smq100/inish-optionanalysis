@@ -9,7 +9,7 @@ from utils import logger
 _logger = logger.get_logger()
 
 
-URL_ALERTS = '/v1/user/alerts'
+URL_ALERTS = '/v1/user/alerts.json'
 
 
 class Alerts:
@@ -25,9 +25,10 @@ class Alerts:
         alert_data = []
 
         url = f'{auth.base_url}{URL_ALERTS}'
-        params = {'status': ['READ', 'UNREAD']}
 
-        response = self.session.get(url, params=params)
+        # response = self.session.get(url)
+        response = self.session.get(url)
+        print(response)
 
         if response is not None and response.status_code == 200:
             alert_data = response.json()

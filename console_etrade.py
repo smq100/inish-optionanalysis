@@ -19,7 +19,7 @@ from utils import ui, logger
 logger.get_logger(logging.WARNING, logfile='')
 
 
-def _callback(url: str) -> str:
+def auth_callback(url: str) -> str:
     webbrowser.open(url)
     code = ui.input_alphanum('Please accept agreement and enter text code from browser: ')
     return code
@@ -33,7 +33,7 @@ class Client:
         self.account_name = ''
 
         if self.session is None:
-            self.session = auth.authorize(_callback)
+            self.session = auth.authorize(auth_callback)
 
         if self.session is not None:
             self.main_menu()
@@ -141,9 +141,9 @@ class Client:
             ui.print_message('Alerts', pre_creturn=1, post_creturn=1)
             for item in alert_data.itertuples():
                 if item:
-                    alert = f'ID: {item.id}'
-                    timestamp = dt.datetime.fromtimestamp(item.createTime).strftime('%Y-%m-%d %H:%M:%S')
-                    alert += f', Time: {timestamp}'
+                    timestamp = dt.datetime.fromtimestamp(item.createTime)
+                    alert  = f'ID: {item.id}'
+                    alert += f', Time: {timestamp:%Y-%m-%d %H:%M:%S}'
                     alert += f', Subject: {item.subject}'
                     alert += f', Status: {item.status}'
 
@@ -256,10 +256,10 @@ class Client:
             print(tabulate(chain_puts, headers=chain_puts.columns, tablefmt=ui.TABULATE_FORMAT, floatfmt='.02f'))
 
     def show_options_expiry(self) -> None:
-        symbol = ui.input_text('Please enter symbol: ').upper()
+        ticker = ui.input_text('Please enter symbol: ').upper()
 
         options = Options(self.session)
-        expiry_data = options.expiry(symbol)
+        expiry_data = options.expiry(ticker)
 
         if 'error' in options.message.lower():
             message = options.message.replace('Error ', '')

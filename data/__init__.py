@@ -5,12 +5,16 @@ import configparser
 VALID_DBS = ('live', 'Postgres', 'SQLite')
 ACTIVE_DB = VALID_DBS[1]
 
-# Data sources
-VALID_DATASOURCES = ('quandl', 'yfinance')
-ACTIVE_CLOUDDATASOURCE = VALID_DATASOURCES[1]
+# Price data sources
+VALID_HISTORYDATASOURCES = ('yfinance', 'quandl')
+ACTIVE_HISTORYDATASOURCE = VALID_HISTORYDATASOURCES[0]
 
-# Postgres
-if ACTIVE_DB == VALID_DBS[1]:
+# Option data sources
+VALID_OPTIONDATASOURCES = ('yfinance', 'etrade')
+ACTIVE_OPTIONDATASOURCE = VALID_OPTIONDATASOURCES[1]
+
+# Databases
+if ACTIVE_DB == VALID_DBS[1]: # Postgres
     CREDENTIALS = os.path.join(os.path.dirname(__file__), 'postgres.ini')
     config = configparser.ConfigParser()
     config.read(CREDENTIALS)
@@ -20,7 +24,7 @@ if ACTIVE_DB == VALID_DBS[1]:
     db = config['DEFAULT']['DB']
     POSTGRES_URI = f'postgresql+psycopg2://{dbuser}:{dbpw}@localhost:{port}/{db}'
     ACTIVE_URI = POSTGRES_URI
-elif ACTIVE_DB == VALID_DBS[2]:  # SQLite
+elif ACTIVE_DB == VALID_DBS[2]: # SQLite
     SQLITE_FILE_PATH = 'data/securities.db'
     SQLITE_URI = f'sqlite:///{SQLITE_FILE_PATH}'
     ACTIVE_URI = SQLITE_URI
