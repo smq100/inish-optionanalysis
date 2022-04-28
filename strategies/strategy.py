@@ -135,7 +135,7 @@ class Strategy(ABC, Threaded):
         else:
             raise ValueError('Invalid pricing method')
 
-    def fetch_contracts(self, expiry: dt.datetime, strike: float = -1.0) -> list[str]:
+    def fetch_contracts(self, expiry: dt.datetime, strike: float = -1.0) -> list[tuple[str, pd.DataFrame]]:
         # Works for one-legged strategies. Override for others
         expiry_tuple = self.chain.get_expiry()
 
@@ -152,10 +152,10 @@ class Strategy(ABC, Threaded):
         contract = ''
         chain_index = -1
         product = self.legs[0].option.product
-        options = self.chain.get_chain(product)
+        chain = self.chain.get_chain(product)
 
         # Calculate the index into the option chain
-        if options.empty:
+        if chain.empty:
             _logger.warning(f'{__name__}: Error fetching option chain for {self.ticker}')
         elif strike <= 0.0:
             chain_index = self.chain.get_index_itm()
@@ -165,12 +165,13 @@ class Strategy(ABC, Threaded):
         # Add the option contract
         if chain_index < 0:
             _logger.warning(f'{__name__}: Error fetching default contract for {self.ticker}')
-        elif chain_index >= len(options):
+        elif chain_index >= len(chain):
             _logger.warning(f'{__name__}: Insufficient options for {self.ticker}')
         else:
-            contract = options.iloc[chain_index]['contractSymbol']
+            contract = chain.iloc[chain_index]['contractSymbol']
 
-        return [contract]
+        items = [(contract, chain)]
+        return items
 
     @abc.abstractmethod
     def generate_profit_table(self) -> bool:

@@ -428,8 +428,8 @@ def get_option_expiry(ticker: str, uselast: bool = False) -> tuple[str]:
     return fetcher.get_option_expiry(ticker, uselast)
 
 
-def get_option_chain(ticker: str, uselast: bool = False) -> dict:
-    return fetcher.get_option_chain(ticker, uselast)
+def get_option_chain(ticker: str, expiry:dt.datetime, uselast: bool = False) -> pd.DataFrame:
+    return fetcher.get_option_chain(ticker, expiry, uselast)
 
 
 def get_treasury_rate(ticker: str = 'DTB3') -> float:

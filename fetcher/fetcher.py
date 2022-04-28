@@ -16,7 +16,7 @@ import fetcher as f
 import data as d
 import etrade.auth as auth
 from etrade.options import Options
-from utils import logger
+from utils import ui, logger
 
 
 _THROTTLE_FETCH = 0.10  # Min secs between calls to fetch pricing
@@ -214,7 +214,6 @@ def _get_option_expiry_yfinance(ticker: str, uselast: bool) -> tuple[str]:
         company = get_company_live(ticker, uselast)
         if company is not None:
             expiry = company.options
-            _logger.debug(f'{__name__}: {expiry}')
             break
         else:
             _logger.warning(f'{__name__}: Retry {retry} to fetch option expiry for {ticker} using yfinance')
@@ -248,16 +247,36 @@ def get_option_expiry(ticker: str, uselast: bool = False) -> tuple[str]:
     return expiry
 
 
-def get_option_chain(ticker: str, uselast: bool = False) -> dict:
-    if not _connected:
-        raise ConnectionError('No internet connection')
-
-    chain = {}
+def _get_option_chain_yfinance(ticker: str, expiry:dt.datetime, uselast: bool = False) -> pd.DataFrame:
+    chain = pd.DataFrame()
     for retry in range(_RETRIES):
         company = get_company_live(ticker, uselast)
         if company is not None:
-            chain = company.option_chain
-            _logger.debug(f'{__name__}: {chain}')
+            chain_c = company.option_chain(expiry.strftime(ui.DATE_FORMAT)).calls
+            chain_c['type'] = 'call'
+            chain_p = company.option_chain(expiry.strftime(ui.DATE_FORMAT)).puts
+            chain_p['type'] = 'put'
+            chain = pd.concat([chain_c, chain_p], axis=0)
+
+            drop = [
+                # 'contractSymbol',
+                # 'lastTradeDate',
+                # 'strike',
+                # 'lastPrice',
+                # 'bid',
+                # 'ask',
+                # 'change',
+                # 'percentChange',
+                # 'volume',
+                # 'openInterest',
+                # 'impliedVolatility',
+                # 'inTheMoney',
+                # 'contractSize',
+                # 'currency',
+                # 'type'
+            ]
+            chain.drop(drop, inplace=True)
+
             break
         else:
             _logger.warning(f'{__name__}: Retry {retry} to fetch option chain for {ticker}')
@@ -265,6 +284,57 @@ def get_option_chain(ticker: str, uselast: bool = False) -> dict:
 
     return chain
 
+def _get_option_chain_etrade(ticker: str, expiry:dt.datetime, uselast: bool = False) -> pd.DataFrame:
+    if auth.Session is None:
+        raise ValueError('Must authorize E*Trade session')
+
+    chain = pd.DataFrame()
+    options = Options()
+
+    year = expiry.year
+    month = expiry.month
+    chain = options.chain(ticker, month, year)
+
+    drop = [
+        # 'optionCategory',
+        # 'optionRootSymbol',
+        # 'timeStamp',
+        # 'adjustedFlag',
+        # 'displaySymbol',
+        # 'optionType',
+        # 'strikePrice',
+        # 'symbol',
+        # 'bid',
+        # 'ask',
+        # 'bidSize',
+        # 'askSize',
+        # 'inTheMoney',
+        # 'volume',
+        # 'openInterest',
+        # 'netChange',
+        # 'lastPrice',
+        # 'quoteDetail',
+        # 'osiKey',
+        # 'OptionGreeks',
+        # 'type'
+    ]
+    chain.drop(drop, inplace=True)
+
+    return chain
+
+def get_option_chain(ticker: str, expiry:dt.datetime, uselast: bool = False) -> pd.DataFrame:
+    if not _connected:
+        raise ConnectionError('No internet connection')
+
+    chain = pd.DataFrame()
+    if d.ACTIVE_OPTIONDATASOURCE == 'yfinance':
+        chain = _get_option_chain_yfinance(ticker, expiry, uselast)
+    elif d.ACTIVE_OPTIONDATASOURCE == 'etrade':
+        chain = _get_option_chain_etrade(ticker, expiry, uselast)
+    else:
+        raise ValueError('Invalid data source')
+
+    return chain
 
 def get_ratings(ticker: str) -> list[int]:
     if not _connected:

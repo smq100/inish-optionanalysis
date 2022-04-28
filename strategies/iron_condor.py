@@ -5,6 +5,7 @@ import pandas as pd
 from base import Threaded
 import strategies as s
 from strategies.strategy import Strategy
+from options.chain import Chain
 from utils import math as m
 from utils import ui, logger
 
@@ -62,15 +63,15 @@ class IronCondor(Strategy):
             self.add_leg(self.quantity, 'put', 'short', self.strike - (self.width1 + self.width2), self.expiry, self.volatility)
 
         if load_contracts:
-            contracts = self.fetch_contracts(self.expiry, strike=self.strike)
-            if len(contracts) == 4:
-                if not self.legs[0].option.load_contract(contracts[0]):
+            items = self.fetch_contracts(self.expiry, strike=self.strike)
+            if len(items) == 4:
+                if not self.legs[0].option.load_contract(items[0][0], items[0][1]):
                     self.error = f'Unable to load leg 0 contract for {self.legs[0].company.ticker}'
-                elif not self.legs[1].option.load_contract(contracts[1]):
+                elif not self.legs[1].option.load_contract(items[1][0], items[1][1]):
                     self.error = f'Unable to load leg 1 contract for {self.legs[1].company.ticker}'
-                elif not self.legs[2].option.load_contract(contracts[2]):
+                elif not self.legs[2].option.load_contract(items[2][0], items[2][1]):
                     self.error = f'Unable to load leg 2 contract for {self.legs[2].company.ticker}'
-                elif not self.legs[3].option.load_contract(contracts[3]):
+                elif not self.legs[3].option.load_contract(items[3][0], items[3][1]):
                     self.error = f'Unable to load leg 3 contract for {self.legs[3].company.ticker}'
 
                 if self.error:
@@ -81,7 +82,7 @@ class IronCondor(Strategy):
     def __str__(self):
         return f'{self.analysis.credit_debit} {self.name}'
 
-    def fetch_contracts(self, expiry: dt.datetime, strike: float = -1.0) -> list[str]:
+    def fetch_contracts(self, expiry: dt.datetime, strike: float = -1.0) -> list[tuple[str, pd.DataFrame]]:
         expiry_tuple = self.chain.get_expiry()
 
         # Calculate expiry
@@ -94,7 +95,7 @@ class IronCondor(Strategy):
         self.chain.expire = self.expiry
 
         # Get the option chain. Need to track call and put indexes seperately because there may be differences in chain structures
-        contracts = []
+        items = []
         chain_index_c = -1
         chain_index_p = -1
 
@@ -127,23 +128,33 @@ class IronCondor(Strategy):
         elif (len(options_c) - chain_index_c) <= (self.width1 + self.width2 + 1):
             chain_index_c = -1 # Index too close to end of chain
         else:
-            contracts += [options_c.iloc[chain_index_c + self.width1 + self.width2]['contractSymbol']]
-            contracts += [options_c.iloc[chain_index_c + self.width1]['contractSymbol']]
+            contract = options_c.iloc[chain_index_c + self.width1 + self.width2]['contractSymbol']
+            items += [(contract, options_c)]
+            contract = options_c.iloc[chain_index_c + self.width1]['contractSymbol']
+            items += [(contract, options_c)]
 
         # Add the leg 3 & 4 option contracts
-        if chain_index_c < 0:
+        if not items:
+            pass
+        elif chain_index_c < 0:
+            items = []
             _logger.warning(f'{__name__}: No option index found for {self.ticker} calls, legs 3 & 4')
         elif chain_index_p < 0:
+            items = []
             _logger.warning(f'{__name__}: No option index found for {self.ticker} puts, legs 3 & 4')
         elif len(options_p) < (self.width1 + self.width2 + 1):
+            items = []
             chain_index_p = -1 # Chain too small
         elif (len(options_p) - chain_index_p) <= (self.width1 + self.width2 + 1):
+            items = []
             chain_index_p = -1 # Index too close to beginning of chain
         else:
-            contracts += [options_p.iloc[chain_index_p - self.width1]['contractSymbol']]
-            contracts += [options_p.iloc[chain_index_p - self.width1 - self.width2]['contractSymbol']]
+            contract = options_p.iloc[chain_index_p - self.width1]['contractSymbol']
+            items += [(contract, options_p)]
+            contract = options_p.iloc[chain_index_p - self.width1 - self.width2]['contractSymbol']
+            items += [(contract, options_p)]
 
-        return contracts
+        return items
 
     @Threaded.threaded
     def analyze(self) -> None:

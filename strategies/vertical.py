@@ -63,11 +63,11 @@ class Vertical(Strategy):
                 self.add_leg(self.quantity, self.product, 'short', self.strike + self.width1, self.expiry, self.volatility)
 
         if load_contracts:
-            contracts = self.fetch_contracts(self.expiry, strike=self.strike)
-            if len(contracts) == 2:
-                if not self.legs[0].option.load_contract(contracts[0]):
+            items = self.fetch_contracts(self.expiry, strike=self.strike)
+            if len(items) == 2:
+                if not self.legs[0].option.load_contract(items[0][0], items[0][1]):
                     self.error = f'Unable to load leg 0 {product} contract for {self.legs[0].company.ticker}'
-                elif not self.legs[1].option.load_contract(contracts[1]):
+                elif not self.legs[1].option.load_contract(items[1][0], items[1][1]):
                     self.error = f'Unable to load leg 1 {product} contract for {self.legs[1].company.ticker}'
 
                 if self.error:
@@ -79,7 +79,7 @@ class Vertical(Strategy):
     def __str__(self):
         return f'{self.name} {self.product} {self.analysis.credit_debit} spread'
 
-    def fetch_contracts(self, expiry: dt.datetime, strike: float = -1.0) -> list[str]:
+    def fetch_contracts(self, expiry: dt.datetime, strike: float = -1.0) -> list[tuple[str, pd.DataFrame]]:
         expiry_tuple = self.chain.get_expiry()
 
         # Calculate expiry
@@ -92,7 +92,7 @@ class Vertical(Strategy):
         self.chain.expire = self.expiry
 
         # Get the option chain
-        contracts = []
+        items = []
         chain_index = -1
         product = self.legs[0].option.product
         options = self.chain.get_chain(product)
@@ -111,10 +111,11 @@ class Vertical(Strategy):
         elif chain_index >= len(options):
             _logger.warning(f'{__name__}: Insufficient options for {self.ticker} leg 1')
         else:
-            contracts = [options.iloc[chain_index]['contractSymbol']]
+            contract = options.iloc[chain_index]['contractSymbol']
+            items += [(contract, options)]
 
         # Calculate the index to the short option
-        if not contracts:
+        if not items:
             pass
         elif self.product == 'call':
             if self.direction == 'long':
@@ -127,18 +128,19 @@ class Vertical(Strategy):
             chain_index += self.width1
 
         # Add the short option contract
-        if not contracts:
+        if not items:
             pass
         elif chain_index < 0:
-            contracts = []
+            items = []
             _logger.warning(f'{__name__}: No option index found for {self.ticker} leg 2')
         elif chain_index >= len(options):
-            contracts = []
+            items = []
             _logger.warning(f'{__name__}: Insufficient options for {self.ticker} leg 2')
         else:
-            contracts += [options.iloc[chain_index]['contractSymbol']]
+            contract = options.iloc[chain_index]['contractSymbol']
+            items += [(contract, options)]
 
-        return contracts
+        return items
 
     @Threaded.threaded
     def analyze(self) -> None:

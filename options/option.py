@@ -37,6 +37,7 @@ class Option:
     rho: float = 0.0
 
     # Fetched online
+    chain: pd.DataFrame = pd.DataFrame()
     contract: str = ''
     last_trade_date: str = ''
     price_last: float = 0.0
@@ -62,10 +63,11 @@ class Option:
     def __post_init__(self):
          self.sort_index = self.price_eff
 
-    def load_contract(self, contract_name: str) -> bool:
+    def load_contract(self, contract_name: str, chain: pd.DataFrame) -> bool:
         ret = False
 
         if len(contract_name) >= MIN_CONTRACT_SIZE:
+            self.chain = chain
             contract = self.get_contract(contract_name)
 
             if not contract.empty:
@@ -110,13 +112,11 @@ class Option:
         self.strike = parsed.strike
 
         try:
-            if self.product == 'call':
-                chain = store.get_option_chain(self.ticker)(str(self.expiry.date())).calls
-            else:
-                chain = store.get_option_chain(self.ticker)(str(self.expiry.date())).puts
+            if self.chain.empty:
+                self.chain = store.get_option_chain(self.ticker, self.expiry)
 
-            if not chain.empty:
-                contract = chain.loc[chain['contractSymbol'] == contract_name].iloc[0]
+            if not self.chain.empty:
+                contract = self.chain.loc[self.chain['contractSymbol'] == contract_name].iloc[0]
             else:
                 _logger.info(f'{__name__}: No contract available')
         except Exception as e:

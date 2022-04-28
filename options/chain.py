@@ -4,7 +4,7 @@ import pandas as pd
 
 from data import store as store
 from data import store as store
-from utils import ui, logger
+from utils import logger
 
 _logger = logger.get_logger()
 
@@ -15,7 +15,6 @@ class Chain:
             raise ValueError('Not a valid ticker')
 
         self.ticker: str = ticker.upper()
-        self.product: str = ''
         self.expire: dt.datetime = None
         self.chain: pd.DataFrame = pd.DataFrame()
 
@@ -23,17 +22,12 @@ class Chain:
         return store.get_option_expiry(self.ticker, uselast=False)
 
     def get_chain(self, product: str) -> pd.DataFrame:
-        self.product = product
-        self.chain = pd.DataFrame()
+        if self.chain.empty:
+            self.chain = store.get_option_chain(self.ticker, self.expire)
 
-        value = store.get_option_chain(self.ticker)(date=self.expire.strftime(ui.DATE_FORMAT))
+        chain = self.chain[self.chain['type'] == product].copy()
 
-        if product == 'call':
-            self.chain = value.calls
-        elif product == 'put':
-            self.chain = value.puts
-
-        return self.chain
+        return chain
 
     def get_index_itm(self) -> int:
         index = -1

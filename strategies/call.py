@@ -43,9 +43,9 @@ class Call(Strategy):
         self.add_leg(self.quantity, self.product, self.direction, self.strike, self.expiry, self.volatility)
 
         if load_contracts:
-            contract = self.fetch_contracts(self.expiry, strike=self.strike)
-            if contract:
-                if not self.legs[0].option.load_contract(contract[0]):
+            items = self.fetch_contracts(self.expiry, strike=self.strike)
+            if items:
+                if not self.legs[0].option.load_contract(items[0][0], items[0][1]):
                     self.error = f'Unable to load call contract for {self.legs[0].company.ticker}'
                     _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}: {self.error}')
             else:

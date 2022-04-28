@@ -136,10 +136,13 @@ class Interface():
             ui.print_error('Invalid width specified')
         else:
             if self.load_contracts:
-                strike = float(math.floor(store.get_last_price(ticker)))
-                width1 = width2 = 1
+                strike = float(math.floor(store.get_last_price(ticker))) if strike < 0.0 else strike
             else:
                 strike, width1, width2 = m.calculate_strike_and_widths(self.strategy_name, product, direction, store.get_last_price(ticker))
+
+            if load_contracts and d.ACTIVE_OPTIONDATASOURCE == 'etrade':
+                if auth.Session is None:
+                    auth.authorize(_auth_callback)
 
             if self.load_strategy(
                 ticker,
@@ -553,7 +556,7 @@ class Interface():
                     contracts = self.select_chain_options('put')
 
                 if contracts:
-                    self.strategy.legs[0].option.load_contract(contracts[0])
+                    self.strategy.legs[0].option.load_contract(contracts[0], self.strategy.chain.chain)
                     print()
 
         # Reset widths to integer indexes
@@ -606,7 +609,7 @@ class Interface():
 
                         if contracts:
                             for leg, contract in enumerate(contracts):
-                                if not self.strategy.legs[leg].option.load_contract(contract):
+                                if not self.strategy.legs[leg].option.load_contract(contract, self.strategy.chain.chain):
                                     success = False
                                     break
 
@@ -624,12 +627,12 @@ class Interface():
         return contracts
 
     def select_chain_expiry(self) -> dt.datetime:
-        if auth.Session is None:
-            auth.authorize(_auth_callback)
+        if d.ACTIVE_OPTIONDATASOURCE == 'etrade':
+            if auth.Session is None:
+                auth.authorize(_auth_callback)
 
         expiry = m.third_friday()
         dates = self.strategy.chain.get_expiry()
-        print(type(dates[0]))
 
         menu_items = {}
         for i, exp in enumerate(dates):
@@ -658,14 +661,15 @@ class Interface():
             menu_items = {}
             for i, row in enumerate(options.itertuples()):
                 itm = 'ITM' if bool(row.inTheMoney) else 'OTM'
-                menu_items[f'{i+1}'] = f'${row.strike:7.2f} {itm} (${row.lastPrice:.2f})'
+                menu_items[f'{i+1}'] = f'${row.strike:7.2f} {itm} {row.type} (${row.lastPrice:.2f})'
 
             prompt = 'Select long option, or 0 to cancel: ' if self.strategy.name == 'vertical' else 'Select option, or 0 to cancel: '
-            select = ui.menu(menu_items, prompt, 0, i+1)
+            select = ui.menu(menu_items, prompt, 0, len(options)+1)
             if select > 0:
                 option = options.iloc[select-1]
                 strike = option['strike']
-                contracts = self.strategy.fetch_contracts(self.strategy.chain.expire, strike)
+                items = self.strategy.fetch_contracts(self.strategy.chain.expire, strike)
+                contracts = [contract[0] for contract in items]
 
                 self.dirty_analyze = True
         else:

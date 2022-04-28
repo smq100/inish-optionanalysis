@@ -50,12 +50,12 @@ class Options:
         return expiry_table
 
     def chain(self,
-              symbol: str,
+              ticker: str,
               expiry_month: int,
               expiry_year: int,
               strikes: int = 10,
               weekly: bool = False,
-              otype: str = 'CALLPUT') -> tuple[pd.DataFrame, pd.DataFrame]:
+              otype: str = 'CALLPUT') -> pd.DataFrame:
 
         self.message = 'success'
         chain_data = None
@@ -67,7 +67,7 @@ class Options:
             'includeWeekly': f'{str(weekly)}',
             'expiryMonth': f'{expiry_month}',
             'expiryYear': f'{expiry_year}',
-            'symbol': f'{symbol}'
+            'symbol': f'{ticker}'
         }
 
         response = self.session.get(url, params=params)
@@ -90,10 +90,15 @@ class Options:
 
             calls = [item['Call'] for item in data]
             calls_table = pd.DataFrame(calls)
+            calls_table['type'] = 'call'
+
             puts = [item['Put'] for item in data]
             puts_table = pd.DataFrame(puts)
+            puts_table['type'] = 'put'
 
-        return calls_table, puts_table
+            chain = pd.concat([calls_table, puts_table], axis=0)
+
+        return chain
 
 
 '''
