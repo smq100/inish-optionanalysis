@@ -1,9 +1,6 @@
 import os
 import configparser
 
-# Databases
-VALID_DBS = ('live', 'Postgres', 'SQLite')
-ACTIVE_DB = VALID_DBS[1]
 
 # Price data sources
 VALID_HISTORYDATASOURCES = ('yfinance', 'quandl')
@@ -14,6 +11,9 @@ VALID_OPTIONDATASOURCES = ('yfinance', 'etrade')
 ACTIVE_OPTIONDATASOURCE = VALID_OPTIONDATASOURCES[1]
 
 # Databases
+VALID_DBS = ('live', 'Postgres', 'SQLite')
+ACTIVE_DB = VALID_DBS[1]
+
 if ACTIVE_DB == VALID_DBS[1]: # Postgres
     CREDENTIALS = os.path.join(os.path.dirname(__file__), 'postgres.ini')
     config = configparser.ConfigParser()

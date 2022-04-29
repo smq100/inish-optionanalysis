@@ -98,6 +98,9 @@ class Options:
 
             chain = pd.concat([calls_table, puts_table], axis=0)
 
+            # E*Trade does not include impliedVolatility. Add for compatability with yfinance. Will force calculated volatility to be used
+            chain['impliedVolatility'] = -1.0
+
         return chain
 
 

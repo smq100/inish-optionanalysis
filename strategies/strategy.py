@@ -107,8 +107,7 @@ class Strategy(ABC, Threaded):
             self.calculate_score()
             self.analysis.summarize()
 
-            _logger.info(f'{__name__}: {self.ticker}: p={self.legs[0].option.price_eff:.2f}, g={self.analysis.max_gain:.2f}, \
-                l={self.analysis.max_loss:.2f} b={self.analysis.breakeven[0] :.2f}')
+            _logger.info(f'{__name__}: {self.ticker}: p={self.legs[0].option.price_eff:.2f}, g={self.analysis.max_gain:.2f}, l={self.analysis.max_loss:.2f} b={self.analysis.breakeven[0] :.2f}')
         else:
             _logger.warning(f'{__name__}: Unable to analyze strategy for {self.ticker}: {self.error}')
 

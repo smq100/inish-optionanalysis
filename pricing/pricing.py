@@ -70,8 +70,8 @@ class Pricing(ABC):
         lhs = call_price - put_price
         rhs = self.spot_price - np.exp(-1 * self.risk_free_rate * self.time_to_maturity) * self.strike_price
 
-        _logger.info(f'{__name__}: Put-Call Parity LHS = %f', lhs)
-        _logger.info(f'{__name__}: Put-Call Parity RHS = %f', rhs)
+        _logger.info(f'{__name__}: Put-Call Parity LHS = {lhs}')
+        _logger.info(f'{__name__}: Put-Call Parity RHS = {rhs}',)
 
         return bool(round(lhs) == round(rhs))
 

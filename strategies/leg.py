@@ -82,13 +82,6 @@ class Leg:
             # Generate the value table
             self.value_table = self.generate_value_table()
 
-            _logger.info(f'{__name__}: Strike {self.option.strike:.2f}')
-            _logger.info(f'{__name__}: Expiry {self.option.expiry}')
-            _logger.info(f'{__name__}: Price {self.option.price_calc:.4f}')
-            _logger.info(f'{__name__}: Rate {self.option.rate:.4f}')
-            _logger.info(f'{__name__}: Vol {self.option.volatility_eff:.4f}')
-            _logger.info(f'{__name__}: TTM {self.option.time_to_maturity:.4f}')
-
             # Calculate Greeks
             if greeks:
                 self.pricer.calculate_greeks(volatility=self.option.volatility_eff)
@@ -105,12 +98,6 @@ class Leg:
                     self.option.theta = self.pricer.theta_put
                     self.option.vega = self.pricer.vega_put
                     self.option.rho = self.pricer.rho_put
-
-                _logger.info(f'{__name__}: Delta {self.option.delta:.4f}')
-                _logger.info(f'{__name__}: Gamma {self.option.gamma:.4f}')
-                _logger.info(f'{__name__}: Theta {self.option.theta:.4f}')
-                _logger.info(f'{__name__}: Vega {self.option.vega:.4f}')
-                _logger.info(f'{__name__}: Rho {self.option.rho:.4f}')
         else:
             _logger.error(f'{__name__}: Validation error')
 
@@ -127,22 +114,12 @@ class Leg:
     def calculate_volatility(self):
         if self.option.volatility_user > 0.0:
             self.option.volatility_eff = self.option.volatility_user
-            _logger.info(f'{__name__}: Using requested volatility = {self.option.volatility_user:.4f}')
         elif self.option.volatility_user == 0.0:
             self.option.volatility_eff = self.option.volatility_calc
-            _logger.info(f'{__name__}: Using calculated volatility')
         elif self.option.volatility_implied < _IV_CUTOFF:
             self.option.volatility_eff = self.option.volatility_calc
-            _logger.info(f'{__name__}: Using calculated volatility')
         else:
             self.option.volatility_eff = self.option.volatility_implied
-            _logger.info(f'{__name__}: Using implied volatility = {self.option.volatility_implied:.4f}')
-
-        _logger.info(f'{__name__}: User volatility = {self.option.volatility_user:.2f}')
-        _logger.info(f'{__name__}: Calculated volatility = {self.option.volatility_calc:.2f}')
-        _logger.info(f'{__name__}: Implied volatility = {self.option.volatility_implied:.2f}')
-        _logger.info(f'{__name__}: Delta volatility = {self.option.volatility_delta:.2f}')
-        _logger.info(f'{__name__}: Effective volatility = {self.option.volatility_eff:.2f}')
 
         # Compensate with delta if specified
         self.option.volatility_eff += (self.option.volatility_eff * self.option.volatility_delta)
@@ -152,6 +129,7 @@ class Leg:
 
         if self.option.price_calc > 0.0:
             cols, step = self.calculate_date_step()
+
             if cols > 1:
                 row = []
                 table = []
@@ -168,6 +146,8 @@ class Leg:
 
                 if self.range.min <= 0.0 or self.range.max <= 0.0 or self.range.step <= 0.0:
                     self.range = m.calculate_min_max_step(self.option.strike)
+
+                _logger.debug(f'{__name__}: {self.range=}')
 
                 # Calculate option price every day till expiry
                 for spot in np.arange(self.range.min, self.range.max, self.range.step):
@@ -199,9 +179,11 @@ class Leg:
                     col_index[index] = f'{str(day.strftime("%b"))}-{str(day.day)}-{str(day.year)}'
 
                 # Finally, create the dataframe then reverse the row order
-                # col_index[-1] = 'Expiry'
                 value = pd.DataFrame(table, index=row_index, columns=col_index)
                 value = value.iloc[::-1]
+
+        else:
+            _logger.error(f'{__name__}: Cannot generate value table: {self.option.price_calc=}')
 
         return value
 

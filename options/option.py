@@ -72,19 +72,11 @@ class Option:
 
             if not contract.empty:
                 self.contract = contract['contractSymbol']
-                self.last_trade_date = contract['lastTradeDate']
                 self.strike = contract['strike']
                 self.price_last = contract['lastPrice']
-                self.bid = contract['bid']
-                self.ask = contract['ask']
-                self.change = contract['change']
-                self.percent_change = contract['percentChange']
                 self.volume = contract['volume']
-                self.open_interest = contract['openInterest']
                 self.volatility_implied = contract['impliedVolatility']
                 self.itm = contract['inTheMoney']
-                self.contract_size = contract['contractSize']
-                self.currency = contract['currency']
 
                 # Reset volatilities to use implied
                 self.volatility_user = -1.0
@@ -126,12 +118,13 @@ class Option:
 
 
 def parse_contract_name(contract_name: str) -> tuple[str, str, str, float]:
-    regex = r'([\d]{6})([PC])'  # ex: MSFT210305C00237500
+    regex = r'([\d]{6})([PC])'  # ex: MSFT210305C00237500 or MSFT--210305C00237500
     parsed = re.split(regex, contract_name)
 
-    ticker = parsed[0]
+    ticker = parsed[0].replace('-', '')
     expiry = f'20{parsed[1][:2]}-{parsed[1][2:4]}-{parsed[1][4:]}'
     product = 'call' if 'C' in parsed[2].upper() else 'put'
     strike = float(parsed[3][:5]) + (float(parsed[3][5:]) / 1000.0)
+    ret = contract_type(ticker, expiry, product, strike)
 
-    return contract_type(ticker, expiry, product, strike)
+    return ret

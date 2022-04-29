@@ -260,22 +260,22 @@ def _get_option_chain_yfinance(ticker: str, expiry:dt.datetime, uselast: bool = 
 
             drop = [
                 # 'contractSymbol',
-                # 'lastTradeDate',
                 # 'strike',
                 # 'lastPrice',
-                # 'bid',
-                # 'ask',
-                # 'change',
-                # 'percentChange',
                 # 'volume',
-                # 'openInterest',
                 # 'impliedVolatility',
                 # 'inTheMoney',
-                # 'contractSize',
-                # 'currency',
                 # 'type'
+                'lastTradeDate',
+                'bid',
+                'ask',
+                'change',
+                'percentChange',
+                'openInterest',
+                'contractSize',
+                'currency',
             ]
-            chain.drop(drop, inplace=True)
+            chain.drop(drop, axis=1, inplace=True)
 
             break
         else:
@@ -296,29 +296,35 @@ def _get_option_chain_etrade(ticker: str, expiry:dt.datetime, uselast: bool = Fa
     chain = options.chain(ticker, month, year)
 
     drop = [
-        # 'optionCategory',
-        # 'optionRootSymbol',
-        # 'timeStamp',
-        # 'adjustedFlag',
-        # 'displaySymbol',
-        # 'optionType',
-        # 'strikePrice',
-        # 'symbol',
-        # 'bid',
-        # 'ask',
-        # 'bidSize',
-        # 'askSize',
-        # 'inTheMoney',
-        # 'volume',
-        # 'openInterest',
-        # 'netChange',
-        # 'lastPrice',
-        # 'quoteDetail',
         # 'osiKey',
-        # 'OptionGreeks',
+        # 'strikePrice',
+        # 'lastPrice',
+        # 'volume',
+        # 'inTheMoney',
         # 'type'
+        'optionCategory',
+        'optionRootSymbol',
+        'timeStamp',
+        'adjustedFlag',
+        'displaySymbol',
+        'optionType',
+        'symbol',
+        'bid',
+        'ask',
+        'bidSize',
+        'askSize',
+        'openInterest',
+        'netChange',
+        'quoteDetail',
+        'OptionGreeks',
     ]
-    chain.drop(drop, inplace=True)
+    chain.drop(drop, axis=1, inplace=True)
+
+    rename = {
+        'osiKey': 'contractSymbol',
+        'strikePrice': 'strike'
+    }
+    chain.rename(rename, axis=1, inplace=True)
 
     return chain
 
