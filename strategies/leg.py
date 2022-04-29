@@ -147,8 +147,6 @@ class Leg:
                 if self.range.min <= 0.0 or self.range.max <= 0.0 or self.range.step <= 0.0:
                     self.range = m.calculate_min_max_step(self.option.strike)
 
-                _logger.debug(f'{__name__}: {self.range=}')
-
                 # Calculate option price every day till expiry
                 for spot in np.arange(self.range.min, self.range.max, self.range.step):
                     row = []

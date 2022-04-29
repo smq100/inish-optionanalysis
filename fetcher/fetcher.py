@@ -63,22 +63,20 @@ def validate_ticker(ticker: str) -> bool:
     return valid
 
 
-_last_company: pd.DataFrame = None
+_last_company: pd.DataFrame = pd.DataFrame()
+_last_ticker: str = ''
 
 
-def get_company_live(ticker: str, uselast: bool = False) -> pd.DataFrame:
+def get_company_live(ticker: str) -> pd.DataFrame:
+    global _last_company, _last_ticker
     if not _connected:
         raise ConnectionError('No internet connection')
 
-    global _last_company
-    company = None
-
-    if uselast:
-        _logger.info(f'{__name__}: Re-using company information for {ticker}')
+    if ticker == _last_ticker:
         company = _last_company
+        _logger.info(f'{__name__}: Using cached company information for {ticker} from Yahoo')
     else:
         _logger.info(f'{__name__}: Fetching live company information for {ticker} from Yahoo')
-
         company = yf.Ticker(ticker)
 
     if company is not None:
@@ -87,19 +85,20 @@ def get_company_live(ticker: str, uselast: bool = False) -> pd.DataFrame:
             _ = company.info
         except Exception as e:
             _logger.warning(f'{__name__}: No company found for {ticker}: {str(e)}')
-            company = None
+            company = pd.DataFrame()
 
     _last_company = company
+    _last_ticker = ticker
 
     return company
 
 
-def _get_history_yfinance(ticker: str, days: int = -1, uselast: bool = False) -> pd.DataFrame:
+def _get_history_yfinance(ticker: str, days: int = -1) -> pd.DataFrame:
     if not _connected:
         raise ConnectionError('No internet connection')
 
     history: pd.DataFrame = pd.DataFrame()
-    company = get_company_live(ticker, uselast)
+    company = get_company_live(ticker)
     if company is not None:
         if days < 0:
             days = 7300  # 20 years
@@ -208,10 +207,10 @@ def get_history_live(ticker: str, days: int = -1) -> pd.DataFrame:
     return history
 
 
-def _get_option_expiry_yfinance(ticker: str, uselast: bool) -> tuple[str]:
+def _get_option_expiry_yfinance(ticker: str) -> tuple[str]:
     expiry = ('',)
     for retry in range(_RETRIES):
-        company = get_company_live(ticker, uselast)
+        company = get_company_live(ticker)
         if company is not None:
             expiry = company.options
             break
@@ -222,7 +221,7 @@ def _get_option_expiry_yfinance(ticker: str, uselast: bool) -> tuple[str]:
     return expiry
 
 
-def _get_option_expiry_etrade(ticker: str, uselast: bool) -> tuple[str]:
+def _get_option_expiry_etrade(ticker: str) -> tuple[str]:
     if auth.Session is None:
         raise ValueError('Must authorize E*Trade session')
 
@@ -233,24 +232,26 @@ def _get_option_expiry_etrade(ticker: str, uselast: bool) -> tuple[str]:
     return expiry
 
 
-def get_option_expiry(ticker: str, uselast: bool = False) -> tuple[str]:
+def get_option_expiry(ticker: str) -> tuple[str]:
     if not _connected:
         raise ConnectionError('No internet connection')
 
     if d.ACTIVE_OPTIONDATASOURCE == 'yfinance':
-        expiry = _get_option_expiry_yfinance(ticker, uselast)
+        expiry = _get_option_expiry_yfinance(ticker)
     elif d.ACTIVE_OPTIONDATASOURCE == 'etrade':
-        expiry = _get_option_expiry_etrade(ticker, uselast)
+        expiry = _get_option_expiry_etrade(ticker)
     else:
         raise ValueError('Invalid data source')
+
+    _logger.debug(f'{__name__}: Expiries: {expiry}')
 
     return expiry
 
 
-def _get_option_chain_yfinance(ticker: str, expiry:dt.datetime, uselast: bool = False) -> pd.DataFrame:
+def _get_option_chain_yfinance(ticker: str, expiry: dt.datetime) -> pd.DataFrame:
     chain = pd.DataFrame()
     for retry in range(_RETRIES):
-        company = get_company_live(ticker, uselast)
+        company = get_company_live(ticker)
         if company is not None:
             chain_c = company.option_chain(expiry.strftime(ui.DATE_FORMAT)).calls
             chain_c['type'] = 'call'
@@ -284,7 +285,8 @@ def _get_option_chain_yfinance(ticker: str, expiry:dt.datetime, uselast: bool = 
 
     return chain
 
-def _get_option_chain_etrade(ticker: str, expiry:dt.datetime, uselast: bool = False) -> pd.DataFrame:
+
+def _get_option_chain_etrade(ticker: str, expiry: dt.datetime) -> pd.DataFrame:
     if auth.Session is None:
         raise ValueError('Must authorize E*Trade session')
 
@@ -328,19 +330,23 @@ def _get_option_chain_etrade(ticker: str, expiry:dt.datetime, uselast: bool = Fa
 
     return chain
 
-def get_option_chain(ticker: str, expiry:dt.datetime, uselast: bool = False) -> pd.DataFrame:
+
+def get_option_chain(ticker: str, expiry: dt.datetime) -> pd.DataFrame:
     if not _connected:
         raise ConnectionError('No internet connection')
 
     chain = pd.DataFrame()
     if d.ACTIVE_OPTIONDATASOURCE == 'yfinance':
-        chain = _get_option_chain_yfinance(ticker, expiry, uselast)
+        chain = _get_option_chain_yfinance(ticker, expiry)
     elif d.ACTIVE_OPTIONDATASOURCE == 'etrade':
-        chain = _get_option_chain_etrade(ticker, expiry, uselast)
+        chain = _get_option_chain_etrade(ticker, expiry)
     else:
         raise ValueError('Invalid data source')
 
+    _logger.debug(f'{__name__}: Chain:\n{chain}')
+
     return chain
+
 
 def get_ratings(ticker: str) -> list[int]:
     if not _connected:

@@ -289,15 +289,15 @@ def get_history(ticker: str, days: int = -1, end: int = 0, use_last: bool = Fals
     return history
 
 
-def get_company(ticker: str, live: bool = False, extra: bool = False, uselast: bool = False, test: bool = False) -> dict:
+def get_company(ticker: str, live: bool = False, extra: bool = False) -> dict:
     ticker = ticker.upper()
     live = True if _session is None else live
     results = {}
 
     if live:
-        company = fetcher.get_company_live(ticker, uselast)
+        company = fetcher.get_company_live(ticker)
         if company is not None:
-            if company.info is not None and not test:
+            if company.info is not None:
                 try:
                     results['name'] = company.info.get('shortName')[:95] if company.info.get('shortName') is not None else UNAVAILABLE
                     results['description'] = company.info.get('longBusinessSummary')[:4995] if company.info.get('longBusinessSummary') is not None else UNAVAILABLE
@@ -424,12 +424,12 @@ def get_index_tickers_master(index: str, type: str = 'google') -> list[str]:
     return symbols
 
 
-def get_option_expiry(ticker: str, uselast: bool = False) -> tuple[str]:
-    return fetcher.get_option_expiry(ticker, uselast)
+def get_option_expiry(ticker: str) -> tuple[str]:
+    return fetcher.get_option_expiry(ticker)
 
 
-def get_option_chain(ticker: str, expiry:dt.datetime, uselast: bool = False) -> pd.DataFrame:
-    return fetcher.get_option_chain(ticker, expiry, uselast)
+def get_option_chain(ticker: str, expiry:dt.datetime) -> pd.DataFrame:
+    return fetcher.get_option_chain(ticker, expiry)
 
 
 def get_treasury_rate(ticker: str = 'DTB3') -> float:

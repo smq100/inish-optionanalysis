@@ -33,8 +33,7 @@ class Options:
         if response is not None and response.status_code == 200:
             expiry_data = json.loads(response.text)
             if expiry_data is not None and 'OptionExpireDateResponse' in expiry_data and 'ExpirationDate' in expiry_data['OptionExpireDateResponse']:
-                parsed = json.dumps(expiry_data, indent=2, sort_keys=True)
-                _logger.debug(f'{__name__}: {parsed}')
+                pass # All good
             else:
                 self.message = 'E*TRADE API service error'
         else:
@@ -75,8 +74,7 @@ class Options:
         if response is not None and response.status_code == 200:
             chain_data = json.loads(response.text)
             if chain_data is not None and 'OptionChainResponse' in chain_data and 'OptionPair' in chain_data['OptionChainResponse']:
-                parsed = json.dumps(chain_data, indent=2, sort_keys=True)
-                _logger.debug(f'{__name__}: {parsed}')
+                pass # All good
             else:
                 self.message = 'E*TRADE API service error'
         else:
