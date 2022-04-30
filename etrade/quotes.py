@@ -15,9 +15,11 @@ class Quotes:
 
         self.session: OAuth1Session = auth.Session
         self.message = ''
+        self.raw = ''
 
     def quote(self, symbols: list[str]) -> list[dict]:
         self.message = 'success'
+        self.raw = ''
         quote_data = None
 
         url = f'{auth.base_url}/v1/market/quote/{",".join(symbols)}.json'
@@ -30,11 +32,9 @@ class Quotes:
         if response is not None and response.status_code == 200:
             quote_data = response.json()
             if 'QuoteResponse' in quote_data and 'QuoteData' in quote_data['QuoteResponse']:
-                parsed = json.dumps(quote_data, indent=2, sort_keys=True)
-                _logger.debug(f'{__name__}: {parsed}')
+                self.raw = json.dumps(quote_data, indent=2, sort_keys=True)
             elif 'QuoteResponse' in quote_data and 'Messages' in quote_data['QuoteResponse']:
-                parsed = json.dumps(quote_data, indent=2, sort_keys=True)
-                _logger.debug(f'{__name__}: {parsed}')
+                self.raw = json.dumps(quote_data, indent=2, sort_keys=True)
                 self.message = quote_data['QuoteResponse']['Messages']['Message'][0]['description']
             else:
                 self.message = 'E*TRADE API service error'

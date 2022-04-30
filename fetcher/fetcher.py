@@ -259,24 +259,17 @@ def _get_option_chain_yfinance(ticker: str, expiry: dt.datetime) -> pd.DataFrame
             chain_p['type'] = 'put'
             chain = pd.concat([chain_c, chain_p], axis=0)
 
-            drop = [
-                # 'contractSymbol',
-                # 'strike',
-                # 'lastPrice',
-                # 'volume',
-                # 'impliedVolatility',
-                # 'inTheMoney',
-                # 'type'
-                'lastTradeDate',
-                'bid',
-                'ask',
-                'change',
-                'percentChange',
-                'openInterest',
-                'contractSize',
-                'currency',
+            order = [
+                'contractSymbol',
+                'symbol',
+                'type',
+                'strike',
+                'lastPrice',
+                'inTheMoney',
+                'impliedVolatility',
+                'volume',
             ]
-            chain.drop(drop, axis=1, inplace=True)
+            chain = chain.reindex(columns=order)
 
             break
         else:
@@ -297,36 +290,23 @@ def _get_option_chain_etrade(ticker: str, expiry: dt.datetime) -> pd.DataFrame:
     month = expiry.month
     chain = options.chain(ticker, month, year)
 
-    drop = [
-        # 'osiKey',
-        # 'strikePrice',
-        # 'lastPrice',
-        # 'volume',
-        # 'inTheMoney',
-        # 'type'
-        'optionCategory',
-        'optionRootSymbol',
-        'timeStamp',
-        'adjustedFlag',
-        'displaySymbol',
-        'optionType',
-        'symbol',
-        'bid',
-        'ask',
-        'bidSize',
-        'askSize',
-        'openInterest',
-        'netChange',
-        'quoteDetail',
-        'OptionGreeks',
-    ]
-    chain.drop(drop, axis=1, inplace=True)
-
     rename = {
         'osiKey': 'contractSymbol',
         'strikePrice': 'strike'
     }
     chain.rename(rename, axis=1, inplace=True)
+
+    order = [
+        'contractSymbol',
+        'symbol',
+        'type',
+        'strike',
+        'lastPrice',
+        'inTheMoney',
+        'impliedVolatility',
+        'volume',
+    ]
+    chain = chain.reindex(columns=order)
 
     return chain
 

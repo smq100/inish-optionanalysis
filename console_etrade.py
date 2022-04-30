@@ -105,7 +105,10 @@ class Client:
                 print(f'Net Account Value: ${balance.get("Computed", {}).get("RealTimeValues", {}).get("totalAccountValue", 0.0):,.2f}')
                 print(f'Margin Buying Power: ${balance.get("Computed", {}).get("marginBuyingPower", 0.0):,.2f}')
                 print(f'Cash Buying Power: ${balance.get("Computed", {}).get("cashBuyingPower"):,.2f}')
-                print(f'Option Level: {balance.get("optionLevel", "error")}')
+                print(f'Option Level: {balance.get("optionLevel", "error")}\n')
+
+                if ui.input_text('Show raw JSON? (y/n): ').lower() == 'y':
+                    print(self.accounts.raw)
             else:
                 ui.print_error(self.accounts.message)
         else:
@@ -125,6 +128,9 @@ class Client:
                     print(f'Gain={position.totalGain:,.02f}')
                     print(f'Value={position.marketValue:,.02f}')
                     print()
+
+                if ui.input_text('Show raw JSON? (y/n): ').lower() == 'y':
+                    print(self.accounts.raw)
             else:
                 ui.print_error(self.accounts.message)
         else:
@@ -139,12 +145,14 @@ class Client:
             for item in alert_data.itertuples():
                 if item:
                     timestamp = dt.datetime.fromtimestamp(item.createTime)
-                    alert  = f'ID: {item.id}'
+                    alert = f'ID: {item.id}'
                     alert += f', Time: {timestamp:%Y-%m-%d %H:%M:%S}'
                     alert += f', Subject: {item.subject}'
-                    alert += f', Status: {item.status}'
-
+                    alert += f', Status: {item.status}\n'
                 print(alert)
+
+            if ui.input_text('Show raw JSON? (y/n): ').lower() == 'y':
+                print(alerts.raw)
         else:
             ui.print_message(alerts.message)
 
@@ -162,6 +170,9 @@ class Client:
                     print(f'Desc: {item.description}')
 
                 print()
+
+            if ui.input_text('Show raw JSON? (y/n): ').lower() == 'y':
+                print(lookup.raw)
         else:
             ui.print_error(f'No information for {symbol} located')
 
@@ -188,6 +199,10 @@ class Client:
                         print(f'Day\'s Range: {all.get("low", 0.0):,.2f} - {all.get("high", 0.0):,.2f}')
                         print(f'Volume: {all.get("totalVolume"):,}')
                     print()
+
+            if ui.input_text('Show raw JSON? (y/n): ').lower() == 'y':
+                print(quotes.raw)
+
         else:
             ui.print_error(quotes.message)
 
@@ -209,67 +224,49 @@ class Client:
             ui.print_message('Options Chain', post_creturn=1)
             expiry_data['date'] = pd.to_datetime(expiry_data['date']).dt.strftime(ui.DATE_FORMAT)
             print(tabulate(expiry_data, headers=expiry_data.columns, tablefmt=ui.TABULATE_FORMAT))
+            print()
+
+            if ui.input_text('Show raw JSON? (y/n): ').lower() == 'y':
+                print(options.raw)
 
     def show_options_chain(self) -> None:
         symbol = ui.input_text('Please enter symbol: ').upper()
 
         date = m.third_friday()
         options = Options()
-        chain_calls, chain_puts = options.chain(symbol, date.month, date.year)
+        chain = options.chain(symbol, date.month, date.year)
 
         if 'error' in options.message.lower():
             message = options.message.replace('Error ', '')
             message = message.replace('\n', '')
             ui.print_error(message)
-        elif chain_calls is None:
-            message = options.message.replace('Error ', '')
-            message = message.replace('\n', '')
-            ui.print_error(message)
-        elif chain_puts is None:
+        elif chain is None:
             message = options.message.replace('Error ', '')
             message = message.replace('\n', '')
             ui.print_error(message)
         else:
-            drop = [
-                'OptionGreeks',
-                'adjustedFlag',
-                'ask',
-                'askSize',
-                'bid',
-                'bidSize',
-                'displaySymbol',
-                # 'inTheMoney',
-                # 'lastPrice',
-                'netChange',
-                'openInterest',
-                'optionCategory',
-                'optionRootSymbol',
-                'optionType',
-                'osiKey',
-                'quoteDetail',
-                # 'strikePrice',
-                # 'symbol',
-                'timeStamp',
-                # 'volume'
-            ]
-
             order = [
                 'symbol',
+                'type',
                 'strikePrice',
                 'lastPrice',
                 'inTheMoney',
-                'volume'
+                'volume',
             ]
 
-            ui.print_message('Options Call Chain', post_creturn=1)
-            chain_calls.drop(drop, axis=1, inplace=True)
-            chain_calls = chain_calls.reindex(columns=order)
+            chain = chain.reindex(columns=order)
+
+            ui.print_message('Options Chain', post_creturn=1)
+            chain_calls = chain[chain['type'] == 'call']
             print(tabulate(chain_calls, headers=chain_calls.columns, tablefmt=ui.TABULATE_FORMAT, floatfmt='.02f'))
 
-            ui.print_message('Options Put Chain', post_creturn=1)
-            chain_puts.drop(drop, axis=1, inplace=True)
-            chain_puts = chain_puts.reindex(columns=order)
+            print()
+            chain_puts = chain[chain['type'] == 'put']
             print(tabulate(chain_puts, headers=chain_puts.columns, tablefmt=ui.TABULATE_FORMAT, floatfmt='.02f'))
+            print()
+
+            if ui.input_text('Show raw JSON? (y/n): ').lower() == 'y':
+                print(options.raw)
 
 
 def main():

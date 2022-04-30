@@ -9,3 +9,4 @@
 * Script-based security screening and scoring
 * Technical Analysis with sophisticated support & resistance analysis
 * Local pricing history database support and data manager
+* E*Trade API support

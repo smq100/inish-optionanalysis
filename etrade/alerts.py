@@ -19,6 +19,7 @@ class Alerts:
 
         self.session: OAuth1Session = auth.Session
         self.message = ''
+        self.raw = ''
 
     def alerts(self) -> pd.DataFrame:
         self.message = 'success'
@@ -33,8 +34,7 @@ class Alerts:
         if response is not None and response.status_code == 200:
             alert_data = response.json()
             if alert_data is not None and 'AlertsResponse' in alert_data and 'Alert' in alert_data['AlertsResponse']:
-                parsed = json.dumps(alert_data, indent=2, sort_keys=True)
-                _logger.debug(f'{__name__}: {parsed}')
+                self.raw = json.dumps(alert_data, indent=2, sort_keys=True)
             else:
                 self.message = 'E*TRADE API service error'
         elif response is not None and response.status_code == 204:

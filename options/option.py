@@ -117,7 +117,7 @@ class Option:
         return contract
 
 
-def parse_contract_name(contract_name: str) -> tuple[str, str, str, float]:
+def parse_contract_name(contract_name: str) -> contract_type:
     regex = r'([\d]{6})([PC])'  # ex: MSFT210305C00237500 or MSFT--210305C00237500
     parsed = re.split(regex, contract_name)
 

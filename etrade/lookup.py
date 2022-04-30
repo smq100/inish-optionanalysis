@@ -16,9 +16,11 @@ class Lookup:
 
         self.session: OAuth1Session = auth.Session
         self.message = ''
+        self.raw = ''
 
     def lookup(self, symbol: str) -> pd.DataFrame:
         self.message = 'success'
+        self.raw = ''
 
         url = f'{auth.base_url}/v1/market/lookup/{symbol}.json'
 
@@ -27,8 +29,7 @@ class Lookup:
         if response is not None and response.status_code == 200:
             alert_data = response.json()
             if alert_data is not None and 'LookupResponse' in alert_data and 'Data' in alert_data['LookupResponse']:
-                parsed = json.dumps(alert_data, indent=2, sort_keys=True)
-                _logger.debug(f'{__name__}: {parsed}')
+                self.raw = json.dumps(alert_data, indent=2, sort_keys=True)
             else:
                 self.message = 'E*TRADE API service error'
         else:

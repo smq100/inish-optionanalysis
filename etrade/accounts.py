@@ -19,17 +19,18 @@ class Accounts:
         self.session: OAuth1Session = auth.Session
         self.accounts: list[pd.DataFrame] = []
         self.message = ''
+        self.raw = ''
 
     def list(self) -> pd.DataFrame:
         url = f'{auth.base_url}{URL_ACCTLIST}'
         response = self.session.get(url)
         self.message = 'success'
+        self.raw = ''
 
         if response is not None and response.status_code == 200:
             acct_data = response.json()
             if acct_data is not None and 'AccountListResponse' in acct_data and 'Accounts' in acct_data['AccountListResponse']:
-                parsed = json.dumps(acct_data, indent=2, sort_keys=True)
-                _logger.debug(f'{__name__}: {parsed}')
+                self.raw = json.dumps(acct_data, indent=2, sort_keys=True)
             else:
                 self.message = 'E*TRADE API service error'
         else:
@@ -45,6 +46,8 @@ class Accounts:
 
     def balance(self, account_index: int) -> dict:
         self.message = 'success'
+        self.raw = ''
+
         url = f'{auth.base_url}/v1/accounts/{self.accounts.iloc[account_index]["accountIdKey"]}/balance.json'
         params = {'instType': self.accounts.iloc[account_index]['institutionType'], 'realTimeNAV': 'true'}
         headers = {'consumerkey': auth.key}
@@ -52,8 +55,7 @@ class Accounts:
         response = self.session.get(url, params=params, headers=headers)
         if response is not None and response.status_code == 200:
             acct_data = json.loads(response.text)
-            parsed = json.dumps(acct_data, indent=2, sort_keys=True)
-            _logger.debug(f'{__name__}: {parsed}')
+            self.raw = json.dumps(acct_data, indent=2, sort_keys=True)
         else:
             _logger.debug(f'{__name__}: Response Body: {response.text}')
             self.message = f'Error: E*TRADE API service error: {response.text}'
@@ -66,13 +68,14 @@ class Accounts:
 
     def portfolio(self, account_index: int) -> pd.DataFrame:
         self.message = 'success'
+        self.raw = ''
+
         url = f'{auth.base_url}/v1/accounts/{self.accounts.iloc[account_index]["accountIdKey"]}/portfolio.json'
 
         response = self.session.get(url)
         if response is not None and response.status_code == 200:
             portfolio_data = json.loads(response.text)
-            parsed = json.dumps(portfolio_data, indent=2, sort_keys=True)
-            _logger.debug(f'{__name__}: {parsed}')
+            self.raw = json.dumps(portfolio_data, indent=2, sort_keys=True)
         else:
             _logger.debug(f'{__name__}: Response Body: {response.text}')
             self.message = f'Error: E*TRADE API service error: {response.text}'

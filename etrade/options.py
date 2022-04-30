@@ -20,9 +20,11 @@ class Options:
 
         self.session: OAuth1Session = auth.Session
         self.message = ''
+        self.raw = ''
 
     def expiry(self, symbol: str) -> pd.DataFrame:
         self.message = 'success'
+        self.raw = ''
         expiry_data = {}
 
         url = f'{auth.base_url}{URL_EXPIRY}'
@@ -33,7 +35,7 @@ class Options:
         if response is not None and response.status_code == 200:
             expiry_data = json.loads(response.text)
             if expiry_data is not None and 'OptionExpireDateResponse' in expiry_data and 'ExpirationDate' in expiry_data['OptionExpireDateResponse']:
-                pass # All good
+                self.raw = json.dumps(expiry_data, indent=2, sort_keys=True)
             else:
                 self.message = 'E*TRADE API service error'
         else:
@@ -57,7 +59,8 @@ class Options:
               otype: str = 'CALLPUT') -> pd.DataFrame:
 
         self.message = 'success'
-        chain_data = None
+        self.raw = ''
+        chain_data = {}
 
         url = f'{auth.base_url}{URL_CHAIN}'
         params = {
@@ -74,7 +77,7 @@ class Options:
         if response is not None and response.status_code == 200:
             chain_data = json.loads(response.text)
             if chain_data is not None and 'OptionChainResponse' in chain_data and 'OptionPair' in chain_data['OptionChainResponse']:
-                pass # All good
+                self.raw = json.dumps(chain_data, indent=2, sort_keys=True)
             else:
                 self.message = 'E*TRADE API service error'
         else:
@@ -96,7 +99,7 @@ class Options:
 
             chain = pd.concat([calls_table, puts_table], axis=0)
 
-            # E*Trade does not include impliedVolatility. Add for compatability with yfinance. Will force calculated volatility to be used
+            # E*Trade does not include impliedVolatility. Add for compatability with yfinance. This will force calculated volatility to be used
             chain['impliedVolatility'] = -1.0
 
         return chain
