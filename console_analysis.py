@@ -126,14 +126,14 @@ class Interface:
                 menu_items['2'] += f' ({self.screen})'
 
             if self.quick:
-                menu_items['5'] += ' (quick)'
+                menu_items['6'] += ' (quick)'
 
             if self.screener is not None and len(self.screener.valids) > 0:
                 top = len(self.screener.valids) if len(self.screener.valids) < LISTTOP_SCREEN else LISTTOP_SCREEN
-                menu_items['7'] += f' ({top})'
+                menu_items['8'] += f' ({top})'
 
             if self.screener is not None and len(self.screener.valids) > 0:
-                menu_items['8'] += f' ({len(self.screener.valids)})'
+                menu_items['9'] += f' ({len(self.screener.valids)})'
 
             if selection == 0:
                 selection = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)

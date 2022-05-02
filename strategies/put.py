@@ -13,15 +13,15 @@ _logger = logger.get_logger()
 
 class Put(Strategy):
     def __init__(self,
-            ticker: str,
-            product: str,
-            direction: str,
-            strike: float,
-            *,
-            quantity: int = 1,
-            expiry: dt.datetime | None = None,
-            volatility: tuple[float, float] = (-1.0, 0.0),
-            load_contracts: bool = False):
+        ticker: str,
+        product: str,
+        direction: str,
+        strike: float,
+        *,
+        quantity: int = 1,
+        expiry: dt.datetime | None = None,
+        volatility: tuple[float, float] = (-1.0, 0.0),
+        load_contracts: bool = False):
 
         product = s.PRODUCTS[1]
 

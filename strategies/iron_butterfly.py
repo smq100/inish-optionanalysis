@@ -13,16 +13,16 @@ _logger = logger.get_logger()
 
 class IronButterfly(Strategy):
     def __init__(self,
-            ticker: str,
-            product: str,
-            direction: str,
-            strike: float,
-            *,
-            width1: int,
-            quantity: int = 1,
-            expiry: dt.datetime | None = None,
-            volatility: tuple[float, float] = (-1.0, 0.0),
-            load_contracts: bool = False):
+        ticker: str,
+        product: str,
+        direction: str,
+        strike: float,
+        *,
+        width1: int,
+        quantity: int = 1,
+        expiry: dt.datetime | None = None,
+        volatility: tuple[float, float] = (-1.0, 0.0),
+        load_contracts: bool = False):
 
         if width1 < 1:
             raise ValueError('Invalid width1')

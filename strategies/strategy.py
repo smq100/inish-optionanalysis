@@ -23,17 +23,17 @@ _logger = logger.get_logger()
 
 class Strategy(ABC, Threaded):
     def __init__(self,
-            ticker: str,
-            product: str,
-            direction: str,
-            strike: float,
-            *,
-            width1: int,
-            width2: int,
-            quantity: int,
-            expiry: dt.datetime | None, # None = use next month's expiry. Otherwise use specified
-            volatility: tuple[float, float], # < 0.0 use latest implied volatility, = 0.0 use calculated, > 0.0 use specified
-            load_contracts: bool):
+        ticker: str,
+        product: str,
+        direction: str,
+        strike: float,
+        *,
+        width1: int,
+        width2: int,
+        quantity: int,
+        expiry: dt.datetime | None, # None = use next month's expiry. Otherwise use specified
+        volatility: tuple[float, float], # < 0.0 use latest implied volatility, = 0.0 use calculated, > 0.0 use specified
+        load_contracts: bool):
 
         if not store.is_ticker(ticker):
             raise ValueError('Invalid ticker')
