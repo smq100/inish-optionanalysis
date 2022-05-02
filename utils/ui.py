@@ -51,13 +51,13 @@ def print_message(message: str, pre_creturn: int = 1, post_creturn: int = 0) -> 
 def print_warning(message: str, pre_creturn: int = 1, post_creturn: int = 0) -> None:
     print(Fore.RED, end='')
     print(delimeter(f'Warning: {message}', pre_creturn, post_creturn))
-    print(Style.RESET_ALL)
+    print(Style.RESET_ALL, end='')
 
 
 def print_error(message: str, pre_creturn: int = 1, post_creturn: int = 0) -> None:
     print(Fore.RED, end='')
     print(delimeter(f'Error: {message}', pre_creturn, post_creturn))
-    print(Style.RESET_ALL)
+    print(Style.RESET_ALL, end='')
 
 
 def print_tickers(tickers: list[str], group: int = 15) -> None:

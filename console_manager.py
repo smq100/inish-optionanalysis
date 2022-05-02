@@ -49,7 +49,7 @@ class Interface:
             elif ticker:
                 self.main_menu(selection=2)
             elif update:
-                self.main_menu(selection=4)
+                self.main_menu(selection=5)
             else:
                 self.main_menu()
         else:
@@ -213,36 +213,34 @@ class Interface:
             if found:
                 ui.print_tickers(found)
 
-    def populate_exchange(self, progressbar: bool = True) -> None:
+    def populate_exchange(self) -> None:
         table = ui.get_valid_table(exchange=True)
         if table:
             self.task = threading.Thread(target=self.manager.populate_exchange, args=[table])
             self.task.start()
 
-            if progressbar:
-                # Show thread progress. Blocking while thread is active
-                self.show_progress('Progress', '')
+            # Show thread progress. Blocking while thread is active
+            self.show_progress('Progress', '')
 
             if self.manager.task_state == 'Done':
                 ui.print_message(f'{self.manager.task_success} {table} '
                                  f'Symbols populated in {self.manager.task_time/60.0:.1f} minutes with {len(self.manager.invalid_tickers)} invalid symbols')
 
-    def populate_index(self, progressbar: bool = True) -> None:
+    def populate_index(self) -> None:
         table = ui.get_valid_table(index=True)
         if table:
             self.task = threading.Thread(target=self.manager.populate_index, args=[table])
             self.task.start()
 
-            if progressbar:
-                # Show thread progress. Blocking while thread is active
-                self.show_progress('Progress', '')
+            # Show thread progress. Blocking while thread is active
+            self.show_progress('Progress', '')
 
             if self.manager.task_state == 'Done':
                 ui.print_message(f'{self.manager.task_success} {table} Symbols populated in {self.manager.task_time:.0f} seconds')
             else:
                 ui.print_error(self.manager.task_state)
 
-    def update_history(self, ticker: str = '', progressbar: bool = True) -> None:
+    def update_history(self, ticker: str = '') -> None:
         table = ui.get_valid_table(exchange=True, ticker=True, all=True)
         if not table:
             ui.print_message('Cancelled')
@@ -254,9 +252,8 @@ class Interface:
             self.task = threading.Thread(target=self.manager.update_history_exchange, args=[table])
             self.task.start()
 
-            if progressbar:
-                # Show thread progress. Blocking while thread is active
-                self.show_progress('Progress', '')
+            # Show thread progress. Blocking while thread is active
+            self.show_progress('Progress', '')
 
             if self.manager.task_state == 'Done':
                 ui.print_message(f'{self.manager.task_total} {table} Ticker pricing refreshed in {self.manager.task_time:.0f} seconds')
@@ -266,7 +263,7 @@ class Interface:
                         ui.print_message(f'{len(self.manager.invalid_tickers)} unsuccessful tickers')
                         ui.print_tickers(self.manager.invalid_tickers)
 
-    def update_company(self, ticker: str = '', progressbar: bool = True) -> None:
+    def update_company(self, ticker: str = '') -> None:
         table = ui.get_valid_table(exchange=True, ticker=True, all=True)
         if not table:
             ui.print_message('Cancelled')
@@ -280,22 +277,20 @@ class Interface:
             self.task = threading.Thread(target=self.manager.update_companies_exchange, args=[table])
             self.task.start()
 
-            if progressbar:
-                # Show thread progress. Blocking while thread is active
-                self.show_progress('Progress', '')
+            # Show thread progress. Blocking while thread is active
+            self.show_progress('Progress', '')
 
             if self.manager.task_state == 'Done':
                 ui.print_message(f'{self.manager.task_total} {table} Company infomation refreshed in {self.manager.task_time:.0f} seconds')
 
-    def delete_exchange(self, progressbar: bool = True) -> None:
+    def delete_exchange(self) -> None:
         table = ui.get_valid_table(exchange=True)
         if table:
             self.task = threading.Thread(target=self.manager.delete_exchange, args=[table])
             self.task.start()
 
-            if progressbar:
-                # Show thread progress. Blocking while thread is active
-                self.show_progress('', '')
+            # Show thread progress. Blocking while thread is active
+            self.show_progress('', '')
 
             self.create_missing_tables()
 
@@ -356,15 +351,14 @@ class Interface:
                 else:
                     ui.print_message('Cancelled')
 
-    def check_price_dates(self, progressbar: bool = True) -> None:
+    def check_price_dates(self) -> None:
         table = ui.get_valid_table(exchange=True, index=True, ticker=True)
         if table:
             self.task = threading.Thread(target=self.manager.identify_incomplete_pricing, args=[table])
             self.task.start()
 
-            if progressbar:
-                # Show thread progress. Blocking while thread is active
-                self.show_progress('Progress', '')
+            # Show thread progress. Blocking while thread is active
+            self.show_progress('Progress', '')
 
             if self.manager.task_state == 'Done':
                 ui.print_message(f'{self.manager.task_total} {table} Ticker pricing checked in {self.manager.task_time:.0f} seconds')
@@ -393,16 +387,15 @@ class Interface:
         else:
             ui.print_message('No ticker errors')
 
-    def recheck_inactive(self, progressbar: bool = True) -> None:
+    def recheck_inactive(self) -> None:
         ticker = ui.input_text('Enter ticker or RETURN for all: ').upper()
         tickers = [ticker] if ticker else self.manager.identify_inactive_tickers('all')
         if tickers:
             self.task = threading.Thread(target=self.manager.recheck_inactive, args=[tickers])
             self.task.start()
 
-            if progressbar:
-                # Show thread progress. Blocking while thread is active
-                self.show_progress('Progress', '')
+            # Show thread progress. Blocking while thread is active
+            self.show_progress('Progress', '')
 
             if self.manager.task_state == 'Done':
                 ui.print_message(f'{self.manager.task_success} Inactive tickers updated in {self.manager.task_time:.0f} seconds')

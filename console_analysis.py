@@ -4,6 +4,7 @@ import math
 import threading
 import logging
 from datetime import datetime as dt
+import webbrowser
 
 import argparse
 import matplotlib.pyplot as plt
@@ -12,12 +13,14 @@ from tabulate import tabulate
 
 import strategies as s
 import strategies.strategy_list as sl
+import data as d
 from strategies.strategy import Strategy
 from screener.screener import Screener, SCREEN_INIT_NAME, SCREEN_BASEPATH, SCREEN_SUFFIX, CACHE_BASEPATH, CACHE_SUFFIX
 from analysis.trend import SupportResistance
 from analysis.correlate import Correlate
 from analysis.chart import Chart
 from data import store as store
+import etrade.auth as auth
 from utils import ui, logger
 from utils import math as m
 
@@ -29,13 +32,18 @@ LISTTOP_TREND = 5
 LISTTOP_CORR = 10
 
 
+def _auth_callback(url: str) -> str:
+    webbrowser.open(url)
+    code = ui.input_alphanum('Please accept agreement and enter text code from browser: ')
+    return code
+
+
 class Interface:
     table: str
     screen: str
     quick: bool
     exit: bool
     days: int
-    auto: bool
     path_screen: str
     results_corr: list[tuple[str, pd.Series]]
     trend: SupportResistance | None
@@ -44,7 +52,6 @@ class Interface:
     chart: Chart | None
     strategy: Strategy | None
     task: threading.Thread | None
-    use_cache: bool
 
     def __init__(self, *, table: str = '', screen: str = '', load_contracts: bool = False, quick: bool = False, exit: bool = False):
         self.table = table.upper()
@@ -53,7 +60,6 @@ class Interface:
         self.quick = quick
         self.exit = exit
         self.days = 1000
-        self.auto = False
         self.path_screen = ''
         self.results_corr = []
         self.trend = None
@@ -62,7 +68,6 @@ class Interface:
         self.chart = None
         self.strategy = None
         self.task = None
-        self.use_cache = True
 
         abort = False
 
@@ -91,7 +96,6 @@ class Interface:
         if abort:
             pass  # We're done
         elif self.table and self.path_screen:
-            self.auto = True
             self.main_menu(selection=3)
         else:
             self.main_menu()
@@ -102,15 +106,16 @@ class Interface:
                 '1':  'Select Table or Ticker',
                 '2':  'Select Screen',
                 '3':  'Run Screen',
-                '4':  'Run Option Strategy',
-                '5':  'Run Support & Resistance Analysis',
-                '6':  'Run Coorelation',
-                '7':  'Show Top Results',
-                '8':  'Show All Results',
-                '9':  'Show Ticker Screen Results',
-                '10': 'Show Chart',
-                '11': 'Manage Cache Files',
-                '12': 'Delete Old Cache Files',
+                '4':  'Refresh Screen',
+                '5':  'Run Option Strategy',
+                '6':  'Run Support & Resistance Analysis',
+                '7':  'Run Coorelation',
+                '8':  'Show Top Results',
+                '9':  'Show All Results',
+                '10':  'Show Ticker Screen Results',
+                '11': 'Show Chart',
+                '12': 'Manage Cache Files',
+                '13': 'Delete Old Cache Files',
                 '0':  'Exit'
             }
 
@@ -131,7 +136,6 @@ class Interface:
                 menu_items['8'] += f' ({len(self.screener.valids)})'
 
             if selection == 0:
-                self.use_cache = False
                 selection = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
 
             if selection == 1:
@@ -143,24 +147,28 @@ class Interface:
                 if len(self.screener.valids) > 0:
                     self.show_valids(top=LISTTOP_SCREEN)
             elif selection == 4:
-                self.select_option_strategy()
+                self.refresh_screen()
+                if len(self.screener.valids) > 0:
+                    self.show_valids(top=LISTTOP_SCREEN)
             elif selection == 5:
-                self.select_support_resistance()
+                self.select_option_strategy()
             elif selection == 6:
+                self.select_support_resistance()
+            elif selection == 7:
                 self.run_coorelate()
                 if len(self.results_corr) > 0:
                     self.show_coorelations()
-            elif selection == 7:
-                self.show_valids(top=LISTTOP_SCREEN)
             elif selection == 8:
-                self.show_valids()
+                self.show_valids(top=LISTTOP_SCREEN)
             elif selection == 9:
-                self.show_ticker_results()
+                self.show_valids()
             elif selection == 10:
-                self.show_chart()
+                self.show_ticker_results()
             elif selection == 11:
-                self.manage_cache_files()
+                self.show_chart()
             elif selection == 12:
+                self.manage_cache_files()
+            elif selection == 13:
                 self.clear_old_cache_files()
             elif selection == 0:
                 self.exit = True
@@ -174,18 +182,24 @@ class Interface:
         list = ui.input_alphanum('Enter exchange, index, or ticker: ').upper()
         if store.is_exchange(list):
             self.table = list
+            self.screener = Screener(self.table, screen=self.path_screen)
+            if self.screener.cache_available:
+                self.run_screen()
         elif store.is_index(list):
             self.table = list
+            self.screener = Screener(self.table, screen=self.path_screen)
+            if self.screener.cache_available:
+                self.run_screen()
         elif store.is_ticker(list):
             self.table = list
+            self.screener = Screener(self.table, screen=self.path_screen)
+            if self.screener.cache_available:
+                self.run_screen()
         else:
-            self.table = ''
-            self.screener = None
             ui.print_error(f'List {list} is not valid')
 
     def select_screen(self) -> None:
         self.script = []
-        self.screener = None
         paths = []
         with os.scandir(SCREEN_BASEPATH) as entries:
             for entry in entries:
@@ -214,6 +228,9 @@ class Interface:
             if selection > 0:
                 self.screen = paths[selection-1]
                 self.path_screen = f'{SCREEN_BASEPATH}{self.screen}.{SCREEN_SUFFIX}'
+                self.screener = Screener(self.table, screen=self.path_screen)
+                if self.screener.cache_available:
+                    self.run_screen()
         else:
             ui.print_message('No screener files found')
 
@@ -233,19 +250,19 @@ class Interface:
             if selection == 1:
                 strategy = 'call'
                 product = 'call'
-                d = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
-                direction = 'long' if d == 1 else 'short'
+                selection = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
+                direction = 'long' if selection == 1 else 'short'
             elif selection == 2:
                 strategy = 'put'
                 product = 'put'
-                d = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
-                direction = 'long' if d == 1 else 'short'
+                selection = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
+                direction = 'long' if selection == 1 else 'short'
             elif selection == 3:
                 strategy = 'vert'
                 p = ui.input_integer('(1) Call, or (2) Put: ', 1, 2)
                 product = 'call' if p == 1 else 'put'
-                d = ui.input_integer('(1) Debit, or (2) Credit: ', 1, 2)
-                direction = 'long' if d == 1 else 'short'
+                selection = ui.input_integer('(1) Debit, or (2) Credit: ', 1, 2)
+                direction = 'long' if selection == 1 else 'short'
             elif selection == 4:
                 strategy = 'ic'
                 product = 'hybrid'
@@ -258,6 +275,10 @@ class Interface:
                 modified = False
 
             if modified:
+                if self.load_contracts and d.ACTIVE_OPTIONDATASOURCE == 'etrade':
+                    if auth.Session is None:
+                        auth.authorize(_auth_callback)
+
                 self.run_strategies(strategy, product, direction)
         else:
             ui.print_error('No valid results to analyze')
@@ -277,9 +298,8 @@ class Interface:
         if tickers:
             self.run_support_resistance(tickers)
 
-    def run_screen(self) -> bool:
+    def run_screen(self, use_cache: bool = True) -> bool:
         success = False
-        self.auto = False
 
         if not self.table:
             ui.print_error('No exchange, index, or ticker specified')
@@ -291,7 +311,7 @@ class Interface:
             except ValueError as e:
                 ui.print_error(f'{__name__}: {str(e)}')
             else:
-                self.task = threading.Thread(target=self.screener.run_script, kwargs={'use_cache': self.use_cache})
+                self.task = threading.Thread(target=self.screener.run_script, kwargs={'use_cache': use_cache})
                 self.task.start()
 
                 # Show thread progress. Blocking while thread is active
@@ -299,15 +319,18 @@ class Interface:
 
                 if self.screener.task_state == 'Done':
                     self.screener.valids = self.screener.valids
-                    self.use_cache = True
-                    success = True
 
                     if self.screener.cache_used:
                         ui.print_message(f'{len(self.screener.valids)} symbols identified. Cached results used')
                     else:
                         ui.print_message(f'{len(self.screener.valids)} symbols identified in {self.screener.task_time:.1f} seconds')
 
+                    success = True
+
         return success
+
+    def refresh_screen(self):
+        self.run_screen(False)
 
     def run_strategies(self, strategy: str, product: str, direction: str) -> None:
         if strategy not in s.STRATEGIES:

@@ -2,6 +2,7 @@ import datetime as dt
 import logging
 import webbrowser
 
+import argparse
 import pandas as pd
 from tabulate import tabulate
 
@@ -25,19 +26,23 @@ def auth_callback(url: str) -> str:
 
 
 class Client:
-    def __init__(self):
+    def __init__(self, quote: str = '', exit: bool = False):
+        self.quote = quote
+        self.exit = exit
         self.accounts = None
         self.account_index = -1
         self.account_name = ''
 
         auth.authorize(auth_callback)
 
-        if auth.Session is not None:
-            self.main_menu()
+        if auth.Session is None:
+            ui.print_error('Invalid authorization')
+        elif self.quote:
+            self.main_menu(selection=5)
         else:
-            ui.print_error('Invalid authorizaton text')
+            self.main_menu()
 
-    def main_menu(self) -> None:
+    def main_menu(self, selection: int = 0) -> None:
         while True:
             menu_items = {
                 '1': 'Accounts',
@@ -54,7 +59,9 @@ class Client:
             if self.account_name:
                 menu_items['1'] += f' ({self.account_name})'
 
-            selection = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
+            if selection == 0:
+                selection = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
+
             if selection == 1:
                 self.show_accounts()
             elif selection == 2:
@@ -72,22 +79,27 @@ class Client:
             elif selection == 8:
                 self.show_symbol()
             elif selection == 0:
-                break
+                self.exit = True
             else:
                 print('Unknown operation selected')
+
+            selection = 0
+
+            if self.exit:
+                break
 
     def show_accounts(self) -> None:
         self.accounts = Accounts()
         acct_table = self.accounts.list()
 
         if self.accounts.message == 'success':
-            menu_items = {str(acct.Index+1): f'{acct.accountDesc} ({acct.accountId})' for acct in acct_table.itertuples()}
+            menu_items = {str(acct.Index+1): f'{acct.accountDesc}: {acct.accountId}' for acct in acct_table.itertuples()}
             menu_items['0'] = 'Cancel'
 
             selection = ui.menu(menu_items, 'Select Accounts', 0, len(menu_items)-1)
             if selection > 0:
                 self.account_index = selection - 1
-                self.account_name = menu_items[str(selection-1)]
+                self.account_name = menu_items[str(selection)]
             else:
                 self.account_index = -1
                 self.account_name = ''
@@ -178,8 +190,14 @@ class Client:
 
     def show_quotes(self) -> None:
         quotes = Quotes()
-        symbols = ui.input_list('Please enter symbols separated with commas: ').upper()
-        quote_data = quotes.quote(symbols.split(','))
+
+        if not self.quote:
+            tickers = ui.input_list('Please enter symbols separated with commas: ').upper()
+        else:
+            tickers = self.quote
+
+        self.quote = ''
+        quote_data = quotes.quote(tickers.split(','))
 
         if quotes.message == 'success':
             ui.print_message('Quotes', pre_creturn=1, post_creturn=1)
@@ -270,7 +288,13 @@ class Client:
 
 
 def main():
-    Client()
+    parser = argparse.ArgumentParser(description='Database Management')
+    parser.add_argument('-q', '--quote', help='Get a quote on the specified ticker', required=False, default='')
+    parser.add_argument('-x', '--exit', help='Run the operation then exit', action='store_true')
+
+    command = vars(parser.parse_args())
+
+    Client(quote=command['quote'], exit=command['exit'])
 
 
 if __name__ == '__main__':
