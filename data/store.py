@@ -51,9 +51,9 @@ def is_ticker(ticker: str, inactive: bool = False) -> bool:
     if _session is not None:
         with _session() as session:
             if inactive:
-                t = session.query(models.Security).filter(models.Security.ticker == ticker).one_or_none()
+                t = session.query(models.Security.id).filter(models.Security.ticker == ticker).one_or_none()
             else:
-                t = session.query(models.Security).filter(and_(models.Security.ticker == ticker, models.Security.active)).one_or_none()
+                t = session.query(models.Security.id).filter(and_(models.Security.ticker == ticker, models.Security.active)).one_or_none()
 
             valid = t is not None
     else:
@@ -67,7 +67,7 @@ def is_exchange(exchange: str) -> bool:
 
     if _session is not None:
         with _session() as session:
-            e = session.query(models.Exchange).filter(models.Exchange.abbreviation == exchange).one_or_none()
+            e = session.query(models.Exchange.id).filter(models.Exchange.abbreviation == exchange).one_or_none()
 
         valid = e is not None
     else:
@@ -82,7 +82,7 @@ def is_index(index: str) -> bool:
 
     if _session is not None:
         with _session() as session:
-            i = session.query(models.Index).filter(models.Index.abbreviation == index).one_or_none()
+            i = session.query(models.Index.id).filter(models.Index.abbreviation == index).one_or_none()
             valid = i is not None
     else:
         i = [i['abbreviation'] for i in d.INDEXES]
@@ -101,7 +101,7 @@ def is_list(list: str) -> bool:
     return exist
 
 
-def get_tickers(list: str, inactive: bool = False) -> list[str]:
+def get_tickers(list: str, sector: str = '', inactive: bool = False) -> list[str]:
     tickers = []
 
     if list.lower() == 'all':
@@ -110,11 +110,15 @@ def get_tickers(list: str, inactive: bool = False) -> list[str]:
                 symbols = session.query(models.Security.ticker).order_by(models.Security.ticker).all()
             else:
                 symbols = session.query(models.Security.ticker).filter(models.Security.active).order_by(models.Security.ticker).all()
+
         tickers = [x[0] for x in symbols]
+
+        if sector:
+            tickers = get_sector_tickers(tickers, sector)
     elif is_exchange(list):
-        tickers = get_exchange_tickers(list, inactive=inactive)
+        tickers = get_exchange_tickers(list, sector=sector, inactive=inactive)
     elif is_index(list):
-        tickers = get_index_tickers(list, inactive=inactive)
+        tickers = get_index_tickers(list, sector=sector, inactive=inactive)
 
     return tickers
 
@@ -139,7 +143,7 @@ def get_indexes() -> list[str]:
     return results
 
 
-def get_exchange_tickers(exchange: str, inactive: bool = False) -> list[str]:
+def get_exchange_tickers(exchange: str, sector: str = '', inactive: bool = False) -> list[str]:
     results = []
 
     if _session is not None:
@@ -148,11 +152,14 @@ def get_exchange_tickers(exchange: str, inactive: bool = False) -> list[str]:
                 exc = session.query(models.Exchange.id).filter(models.Exchange.abbreviation == exchange.upper()).one()
                 if exc is not None:
                     if inactive:
-                        symbols = session.query(models.Security).filter(models.Security.exchange_id == exc.id).all()
+                        symbols = session.query(models.Security.ticker).filter(models.Security.exchange_id == exc.id).all()
                     else:
-                        symbols = session.query(models.Security).filter(and_(models.Security.exchange_id == exc.id, models.Security.active)).all()
+                        symbols = session.query(models.Security.ticker).filter(and_(models.Security.exchange_id == exc.id, models.Security.active)).all()
 
                     results = [symbol.ticker for symbol in symbols]
+
+                    if sector:
+                        results = get_sector_tickers(results, sector)
         else:
             raise ValueError(f'Invalid exchange: {exchange}')
     else:
@@ -161,7 +168,7 @@ def get_exchange_tickers(exchange: str, inactive: bool = False) -> list[str]:
     return results
 
 
-def get_index_tickers(index: str, inactive: bool = False) -> list[str]:
+def get_index_tickers(index: str, sector: str = '', inactive: bool = False) -> list[str]:
     results = []
 
     if _session is not None:
@@ -170,17 +177,34 @@ def get_index_tickers(index: str, inactive: bool = False) -> list[str]:
                 ind = session.query(models.Index.id).filter(models.Index.abbreviation == index.upper()).first()
                 if ind is not None:
                     if inactive:
-                        symbols = session.query(models.Security).filter(
+                        symbols = session.query(models.Security.ticker).filter(
                             or_(models.Security.index1_id == ind.id, models.Security.index2_id == ind.id, models.Security.index3_id == ind.id)).all()
                     else:
-                        symbols = session.query(models.Security).filter(
+                        symbols = session.query(models.Security.ticker).filter(
                             and_(models.Security.active, or_(models.Security.index1_id == ind.id, models.Security.index2_id == ind.id, models.Security.index3_id == ind.id))).all()
 
                     results = [symbol.ticker for symbol in symbols]
+
+                    if sector:
+                        results = get_sector_tickers(results, sector)
         else:
             raise ValueError(f'Invalid index: {index}')
     else:
         results = get_index_tickers_master(index)
+
+    return results
+
+
+def get_sector_tickers(tickers: list[str], sector: str) -> list[str]:
+    results = []
+
+    with _session() as session:
+        for ticker in tickers:
+            symbol = session.query(models.Security.id).filter(and_(models.Security.ticker == ticker, models.Security.active)).one_or_none()
+            if symbol is not None:
+                company = session.query(models.Company.id).filter(and_(models.Company.security_id == symbol.id, models.Company.sector == sector)).one_or_none()
+                if company is not None:
+                    results += [ticker]
 
     return results
 
@@ -208,10 +232,6 @@ def get_ticker_index(ticker: str) -> str:
         if index:
             index += ', '
         index += 'DOW'
-
-    # if ticker.upper() in get_index_tickers_master('CUSTOM'):
-    #     if index: index += ', '
-    #     index += 'CUSTOM'
 
     if not index:
         index = 'None'
@@ -372,6 +392,24 @@ def get_company_name(ticker: str) -> str:
     return name
 
 
+def get_sectors(exchange: str) -> list[str]:
+    sectors = []
+
+    tickers = get_tickers(exchange)
+    for ticker in tickers:
+        company = get_company(ticker)
+        sectors += [company['sector']]
+
+    if sectors:
+        sectors = list(set(sectors))  # Extract unique values by converting to a set, then back to list
+        if '' in sectors:
+            sectors.remove('')
+        if 'unavailable' in sectors:
+            sectors.remove('unavailable')
+
+    return sectors
+
+
 def get_exchange_tickers_master(exchange: str, type: str = 'google') -> list[str]:
     global _master_exchanges
     symbols = []
@@ -428,7 +466,7 @@ def get_option_expiry(ticker: str) -> tuple[str]:
     return fetcher.get_option_expiry(ticker)
 
 
-def get_option_chain(ticker: str, expiry:dt.datetime) -> pd.DataFrame:
+def get_option_chain(ticker: str, expiry: dt.datetime) -> pd.DataFrame:
     return fetcher.get_option_chain(ticker, expiry)
 
 
@@ -439,12 +477,13 @@ def get_treasury_rate(ticker: str = 'DTB3') -> float:
 
 if __name__ == '__main__':
     import sys
-    from logging import DEBUG
-    logger = ui.get_logger(DEBUG)
+    # from logging import DEBUG
+    # _logger = logger.get_logger(DEBUG)
 
     if len(sys.argv) > 1:
-        t = get_history(sys.argv[1], days=100, live=True)
+        # t = get_sectors(sys.argv[1])
+        t = get_tickers(sys.argv[1], 'Technology')
     else:
-        t = get_history('AAPL', live=True)
+        t = get_tickers('SP500', 'Industrials')
 
     print(t)

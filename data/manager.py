@@ -548,8 +548,8 @@ class Manager(Threaded):
         if store.is_index(index):
             with self.session() as session:
                 i = session.query(models.Index.id).filter(models.Index.abbreviation == index).one()
-                t = session.query(models.Security.ticker).filter(or_(models.Security.index1_id == i.id,
-                                                                     models.Security.index2_id == i.id, models.Security.index3_id == i.id)).order_by(models.Security.ticker).all()
+                t = session.query(models.Security.ticker).filter(
+                    or_(models.Security.index1_id == i.id, models.Security.index2_id == i.id, models.Security.index3_id == i.id)).order_by(models.Security.ticker).all()
 
                 found = [ticker[0] for ticker in t]
 
@@ -869,7 +869,4 @@ if __name__ == '__main__':
     # from logging import DEBUG
     # _logger = ui.get_logger(DEBUG)
 
-    tickers = ['IBM', 'AAPL', 'MSFT']
-    filename = _write_tickers_log(tickers)
-    new_tickers = _read_tickers_log(filename)
-    print(new_tickers)
+    manager = Manager()
