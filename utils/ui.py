@@ -14,7 +14,7 @@ CHART_SIZE = (17, 10)
 
 TERMINAL_SIZE = os.get_terminal_size()
 
-def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int) -> int:
+def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int, prompt:str='Please select') -> int:
     print(f'\n{header}')
     print('-' * 50)
 
@@ -24,7 +24,7 @@ def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int) -> int:
         else:
             print(f'\t{menu_items[entry]}')
 
-    return input_integer('Please select: ', minvalue, maxvalue)
+    return input_integer(f'{prompt}: ', minvalue, maxvalue)
 
 
 def delimeter(message, pre_creturn: int, post_creturn: int) -> str:

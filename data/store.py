@@ -392,20 +392,34 @@ def get_company_name(ticker: str) -> str:
     return name
 
 
-def get_sectors(exchange: str) -> list[str]:
-    sectors = []
+def get_sectors(refresh: bool = False) -> list[str]:
+    if refresh:
+        sectors = []
+        tickers = get_tickers('all')
+        for ticker in tickers:
+            company = get_company(ticker)
+            sectors += [company['sector']]
 
-    tickers = get_tickers(exchange)
-    for ticker in tickers:
-        company = get_company(ticker)
-        sectors += [company['sector']]
-
-    if sectors:
-        sectors = list(set(sectors))  # Extract unique values by converting to a set, then back to list
-        if '' in sectors:
-            sectors.remove('')
-        if 'unavailable' in sectors:
-            sectors.remove('unavailable')
+        if sectors:
+            sectors = list(set(sectors))  # Extract unique values by converting to a set, then back to list
+            if '' in sectors:
+                sectors.remove('')
+            if 'unavailable' in sectors:
+                sectors.remove('unavailable')
+    else:
+        sectors = [
+            'Basic Materials',
+            'Communication Services',
+            'Consumer Cyclical',
+            'Consumer Defensive',
+            'Energy', 'Financial',
+            'Financial Services',
+            'Healthcare',
+            'Industrials',
+            'Real Estate',
+            'Technology',
+            'Utilities'
+        ]
 
     return sectors
 
@@ -480,10 +494,7 @@ if __name__ == '__main__':
     # from logging import DEBUG
     # _logger = logger.get_logger(DEBUG)
 
-    if len(sys.argv) > 1:
-        # t = get_sectors(sys.argv[1])
-        t = get_tickers(sys.argv[1], 'Technology')
-    else:
-        t = get_tickers('SP500', 'Industrials')
+    t = get_sectors()
+    # t = get_tickers(sys.argv[1], 'Technology')
 
     print(t)

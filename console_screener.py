@@ -175,12 +175,10 @@ class Interface:
             self.script.sort()
             paths.sort()
 
-            menu_items = {}
-            for index, item in enumerate(paths):
-                menu_items[f'{index+1}'] = f'{item.title()}'
+            menu_items = {f'{index+1}': f'{item.title()}' for index, item in enumerate(paths)}
             menu_items['0'] = 'Cancel'
 
-            selection = ui.menu(menu_items, 'Select Screen', 0, index+1)
+            selection = ui.menu(menu_items, 'Select Screen', 0, len(menu_items)+1)
             if selection > 0:
                 self.screen_base = paths[selection-1]
                 self.screen_path = BASEPATH + self.screen_base + '.' + SCREEN_SUFFIX

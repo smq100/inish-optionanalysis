@@ -634,11 +634,10 @@ class Interface():
         expiry = m.third_friday()
         dates = self.strategy.chain.get_expiry()
 
-        menu_items = {}
-        for i, exp in enumerate(dates):
-            menu_items[f'{i+1}'] = f'{exp}'
+        menu_items = {f'{index+1}': f'{item}' for index, item in enumerate(dates)}
+        menu_items['0'] = 'Cancel'
 
-        select = ui.menu(menu_items, 'Select expiration date, or 0 for the next monthly: ', 0, i+1)
+        select = ui.menu(menu_items, 'Select expiration date, or 0 for the next monthly: ', 0, len(menu_items)+1)
         if select > 0:
             expiry = dt.datetime.strptime(dates[select-1], ui.DATE_FORMAT)
 

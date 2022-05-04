@@ -110,12 +110,13 @@ class Interface:
                 '5':  'Run Option Strategy',
                 '6':  'Run Support & Resistance Analysis',
                 '7':  'Run Coorelation',
-                '8':  'Show Top Results',
-                '9':  'Show All Results',
-                '10':  'Show Ticker Screen Results',
-                '11': 'Show Chart',
-                '12': 'Manage Cache Files',
-                '13': 'Delete Old Cache Files',
+                '8':  'Show by Sector',
+                '9':  'Show Top Results',
+                '10':  'Show All Results',
+                '11':  'Show Ticker Screen Results',
+                '12': 'Show Chart',
+                '13': 'Manage Cache Files',
+                '14': 'Delete Old Cache Files',
                 '0':  'Exit'
             }
 
@@ -130,10 +131,10 @@ class Interface:
 
             if self.screener is not None and len(self.screener.valids) > 0:
                 top = len(self.screener.valids) if len(self.screener.valids) < LISTTOP_SCREEN else LISTTOP_SCREEN
-                menu_items['8'] += f' ({top})'
+                menu_items['9'] += f' ({top})'
 
             if self.screener is not None and len(self.screener.valids) > 0:
-                menu_items['9'] += f' ({len(self.screener.valids)})'
+                menu_items['10'] += f' ({len(self.screener.valids)})'
 
             if selection == 0:
                 selection = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
@@ -159,16 +160,18 @@ class Interface:
                 if len(self.results_corr) > 0:
                     self.show_coorelations()
             elif selection == 8:
-                self.show_valids(top=LISTTOP_SCREEN)
+                self.filter_by_sector()
             elif selection == 9:
-                self.show_valids()
+                self.show_valids(top=LISTTOP_SCREEN)
             elif selection == 10:
-                self.show_ticker_results()
+                self.show_valids()
             elif selection == 11:
-                self.show_chart()
+                self.show_ticker_results()
             elif selection == 12:
-                self.manage_cache_files()
+                self.show_chart()
             elif selection == 13:
+                self.manage_cache_files()
+            elif selection == 14:
                 self.clear_old_cache_files()
             elif selection == 0:
                 self.exit = True
@@ -219,12 +222,10 @@ class Interface:
             self.script.sort()
             paths.sort()
 
-            menu_items = {}
-            for index, item in enumerate(paths):
-                menu_items[f'{index+1}'] = f'{item.title()}'
+            menu_items = {f'{index+1}': f'{item.title()}' for index, item in enumerate(paths)}
             menu_items['0'] = 'Cancel'
 
-            selection = ui.menu(menu_items, 'Select Screen', 0, index+1)
+            selection = ui.menu(menu_items, 'Select Screen', 0, len(menu_items)-1)
             if selection > 0:
                 self.screen = paths[selection-1]
                 self.path_screen = f'{SCREEN_BASEPATH}{self.screen}.{SCREEN_SUFFIX}'
@@ -436,6 +437,31 @@ class Interface:
                 df = self.coorelate.get_ticker_coorelation(ticker)
                 self.results_corr += [(ticker, df.iloc[-1])]
 
+    def filter_by_sector(self):
+        if self.screener.valids:
+            sectors = store.get_sectors()
+            sectors.sort()
+
+            menu_items = {f'{index+1}': f'{item}' for index, item in enumerate(sectors)}
+            menu_items['0'] = 'Done'
+
+            while True:
+                selection = ui.menu(menu_items, 'Market Sectors', 0, len(menu_items)-1, prompt='Select desired sector')
+                if selection > 0:
+                    valids = [str(r) for r in self.screener.valids]
+                    filtered = store.get_sector_tickers(valids, sectors[selection-1])
+
+                    index = 1
+                    ui.print_message(f'Results of {self.screen}/{self.table} for the {sectors[selection-1]} sector', post_creturn=1)
+                    for result in self.screener.valids:
+                        if str(result) in filtered:
+                            print(f'{index:>3}: {result} ({float(result):.2f})')
+                            index += 1
+                else:
+                    break
+        else:
+            ui.print_message('No results were located')
+
     def show_valids(self, top: int = -1, verbose: bool = False, ticker: str = '') -> None:
         if not self.table:
             ui.print_error('No table specified')
@@ -608,12 +634,10 @@ class Interface:
     def manage_cache_files(self) -> None:
         paths = _get_screener_cache_files()
         if paths:
-            menu_items = {}
-            for index, item in enumerate(paths):
-                menu_items[f'{index+1}'] = f'{item}'
+            menu_items = {f'{index+1}': f'{item}' for index, item in enumerate(paths)}
             menu_items['0'] = 'Done'
 
-            selection = ui.menu(menu_items, 'Select cache file', 0, index+1)
+            selection = ui.menu(menu_items, 'Select cache file', 0, len(menu_items)-1)
             if selection > 0:
                 screen = paths[selection-1]
                 file = f'{CACHE_BASEPATH}{screen}.{CACHE_SUFFIX}'
