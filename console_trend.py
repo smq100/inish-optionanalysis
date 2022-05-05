@@ -52,7 +52,7 @@ class Interface:
             if self.quick:
                 menu_items['4'] += ' (quick)'
 
-            selection = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
+            selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1, prompt='Select operation, or 0 when done')
 
             if selection == 1:
                 self.select_ticker()

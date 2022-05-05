@@ -97,7 +97,7 @@ class Interface:
                 menu_items['8'] += f' ({len(self.valids)})'
 
             if selection == 0:
-                selection = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
+                selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1, prompt='Select operation, or 0 when done')
 
             if selection == 1:
                 self.select_source()
@@ -134,7 +134,7 @@ class Interface:
             '0': 'Cancel',
         }
 
-        selection = ui.menu(menu_items, 'Select Data Source', 0, len(menu_items)-1)
+        selection = ui.menu(menu_items, 'Available Data Sources', 0, len(menu_items)-1, prompt='Select source, or 0 when done')
         if selection == 1:
             self.live = False
         elif selection == 2:
@@ -175,10 +175,10 @@ class Interface:
             self.script.sort()
             paths.sort()
 
-            menu_items = {f'{index+1}': f'{item.title()}' for index, item in enumerate(paths)}
+            menu_items = {f'{index}': f'{item.title()}' for index, item in enumerate(paths, start=1)}
             menu_items['0'] = 'Cancel'
 
-            selection = ui.menu(menu_items, 'Select Screen', 0, len(menu_items)+1)
+            selection = ui.menu(menu_items, 'Available Screens', 0, len(menu_items)+1, prompt='Select Screen, or 0 to cancel')
             if selection > 0:
                 self.screen_base = paths[selection-1]
                 self.screen_path = BASEPATH + self.screen_base + '.' + SCREEN_SUFFIX

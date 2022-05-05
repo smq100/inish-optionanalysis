@@ -115,8 +115,9 @@ class Interface:
                 '10':  'Show All Results',
                 '11':  'Show Ticker Screen Results',
                 '12': 'Show Chart',
-                '13': 'Manage Cache Files',
-                '14': 'Delete Old Cache Files',
+                '13': 'Roll Cache Files',
+                '14': 'Manage Cache Files',
+                '15': 'Delete Old Cache Files',
                 '0':  'Exit'
             }
 
@@ -137,7 +138,7 @@ class Interface:
                 menu_items['10'] += f' ({len(self.screener.valids)})'
 
             if selection == 0:
-                selection = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
+                selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1, prompt='Select operation, or 0 when done')
 
             if selection == 1:
                 self.select_list()
@@ -170,9 +171,11 @@ class Interface:
             elif selection == 12:
                 self.show_chart()
             elif selection == 13:
-                self.manage_cache_files()
+                self.roll_cache_files()
             elif selection == 14:
-                self.clear_old_cache_files()
+                self.manage_cache_files()
+            elif selection == 15:
+                self.delete_old_cache_files()
             elif selection == 0:
                 self.exit = True
 
@@ -222,10 +225,10 @@ class Interface:
             self.script.sort()
             paths.sort()
 
-            menu_items = {f'{index+1}': f'{item.title()}' for index, item in enumerate(paths)}
+            menu_items = {f'{index}': f'{item.title()}' for index, item in enumerate(paths, start=1)}
             menu_items['0'] = 'Cancel'
 
-            selection = ui.menu(menu_items, 'Select Screen', 0, len(menu_items)-1)
+            selection = ui.menu(menu_items, 'Available Screens', 0, len(menu_items)-1, prompt='Select screen, or 0 to cancel')
             if selection > 0:
                 self.screen = paths[selection-1]
                 self.path_screen = f'{SCREEN_BASEPATH}{self.screen}.{SCREEN_SUFFIX}'
@@ -247,7 +250,7 @@ class Interface:
             }
 
             modified = True
-            selection = ui.menu(menu_items, 'Select Strategy', 0, len(menu_items))
+            selection = ui.menu(menu_items, 'Available Strategy', 0, len(menu_items), prompt='Select strategy, or 0 to cancel')
             if selection == 1:
                 strategy = 'call'
                 product = 'call'
@@ -442,7 +445,7 @@ class Interface:
             sectors = store.get_sectors()
             sectors.sort()
 
-            menu_items = {f'{index+1}': f'{item}' for index, item in enumerate(sectors)}
+            menu_items = {f'{index}': f'{item}' for index, item in enumerate(sectors, start=1)}
             menu_items['0'] = 'Done'
 
             while True:
@@ -634,36 +637,51 @@ class Interface:
     def manage_cache_files(self) -> None:
         paths = _get_screener_cache_files()
         if paths:
-            menu_items = {f'{index+1}': f'{item}' for index, item in enumerate(paths)}
+            menu_items = {f'{index}': f'{item}' for index, item in enumerate(paths, start=1)}
             menu_items['0'] = 'Done'
 
-            selection = ui.menu(menu_items, 'Select cache file', 0, len(menu_items)-1)
+            selection = ui.menu(menu_items, 'Available Cache Files', 0, len(menu_items)-1, prompt='Select cache file')
             if selection > 0:
-                screen = paths[selection-1]
-                file = f'{CACHE_BASEPATH}{screen}.{CACHE_SUFFIX}'
-                selection = ui.input_integer(f"Select operation for '{screen}': (1) Delete, (2) Rename, (0) Cancel: ", 0, 2)
+                screen_old = paths[selection-1]
+                file_old = f'{CACHE_BASEPATH}{screen_old}.{CACHE_SUFFIX}'
+                selection = ui.input_integer(f"Select operation for '{screen_old}': (1) Delete, (2) Roll, (0) Cancel: ", 0, 2)
                 if selection == 1:
                     try:
-                        os.remove(file)
+                        os.remove(file_old)
                     except OSError as e:
                         ui.print_error(f'{__name__}: File error for {e.filename}: {e.strerror}')
                     else:
-                        ui.print_message(f'Cache {screen} deleted')
+                        ui.print_message(f'Cache {screen_old} deleted')
                 elif selection == 2:
                     date_time = dt.now().strftime(ui.DATE_FORMAT)
-                    new_screen = f'{date_time}{screen[10:]}'
-                    new_file = f'{CACHE_BASEPATH}{new_screen}.{CACHE_SUFFIX}'
+                    screen_new = f'{date_time}{screen_old[10:]}'
+                    file_new = f'{CACHE_BASEPATH}{screen_new}.{CACHE_SUFFIX}'
                     try:
-                        os.replace(file, new_file)
+                        os.replace(file_old, file_new)
                     except OSError as e:
                         ui.print_error(f'File error for {e.filename}: {e.strerror}')
                     else:
-                        ui.print_message(f'Renamed {screen} to {new_screen}')
+                        ui.print_message(f'Renamed {screen_old} to {screen_new}')
 
         else:
             ui.print_message('No cache files found')
 
-    def clear_old_cache_files(self):
+    def roll_cache_files(self) -> None:
+        paths = _get_screener_cache_files()
+        for screen_old in paths:
+            file_old = f'{CACHE_BASEPATH}{screen_old}.{CACHE_SUFFIX}'
+            date_time = dt.now().strftime(ui.DATE_FORMAT)
+            screen_new = f'{date_time}{screen_old[10:]}'
+            if screen_new > screen_old:
+                file_new = f'{CACHE_BASEPATH}{screen_new}.{CACHE_SUFFIX}'
+                try:
+                    os.replace(file_old, file_new)
+                except OSError as e:
+                    ui.print_error(f'File error for {e.filename}: {e.strerror}')
+                else:
+                    ui.print_message(f'Renamed {screen_old} to {screen_new}')
+
+    def delete_old_cache_files(self):
         files = _get_screener_cache_files()
         if files:
             old_paths = []

@@ -15,7 +15,7 @@ class Chain:
             raise ValueError('Not a valid ticker')
 
         self.ticker: str = ticker.upper()
-        self.expire: dt.datetime = None
+        self.expire: dt.datetime = dt.datetime.now()
         self.chain: pd.DataFrame = pd.DataFrame()
 
     def get_expiry(self) -> tuple[str]:

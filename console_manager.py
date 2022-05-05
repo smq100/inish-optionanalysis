@@ -80,7 +80,7 @@ class Interface:
 
         while True:
             if not self.ticker:
-                selection = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
+                selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1, prompt='Select operation, or 0 when done')
 
             if selection == 1:
                 self.show_database_information()
@@ -340,7 +340,7 @@ class Interface:
                 '0': 'Exit',
             }
 
-            select = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
+            select = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1, prompt='Select operation, or 0 when done')
             if select > 0:
                 table = ui.get_valid_table(exchange=True)
                 if table:
@@ -422,7 +422,7 @@ class Interface:
         }
 
         while True:
-            select = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
+            select = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1, prompt='Select operation, or 0 when done')
             if select == 1:
                 input = ui.input_list('Enter tickers (comma separated): ').upper()
                 if input:

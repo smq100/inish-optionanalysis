@@ -60,7 +60,7 @@ class Client:
                 menu_items['1'] += f' ({self.account_name})'
 
             if selection == 0:
-                selection = ui.menu(menu_items, 'Select Operation', 0, len(menu_items)-1)
+                selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1, prompt='Select operation, or 0 when done')
 
             if selection == 1:
                 self.show_accounts()
@@ -96,7 +96,7 @@ class Client:
             menu_items = {str(acct.Index+1): f'{acct.accountDesc}: {acct.accountId}' for acct in acct_table.itertuples()}
             menu_items['0'] = 'Cancel'
 
-            selection = ui.menu(menu_items, 'Select Accounts', 0, len(menu_items)-1)
+            selection = ui.menu(menu_items, 'Available Accounts', 0, len(menu_items)-1, prompt='Select account, or 0 when done')
             if selection > 0:
                 self.account_index = selection - 1
                 self.account_name = menu_items[str(selection)]
@@ -119,7 +119,7 @@ class Client:
                 print(f'Cash Buying Power: ${balance.get("Computed", {}).get("cashBuyingPower"):,.2f}')
                 print(f'Option Level: {balance.get("optionLevel", "error")}\n')
 
-                if ui.input_text('Show raw JSON? (y/n): ').lower() == 'y':
+                if ui.input_text('Show JSON? (y/n): ').lower() == 'y':
                     print(self.accounts.raw)
             else:
                 ui.print_error(self.accounts.message)
@@ -141,7 +141,7 @@ class Client:
                     print(f'Value={position.marketValue:,.02f}')
                     print()
 
-                if ui.input_text('Show raw JSON? (y/n): ').lower() == 'y':
+                if ui.input_text('Show JSON? (y/n): ').lower() == 'y':
                     print(self.accounts.raw)
             else:
                 ui.print_error(self.accounts.message)
@@ -163,7 +163,7 @@ class Client:
                     alert += f', Status: {item.status}\n'
                 print(alert)
 
-            if ui.input_text('Show raw JSON? (y/n): ').lower() == 'y':
+            if ui.input_text('Show JSON? (y/n): ').lower() == 'y':
                 print(alerts.raw)
         else:
             ui.print_message(alerts.message)
@@ -183,7 +183,7 @@ class Client:
 
                 print()
 
-            if ui.input_text('Show raw JSON? (y/n): ').lower() == 'y':
+            if ui.input_text('Show JSON? (y/n): ').lower() == 'y':
                 print(lookup.raw)
         else:
             ui.print_error(f'No information for {symbol} located')
@@ -218,7 +218,7 @@ class Client:
                         print(f'Volume: {all.get("totalVolume"):,}')
                     print()
 
-            if ui.input_text('Show raw JSON? (y/n): ').lower() == 'y':
+            if ui.input_text('Show JSON? (y/n): ').lower() == 'y':
                 print(quotes.raw)
 
         else:
@@ -244,7 +244,7 @@ class Client:
             print(tabulate(expiry_data, headers=expiry_data.columns, tablefmt=ui.TABULATE_FORMAT))
             print()
 
-            if ui.input_text('Show raw JSON? (y/n): ').lower() == 'y':
+            if ui.input_text('Show JSON? (y/n): ').lower() == 'y':
                 print(options.raw)
 
     def show_options_chain(self) -> None:
@@ -283,7 +283,7 @@ class Client:
             print(tabulate(chain_puts, headers=chain_puts.columns, tablefmt=ui.TABULATE_FORMAT, floatfmt='.02f'))
             print()
 
-            if ui.input_text('Show raw JSON? (y/n): ').lower() == 'y':
+            if ui.input_text('Show JSON? (y/n): ').lower() == 'y':
                 print(options.raw)
 
 
