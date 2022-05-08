@@ -35,10 +35,10 @@ class Interpreter:
 
         self.success = False
         self.score = 1.0
-        self.result = ''
+        self.description = ''
 
-    def __repr__(self):
-        return f'<Interpreter ({self.company.ticker})>'
+    def __str__(self):
+        return self.description
 
     def run(self) -> bool:
         if self.filter['base']['technical'] not in VALID_TECHNICALS:
@@ -196,7 +196,7 @@ class Interpreter:
 
             basef = f'{base:.2f}' if base < 1e5 else f'{base:.1e}'
             criteriaf = f'{criteria:.2f}' if criteria < 1e5 else f'{criteria:.1e}'
-            self.result = f'{self.company.ticker:6s} {str(self.success)[:1]} {self.score:6.2f}: {self.note:18s}: ' + \
+            self.description = f'{self.company.ticker:6s} {str(self.success)[:1]} {self.score:6.2f}: {self.note:18s}: ' + \
                 f'{self.base_technical}({self.base_length})/{basef}@{self.base_factor:.2f} ' + \
                 f'{self.conditional} ' + \
                 f'{self.criteria_technical}({self.criteria_length})/{self.criteria_start}/{self.criteria_series}/{criteriaf}@{self.criteria_factor:.2f} ' + \
@@ -204,13 +204,13 @@ class Interpreter:
         else:
             _logger.warning(f'{__name__}: No technical information for {self.company}')
 
-            self.result = f'{self.company.ticker:6s} {str(self.success)[:1]} {self.score:6.2f}: {self.note:18s}: ' + \
+            self.description = f'{self.company.ticker:6s} {str(self.success)[:1]} {self.score:6.2f}: {self.note:18s}: ' + \
                 f'{self.base_technical}({self.base_length})/***@{self.base_factor:.2f} ' + \
                 f'{self.conditional} ' + \
                 f'{self.criteria_technical}({self.criteria_length})/{self.criteria_start}/{self.criteria_series}/***@{self.criteria_factor:.2f} ' + \
                 f'w={self.weight:.1f}'
 
-        _logger.info(self.result)
+        _logger.info(self.description)
 
         return (self.success, self.score)
 

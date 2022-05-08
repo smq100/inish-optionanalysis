@@ -265,9 +265,9 @@ class Interface:
             index = 1
             for result in results:
                 if ticker:
-                    [print(r) for r in result.results if ticker.upper().ljust(6, ' ') == r[:6]]
+                    [print(r) for r in result.descriptions if ticker.upper().ljust(6, ' ') == r[:6]]
                 elif self.verbose or verbose:
-                    [print(r) for r in result.results if result]
+                    [print(r) for r in result.descriptions if result]
                 elif result:
                     print(f'{index:>3}: {result} ({float(result):.2f})')
                     index += 1

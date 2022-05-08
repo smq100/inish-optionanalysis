@@ -115,9 +115,9 @@ class Interface:
                 '10':  'Show All Results',
                 '11':  'Show Ticker Screen Results',
                 '12': 'Show Chart',
-                '13': 'Roll Cache Files',
-                '14': 'Manage Cache Files',
-                '15': 'Delete Old Cache Files',
+                '13': 'Roll Result Files',
+                '14': 'Manage Result Files',
+                '15': 'Delete Old Result Files',
                 '0':  'Exit'
             }
 
@@ -458,14 +458,14 @@ class Interface:
                     ui.print_message(f'Results of {self.screen}/{self.table} for the {sectors[selection-1]} sector', post_creturn=1)
                     for result in self.screener.valids:
                         if str(result) in filtered:
-                            print(f'{index:>3}: {result} ({float(result):.2f})')
+                            print(f'{index:>3}: {str(result):<5} ({float(result):.2f}) - {result.company.information["name"]}')
                             index += 1
                 else:
                     break
         else:
             ui.print_message('No results were located')
 
-    def show_valids(self, top: int = -1, verbose: bool = False, ticker: str = '') -> None:
+    def show_valids(self, top: int = -1) -> None:
         if not self.table:
             ui.print_error('No table specified')
         elif not self.screen:
@@ -478,20 +478,12 @@ class Interface:
             elif top > self.screener.task_success:
                 top = self.screener.task_success
 
-            if ticker:
-                ui.print_message(f'Screener Results for {ticker} ({self.screen})')
-            else:
-                ui.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen}/{self.table})')
+            ui.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen}/{self.table})', post_creturn=1)
 
             index = 1
             for result in self.screener.valids:
-                if ticker:
-                    [print(r) for r in result.results if ticker.upper().ljust(6, ' ') == r[:6]]
-                elif verbose:
-                    [print(r) for r in result.results if result]
-                elif result:
-                    print(f'{index:>3}: {result} ({float(result):.2f})')
-                    index += 1
+                print(f'{index:>3}: {str(result):<5} ({float(result):.2f}) - {result.company.information["name"]}, {result.company.information["sector"]}')
+                index += 1
 
                 if index > top:
                     break
@@ -519,7 +511,7 @@ class Interface:
         if ticker:
             ui.print_message('Ticker Screen Results')
             for result in self.screener.results:
-                [print(r) for r in result.results if ticker.ljust(6, ' ') == r[:6]]
+                [print(r) for r in result.descriptions if ticker.ljust(6, ' ') == r[:6]]
 
     def show_coorelations(self):
         results = [f'{result[0]:<5}/ {result[1]["ticker"]:<5} {result[1]["value"]:.5f}' for result in self.results_corr if result[1]['value'] > COOR_CUTOFF]
@@ -737,7 +729,6 @@ def main():
     parser.add_argument('-s', '--screen', help='Specify a screening script', required=False, default='')
     parser.add_argument('-f', '--default', help='Load the default options', required=False, action='store_true')
     parser.add_argument('-q', '--quick', help='Run a quick analysis', action='store_true')
-    parser.add_argument('-v', '--verbose', help='Show verbose output', action='store_true')
     parser.add_argument('-x', '--exit', help='Run the script and quit (only valid with -t and -s) then exit', action='store_true')
 
     command = vars(parser.parse_args())

@@ -4,6 +4,7 @@ import pickle
 import random
 from datetime import datetime as dt
 from concurrent import futures
+from dataclasses import dataclass, field
 
 import numpy as np
 
@@ -24,27 +25,28 @@ CACHE_BASEPATH = './screener/cache/'
 CACHE_SUFFIX = 'pickle'
 
 
+@dataclass
 class Result:
-    def __init__(self, company: Company, success: list[bool], score: list[float], results: list[str]):
-        self.company = company
-        self.success = success
-        self.score = score
-        self.results = results
-        self.backtest_success = False
-        self.price_last = 0.0
-        self.price_current = 0.0
+    company: Company
+    screen: str
+    successes: list[bool]
+    scores: list[float]
+    descriptions: list[str]
+    backtest_success: bool = False
+    price_last: float = 0.0
+    price_current: float = 0.0
 
     def __repr__(self):
-        return f'<Result ({self.company.ticker})>'
+        return f'{self.company.ticker}: {float(self):.2f}, {self.screen}>'
 
     def __str__(self):
         return self.company.ticker
 
     def __bool__(self):
-        return all(self.success)
+        return all(self.successes)
 
     def __float__(self):
-        return float(sum(self.score)) / len(self.score) if len(self.score) > 0 else 0.0
+        return float(sum(self.scores)) / len(self.scores) if len(self.scores) > 0 else 0.0
 
 
 class Screener(Threaded):
@@ -100,7 +102,7 @@ class Screener(Threaded):
         return f'{self.table}/{self.screen}'
 
     @Threaded.threaded
-    def run_script(self, use_cache: bool = True, dump_cache: bool = True) -> None:
+    def run_script(self, use_cache: bool = True, dump_results: bool = True) -> None:
         self.task_total = len(self.companies)
 
         if use_cache and self.cache_available:
@@ -149,7 +151,7 @@ class Screener(Threaded):
             self.valids = [result for result in self.results if result]
             self.valids = sorted(self.valids, reverse=True, key=lambda r: float(r))
 
-            if dump_cache:
+            if dump_results:
                 self._dump_results()
 
             self.task_state = 'Done'
@@ -166,16 +168,16 @@ class Screener(Threaded):
 
     def _run(self, companies: list[Company]) -> None:
         for ticker in companies:
-            success = []
-            score = []
-            result = []
+            successes = []
+            scores = []
+            descriptions = []
             self.task_ticker = str(ticker)
             for filter in self.scripts:
                 try:
                     interpreter = Interpreter(ticker, filter)
-                    success += [interpreter.run()]
-                    score += [interpreter.score]
-                    result += [interpreter.result]
+                    successes += [interpreter.run()]
+                    scores += [interpreter.score]
+                    descriptions += [interpreter.description]
                 except SyntaxError as e:
                     self.task_state = str(e)
                     _logger.error(f'{__name__}: SyntaxError: {self.task_state}')
@@ -191,7 +193,7 @@ class Screener(Threaded):
 
             if self.task_state == 'None':
                 self.task_completed += 1
-                self.results += [Result(ticker, success, score, result)]
+                self.results += [Result(ticker, self.screen, successes, scores, descriptions)]
                 if (bool(self.results[-1])):
                     self.task_success += 1
             else:

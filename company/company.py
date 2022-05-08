@@ -3,7 +3,7 @@ import pandas as pd
 
 from analysis.technical import Technical
 from data import store as store
-from utils import ui, logger
+from utils import logger
 
 _logger = logger.get_logger()
 
@@ -14,9 +14,8 @@ class Company:
         self.days = days
         self.end = end
         self.live = live if store.is_database_connected() else True
-        self.info = {}
         self.history: pd.DataFrame = pd.DataFrame()
-        self.company = {}
+        self.information = {}
         self.price = 0.0
         self.volatility = 0.0
         self.ta = None
@@ -89,27 +88,22 @@ class Company:
         return value
 
     def get_beta(self) -> float:
-        if not self.company:
+        if not self.information:
             self._load_company()
 
-        return self.company['beta']
+        return self.information['beta']
 
     def get_rating(self) -> float:
-        if not self.company:
+        if not self.information:
             self._load_company()
 
-        return self.company['rating']
+        return self.information['rating']
 
     def get_marketcap(self) -> int:
-        if not self.company:
+        if not self.information:
             self._load_company()
 
-        return self.company['marketcap']
-
-    def get_liveinfo(self) -> dict:
-        self.info = store.get_company(self.ticker, live=True)
-
-        return self.info
+        return self.information['marketcap']
 
     def _load_history(self) -> bool:
         success = False
@@ -128,8 +122,8 @@ class Company:
         return success
 
     def _load_company(self) -> None:
-        self.company = store.get_company(self.ticker, live=self.live)
-        if not self.company:
+        self.information = store.get_company(self.ticker, live=self.live)
+        if not self.information:
             raise RuntimeError(f'No company info for {self.ticker}')
 
 
