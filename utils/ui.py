@@ -24,7 +24,7 @@ def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int, prompt:str
         else:
             print(f'\t{menu_items[entry]}')
 
-    return input_integer(f'{prompt}: ', minvalue, maxvalue)
+    return input_integer(f'{prompt}', minvalue, maxvalue)
 
 
 def delimeter(message, pre_creturn: int, post_creturn: int) -> str:
@@ -86,7 +86,7 @@ def erase_line():
 def input_integer(message: str, min_: int, max_: int) -> int:
     val = min_ - 1
     while val < min_:
-        text = input(message)
+        text = input(f'{message}: ')
         if not m.isnumeric(text):
             print_error(f'Invalid value. Enter an integer between {min_} and {max_}')
             val = min_ - 1
@@ -107,7 +107,7 @@ def input_integer(message: str, min_: int, max_: int) -> int:
 def input_float(message: str, min_: float, max_: float) -> float:
     val = min_ - 1.0
     while val < min_:
-        text = input(message)
+        text = input(f'{message}: ')
         if not m.isnumeric(text):
             print_error(f'Invalid value. Enter an integer between {min_:.2f} and {max_:.2f}')
             val = min_ - 1.0
@@ -139,7 +139,7 @@ def input_float_range(message: str, middle: float, percent: float) -> float:
 
 
 def input_text(message: str) -> str:
-    val = input(message)
+    val = input(f'{message}: ')
     if not all(char.isalpha() for char in val):
         val = ''
         print_error('Symbol value must be all letters')
@@ -148,7 +148,7 @@ def input_text(message: str) -> str:
 
 
 def input_list(message: str, separator: str = ',') -> str:
-    val = input(message).replace(' ', '')
+    val = input(f'{message}: ').replace(' ', '')
     if not all(char.isalpha() or char == separator for char in val):
         val = ''
         print_error('Symbol value must be all letters')
@@ -157,7 +157,7 @@ def input_list(message: str, separator: str = ',') -> str:
 
 
 def input_alphanum(message: str) -> str:
-    val = input(message)
+    val = input(f'{message}: ')
     if not all(char.isalnum() for char in val):
         val = ''
         print_error('Symbol value must be all letters')

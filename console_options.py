@@ -33,7 +33,7 @@ logger.get_logger(logging.WARNING, logfile='')
 
 def _auth_callback(url: str) -> str:
     webbrowser.open(url)
-    code = ui.input_alphanum('Please accept agreement and enter text code from browser: ')
+    code = ui.input_alphanum('Please accept agreement and enter text code from browser')
     return code
 
 class Interface():
@@ -323,14 +323,14 @@ class Interface():
     def show_value(self, style: int = 0) -> None:
         if not self.dirty_analyze:
             if len(self.strategy.legs) > 1:
-                leg = ui.input_integer('Enter Leg: ', 1, len(self.strategy.legs)) - 1
+                leg = ui.input_integer('Enter Leg', 1, len(self.strategy.legs)) - 1
             else:
                 leg = 0
 
             value = self.strategy.legs[leg].value_table * 100.0
             if value is not None:
                 if style == 0:
-                    style = ui.input_integer('(1) Table, (2) Chart, (3) Contour, (4) Surface, or (0) Cancel: ', 0, 4)
+                    style = ui.input_integer('(1) Table, (2) Chart, (3) Contour, (4) Surface, or (0) Cancel', 0, 4)
                 if style > 0:
                     title = f'{self.strategy.legs[leg].description()}'
                     greeks = f'{self.strategy.legs[leg].description(greeks=True)}'
@@ -364,7 +364,7 @@ class Interface():
             analysis = self.strategy.analysis.profit_table * 100.0
             if analysis is not None:
                 if style == 0:
-                    style = ui.input_integer('(1) Summary, (2) Table, (3) Chart, (4) Contour, (5) Surface, or (0) Cancel: ', 0, 5)
+                    style = ui.input_integer('(1) Summary, (2) Table, (3) Chart, (4) Contour, (5) Surface, or (0) Cancel', 0, 5)
 
                 if style > 0:
                     rows, cols = analysis.shape
@@ -407,7 +407,7 @@ class Interface():
     def show_options(self) -> None:
         if len(self.strategy.legs) > 0:
             if len(self.strategy.legs) > 1:
-                leg = ui.input_integer('Enter Leg (0=all): ', 0, 2) - 1
+                leg = ui.input_integer('Enter Leg (0=all)', 0, 2) - 1
             else:
                 leg = 0
 
@@ -492,25 +492,25 @@ class Interface():
 
             if selection == 1:
                 strategy = product = 'call'
-                d = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
+                d = ui.input_integer('(1) Long, or (2) Short', 1, 2)
                 direction = 'long' if d == 1 else 'short'
-                strike = ui.input_float_range(f'Enter strike ({price:.2f}): ', price, 20.0)
+                strike = ui.input_float_range(f'Enter strike ({price:.2f})', price, 20.0)
                 modified = self.load_strategy(self.strategy.ticker, strategy, product, direction, strike, 0, 0, self.strategy.quantity, expiry, volatility)
 
             elif selection == 2:
                 strategy = product = 'put'
-                d = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
+                d = ui.input_integer('(1) Long, or (2) Short', 1, 2)
                 direction = 'long' if d == 1 else 'short'
-                strike = ui.input_float_range(f'Enter strike ({price:.2f}): ', price, 20.0)
+                strike = ui.input_float_range(f'Enter strike ({price:.2f})', price, 20.0)
                 modified = self.load_strategy(self.strategy.ticker, strategy, product, direction, strike, 0, 0, self.strategy.quantity, expiry, volatility)
 
             elif selection == 3:
                 strategy = 'vert'
-                p = ui.input_integer('(1) Call, or (2) Put: ', 1, 2)
+                p = ui.input_integer('(1) Call, or (2) Put', 1, 2)
                 product = 'call' if p == 1 else 'put'
-                d = ui.input_integer('(1) Debit, or (2) Credit: ', 1, 2)
+                d = ui.input_integer('(1) Debit, or (2) Credit', 1, 2)
                 direction = 'long' if d == 1 else 'short'
-                strike = ui.input_float_range(f'Enter strike ({price:.2f}): ', price, 20.0)
+                strike = ui.input_float_range(f'Enter strike ({price:.2f})', price, 20.0)
 
                 _, width1, _ = m.calculate_strike_and_widths(strategy, product, direction, store.get_last_price(self.strategy.ticker))
 
@@ -519,9 +519,9 @@ class Interface():
             elif selection == 4:
                 strategy = 'ic'
                 product = 'hybrid'
-                d = ui.input_integer('(1) Debit, or (2) Credit: ', 1, 2)
+                d = ui.input_integer('(1) Debit, or (2) Credit', 1, 2)
                 direction = 'long' if d == 1 else 'short'
-                strike = ui.input_float_range(f'Enter strike ({price:.2f}): ', price, 20.0)
+                strike = ui.input_float_range(f'Enter strike ({price:.2f})', price, 20.0)
 
                 _, width1, width2 = m.calculate_strike_and_widths(strategy, product, direction, store.get_last_price(self.strategy.ticker))
 
@@ -530,9 +530,9 @@ class Interface():
             elif selection == 5:
                 strategy = 'ib'
                 product = 'hybrid'
-                d = ui.input_integer('(1) Debit, or (2) Credit: ', 1, 2)
+                d = ui.input_integer('(1) Debit, or (2) Credit', 1, 2)
                 direction = 'long' if d == 1 else 'short'
-                strike = ui.input_float_range(f'Enter strike ({price:.2f}): ', price, 20.0)
+                strike = ui.input_float_range(f'Enter strike ({price:.2f})', price, 20.0)
 
                 _, width1, _ = m.calculate_strike_and_widths(strategy, product, direction, store.get_last_price(self.strategy.ticker))
 
@@ -599,10 +599,10 @@ class Interface():
                         self.strategy.update_expiry(expiry)
 
                 elif selection == 2:
-                    self.strategy.quantity = ui.input_integer('Enter quantity (1 - 10): ', 1, 10)
+                    self.strategy.quantity = ui.input_integer('Enter quantity (1 - 10)', 1, 10)
 
                 elif selection == 3:
-                    self.strategy.width1 = ui.input_integer('Enter width (1 - 5): ', 1, 5)
+                    self.strategy.width1 = ui.input_integer('Enter width (1 - 5)', 1, 5)
                     self.strategy.width2 = 1 if self.strategy.name == s.STRATEGIES_BROAD[3] else 0
 
                 elif selection == 4:

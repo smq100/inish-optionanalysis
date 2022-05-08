@@ -21,7 +21,7 @@ logger.get_logger(logging.WARNING, logfile='')
 
 def auth_callback(url: str) -> str:
     webbrowser.open(url)
-    code = ui.input_alphanum('Please accept agreement and enter text code from browser: ')
+    code = ui.input_alphanum('Please accept agreement and enter text code from browser')
     return code
 
 
@@ -119,7 +119,7 @@ class Client:
                 print(f'Cash Buying Power: ${balance.get("Computed", {}).get("cashBuyingPower"):,.2f}')
                 print(f'Option Level: {balance.get("optionLevel", "error")}\n')
 
-                if ui.input_text('Show JSON? (y/n): ').lower() == 'y':
+                if ui.input_yesno('Show JSON? (y/n)') == 'y':
                     print(self.accounts.raw)
             else:
                 ui.print_error(self.accounts.message)
@@ -141,7 +141,7 @@ class Client:
                     print(f'Value={position.marketValue:,.02f}')
                     print()
 
-                if ui.input_text('Show JSON? (y/n): ').lower() == 'y':
+                if ui.input_text('Show JSON? (y/n)').lower() == 'y':
                     print(self.accounts.raw)
             else:
                 ui.print_error(self.accounts.message)
@@ -163,13 +163,13 @@ class Client:
                     alert += f', Status: {item.status}\n'
                 print(alert)
 
-            if ui.input_text('Show JSON? (y/n): ').lower() == 'y':
+            if ui.input_yesno('Show JSON? (y/n)') == 'y':
                 print(alerts.raw)
         else:
             ui.print_message(alerts.message)
 
     def show_symbol(self) -> None:
-        symbol = ui.input_text('Please enter symbol: ').upper()
+        symbol = ui.input_text('Please enter symbol').upper()
         lookup = Lookup()
         lookup_data = lookup.lookup(symbol)
 
@@ -183,7 +183,7 @@ class Client:
 
                 print()
 
-            if ui.input_text('Show JSON? (y/n): ').lower() == 'y':
+            if ui.input_yesno('Show JSON? (y/n)') == 'y':
                 print(lookup.raw)
         else:
             ui.print_error(f'No information for {symbol} located')
@@ -192,7 +192,7 @@ class Client:
         quotes = Quotes()
 
         if not self.quote:
-            tickers = ui.input_list('Please enter symbols separated with commas: ').upper()
+            tickers = ui.input_list('Please enter symbols separated with commas').upper()
         else:
             tickers = self.quote
 
@@ -218,14 +218,14 @@ class Client:
                         print(f'Volume: {all.get("totalVolume"):,}')
                     print()
 
-            if ui.input_text('Show JSON? (y/n): ').lower() == 'y':
+            if ui.input_yesno('Show JSON? (y/n)') == 'y':
                 print(quotes.raw)
 
         else:
             ui.print_error(quotes.message)
 
     def show_options_expiry(self) -> None:
-        ticker = ui.input_text('Please enter symbol: ').upper()
+        ticker = ui.input_text('Please enter symbol').upper()
 
         options = Options()
         expiry_data = options.expiry(ticker)
@@ -244,11 +244,11 @@ class Client:
             print(tabulate(expiry_data, headers=expiry_data.columns, tablefmt=ui.TABULATE_FORMAT))
             print()
 
-            if ui.input_text('Show JSON? (y/n): ').lower() == 'y':
+            if ui.input_yesno('Show JSON? (y/n)') == 'y':
                 print(options.raw)
 
     def show_options_chain(self) -> None:
-        symbol = ui.input_text('Please enter symbol: ').upper()
+        symbol = ui.input_text('Please enter symbol').upper()
 
         date = m.third_friday()
         options = Options()
@@ -283,7 +283,7 @@ class Client:
             print(tabulate(chain_puts, headers=chain_puts.columns, tablefmt=ui.TABULATE_FORMAT, floatfmt='.02f'))
             print()
 
-            if ui.input_text('Show JSON? (y/n): ').lower() == 'y':
+            if ui.input_yesno('Show JSON? (y/n)') == 'y':
                 print(options.raw)
 
 

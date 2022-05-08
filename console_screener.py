@@ -141,7 +141,7 @@ class Interface:
             self.live = True
 
     def select_list(self) -> None:
-        list = ui.input_text('Enter exchange, index, or ticker: ').upper()
+        list = ui.input_text('Enter exchange, index, or ticker').upper()
         if store.is_exchange(list):
             self.table = list
         elif store.is_list(list):
@@ -223,7 +223,7 @@ class Interface:
 
     def run_backtest(self, prompt: bool = True, bullish: bool = True) -> bool:
         if prompt:
-            input = ui.input_integer('Input number of days (10-100): ', 10, 100)
+            input = ui.input_integer('Input number of days (10-100)', 10, 100)
             self.end = input
 
         success = self.run_screen(backtest=True)
@@ -302,7 +302,7 @@ class Interface:
                     break
 
     def print_ticker_results(self):
-        ticker = ui.input_text('Enter ticker: ')
+        ticker = ui.input_text('Enter ticker')
         if ticker:
             ticker = ticker.upper()
             if store.is_ticker(ticker):

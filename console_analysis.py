@@ -15,7 +15,7 @@ import strategies as s
 import strategies.strategy_list as sl
 import data as d
 from strategies.strategy import Strategy
-from screener.screener import Screener, SCREEN_INIT_NAME, SCREEN_BASEPATH, SCREEN_SUFFIX, CACHE_BASEPATH, CACHE_SUFFIX
+from screener.screener import Screener, Result, SCREEN_INIT_NAME, SCREEN_BASEPATH, SCREEN_SUFFIX, CACHE_BASEPATH, CACHE_SUFFIX
 from analysis.trend import SupportResistance
 from analysis.correlate import Correlate
 from analysis.chart import Chart
@@ -28,13 +28,14 @@ logger.get_logger(logging.WARNING, logfile='')
 
 COOR_CUTOFF = 0.85
 LISTTOP_SCREEN = 10
+LISTTOP_ANALYSIS = 15
 LISTTOP_TREND = 5
 LISTTOP_CORR = 10
 
 
 def _auth_callback(url: str) -> str:
     webbrowser.open(url)
-    code = ui.input_alphanum('Please accept agreement and enter text code from browser: ')
+    code = ui.input_alphanum('Please accept agreement and enter text code from browser')
     return code
 
 
@@ -115,9 +116,10 @@ class Interface:
                 '10':  'Show All Results',
                 '11':  'Show Ticker Screen Results',
                 '12': 'Show Chart',
-                '13': 'Roll Result Files',
-                '14': 'Manage Result Files',
-                '15': 'Delete Old Result Files',
+                '13': 'Analyze Result Files',
+                '14': 'Roll Result Files',
+                '15': 'Manage Result Files',
+                '16': 'Delete Old Result Files',
                 '0':  'Exit'
             }
 
@@ -171,11 +173,13 @@ class Interface:
             elif selection == 12:
                 self.show_chart()
             elif selection == 13:
-                self.roll_cache_files()
+                self.analyze_result_files()
             elif selection == 14:
-                self.manage_cache_files()
+                self.roll_result_files()
             elif selection == 15:
-                self.delete_old_cache_files()
+                self.manage_result_files()
+            elif selection == 16:
+                self.delete_old_result_files()
             elif selection == 0:
                 self.exit = True
 
@@ -185,7 +189,7 @@ class Interface:
                 break
 
     def select_list(self) -> None:
-        list = ui.input_alphanum('Enter exchange, index, or ticker: ').upper()
+        list = ui.input_alphanum('Enter exchange, index, or ticker').upper()
         if store.is_exchange(list):
             self.table = list
             self.screener = Screener(self.table, screen=self.path_screen)
@@ -254,18 +258,18 @@ class Interface:
             if selection == 1:
                 strategy = 'call'
                 product = 'call'
-                selection = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
+                selection = ui.input_integer('(1) Long, or (2) Short', 1, 2)
                 direction = 'long' if selection == 1 else 'short'
             elif selection == 2:
                 strategy = 'put'
                 product = 'put'
-                selection = ui.input_integer('(1) Long, or (2) Short: ', 1, 2)
+                selection = ui.input_integer('(1) Long, or (2) Short', 1, 2)
                 direction = 'long' if selection == 1 else 'short'
             elif selection == 3:
                 strategy = 'vert'
                 p = ui.input_integer('(1) Call, or (2) Put: ', 1, 2)
                 product = 'call' if p == 1 else 'put'
-                selection = ui.input_integer('(1) Debit, or (2) Credit: ', 1, 2)
+                selection = ui.input_integer('(1) Debit, or (2) Credit', 1, 2)
                 direction = 'long' if selection == 1 else 'short'
             elif selection == 4:
                 strategy = 'ic'
@@ -289,7 +293,7 @@ class Interface:
 
     def select_support_resistance(self) -> list[str]:
         tickers = []
-        ticker = ui.input_text("Enter ticker or 'valids': ").upper()
+        ticker = ui.input_text("Enter ticker or 'valids'").upper()
         if store.is_ticker(ticker):
             tickers = [ticker]
         elif ticker != 'VALIDS':
@@ -490,7 +494,7 @@ class Interface:
         print()
 
     def show_chart(self):
-        ticker = ui.input_text("Enter ticker: ").upper()
+        ticker = ui.input_text("Enter ticker").upper()
         if store.is_ticker(ticker):
             self.chart = Chart(ticker, days=180)
 
@@ -507,7 +511,7 @@ class Interface:
             ui.print_error('Not a valid ticker')
 
     def show_ticker_results(self):
-        ticker = ui.input_text('Enter ticker: ').upper()
+        ticker = ui.input_text('Enter ticker').upper()
         if ticker:
             ui.print_message('Ticker Screen Results')
             for result in self.screener.results:
@@ -626,7 +630,7 @@ class Interface:
 
         print()
 
-    def manage_cache_files(self) -> None:
+    def manage_result_files(self) -> None:
         paths = _get_screener_cache_files()
         if paths:
             menu_items = {f'{index}': f'{item}' for index, item in enumerate(paths, start=1)}
@@ -636,7 +640,7 @@ class Interface:
             if selection > 0:
                 screen_old = paths[selection-1]
                 file_old = f'{CACHE_BASEPATH}{screen_old}.{CACHE_SUFFIX}'
-                selection = ui.input_integer(f"Select operation for '{screen_old}': (1) Delete, (2) Roll, (0) Cancel: ", 0, 2)
+                selection = ui.input_integer(f"Select operation for '{screen_old}': (1) Delete, (2) Roll, (0) Cancel", 0, 2)
                 if selection == 1:
                     try:
                         os.remove(file_old)
@@ -658,7 +662,41 @@ class Interface:
         else:
             ui.print_message('No cache files found')
 
-    def roll_cache_files(self) -> None:
+    def analyze_result_files(self, top: int = LISTTOP_ANALYSIS):
+        table = ui.input_alphanum('Enter table').upper()
+
+        files = _get_screener_cache_files()
+
+        results: list[Result] = []
+        for item in files:
+            parts = item.split('_')
+            if parts[1] != table:
+                pass # Wrong table
+            elif parts[0] != dt.now().strftime(ui.DATE_FORMAT):
+                pass # Old date
+            else:
+                path = f'{SCREEN_BASEPATH}{parts[2]}.{SCREEN_SUFFIX}'
+                screen = Screener(parts[1], path)
+                if screen.cache_available:
+                    screen.run_script()
+                    results += screen.valids
+
+        if results:
+            results = sorted(results, reverse=True, key=lambda r: float(r))
+
+            if top <= 0:
+                top = len(results)
+            elif top > len(results):
+                top = len(results)
+            index = 1
+            ui.print_message(f'Analysis Results {top} of {len(results)} ({table})', post_creturn=1)
+            for result in results[:top]:
+                print(f'{index:>3}: {str(result):<5} {float(result):.2f} - {result.screen} - {result.company.information["name"]}, {result.company.information["sector"]}')
+                index += 1
+        else:
+            ui.print_message(f'No results for {table} found', post_creturn=1)
+
+    def roll_result_files(self) -> None:
         paths = _get_screener_cache_files()
         for screen_old in paths:
             file_old = f'{CACHE_BASEPATH}{screen_old}.{CACHE_SUFFIX}'
@@ -673,22 +711,22 @@ class Interface:
                 else:
                     ui.print_message(f'Renamed {screen_old} to {screen_new}')
 
-    def delete_old_cache_files(self):
+    def delete_old_result_files(self):
         files = _get_screener_cache_files()
         if files:
-            old_paths = []
+            paths = []
             date_time = dt.now().strftime(ui.DATE_FORMAT)
             for path in files:
                 file_time = f'{path[:10]}'
                 if file_time != date_time:
                     file = f'{CACHE_BASEPATH}{path}.{CACHE_SUFFIX}'
-                    old_paths += [file]
+                    paths += [file]
 
-            if old_paths:
+            if paths:
                 deleted = 0
-                select = ui.input_text(f'Delete {len(old_paths)} files? (y/n): ').lower()
+                select = ui.input_text(f'Delete {len(paths)} files? (y/n)').lower()
                 if select == 'y':
-                    for path in old_paths:
+                    for path in paths:
                         try:
                             os.remove(path)
                         except OSError as e:

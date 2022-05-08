@@ -37,7 +37,7 @@ class Result:
     price_current: float = 0.0
 
     def __repr__(self):
-        return f'{self.company.ticker}: {float(self):.2f}, {self.screen}>'
+        return f'{self.company.ticker}: {float(self):.2f}, {self.screen}'
 
     def __str__(self):
         return self.company.ticker
@@ -96,10 +96,10 @@ class Screener(Threaded):
             raise ValueError(f'Script not found or invalid format: {screen}')
 
     def __repr__(self):
-        return f'<Screener ({self.table})>'
+        return f'<Screener ({self.table} - {self.screen})>'
 
     def __str__(self):
-        return f'{self.table}/{self.screen}'
+        return f'{self.table} - {self.screen}'
 
     @Threaded.threaded
     def run_script(self, use_cache: bool = True, dump_results: bool = True) -> None:
@@ -193,7 +193,10 @@ class Screener(Threaded):
 
             if self.task_state == 'None':
                 self.task_completed += 1
-                self.results += [Result(ticker, self.screen, successes, scores, descriptions)]
+
+                head_tail = os.path.split(self.screen)
+                head, sep, tail = head_tail[1].partition('.')
+                self.results += [Result(ticker, head, successes, scores, descriptions)]
                 if (bool(self.results[-1])):
                     self.task_success += 1
             else:

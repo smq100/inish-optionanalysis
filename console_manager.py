@@ -139,12 +139,12 @@ class Interface:
 
     def show_ticker_information(self, ticker: str = '', prompt: bool = False, live: bool = False) -> None:
         if not ticker:
-            ticker = ui.input_text('Enter ticker: ').upper()
+            ticker = ui.input_text('Enter ticker').upper()
 
         if ticker:
             if store.is_ticker(ticker, inactive=True):
                 if prompt:
-                    end = ui.input_integer('Input number of days: ', 0, 100)
+                    end = ui.input_integer('Input number of days', 0, 100)
                 else:
                     end = 0
 
@@ -312,7 +312,7 @@ class Interface:
             ui.print_message(f'Deleted ticker {ticker}')
 
     def reset_database(self) -> None:
-        select = ui.input_integer('Are you sure? 1 to reset or 0 to cancel: ', 0, 1)
+        select = ui.input_integer('Are you sure? 1 to reset or 0 to cancel', 0, 1)
         if select == 1:
             self.manager.delete_database()
             self.manager.create_database()
@@ -388,7 +388,7 @@ class Interface:
             ui.print_message('No ticker errors')
 
     def recheck_inactive(self) -> None:
-        ticker = ui.input_text('Enter ticker or RETURN for all: ').upper()
+        ticker = ui.input_text('Enter ticker or RETURN for all').upper()
         tickers = [ticker] if ticker else self.manager.identify_inactive_tickers('all')
         if tickers:
             self.task = threading.Thread(target=self.manager.recheck_inactive, args=[tickers])
@@ -424,10 +424,10 @@ class Interface:
         while True:
             select = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1, prompt='Select operation, or 0 when done')
             if select == 1:
-                input = ui.input_list('Enter tickers (comma separated): ').upper()
+                input = ui.input_list('Please enter symbols separated with commas').upper()
                 if input:
                     tickers = input.split(',')
-                    select = ui.input_integer('(1) Active, (2) Inactive: ', min_=1, max_=2)
+                    select = ui.input_integer('(1) Active, (2) Inactive', min_=1, max_=2)
                     if select > 0:
                         active = (select == 1)
                         self.manager.change_active(tickers, active)

@@ -99,7 +99,7 @@ class Interface:
     def select_days(self):
         self.days = 0
         while self.days < 30:
-            self.days = ui.input_integer('Enter number of days: ', 30, 9999)
+            self.days = ui.input_integer('Enter number of days', 30, 9999)
 
     def calculate_support_and_resistance(self) -> None:
         if self.tickers:
