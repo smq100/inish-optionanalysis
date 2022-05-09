@@ -166,7 +166,7 @@ def input_alphanum(message: str) -> str:
 
 
 def input_yesno(message: str) -> bool:
-    return input(f'{message}: (y/n)').lower() == 'y'
+    return input(f'{message} (y/n)? ').lower() == 'y'
 
 
 def get_valid_table(exchange: bool = False, index: bool = False, ticker: bool = False, all: bool = False) -> str:

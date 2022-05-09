@@ -27,8 +27,8 @@ class Interface:
         self.auto = False
         self.screen_path = ''
         self.valids: list[Result] = []
-        self.screener: Screener = None
-        self.task: threading.Thread = None
+        self.screener: Screener
+        self.task: threading.Thread
 
         abort = False
 
@@ -150,7 +150,6 @@ class Interface:
             self.table = list
         else:
             self.table = ''
-            self.screener = None
             ui.print_error(f'List {list} is not valid')
 
     def select_screen(self) -> None:
@@ -206,7 +205,7 @@ class Interface:
                 ui.print_error(f'{__name__}: {str(e)}')
             else:
                 self.valids = []
-                self.task = threading.Thread(target=self.screener.run_script, kwargs={'use_cache': False})
+                self.task = threading.Thread(target=self.screener.run_script, kwargs={'use_cache': True})
                 self.task.start()
 
                 # Show thread progress. Blocking while thread is active

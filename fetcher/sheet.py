@@ -18,5 +18,5 @@ class Sheet(ABC):
         return False
 
     @abc.abstractmethod
-    def get_column(self, column: str) -> list[str]:
+    def get_column(self, column: int) -> list[str]:
         return []

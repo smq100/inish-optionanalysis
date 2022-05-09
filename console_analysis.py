@@ -47,12 +47,12 @@ class Interface:
     days: int
     path_screen: str
     results_corr: list[tuple[str, pd.Series]]
-    trend: SupportResistance | None
-    screener: Screener | None
-    correlate: Correlate | None
-    chart: Chart | None
-    strategy: Strategy | None
-    task: threading.Thread | None
+    trend: SupportResistance
+    screener: Screener
+    correlate: Correlate
+    chart: Chart
+    strategy: Strategy
+    task: threading.Thread
 
     def __init__(self, *, table: str = '', screen: str = '', load_contracts: bool = False, quick: bool = False, exit: bool = False):
         self.table = table.upper()
@@ -63,12 +63,12 @@ class Interface:
         self.days = 1000
         self.path_screen = ''
         self.results_corr = []
-        self.trend = None
-        self.screener = None
-        self.correlate = None
-        self.chart = None
-        self.strategy = None
-        self.task = None
+        # self.trend = None
+        # self.screener = None
+        # self.correlate = None
+        # self.chart = None
+        # self.strategy = None
+        # self.task = None
 
         abort = False
 
@@ -291,7 +291,7 @@ class Interface:
         else:
             ui.print_error('No valid results to analyze')
 
-    def select_support_resistance(self) -> list[str]:
+    def select_support_resistance(self) -> None:
         tickers = []
         ticker = ui.input_text("Enter ticker or 'valids'").upper()
         if store.is_ticker(ticker):
@@ -462,7 +462,7 @@ class Interface:
                     ui.print_message(f'Results of {self.screen}/{self.table} for the {sectors[selection-1]} sector', post_creturn=1)
                     for result in self.screener.valids:
                         if str(result) in filtered:
-                            print(f'{index:>3}: {str(result):<5} ({float(result):.2f}) - {result.company.information["name"]}')
+                            print(f'{index:>3}: {str(result):<5} {float(result):.2f} - {result.company.information["name"]}')
                             index += 1
                 else:
                     break
@@ -486,7 +486,7 @@ class Interface:
 
             index = 1
             for result in self.screener.valids:
-                print(f'{index:>3}: {str(result):<5} ({float(result):.2f}) - {result.company.information["name"]}, {result.company.information["sector"]}')
+                print(f'{index:>3}: {str(result):<5} {float(result):.2f} - {result.company.information["name"]}, {result.company.information["sector"]}')
                 index += 1
 
                 if index > top:

@@ -22,7 +22,7 @@ class IronCondor(Strategy):
         width1: int,
         width2: int,
         quantity: int = 1,
-        expiry: dt.datetime | None = None,
+        expiry: dt.datetime = dt.datetime.now(),
         volatility: tuple[float, float] = (-1.0, 0.0),
         load_contracts: bool = False):
 
@@ -245,7 +245,7 @@ class IronCondor(Strategy):
 
         return True
 
-    def calculate_pop(self) -> float:
+    def calculate_pop(self) -> bool:
         pop = 1.0 - (self.analysis.max_gain / (self.legs[0].option.strike - self.legs[1].option.strike))
         self.analysis.pop = pop if pop > 0.0 else 0.0
 
@@ -282,7 +282,7 @@ if __name__ == '__main__':
 
     ticker = 'MSFT'
     strike = float(math.ceil(store.get_last_price(ticker)))
-    ic = IronCondor(ticker, 'hybrid', 'short', strike, 1, 1, load_contracts=True)
+    ic = IronCondor(ticker, 'hybrid', 'short', strike, width1=1, width2=1)
     ic.analyze()
 
     # print(ic.legs[0])

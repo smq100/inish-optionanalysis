@@ -70,6 +70,10 @@ class MonteCarlo(Pricing):
         '''TODO'''
         return 0.0, 0.0
 
+    def calculate_rho(self, spot_price=-1.0, time_to_maturity=-1.0):
+        '''TODO'''
+        return 0.0, 0.0
+
     def _generate_asset_price(self, spot_price):
         ''' Calculate predicted Asset Price at the time of Option Expiry date.
         It used a random variable based on Gaus model and then calculate price using the below equation.

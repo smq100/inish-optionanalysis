@@ -34,7 +34,7 @@ class Excel(Sheet):
 
         return self.opened
 
-    def get_column(self, column: str) -> list[str]:
+    def get_column(self, column: int) -> list[str]:
         self.col = []
         if self.opened and column > 0:
             col = self.sheet[COLUMNS[column]]

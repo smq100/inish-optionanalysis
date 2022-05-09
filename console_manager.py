@@ -369,7 +369,7 @@ class Interface:
                 for item in self.manager.task_results:
                     total += item[1]
                     print(f'{item[0]}:')
-                    ui.print_tickers(item[1], post_creturn=1)
+                    ui.print_tickers(item[1])
 
                 if ui.input_yesno('Mark tickers as inactive?'):
                     self.manager.change_active(total, False)

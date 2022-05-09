@@ -89,9 +89,9 @@ class Manager(Threaded):
                     if self._concurrency > 1:
                         random.shuffle(tickers)
                         lists = np.array_split(tickers, self._concurrency)
-                        self.task_futures = [executor.submit(add, list, exchange) for list in lists]
+                        self.task_futures = [executor.submit(add, list) for list in lists]
                     else:
-                        self.task_futures = [executor.submit(add, tickers, exchange)]
+                        self.task_futures = [executor.submit(add, tickers)]
 
                     for future in futures.as_completed(self.task_futures):
                         running -= 1
@@ -299,7 +299,7 @@ class Manager(Threaded):
 
                 delta = (today - date_db).days
                 if delta > 0:
-                    history = store.get_history(ticker, 60, live=True) # Change days value if severely out of data
+                    history = store.get_history(ticker, 60, live=True)  # Change days value if severely out of data
                     if history is None:
                         _logger.info(f'{__name__}: No pricing dataframe for {ticker}')
                     elif history.empty:
@@ -375,7 +375,7 @@ class Manager(Threaded):
                 if self._concurrency > 1:
                     random.shuffle(tickers)
                     lists = np.array_split(tickers, self._concurrency)
-                    self.task_futures = [executor.submit(update, list) for list in lists]
+                    self.task_futures = [executor.submit(update, list.tolist()) for list in lists]
                 else:
                     self.task_futures = [executor.submit(update, tickers)]
 
@@ -613,7 +613,7 @@ class Manager(Threaded):
 
             with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
                 if self._concurrency > 1:
-                    self.task_futures = [executor.submit(recheck, list) for list in lists]
+                    self.task_futures = [executor.submit(recheck, list.tolist()) for list in lists]
                 else:
                     running = 1
                     self.task_futures = [executor.submit(recheck, tickers)]
@@ -672,11 +672,11 @@ class Manager(Threaded):
         return inactive
 
     @Threaded.threaded
-    def identify_incomplete_pricing(self, table: str) -> dict:
+    def identify_incomplete_pricing(self, table: str) -> None:
         tickers = store.get_tickers(table.upper())
         running = self._concurrency
         self.task_total = len(tickers)
-        self.task_object = {}
+        self.task_object: dict = {}
 
         def check(tickers: list[str]) -> None:
             nonlocal running
@@ -699,7 +699,7 @@ class Manager(Threaded):
                 if self._concurrency > 1:
                     random.shuffle(tickers)
                     lists = np.array_split(tickers, self._concurrency)
-                    self.task_futures = [executor.submit(check, item) for item in lists]
+                    self.task_futures = [executor.submit(check, item.tolist()) for item in lists]
                 else:
                     self.task_futures = [executor.submit(check, tickers)]
 

@@ -17,7 +17,7 @@ from utils import logger
 
 _logger = logger.get_logger()
 
-strategy_type = collections.namedtuple('strategy', [
+strategy_type = collections.namedtuple('strategy_type', [
     'ticker',
     'strategy',
     'product',
@@ -71,39 +71,40 @@ def analyze(strategies: list[strategy_type]) -> None:
     strategy_total = len(strategies)
     if strategy_total > 0:
         strategy_state = 'None'
+        item: Strategy
         items: list[Strategy] = []
 
         try:
             for s in strategies:
                 decorator = ' *' if s.load_contracts else ''
-                if s.strategy == STRATEGIES[0]: # Call
+                if s.strategy == STRATEGIES[0]:  # Call
                     strategy_msg = f'{s.ticker}: ${s.strike:.2f} {s.direction} {s.product}{decorator}'
                     item = Call(s.ticker, 'call', s.direction, s.strike, quantity=1,
-                        expiry=s.expiry, volatility=s.volatility, load_contracts=s.load_contracts)
+                                expiry=s.expiry, volatility=s.volatility, load_contracts=s.load_contracts)
                     item.set_score_screen(s.score_screen)
                     items += [item]
-                elif s.strategy == STRATEGIES[1]: # Put
+                elif s.strategy == STRATEGIES[1]:  # Put
                     strategy_msg = f'{s.ticker}: ${s.strike:.2f} {s.direction} {s.product}{decorator}'
                     item = Put(s.ticker, 'put', s.direction, s.strike, quantity=1,
-                        expiry=s.expiry, volatility=s.volatility, load_contracts=s.load_contracts)
+                               expiry=s.expiry, volatility=s.volatility, load_contracts=s.load_contracts)
                     item.set_score_screen(s.score_screen)
                     items += [item]
-                elif s.strategy == STRATEGIES[2]: # Vertical
+                elif s.strategy == STRATEGIES[2]:  # Vertical
                     strategy_msg = f'{s.ticker}: ${s.strike:.2f} {s.direction} {s.strategy} {s.product}{decorator}'
                     item = Vertical(s.ticker, s.product, s.direction, s.strike, width=s.width1, quantity=1,
-                        expiry=s.expiry, volatility=s.volatility, load_contracts=s.load_contracts)
+                                    expiry=s.expiry, volatility=s.volatility, load_contracts=s.load_contracts)
                     item.set_score_screen(s.score_screen)
                     items += [item]
-                elif s.strategy == STRATEGIES[3]: # Iron condor
+                elif s.strategy == STRATEGIES[3]:  # Iron condor
                     strategy_msg = f'{s.ticker}: ${s.strike:.2f}{decorator}'
                     item = IronCondor(s.ticker, 'hybrid', s.direction, s.strike, width1=s.width1, width2=s.width2, quantity=1,
-                        expiry=s.expiry, volatility=s.volatility, load_contracts=s.load_contracts)
+                                      expiry=s.expiry, volatility=s.volatility, load_contracts=s.load_contracts)
                     item.set_score_screen(s.score_screen)
                     items += [item]
-                elif s.strategy == STRATEGIES[4]: # Iron butterfly
+                elif s.strategy == STRATEGIES[4]:  # Iron butterfly
                     strategy_msg = f'{s.ticker}: ${s.strike:.2f}{decorator}'
-                    item = IronButterfly(s.ticker, 'hybrid', s.direction, s.strike, width1=s.width1, width2=s.width2, quantity=1,
-                        expiry=s.expiry, volatility=s.volatility, load_contracts=s.load_contracts)
+                    item = IronButterfly(s.ticker, 'hybrid', s.direction, s.strike, width1=s.width1, quantity=1,
+                                         expiry=s.expiry, volatility=s.volatility, load_contracts=s.load_contracts)
                     item.set_score_screen(s.score_screen)
                     items += [item]
         except Exception as e:

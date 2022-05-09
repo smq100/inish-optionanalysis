@@ -260,7 +260,7 @@ class Interface():
         if strategy == 'ib' and width1 < 1:
             raise ValueError(f'Invalid width specified: {width1}')
 
-        expiry_dt = dt.datetime.strptime(expiry, ui.DATE_FORMAT) if expiry else None
+        expiry_dt = dt.datetime.strptime(expiry, ui.DATE_FORMAT) if expiry else dt.datetime.now()
 
         name = strategy.lower()
         try:

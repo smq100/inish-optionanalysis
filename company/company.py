@@ -15,10 +15,10 @@ class Company:
         self.end = end
         self.live = live if store.is_database_connected() else True
         self.history: pd.DataFrame = pd.DataFrame()
-        self.information = {}
+        self.information: dict = {}
         self.price = 0.0
         self.volatility = 0.0
-        self.ta = None
+        self.ta: Technical
 
         if not store.is_ticker(ticker):
             raise ValueError(f'Invalid ticker {ticker}')

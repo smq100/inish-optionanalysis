@@ -21,7 +21,7 @@ class Vertical(Strategy):
         *,
         width: int,
         quantity: int = 1,
-        expiry: dt.datetime | None = None,
+        expiry: dt.datetime = dt.datetime.now(),
         volatility: tuple[float, float] = (-1.0, 0.0),
         load_contracts: bool = False):
 
@@ -277,7 +277,7 @@ if __name__ == '__main__':
 
     ticker = 'AAPL'
     strike = float(math.ceil(store.get_last_price(ticker)))
-    vert = Vertical(ticker, 'call', 'long', strike, 1, 1, load_contracts=True)
+    vert = Vertical(ticker, 'call', 'long', strike, width=1)
     vert.analyze()
 
     print(vert.legs[0])

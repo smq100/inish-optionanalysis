@@ -232,7 +232,7 @@ class Interpreter:
         stop = None if self.base_stop == 0 else self.base_stop
         sl = slice(start, stop)
         if self.company.ta is not None:
-            value = self.company.ta.calc_sma(self.base_length)[sl]
+            value = self.company.ta.calc_sma(int(self.base_length))[sl]
         return value
 
     def _get_base_rsi(self) -> pd.Series:
@@ -241,7 +241,7 @@ class Interpreter:
         stop = None if self.base_stop == 0 else self.base_stop
         sl = slice(start, stop)
         if self.company.ta is not None:
-            value = self.company.ta.calc_rsi(self.base_length)[sl]
+            value = self.company.ta.calc_rsi(int(self.base_length))[sl]
         return value
 
     def _get_base_beta(self) -> pd.Series:
@@ -290,5 +290,5 @@ class Interpreter:
         stop = None if self.criteria_stop == 0 else self.criteria_stop
         sl = slice(start, stop)
         if self.company.ta is not None:
-            value = self.company.ta.calc_sma(self.criteria_length)[sl]
+            value = self.company.ta.calc_sma(int(self.criteria_length))[sl]
         return value

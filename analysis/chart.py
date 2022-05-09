@@ -27,7 +27,7 @@ class Chart(Threaded):
         self.days = days
         self.live = live
         self.history = pd.DataFrame()
-        self.company = {}
+        self.company:dict = {}
         self.figure, self.ax = plt.subplots(figsize=ui.CHART_SIZE)
 
         plt.style.use(ui.CHART_STYLE)

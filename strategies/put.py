@@ -19,7 +19,7 @@ class Put(Strategy):
         strike: float,
         *,
         quantity: int = 1,
-        expiry: dt.datetime | None = None,
+        expiry: dt.datetime = dt.datetime.now(),
         volatility: tuple[float, float] = (-1.0, 0.0),
         load_contracts: bool = False):
 
@@ -101,7 +101,7 @@ if __name__ == '__main__':
 
     ticker = 'AAPL'
     strike = float(math.floor(store.get_last_price(ticker)))
-    put = Put(ticker, 'put', 'long', strike, 1, 0, load_contracts=True)
+    put = Put(ticker, 'put', 'long', strike)
     put.analyze()
 
     print(put.legs[0])

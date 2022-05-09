@@ -20,7 +20,7 @@ class Quotes:
     def quote(self, symbols: list[str]) -> list[dict]:
         self.message = 'success'
         self.raw = ''
-        quote_data = None
+        quote_data: dict = {}
 
         url = f'{auth.base_url}/v1/market/quote/{",".join(symbols)}.json'
         params = {

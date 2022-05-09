@@ -45,7 +45,7 @@ class Google(Sheet):
 
         return self.opened
 
-    def get_column(self, column: str) -> list[str]:
+    def get_column(self, column: int) -> list[str]:
         if self.opened and int(column) > 0:
             self.col = self.sheet.col_values(column)
 

@@ -29,7 +29,7 @@ class Strategy(ABC, Threaded):
         width1: int,
         width2: int,
         quantity: int,
-        expiry: dt.datetime | None, # None = use next month's expiry. Otherwise use specified
+        expiry: dt.datetime,
         volatility: tuple[float, float], # < 0.0 use latest implied volatility, = 0.0 use calculated, > 0.0 use specified
         load_contracts: bool):
 
@@ -43,8 +43,8 @@ class Strategy(ABC, Threaded):
             raise ValueError('Invalid strike')
         if quantity < 1:
             raise ValueError('Invalid quantity')
-        if not (isinstance(expiry, dt.datetime) or expiry is None):
-            raise TypeError('Expiry must be a datetime or None')
+        if not (isinstance(expiry, dt.datetime)):
+            raise TypeError('Expiry must be a datetime')
 
         if not load_contracts and volatility[0] < 0.0:
             volatility = (0.0, volatility[1])
@@ -69,7 +69,7 @@ class Strategy(ABC, Threaded):
         self.error = ''
 
         # Default expiry is third Friday of next month, otherwise set it and check validity
-        if expiry is None:
+        if expiry <= dt.datetime.now():
             self.expiry = m.third_friday()
         else:
             self.expiry.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -209,22 +209,4 @@ class Strategy(ABC, Threaded):
         return not bool(self.error)
 
 if __name__ == '__main__':
-    import logging
-    from strategies.call import Call
-    from strategies.put import Put
-    from strategies.vertical import Vertical
-    from utils import logger
-
-    # logger.get_logger(logging.DEBUG)
-
-    # strategy = Vertical('AAPL', 'call', 'long', 1, 1, True)
-    strategy = Call('NVDA', 'call', 'long', 1, 1, True)
-    # strategy = Put('IBM', 'put', 'long', 1, 1, True)
-    strategy.analyze()
-
-    # print(strategy)
-    # print(strategy.analysis)
-    # print(strategy.legs[0].value)
-    # print(strategy.legs[1].value)
-    print(strategy.analysis.profit_table)
-    print(strategy.analysis.analysis)
+    pass

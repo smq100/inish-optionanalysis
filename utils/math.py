@@ -11,7 +11,7 @@ from utils import ui
 VALUETABLE_ROWS = 50
 VALUETABLE_COLS = 9
 
-range_type = collections.namedtuple('range', ['min', 'max', 'step'])
+range_type = collections.namedtuple('range_type', ['min', 'max', 'step'])
 
 
 def mround(n: float, precision: float, floor: bool = False) -> float:
@@ -33,7 +33,7 @@ def isnumeric(value) -> bool:
         return False
 
 
-def calculate_min_max_step(strike: float) -> tuple[float, float, float]:
+def calculate_min_max_step(strike: float) -> range_type:
     min_ = 0.0
     max_ = 0.0
     step = 0.0

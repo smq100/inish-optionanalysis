@@ -23,11 +23,10 @@ class Alerts:
 
     def alerts(self) -> pd.DataFrame:
         self.message = 'success'
-        alert_data = []
+        alert_data: dict = {}
 
         url = f'{auth.base_url}{URL_ALERTS}'
 
-        # response = self.session.get(url)
         response = self.session.get(url)
         print(response)
 

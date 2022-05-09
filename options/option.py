@@ -9,7 +9,7 @@ from data import store as store
 from utils import ui, logger
 
 _logger = logger.get_logger()
-contract_type = collections.namedtuple('contract', ['ticker', 'expiry', 'product', 'strike'])
+contract_type = collections.namedtuple('contract_type', ['ticker', 'expiry', 'product', 'strike'])
 
 MIN_CONTRACT_SIZE = 16
 
@@ -18,8 +18,8 @@ MIN_CONTRACT_SIZE = 16
 class Option:
     ticker: str = ''
     product: str = ''
-    strike: str = ''
-    expiry: dt.datetime = field(init=False)
+    strike: float = 0.0
+    expiry: dt.datetime = dt.datetime.now()
     volatility_user: float = 0.0
     volatility_delta: float = 0.0
 
@@ -52,7 +52,7 @@ class Option:
     contract_size: str = ''
     currency: str = ''
 
-    def __init__(self, ticker: str, product: str, strike: str, expiry: dt.datetime, volatility: tuple[float, float]):
+    def __init__(self, ticker: str, product: str, strike: float, expiry: dt.datetime, volatility: tuple[float, float]):
         self.ticker = ticker
         self.product = product
         self.strike = strike

@@ -29,9 +29,9 @@ class Client:
     def __init__(self, quote: str = '', exit: bool = False):
         self.quote = quote
         self.exit = exit
-        self.accounts = None
         self.account_index = -1
         self.account_name = ''
+        self.accounts: Accounts
 
         auth.authorize(auth_callback)
 
@@ -103,8 +103,6 @@ class Client:
             else:
                 self.account_index = -1
                 self.account_name = ''
-        else:
-            self.accounts = None
 
     def show_balance(self) -> None:
         if self.account_index >= 0:
@@ -119,7 +117,7 @@ class Client:
                 print(f'Cash Buying Power: ${balance.get("Computed", {}).get("cashBuyingPower"):,.2f}')
                 print(f'Option Level: {balance.get("optionLevel", "error")}\n')
 
-                if ui.input_yesno('Show JSON? (y/n)') == 'y':
+                if ui.input_yesno('Show JSON') == 'y':
                     print(self.accounts.raw)
             else:
                 ui.print_error(self.accounts.message)
@@ -141,7 +139,7 @@ class Client:
                     print(f'Value={position.marketValue:,.02f}')
                     print()
 
-                if ui.input_text('Show JSON? (y/n)').lower() == 'y':
+                if ui.input_text('Show JSON').lower() == 'y':
                     print(self.accounts.raw)
             else:
                 ui.print_error(self.accounts.message)
@@ -163,7 +161,7 @@ class Client:
                     alert += f', Status: {item.status}\n'
                 print(alert)
 
-            if ui.input_yesno('Show JSON? (y/n)') == 'y':
+            if ui.input_yesno('Show JSON') == 'y':
                 print(alerts.raw)
         else:
             ui.print_message(alerts.message)
@@ -183,7 +181,7 @@ class Client:
 
                 print()
 
-            if ui.input_yesno('Show JSON? (y/n)') == 'y':
+            if ui.input_yesno('Show JSON') == 'y':
                 print(lookup.raw)
         else:
             ui.print_error(f'No information for {symbol} located')
@@ -218,7 +216,7 @@ class Client:
                         print(f'Volume: {all.get("totalVolume"):,}')
                     print()
 
-            if ui.input_yesno('Show JSON? (y/n)') == 'y':
+            if ui.input_yesno('Show JSON') == 'y':
                 print(quotes.raw)
 
         else:
@@ -244,7 +242,7 @@ class Client:
             print(tabulate(expiry_data, headers=expiry_data.columns, tablefmt=ui.TABULATE_FORMAT))
             print()
 
-            if ui.input_yesno('Show JSON? (y/n)') == 'y':
+            if ui.input_yesno('Show JSON') == 'y':
                 print(options.raw)
 
     def show_options_chain(self) -> None:
@@ -283,7 +281,7 @@ class Client:
             print(tabulate(chain_puts, headers=chain_puts.columns, tablefmt=ui.TABULATE_FORMAT, floatfmt='.02f'))
             print()
 
-            if ui.input_yesno('Show JSON? (y/n)') == 'y':
+            if ui.input_yesno('Show JSON') == 'y':
                 print(options.raw)
 
 

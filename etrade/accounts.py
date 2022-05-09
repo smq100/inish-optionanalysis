@@ -17,7 +17,7 @@ class Accounts:
             raise AssertionError('Etrade session not initialized')
 
         self.session: OAuth1Session = auth.Session
-        self.accounts: list[pd.DataFrame] = []
+        self.accounts: pd.DataFrame = pd.DataFrame()
         self.message = ''
         self.raw = ''
 

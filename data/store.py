@@ -6,6 +6,7 @@ from sqlalchemy.orm import sessionmaker
 
 import data as d
 from fetcher import fetcher as fetcher
+from fetcher.google import Sheet
 from fetcher.google import Google
 from fetcher.excel import Excel
 from data import models as models
@@ -427,6 +428,7 @@ def get_sectors(refresh: bool = False) -> list[str]:
 def get_exchange_tickers_master(exchange: str, type: str = 'google') -> list[str]:
     global _master_exchanges
     symbols = []
+    table: Sheet
 
     if is_exchange(exchange):
         if len(_master_exchanges[exchange]) > 0:
@@ -453,6 +455,7 @@ def get_exchange_tickers_master(exchange: str, type: str = 'google') -> list[str
 def get_index_tickers_master(index: str, type: str = 'google') -> list[str]:
     global _master_indexes
     symbols = []
+    table: Sheet
 
     if is_index(index):
         if len(_master_indexes[index]) > 0:
@@ -466,7 +469,7 @@ def get_index_tickers_master(index: str, type: str = 'google') -> list[str]:
                 raise ValueError(f'Invalid spreadsheet type: {type}')
 
             if table.open(index):
-                symbols = set(table.get_column('1'))
+                symbols = list(set(table.get_column(1)))
                 _master_indexes[index] = symbols
             else:
                 _logger.warning(f'{__name__}: Unable to open index spreadsheet {index}')

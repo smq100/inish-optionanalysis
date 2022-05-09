@@ -19,6 +19,8 @@ _IV_CUTOFF = 0.020
 
 _logger = logger.get_logger()
 class Leg:
+    pricer: Pricing
+
     def __init__(self, ticker: str, quantity: int, product: str, direction: str, strike: float, expiry: dt.datetime, volatility: tuple[float, float]):
         if product not in s.PRODUCTS:
             raise ValueError('Invalid product')
@@ -32,7 +34,6 @@ class Leg:
         self.pricing_method = pricing.PRICING_METHODS[0]
         self.quantity = quantity
         self.direction = direction
-        self.pricer: Pricing = None
         self.value_table = pd.DataFrame()
         self.range = m.range_type(0.0, 0.0, 0.0)
 
@@ -103,7 +104,7 @@ class Leg:
 
         return self.option.price_calc
 
-    def recalculate(self, spot_price: float, time_to_maturity: int) -> tuple[float, float]:
+    def recalculate(self, spot_price: float, time_to_maturity: float) -> tuple[float, float]:
         if self.pricer is not None:
             call, put = self.pricer.calculate_price(spot_price, time_to_maturity, volatility=self.option.volatility_eff)
         else:
@@ -131,7 +132,7 @@ class Leg:
             cols, step = self.calculate_date_step()
 
             if cols > 1:
-                row = []
+                row: list[float] = []
                 table = []
                 col_index = []
                 row_index = []
@@ -238,7 +239,6 @@ class Leg:
 
     def reset(self) -> None:
         self.value_table = pd.DataFrame()
-        self.pricer = None
         self.calculate()
 
     def validate(self) -> bool:

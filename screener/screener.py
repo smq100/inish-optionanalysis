@@ -138,11 +138,11 @@ class Screener(Threaded):
 
             # Randomize and split up the lists
             random.shuffle(self.companies)
-            companies = np.array_split(self.companies, self._concurrency)
+            companies: list[np.ndarray] = np.array_split(self.companies, self._concurrency)
             companies = [i for i in companies if i is not None]
 
             with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
-                self.task_futures = [executor.submit(self._run, list) for list in companies]
+                self.task_futures = [executor.submit(self._run, list.tolist()) for list in companies]
 
                 for future in futures.as_completed(self.task_futures):
                     _logger.info(f'{__name__}: Thread completed: {future.result()}')
@@ -301,9 +301,7 @@ class Screener(Threaded):
 
 if __name__ == '__main__':
     import logging
+    logger.get_logger(logging.INFO)
 
-    ui.get_logger(logging.DEBUG)
-
-    s = Screener('DOW')
-    s._load('/Users/steve/Documents/Source Code/Personal/OptionAnalysis/screener/screens/test.screen')
+    s = Screener('SP500', 'bulltrend')
     # s.run_script()

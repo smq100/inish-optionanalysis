@@ -20,7 +20,7 @@ class IronButterfly(Strategy):
         *,
         width1: int,
         quantity: int = 1,
-        expiry: dt.datetime | None = None,
+        expiry: dt.datetime = dt.datetime.now(),
         volatility: tuple[float, float] = (-1.0, 0.0),
         load_contracts: bool = False):
 
@@ -279,7 +279,7 @@ if __name__ == '__main__':
 
     ticker = 'MSFT'
     strike = float(math.ceil(store.get_last_price(ticker)))
-    ic = IronButterfly(ticker, 'hybrid', 'short', strike, 1, 0, load_contracts=True)
+    ic = IronButterfly(ticker, 'hybrid', 'short', strike, width1=1)
     ic.analyze()
 
     # print(ic.legs[0])
