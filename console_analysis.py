@@ -47,8 +47,8 @@ class Interface:
     days: int
     path_screen: str
     results_corr: list[tuple[str, pd.Series]]
+    screener: Screener | None
     trend: SupportResistance
-    screener: Screener
     correlate: Correlate
     chart: Chart
     strategy: Strategy
@@ -63,12 +63,7 @@ class Interface:
         self.days = 1000
         self.path_screen = ''
         self.results_corr = []
-        # self.trend = None
-        # self.screener = None
-        # self.correlate = None
-        # self.chart = None
-        # self.strategy = None
-        # self.task = None
+        self.screener = None
 
         abort = False
 
@@ -192,21 +187,18 @@ class Interface:
         list = ui.input_alphanum('Enter exchange, index, or ticker').upper()
         if store.is_exchange(list):
             self.table = list
-            self.screener = Screener(self.table, screen=self.path_screen)
-            if self.screener.cache_available:
-                self.run_screen()
         elif store.is_index(list):
             self.table = list
-            self.screener = Screener(self.table, screen=self.path_screen)
-            if self.screener.cache_available:
-                self.run_screen()
         elif store.is_ticker(list):
             self.table = list
+        else:
+            self.table = ''
+            ui.print_error(f'List {list} is not valid')
+
+        if self.table and self.path_screen:
             self.screener = Screener(self.table, screen=self.path_screen)
             if self.screener.cache_available:
                 self.run_screen()
-        else:
-            ui.print_error(f'List {list} is not valid')
 
     def select_screen(self) -> None:
         self.script = []
@@ -236,9 +228,11 @@ class Interface:
             if selection > 0:
                 self.screen = paths[selection-1]
                 self.path_screen = f'{SCREEN_BASEPATH}{self.screen}.{SCREEN_SUFFIX}'
-                self.screener = Screener(self.table, screen=self.path_screen)
-                if self.screener.cache_available:
-                    self.run_screen()
+
+                if self.table:
+                    self.screener = Screener(self.table, screen=self.path_screen)
+                    if self.screener.cache_available:
+                        self.run_screen()
         else:
             ui.print_message('No screener files found')
 
