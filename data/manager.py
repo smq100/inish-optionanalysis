@@ -653,7 +653,7 @@ class Manager(Threaded):
 
         if len(tickers) > 0:
             with self.session() as session:
-                if exchange == 'ALL':
+                if exchange == 'EVERY':
                     for sec in tickers:
                         t = session.query(models.Security.ticker).filter(and_(models.Security.ticker == sec, models.Security.active == False)).one_or_none()
                         if t is not None:

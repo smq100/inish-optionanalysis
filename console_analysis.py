@@ -68,7 +68,7 @@ class Interface:
         abort = False
 
         if self.table:
-            if self.table == 'ALL':
+            if self.table == 'EVERY':
                 pass
             elif store.is_exchange(self.table):
                 pass

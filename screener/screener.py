@@ -59,8 +59,8 @@ class Screener(Threaded):
         self.cache_available = False
         self.cache_used = False
 
-        if self.table == 'ALL':
-            self.type = 'all'
+        if self.table == 'EVERY':
+            self.type = 'every'
         elif store.is_exchange(self.table):
             self.type = 'exchange'
         elif store.is_index(self.table):
@@ -224,8 +224,8 @@ class Screener(Threaded):
     def _open(self) -> bool:
         tickers = []
 
-        if self.type == 'all':
-            tickers = store.get_tickers('all')
+        if self.type == 'every':
+            tickers = store.get_tickers('every')
         elif self.type == 'exchange':
             tickers = store.get_exchange_tickers(self.table)
         elif self.type == 'index':

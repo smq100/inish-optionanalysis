@@ -169,7 +169,7 @@ def input_yesno(message: str) -> bool:
     return input(f'{message} (y/n)? ').lower() == 'y'
 
 
-def get_valid_table(exchange: bool = False, index: bool = False, ticker: bool = False, all: bool = False) -> str:
+def input_table(exchange: bool = False, index: bool = False, ticker: bool = False, all: bool = False) -> str:
     if exchange and index and ticker:
         prompt = 'Enter an exchange, an index or a ticker'
     elif exchange and index and not ticker:
@@ -187,14 +187,14 @@ def get_valid_table(exchange: bool = False, index: bool = False, ticker: bool = 
     else:
         assert ValueError('Invalid options')
 
-    prompt += ' (or all): ' if all else ': '
+    prompt += ' (or \'every\')' if all else ''
 
     while True:
         table = input_alphanum(prompt).upper()
 
         if not table:
             break
-        elif all and table == 'ALL':
+        elif all and table == 'EVERY':
             break
         elif exchange and store.is_exchange(table):
             break
@@ -276,4 +276,4 @@ def progress_bar(iteration, total: int, prefix: str = 'Working', suffix: str = '
 
 
 if __name__ == '__main__':
-    print(get_valid_table(exchange=False, index=False, ticker=False))
+    print(input_table(exchange=False, index=False, ticker=False))

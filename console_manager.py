@@ -10,7 +10,7 @@ from data import manager as manager
 from utils import ui, logger
 
 
-logger.get_logger(logging.WARNING)#, logfile='output')
+logger.get_logger(logging.WARNING)  # , logfile='output')
 
 
 class Interface:
@@ -29,10 +29,14 @@ class Interface:
                     exit = True
                     ui.print_error(f'Invalid ticker specifed: {ticker}')
             elif update:
-                if store.is_ticker(update.upper()):
+                if update.lower() == 'every':
+                    self.ticker = update.upper()
+                    self.stop = True
+                elif store.is_ticker(update):
                     self.ticker = update.upper()
                     self.stop = True
                 else:
+                    update = ''
                     exit = True
                     ui.print_error(f'Invalid ticker specifed: {update}')
 
@@ -124,7 +128,7 @@ class Interface:
         for i in info:
             print(f'{i["table"]:>16}:\t{i["count"]} records')
 
-        inactive = self.manager.identify_inactive_tickers('all')
+        inactive = self.manager.identify_inactive_tickers('every')
         print(f'        inactive:\t{len(inactive)} tickers')
 
         # ui.print_message('Exchange Information')
@@ -144,7 +148,7 @@ class Interface:
         if ticker:
             if store.is_ticker(ticker, inactive=True):
                 if prompt:
-                    end = ui.input_integer('Input number of days', 0, 100)
+                    end = ui.input_integer('Enter number of days', 0, 100)
                 else:
                     end = 0
 
@@ -201,7 +205,7 @@ class Interface:
 
     def list_table(self) -> None:
         found = []
-        table = ui.get_valid_table(exchange=True)
+        table = ui.input_table(exchange=True)
         if table:
             if store.is_exchange(table):
                 found = self.manager.list_exchange(table)
@@ -214,7 +218,7 @@ class Interface:
                 ui.print_tickers(found)
 
     def populate_exchange(self) -> None:
-        table = ui.get_valid_table(exchange=True)
+        table = ui.input_table(exchange=True)
         if table:
             self.task = threading.Thread(target=self.manager.populate_exchange, args=[table])
             self.task.start()
@@ -227,7 +231,7 @@ class Interface:
                                  f'Symbols populated in {self.manager.task_time/60.0:.1f} minutes with {len(self.manager.invalid_tickers)} invalid symbols')
 
     def populate_index(self) -> None:
-        table = ui.get_valid_table(index=True)
+        table = ui.input_table(index=True)
         if table:
             self.task = threading.Thread(target=self.manager.populate_index, args=[table])
             self.task.start()
@@ -241,12 +245,20 @@ class Interface:
                 ui.print_error(self.manager.task_state)
 
     def update_history(self, ticker: str = '') -> None:
-        table = ui.get_valid_table(exchange=True, ticker=True, all=True)
+        if not ticker:
+            table = ui.input_table(exchange=True, ticker=True, all=True)
+        elif store.is_list(ticker):
+            table = ticker
+        elif store.is_ticker(ticker):
+            table = ticker
+        else:
+            table = ''
+
         if not table:
-            ui.print_message('Cancelled')
+            ui.print_message('Invalid table')
         elif store.is_ticker(ticker):
             days = self.manager.update_history_ticker(ticker)
-            ui.print_message(f'Added {days} days pricing for {ticker}')
+            ui.print_message(f'Added {days} days pricing for {ticker.upper()}')
             self.show_ticker_information(ticker=ticker)
         else:
             self.task = threading.Thread(target=self.manager.update_history_exchange, args=[table])
@@ -258,13 +270,14 @@ class Interface:
             if self.manager.task_state == 'Done':
                 ui.print_message(f'{self.manager.task_total} {table} Ticker pricing refreshed in {self.manager.task_time:.0f} seconds')
 
-                if len(self.manager.invalid_tickers) > 0:
+                if not self.stop and len(self.manager.invalid_tickers) > 0:
                     if ui.input_yesno('Show unsuccessful tickers?'):
                         ui.print_message(f'{len(self.manager.invalid_tickers)} unsuccessful tickers')
                         ui.print_tickers(self.manager.invalid_tickers)
 
     def update_company(self, ticker: str = '') -> None:
-        table = ui.get_valid_table(exchange=True, ticker=True, all=True)
+        table = ui.input_table(exchange=True, ticker=True, all=True)
+
         if not table:
             ui.print_message('Cancelled')
         elif store.is_ticker(ticker):
@@ -284,7 +297,7 @@ class Interface:
                 ui.print_message(f'{self.manager.task_total} {table} Company infomation refreshed in {self.manager.task_time:.0f} seconds')
 
     def delete_exchange(self) -> None:
-        table = ui.get_valid_table(exchange=True)
+        table = ui.input_table(exchange=True)
         if table:
             self.task = threading.Thread(target=self.manager.delete_exchange, args=[table])
             self.task.start()
@@ -298,7 +311,7 @@ class Interface:
                 ui.print_message(f'Deleted exchange {table} in {self.manager.task_time:.0f} seconds')
 
     def delete_index(self) -> None:
-        table = ui.get_valid_table(index=True)
+        table = ui.input_table(index=True)
         if table:
             self.manager.delete_index(table)
             self.create_missing_tables()
@@ -306,7 +319,7 @@ class Interface:
             ui.print_message(f'Deleted exchange {table}')
 
     def delete_ticker(self) -> None:
-        ticker = ui.get_valid_table(ticker=True)
+        ticker = ui.input_table(ticker=True)
         if ticker:
             self.manager.delete_ticker(ticker)
             ui.print_message(f'Deleted ticker {ticker}')
@@ -342,7 +355,7 @@ class Interface:
 
             select = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1, prompt='Select operation, or 0 when done')
             if select > 0:
-                table = ui.get_valid_table(exchange=True)
+                table = ui.input_table(exchange=True)
                 if table:
                     if select == 1:
                         ui.print_tickers(missing_tickers[table])
@@ -352,7 +365,7 @@ class Interface:
                     ui.print_message('Cancelled')
 
     def check_price_dates(self) -> None:
-        table = ui.get_valid_table(exchange=True, index=True, ticker=True)
+        table = ui.input_table(exchange=True, index=True, ticker=True)
         if table:
             self.task = threading.Thread(target=self.manager.identify_incomplete_pricing, args=[table])
             self.task.start()
@@ -389,7 +402,7 @@ class Interface:
 
     def recheck_inactive(self) -> None:
         ticker = ui.input_text('Enter ticker or RETURN for all').upper()
-        tickers = [ticker] if ticker else self.manager.identify_inactive_tickers('all')
+        tickers = [ticker] if ticker else self.manager.identify_inactive_tickers('every')
         if tickers:
             self.task = threading.Thread(target=self.manager.recheck_inactive, args=[tickers])
             self.task.start()
@@ -406,7 +419,7 @@ class Interface:
             ui.print_message('No tickers to update')
 
     def list_inactive(self) -> None:
-        tickers = self.manager.identify_inactive_tickers('all')
+        tickers = self.manager.identify_inactive_tickers('every')
         if tickers:
             ui.print_message(f'{len(tickers)} inactive tickers')
             ui.print_tickers(tickers)
@@ -435,7 +448,7 @@ class Interface:
                 tickers = self.manager.get_latest_errors()
                 self.manager.change_active(tickers, False)
             elif select == 3:
-                tickers = self.manager.identify_inactive_tickers('all')
+                tickers = self.manager.identify_inactive_tickers('every')
                 self.manager.change_active(tickers, True)
             else:
                 break

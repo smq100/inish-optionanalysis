@@ -94,7 +94,10 @@ def is_index(index: str) -> bool:
 
 def is_list(list: str) -> bool:
     exist = False
-    if is_exchange(list):
+
+    if list.lower() == 'every':
+        exist = True
+    elif is_exchange(list):
         exist = True
     elif is_index(list):
         exist = True
@@ -105,7 +108,7 @@ def is_list(list: str) -> bool:
 def get_tickers(list: str, sector: str = '', inactive: bool = False) -> list[str]:
     tickers = []
 
-    if list.lower() == 'all':
+    if list.lower() == 'every':
         with _session() as session:
             if inactive:
                 symbols = session.query(models.Security.ticker).order_by(models.Security.ticker).all()
@@ -396,7 +399,7 @@ def get_company_name(ticker: str) -> str:
 def get_sectors(refresh: bool = False) -> list[str]:
     if refresh:
         sectors = []
-        tickers = get_tickers('all')
+        tickers = get_tickers('every')
         for ticker in tickers:
             company = get_company(ticker)
             sectors += [company['sector']]
