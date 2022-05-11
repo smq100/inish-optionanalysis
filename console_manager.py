@@ -29,7 +29,7 @@ class Interface:
                     exit = True
                     ui.print_error(f'Invalid ticker specifed: {ticker}')
             elif update:
-                if update.lower() == 'every':
+                if store.is_list(update):
                     self.ticker = update.upper()
                     self.stop = True
                 elif store.is_ticker(update):

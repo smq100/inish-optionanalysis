@@ -68,7 +68,6 @@ class Manager(Threaded):
         running = self._concurrency
 
         def add(tickers):
-            nonlocal running
             for ticker in tickers:
                 self.task_ticker = ticker
                 if self.add_ticker_to_exchange(ticker):
@@ -89,7 +88,8 @@ class Manager(Threaded):
                     if self._concurrency > 1:
                         random.shuffle(tickers)
                         lists = np.array_split(tickers, self._concurrency)
-                        self.task_futures = [executor.submit(add, list) for list in lists]
+                        lists = [item.tolist() for item in lists if item.size > 0]
+                        self.task_futures = [executor.submit(add, item) for item in lists]
                     else:
                         self.task_futures = [executor.submit(add, tickers)]
 
@@ -240,7 +240,6 @@ class Manager(Threaded):
         exchange = exchange.upper()
 
         def update(tickers):
-            nonlocal running
             for sec in tickers:
                 self.task_ticker = sec
                 if self.update_company_ticker(sec, replace=replace):
@@ -264,7 +263,8 @@ class Manager(Threaded):
                     if concurrency > 1:
                         random.shuffle(tickers)
                         lists = np.array_split(tickers, concurrency)
-                        self.task_futures = [executor.submit(update, list) for list in lists]
+                        lists = [item.tolist() for item in lists if item.size > 0]
+                        self.task_futures = [executor.submit(update, item) for item in lists]
                     else:
                         self.task_futures = [executor.submit(update, tickers)]
 
@@ -350,12 +350,13 @@ class Manager(Threaded):
         running = self._concurrency
 
         def update(tickers: list[str]) -> None:
-            nonlocal running
             for ticker in tickers:
                 self.task_ticker = ticker
                 try:
+                    time.sleep(0.5)
                     days = self.update_history_ticker(ticker)
                 except IntegrityError as e:
+                    days = 0
                     _logger.error(f'{__name__}: IntegrityError exception occurred for {ticker} (1): {e.__cause__}')
 
                 self.task_completed += 1
@@ -365,6 +366,7 @@ class Manager(Threaded):
                 elif days < 0:
                     self.invalid_tickers += [ticker]
 
+                # Save invalid tickers to log file every 10 invalid_tickers
                 if len(self.invalid_tickers) % 10 == 0:
                     _write_tickers_log(self.invalid_tickers)
 
@@ -375,7 +377,8 @@ class Manager(Threaded):
                 if self._concurrency > 1:
                     random.shuffle(tickers)
                     lists = np.array_split(tickers, self._concurrency)
-                    self.task_futures = [executor.submit(update, list.tolist()) for list in lists]
+                    lists = [item.tolist() for item in lists if item.size > 0]
+                    self.task_futures = [executor.submit(update, item) for item in lists]
                 else:
                     self.task_futures = [executor.submit(update, tickers)]
 
@@ -606,14 +609,14 @@ class Manager(Threaded):
 
             random.shuffle(tickers)
             lists = np.array_split(tickers, self._concurrency)
-            lists = [list for list in lists if list.size > 0]  # Remove empties
+            lists = [item.tolist() for item in lists if item.size > 0]
             running = len(lists)
             if running < self._concurrency:
                 self._concurrency = running
 
             with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
                 if self._concurrency > 1:
-                    self.task_futures = [executor.submit(recheck, list.tolist()) for list in lists]
+                    self.task_futures = [executor.submit(recheck, item.tolist()) for item in lists]
                 else:
                     running = 1
                     self.task_futures = [executor.submit(recheck, tickers)]
@@ -679,7 +682,6 @@ class Manager(Threaded):
         self.task_object: dict = {}
 
         def check(tickers: list[str]) -> None:
-            nonlocal running
             for ticker in tickers:
                 self.task_ticker = ticker
                 history = store.get_history(ticker, days=90)
@@ -699,6 +701,7 @@ class Manager(Threaded):
                 if self._concurrency > 1:
                     random.shuffle(tickers)
                     lists = np.array_split(tickers, self._concurrency)
+                    lists = [item.tolist() for item in lists if item.size > 0]
                     self.task_futures = [executor.submit(check, item.tolist()) for item in lists]
                 else:
                     self.task_futures = [executor.submit(check, tickers)]

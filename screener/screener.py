@@ -294,7 +294,7 @@ class Screener(Threaded):
         date_time = dt.now().strftime(ui.DATE_FORMAT)
         head_tail = os.path.split(self.screen)
         head, sep, tail = head_tail[1].partition('.')
-        filename = f'{CACHE_BASEPATH}/{date_time}_{self.table}_{head.upper()}.{CACHE_SUFFIX}'
+        filename = f'{CACHE_BASEPATH}/{date_time}_{self.table.lower()}_{head.lower()}.{CACHE_SUFFIX}'
 
         return filename
 

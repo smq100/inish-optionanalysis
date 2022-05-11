@@ -135,7 +135,7 @@ class Interface:
                 menu_items['10'] += f' ({len(self.screener.valids)})'
 
             if selection == 0:
-                selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1, prompt='Select operation, or 0 when done')
+                selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1)
 
             if selection == 1:
                 self.select_list()
