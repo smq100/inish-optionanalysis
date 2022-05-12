@@ -144,6 +144,9 @@ def get_indexes() -> list[str]:
         index = session.query(models.Index.abbreviation).all()
         results = [ind.abbreviation for ind in index]
 
+    if 'CUSTOM' in results:
+        results.remove('CUSTOM')
+
     return results
 
 

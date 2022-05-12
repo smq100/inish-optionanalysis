@@ -99,7 +99,7 @@ class Interface:
     def main_menu(self, selection: int = 0) -> None:
         while True:
             menu_items = {
-                '1':  'Select Table or Ticker',
+                '1':  'Select Table or Index',
                 '2':  'Select Screen',
                 '3':  'Run Screen',
                 '4':  'Refresh Screen',
@@ -111,10 +111,10 @@ class Interface:
                 '10':  'Show All Results',
                 '11':  'Show Ticker Screen Results',
                 '12': 'Show Chart',
-                '13': 'Analyze Result Files',
-                '14': 'Roll Result Files',
-                '15': 'Manage Result Files',
-                '16': 'Delete Old Result Files',
+                '13': 'Build Result Files',
+                '14': 'Analyze Result Files',
+                '15': 'Roll Result Files',
+                '16': 'Delete Result Files',
                 '0':  'Exit'
             }
 
@@ -138,7 +138,7 @@ class Interface:
                 selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1)
 
             if selection == 1:
-                self.select_list()
+                self.select_table()
             elif selection == 2:
                 self.select_screen()
             elif selection == 3:
@@ -168,13 +168,13 @@ class Interface:
             elif selection == 12:
                 self.show_chart()
             elif selection == 13:
-                self.analyze_result_files()
+                self.build_result_files()
             elif selection == 14:
-                self.roll_result_files()
+                self.analyze_result_files()
             elif selection == 15:
-                self.manage_result_files()
+                self.roll_result_files()
             elif selection == 16:
-                self.delete_old_result_files()
+                self.delete_result_files()
             elif selection == 0:
                 self.exit = True
 
@@ -183,13 +183,9 @@ class Interface:
             if self.exit:
                 break
 
-    def select_list(self) -> None:
-        list = ui.input_alphanum('Enter exchange, index, or ticker').upper()
-        if store.is_exchange(list):
-            self.table = list
-        elif store.is_index(list):
-            self.table = list
-        elif store.is_ticker(list):
+    def select_table(self) -> None:
+        list = ui.input_alphanum('Enter exchange or index').upper()
+        if store.is_list(list):
             self.table = list
         else:
             self.table = ''
@@ -201,33 +197,16 @@ class Interface:
                 self.run_screen()
 
     def select_screen(self) -> None:
-        self.script = []
-        paths = []
-        with os.scandir(SCREEN_BASEPATH) as entries:
-            for entry in entries:
-                if entry.is_file():
-                    head, sep, tail = entry.name.partition('.')
-                    if tail != SCREEN_SUFFIX:
-                        pass
-                    elif head == SCREEN_INIT_NAME:
-                        pass
-                    elif head == 'test':
-                        pass
-                    else:
-                        self.script += [entry.path]
-                        paths += [head]
+        paths = _get_screener_script_files()
 
         if paths:
-            self.script.sort()
-            paths.sort()
-
-            menu_items = {f'{index}': f'{item.title()}' for index, item in enumerate(paths, start=1)}
+            menu_items = {f'{index}': f'{item[1].title()}' for index, item in enumerate(paths, start=1)}
             menu_items['0'] = 'Cancel'
 
             selection = ui.menu(menu_items, 'Available Screens', 0, len(menu_items)-1, prompt='Select screen, or 0 to cancel')
             if selection > 0:
-                self.screen = paths[selection-1]
-                self.path_screen = f'{SCREEN_BASEPATH}{self.screen}.{SCREEN_SUFFIX}'
+                self.path_screen = paths[selection-1][0]
+                self.screen = paths[selection-1][1]
 
                 if self.table:
                     self.screener = Screener(self.table, screen=self.path_screen)
@@ -325,7 +304,7 @@ class Interface:
                     if self.screener.cache_used:
                         ui.print_message(f'{len(self.screener.valids)} symbols identified. Cached results used')
                     else:
-                        ui.print_message(f'{len(self.screener.valids)} symbols identified in {self.screener.task_time:.1f} seconds')
+                        ui.print_message(f'{len(self.screener.valids)} symbols identified in {self.screener.task_time:.1f} seconds', pre_creturn=0)
 
                     success = True
 
@@ -525,7 +504,7 @@ class Interface:
             pass
 
         if self.screener.task_state == 'None':
-            prefix = 'Screening'
+            prefix = f'Screening {self.table}/{self.screen}'
             total = self.screener.task_total
             ui.progress_bar(self.screener.task_completed, self.screener.task_total, prefix=prefix, reset=True)
 
@@ -537,8 +516,6 @@ class Interface:
                 tasks = len([True for future in self.screener.task_futures if future.running()])
 
                 ui.progress_bar(completed, total, prefix=prefix, ticker=ticker, success=success, tasks=tasks)
-
-        print()
 
     def show_progress_options(self) -> None:
         while not sl.strategy_state:
@@ -624,40 +601,24 @@ class Interface:
 
         print()
 
-    def manage_result_files(self) -> None:
-        paths = _get_screener_cache_files()
-        if paths:
-            menu_items = {f'{index}': f'{item}' for index, item in enumerate(paths, start=1)}
-            menu_items['0'] = 'Done'
+    def build_result_files(self) -> None:
+        screens = _get_screener_script_files()
+        screens.sort()
 
-            selection = ui.menu(menu_items, 'Available Cache Files', 0, len(menu_items)-1, prompt='Select cache file')
-            if selection > 0:
-                screen_old = paths[selection-1]
-                file_old = f'{CACHE_BASEPATH}{screen_old}.{CACHE_SUFFIX}'
-                selection = ui.input_integer(f"Select operation for '{screen_old}': (1) Delete, (2) Roll, (0) Cancel", 0, 2)
-                if selection == 1:
-                    try:
-                        os.remove(file_old)
-                    except OSError as e:
-                        ui.print_error(f'{__name__}: File error for {e.filename}: {e.strerror}')
-                    else:
-                        ui.print_message(f'Cache {screen_old} deleted')
-                elif selection == 2:
-                    date_time = dt.now().strftime(ui.DATE_FORMAT)
-                    screen_new = f'{date_time}{screen_old[10:]}'
-                    file_new = f'{CACHE_BASEPATH}{screen_new}.{CACHE_SUFFIX}'
-                    try:
-                        os.replace(file_old, file_new)
-                    except OSError as e:
-                        ui.print_error(f'File error for {e.filename}: {e.strerror}')
-                    else:
-                        ui.print_message(f'Renamed {screen_old} to {screen_new}')
+        tables = store.get_exchanges()
+        tables.extend(store.get_indexes())
+        tables += ['EVERY']
+        tables.sort()
 
-        else:
-            ui.print_message('No cache files found')
+        for screen in screens:
+            for table in tables:
+                self.path_screen = screen[0]
+                self.screen = screen[1].title()
+                self.table = table
+                self.run_screen(False)
 
     def analyze_result_files(self, top: int = LISTTOP_ANALYSIS):
-        table = ui.input_alphanum('Enter table').upper()
+        table = ui.input_alphanum('Enter table').lower()
 
         files = _get_screener_cache_files()
 
@@ -665,9 +626,9 @@ class Interface:
         for item in files:
             parts = item.split('_')
             if parts[1] != table:
-                pass # Wrong table
+                pass  # Wrong table
             elif parts[0] != dt.now().strftime(ui.DATE_FORMAT):
-                pass # Old date
+                pass  # Old date
             else:
                 path = f'{SCREEN_BASEPATH}{parts[2]}.{SCREEN_SUFFIX}'
                 screen = Screener(parts[1], path)
@@ -705,7 +666,7 @@ class Interface:
                 else:
                     ui.print_message(f'Renamed {screen_old} to {screen_new}')
 
-    def delete_old_result_files(self):
+    def delete_result_files(self):
         files = _get_screener_cache_files()
         if files:
             paths = []
@@ -737,7 +698,7 @@ class Interface:
 
 
 def _get_screener_cache_files() -> list[str]:
-    paths = []
+    files = []
     with os.scandir(CACHE_BASEPATH) as entries:
         for entry in entries:
             if entry.is_file():
@@ -747,12 +708,31 @@ def _get_screener_cache_files() -> list[str]:
                 elif head == SCREEN_INIT_NAME:
                     pass
                 else:
-                    paths += [head]
+                    files += [head]
 
-    if paths:
-        paths.sort()
+    files.sort()
 
-    return paths
+    return files
+
+def _get_screener_script_files() -> list[tuple[str, str]]:
+    files = []
+    with os.scandir(SCREEN_BASEPATH) as entries:
+        for entry in entries:
+            if entry.is_file():
+                head, sep, tail = entry.name.partition('.')
+                if tail != SCREEN_SUFFIX:
+                    pass
+                elif head == SCREEN_INIT_NAME:
+                    pass
+                elif head == 'test':
+                    pass
+                else:
+                    file = (f'{SCREEN_BASEPATH}{head}.{SCREEN_SUFFIX}', head)
+                    files += [file]
+
+    files.sort()
+
+    return files
 
 
 def main():
