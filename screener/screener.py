@@ -7,6 +7,7 @@ from concurrent import futures
 from dataclasses import dataclass, field
 
 import numpy as np
+import pandas as pd
 
 from base import Threaded
 from company.company import Company
@@ -87,6 +88,7 @@ class Screener(Threaded):
         self.companies: list[Company] = []
         self.results: list[Result] = []
         self.valids: list[Result] = []
+        self.summary: pd.DataFrame = pd.DataFrame()
         self._concurrency = 10
 
         if self._load(screen, init=self.screen_init):
@@ -147,9 +149,10 @@ class Screener(Threaded):
                 for future in futures.as_completed(self.task_futures):
                     _logger.info(f'{__name__}: Thread completed: {future.result()}')
 
-            # Extract the successful screens and sort based on score
+            # Extract the successful screens, sort based on score, then summarize
             self.valids = [result for result in self.results if result]
             self.valids = sorted(self.valids, reverse=True, key=lambda r: float(r))
+            self.summary = summarize(self.valids)
 
             if dump_results:
                 self._dump_results()
@@ -297,6 +300,39 @@ class Screener(Threaded):
         filename = f'{CACHE_BASEPATH}/{date_time}_{self.table.lower()}_{head.lower()}.{CACHE_SUFFIX}'
 
         return filename
+
+
+def summarize(results: list[Result]) -> pd.DataFrame:
+    summary = pd.DataFrame()
+
+    items = [{
+        'ticker': result.company.ticker,
+        'valid': bool(result),
+        'score': float(result),
+        'company': result.company.information['name'],
+        'sector': result.company.information['sector'],
+        'screen': result.screen.title(),
+    } for result in results]
+
+    if items:
+        summary = pd.DataFrame(items)
+        summary.index += 1 # Use 1-based index
+
+    return summary
+
+def group_duplicates(results: list[Result]) -> pd.DataFrame:
+    items = pd.DataFrame()
+
+    summary = summarize(results)
+    dups = summary.duplicated(subset=['ticker'], keep=False)
+    duplicated = summary[dups]
+
+    if not duplicated.empty:
+        group = duplicated.groupby(['ticker'], sort=False, as_index=False)
+        for item in group:
+            items = pd.concat([items, item[1]], axis=0)
+
+    return items
 
 
 if __name__ == '__main__':

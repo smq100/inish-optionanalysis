@@ -14,8 +14,9 @@ from tabulate import tabulate
 import strategies as s
 import strategies.strategy_list as sl
 import data as d
+import screener.screener as screener
+from screener.screener import Screener, Result
 from strategies.strategy import Strategy
-from screener.screener import Screener, Result, SCREEN_INIT_NAME, SCREEN_BASEPATH, SCREEN_SUFFIX, CACHE_BASEPATH, CACHE_SUFFIX
 from analysis.trend import SupportResistance
 from analysis.correlate import Correlate
 from analysis.chart import Chart
@@ -28,7 +29,7 @@ logger.get_logger(logging.WARNING, logfile='')
 
 COOR_CUTOFF = 0.85
 LISTTOP_SCREEN = 10
-LISTTOP_ANALYSIS = 15
+LISTTOP_ANALYSIS = 25
 LISTTOP_TREND = 5
 LISTTOP_CORR = 10
 
@@ -82,8 +83,8 @@ class Interface:
                 ui.print_error('Exchange, index or ticker not found')
 
         if self.screen:
-            if os.path.exists(SCREEN_BASEPATH+screen+'.'+SCREEN_SUFFIX):
-                self.path_screen = f'{SCREEN_BASEPATH}{self.screen}.{SCREEN_SUFFIX}'
+            if os.path.exists(screener.SCREEN_BASEPATH+screen+'.'+screener.SCREEN_SUFFIX):
+                self.path_screen = f'{screener.SCREEN_BASEPATH}{self.screen}.{screener.SCREEN_SUFFIX}'
             else:
                 ui.print_error(f'File "{self.screen}" not found')
                 abort = True
@@ -455,15 +456,12 @@ class Interface:
             elif top > self.screener.task_success:
                 top = self.screener.task_success
 
-            ui.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen}/{self.table})', post_creturn=1)
+            ui.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen.title()}/{self.table})', post_creturn=1)
 
-            index = 1
-            for result in self.screener.valids:
-                print(f'{index:>3}: {str(result):<5} {float(result):.2f} - {result.company.information["name"]}, {result.company.information["sector"]}')
-                index += 1
+            summary = screener.summarize(self.screener.valids).drop(['valid', 'screen'], axis=1)
+            headers = [header.title() for header in summary.columns]
+            print(tabulate(summary.head(top), headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
 
-                if index > top:
-                    break
         print()
 
     def show_chart(self):
@@ -630,7 +628,7 @@ class Interface:
             elif parts[0] != dt.now().strftime(ui.DATE_FORMAT):
                 pass  # Old date
             else:
-                path = f'{SCREEN_BASEPATH}{parts[2]}.{SCREEN_SUFFIX}'
+                path = f'{screener.SCREEN_BASEPATH}{parts[2]}.{screener.SCREEN_SUFFIX}'
                 screen = Screener(parts[1], path)
                 if screen.cache_available:
                     screen.run_script()
@@ -643,22 +641,30 @@ class Interface:
                 top = len(results)
             elif top > len(results):
                 top = len(results)
-            index = 1
-            ui.print_message(f'Analysis Results {top} of {len(results)} ({table})', post_creturn=1)
-            for result in results[:top]:
-                print(f'{index:>3}: {str(result):<5} {float(result):.2f} - {result.screen} - {result.company.information["name"]}, {result.company.information["sector"]}')
-                index += 1
+
+            summary = screener.summarize(results).drop(['valid'], axis=1)
+            headers = [header.title() for header in summary.columns]
+
+            # Top scores
+            ui.print_message(f'Top {top} Scores of {len(results)} ({table})', post_creturn=1)
+            print(tabulate(summary.head(top), headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
+
+            # Results with multiple successes
+            groups = screener.group_duplicates(results)
+            if not groups.empty:
+                ui.print_message('Multiple Successful Results', post_creturn=1)
+                print(tabulate(groups, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
         else:
             ui.print_message(f'No results for {table} found', post_creturn=1)
 
     def roll_result_files(self) -> None:
         paths = _get_screener_cache_files()
         for screen_old in paths:
-            file_old = f'{CACHE_BASEPATH}{screen_old}.{CACHE_SUFFIX}'
+            file_old = f'{screener.CACHE_BASEPATH}{screen_old}.{screener.CACHE_SUFFIX}'
             date_time = dt.now().strftime(ui.DATE_FORMAT)
             screen_new = f'{date_time}{screen_old[10:]}'
             if screen_new > screen_old:
-                file_new = f'{CACHE_BASEPATH}{screen_new}.{CACHE_SUFFIX}'
+                file_new = f'{screener.CACHE_BASEPATH}{screen_new}.{screener.CACHE_SUFFIX}'
                 try:
                     os.replace(file_old, file_new)
                 except OSError as e:
@@ -674,7 +680,7 @@ class Interface:
             for path in files:
                 file_time = f'{path[:10]}'
                 if file_time != date_time:
-                    file = f'{CACHE_BASEPATH}{path}.{CACHE_SUFFIX}'
+                    file = f'{screener.CACHE_BASEPATH}{path}.{screener.CACHE_SUFFIX}'
                     paths += [file]
 
             if paths:
@@ -699,13 +705,13 @@ class Interface:
 
 def _get_screener_cache_files() -> list[str]:
     files = []
-    with os.scandir(CACHE_BASEPATH) as entries:
+    with os.scandir(screener.CACHE_BASEPATH) as entries:
         for entry in entries:
             if entry.is_file():
                 head, sep, tail = entry.name.partition('.')
-                if tail != CACHE_SUFFIX:
+                if tail != screener.CACHE_SUFFIX:
                     pass
-                elif head == SCREEN_INIT_NAME:
+                elif head == screener.SCREEN_INIT_NAME:
                     pass
                 else:
                     files += [head]
@@ -716,18 +722,18 @@ def _get_screener_cache_files() -> list[str]:
 
 def _get_screener_script_files() -> list[tuple[str, str]]:
     files = []
-    with os.scandir(SCREEN_BASEPATH) as entries:
+    with os.scandir(screener.SCREEN_BASEPATH) as entries:
         for entry in entries:
             if entry.is_file():
                 head, sep, tail = entry.name.partition('.')
-                if tail != SCREEN_SUFFIX:
+                if tail != screener.SCREEN_SUFFIX:
                     pass
-                elif head == SCREEN_INIT_NAME:
+                elif head == screener.SCREEN_INIT_NAME:
                     pass
                 elif head == 'test':
                     pass
                 else:
-                    file = (f'{SCREEN_BASEPATH}{head}.{SCREEN_SUFFIX}', head)
+                    file = (f'{screener.SCREEN_BASEPATH}{head}.{screener.SCREEN_SUFFIX}', head)
                     files += [file]
 
     files.sort()
