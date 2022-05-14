@@ -3,10 +3,12 @@ import time
 import threading
 import logging
 
+from tabulate import tabulate
 import argparse
 
 import data as d
-from screener.screener import Screener, Result, SCREEN_INIT_NAME
+import screener.screener as screener
+from screener.screener import Screener, Result
 from data import store as store
 from utils import ui, logger
 
@@ -18,10 +20,9 @@ SCREEN_SUFFIX = 'screen'
 
 
 class Interface:
-    def __init__(self, table: str = '', screen: str = '', backtest: int = 0, verbose: bool = False, exit: bool = False, live: bool = False):
+    def __init__(self, table: str = '', screen: str = '', backtest: int = 0, exit: bool = False, live: bool = False):
         self.table = table.upper()
         self.screen_base = screen
-        self.verbose = verbose
         self.exit = exit
         self.live = live if store.is_database_connected() else True
         self.auto = False
@@ -33,9 +34,9 @@ class Interface:
         abort = False
 
         if type(backtest) == int:
-            self.end = backtest
+            self.backtest = backtest
         else:
-            self.end = 0
+            self.backtest = 0
             abort = False
             ui.print_error("'backtest' must be an integer. Using a value of 0")
 
@@ -63,7 +64,7 @@ class Interface:
 
         if abort:
             pass
-        elif self.table and self.screen_path and self.end > 0:
+        elif self.table and self.screen_path and self.backtest > 0:
             self.auto = True
             self.main_menu(selection=5)
         elif self.table and self.screen_path:
@@ -108,17 +109,17 @@ class Interface:
             elif selection == 4:
                 if self.run_screen():
                     if len(self.valids) > 0:
-                        self.print_results(top=20)
+                        self.show_valids(top=20)
             elif selection == 5:
                 if self.run_backtest(prompt=not self.auto):
                     if len(self.valids) > 0:
-                        self.print_backtest(top=20)
+                        self.show_backtest(top=20)
             elif selection == 6:
                 self.print_ticker_results()
             elif selection == 7:
-                self.print_results(top=20)
+                self.show_valids(top=20)
             elif selection == 8:
-                self.print_results()
+                self.show_valids()
             elif selection == 0:
                 self.exit = True
 
@@ -162,7 +163,7 @@ class Interface:
                     head, sep, tail = entry.name.partition('.')
                     if tail != SCREEN_SUFFIX:
                         pass
-                    elif head == SCREEN_INIT_NAME:
+                    elif head == screener.SCREEN_INIT_NAME:
                         pass
                     elif head == 'test':
                         pass
@@ -185,7 +186,7 @@ class Interface:
         else:
             ui.print_message('No screener files found')
 
-    def run_screen(self, backtest: bool = False) -> bool:
+    def run_screen(self) -> bool:
         success = False
         self.auto = False
 
@@ -194,18 +195,19 @@ class Interface:
         elif not self.screen_path:
             ui.print_error('No screen specified')
         else:
-            if backtest:
+            if self.backtest > 0:
                 self.live = False
-            else:
-                self.end = 0
 
             try:
-                self.screener = Screener(self.table, screen=self.screen_path, end=self.end, live=self.live)
+                self.screener = Screener(self.table, screen=self.screen_path, backtest=self.backtest, live=self.live)
             except ValueError as e:
                 ui.print_error(f'{__name__}: {str(e)}')
             else:
+                cache = True if self.backtest == 0 else False
+                dump = True if self.backtest == 0 else False
                 self.valids = []
-                self.task = threading.Thread(target=self.screener.run_script, kwargs={'use_cache': True})
+
+                self.task = threading.Thread(target=self.screener.run_script, kwargs={'use_cache': cache, 'dump_results': dump})
                 self.task.start()
 
                 # Show thread progress. Blocking while thread is active
@@ -223,23 +225,23 @@ class Interface:
     def run_backtest(self, prompt: bool = True, bullish: bool = True) -> bool:
         if prompt:
             input = ui.input_integer('Input number of days (10-100)', 10, 100)
-            self.end = input
+            self.backtest = input
 
-        success = self.run_screen(backtest=True)
+        success = self.run_screen()
         if success:
             for result in self.valids:
                 if result:
-                    result.price_last = result.company.get_last_price()
-                    result.price_current = store.get_last_price(result.company.ticker)
+                    result.backtest_price_last = result.company.get_last_price()
+                    result.backtest_price_current = store.get_last_price(result.company.ticker)
 
                     if bullish:
-                        result.backtest_success = (result.price_current > result.price_last)
+                        result.backtest_success = (result.backtest_price_current > result.backtest_price_last)
                     else:
-                        result.backtest_success = (result.price_current < result.price_last)
+                        result.backtest_success = (result.backtest_price_current < result.backtest_price_last)
 
         return success
 
-    def print_results(self, top: int = -1, verbose: bool = False, ticker: str = '') -> None:
+    def show_valids(self, top: int = -1, ticker: str = '') -> None:
         if not self.table:
             ui.print_error('No table specified')
         elif not self.screen_base:
@@ -259,23 +261,20 @@ class Interface:
             if ticker:
                 ui.print_message(f'Screener Results for {ticker} ({self.screen_base})')
             else:
-                ui.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen_base})')
+                ui.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen_base})', post_creturn=1)
 
-            index = 1
-            for result in results:
-                if ticker:
+            if ticker:
+                for result in results:
                     [print(r) for r in result.descriptions if ticker.upper().ljust(6, ' ') == r[:6]]
-                elif self.verbose or verbose:
-                    [print(r) for r in result.descriptions if result]
-                elif result:
-                    print(f'{index:>3}: {result} ({float(result):.2f})')
-                    index += 1
+            elif results:
+                drop = ['valid', 'backtest_price_last', 'backtest_price_current', 'backtest_success']
+                summary = screener.summarize(results).drop(drop, axis=1)
+                headers = [header.title() for header in summary.columns]
+                print(tabulate(summary.head(top), headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
 
-                if index > top:
-                    break
         print()
 
-    def print_backtest(self, top: int = -1):
+    def show_backtest(self, top: int = -1):
         if not self.table:
             ui.print_error('No table specified')
         elif not self.screen_base:
@@ -288,28 +287,23 @@ class Interface:
             elif top > self.screener.task_success:
                 top = self.screener.task_success
 
+            summary = screener.summarize(self.valids)
+            order = ['ticker', 'score', 'backtest_success']
+            summary = summary.reindex(columns=order)
+            headers = [header.replace('_', '\n').title() for header in summary.columns]
+
             ui.print_message(f'Backtest Results {top} of {self.screener.task_success} ({self.screen_base})')
-
-            index = 1
-            for result in self.valids:
-                if result:
-                    mark = '*' if result.backtest_success else ' '
-                    print(f'{index:>3}: {mark} {result} ({float(result):.2f}) ${result.price_last:.2f}/${result.price_current:.2f}')
-                    index += 1
-
-                if index > top:
-                    break
+            print(tabulate(summary.head(top), headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
 
     def print_ticker_results(self):
         ticker = ui.input_text('Enter ticker')
         if ticker:
             ticker = ticker.upper()
             if store.is_ticker(ticker):
-                self.print_results(ticker=ticker)
+                self.show_valids(ticker=ticker)
 
     def show_progress(self, prefix, suffix) -> None:
-        while not self.screener.task_state:
-            pass
+        while not self.screener.task_state: pass
 
         if self.screener.task_state == 'None':
             ui.progress_bar(self.screener.task_completed, self.screener.task_total, prefix=prefix, suffix=suffix, reset=True)
@@ -332,8 +326,6 @@ class Interface:
                     print(result)
             else:
                 print('None')
-        else:
-            ui.print_message(f'{self.screener.task_state}')
 
 
 def main():
@@ -342,7 +334,6 @@ def main():
     parser.add_argument('-s', '--screen', help='Specify a screening script', required=False, default='')
     parser.add_argument('-b', '--backtest', help='Run a backtest (only valid with -t and -s)', required=False, default=0)
     parser.add_argument('-x', '--exit', help='Run the script and quit (only valid with -t and -s) then exit', action='store_true')
-    parser.add_argument('-v', '--verbose', help='Show verbose output', action='store_true')
 
     command = vars(parser.parse_args())
     table = ''
@@ -355,9 +346,9 @@ def main():
         screen = command['screen']
 
     if screen and table and command['exit']:
-        Interface(table, screen, backtest=int(command['backtest']), verbose=command['verbose'], exit=True)
+        Interface(table, screen, backtest=int(command['backtest']), exit=True)
     else:
-        Interface(table, screen, backtest=int(command['backtest']), verbose=command['verbose'])
+        Interface(table, screen, backtest=int(command['backtest']))
 
 if __name__ == '__main__':
     main()

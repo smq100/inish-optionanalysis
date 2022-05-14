@@ -352,13 +352,15 @@ class Interface:
 
             # Show the results
             if not sl.strategy_results.empty:
-                ui.print_message(f'Strategy Analysis ({task_time:.1f}s)', pre_creturn=2, post_creturn=1)
-                table = sl.strategy_results.drop(['breakeven', 'breakeven1', 'breakeven2'], axis=1, errors='ignore')
-
+                drop = ['breakeven', 'breakeven1', 'breakeven2']
+                table = sl.strategy_results.drop(drop, axis=1, errors='ignore')
                 strategy = table.iloc[:, :6]
                 headers = [header.replace('_', '\n').title() for header in strategy]
+
+                ui.print_message(f'Strategy Analysis ({task_time:.1f}s)', pre_creturn=2, post_creturn=1)
                 print(tabulate(strategy, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
                 print()
+
                 summary = table.iloc[:, 6:]
                 headers = [header.replace('_', '\n').title() for header in summary]
                 print(tabulate(summary, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
@@ -456,10 +458,11 @@ class Interface:
             elif top > self.screener.task_success:
                 top = self.screener.task_success
 
-            ui.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen.title()}/{self.table})', post_creturn=1)
-
-            summary = screener.summarize(self.screener.valids).drop(['valid', 'screen'], axis=1)
+            drop = ['valid', 'screen', 'bt_price_last', 'bt_price_current', 'bt_success']
+            summary = screener.summarize(self.screener.valids).drop(drop, axis=1)
             headers = [header.title() for header in summary.columns]
+
+            ui.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen.title()}/{self.table})', post_creturn=1)
             print(tabulate(summary.head(top), headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
 
         print()
@@ -642,7 +645,8 @@ class Interface:
             elif top > len(results):
                 top = len(results)
 
-            summary = screener.summarize(results).drop(['valid'], axis=1)
+            drop = ['valid', 'bt_price_last', 'bt_price_current', 'bt_success']
+            summary = screener.summarize(results).drop(drop, axis=1)
             headers = [header.title() for header in summary.columns]
 
             # Top scores

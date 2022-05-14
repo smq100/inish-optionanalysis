@@ -267,13 +267,14 @@ def get_last_price(ticker: str) -> float:
 
 
 def get_history(ticker: str, days: int = -1, end: int = 0, use_last: bool = False, live: bool = False, inactive: bool = False) -> pd.DataFrame:
+    if end < 0:
+        raise ValueError('Invalid value for "end"')
+
     ticker = ticker.upper()
     history = pd.DataFrame()
     live = True if _session is None else live
 
-    if end < 0:
-        ValueError('Invalid value for "end"')
-    elif live:
+    if live:
         history = fetcher.get_history_live(ticker, days)
         if history is not None:
             _logger.info(f'{__name__}: Fetched {len(history)} days of live price history for {ticker}')

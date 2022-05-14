@@ -33,9 +33,9 @@ class Result:
     successes: list[bool]
     scores: list[float]
     descriptions: list[str]
+    backtest_price_last: float = 0.0
+    backtest_price_current: float = 0.0
     backtest_success: bool = False
-    price_last: float = 0.0
-    price_current: float = 0.0
 
     def __repr__(self):
         return f'{self.company.ticker}: {float(self):.2f}, {self.screen}'
@@ -51,7 +51,7 @@ class Result:
 
 
 class Screener(Threaded):
-    def __init__(self, table: str, screen: str, days: int = 365, end: int = 0, live: bool = False):
+    def __init__(self, table: str, screen: str, days: int = 365, backtest: int = 0, live: bool = False):
         super().__init__()
 
         self.table = table.upper()
@@ -78,11 +78,11 @@ class Screener(Threaded):
         if days < 30:
             raise ValueError('Invalid number of days')
 
-        if end < 0:
-            raise ValueError('Invalid "end" days')
+        if backtest < 0:
+            raise ValueError('Invalid backtest days')
 
         self.days = days
-        self.end = end
+        self.backtest = backtest
         self.live = live if store.is_database_connected() else True
         self.scripts: list[dict] = []
         self.companies: list[Company] = []
@@ -93,7 +93,7 @@ class Screener(Threaded):
 
         if self._load(screen, init=self.screen_init):
             self._open()
-            self.cache_available = self._load_results()
+            self.cache_available = self._load_results() if self.backtest == 0 else False
         else:
             raise ValueError(f'Script not found or invalid format: {screen}')
 
@@ -134,9 +134,9 @@ class Screener(Threaded):
             self._concurrency = 10 if len(self.companies) > 10 else 1
 
             if self.task_total > 1:
-                _logger.info(f'{__name__}: Screening {self.task_total} symbols from {self.table} table (days={self.days}, end={self.end})')
+                _logger.info(f'{__name__}: Screening {self.task_total} symbols from {self.table} table (days={self.days}, end={self.backtest})')
             else:
-                _logger.info(f'{__name__}: Screening {self.table} (days={self.days}, end={self.end})')
+                _logger.info(f'{__name__}: Screening {self.table} (days={self.days}, end={self.backtest})')
 
             # Randomize and split up the lists
             random.shuffle(self.companies)
@@ -238,7 +238,7 @@ class Screener(Threaded):
 
         if len(tickers) > 0:
             try:
-                self.companies = [Company(s, self.days, end=self.end, live=self.live) for s in tickers]
+                self.companies = [Company(s, self.days, backtest=self.backtest, live=self.live) for s in tickers]
             except ValueError as e:
                 _logger.warning(f'{__name__}: Invalid ticker {s}')
 
@@ -272,7 +272,7 @@ class Screener(Threaded):
 
             with open(filename, 'wb') as f:
                 try:
-                    pickle.dump(self.results, f, protocol=pickle.HIGHEST_PROTOCOL)  # TODO dump() sends LF's to console for some reason
+                    pickle.dump(self.results, f, protocol=pickle.HIGHEST_PROTOCOL)  # TODO Understand why dump() sends LF's to console
                 except Exception as e:
                     _logger.error(f'{__name__}: Exception for pickle dump: {str(e)}')
 
@@ -312,6 +312,9 @@ def summarize(results: list[Result]) -> pd.DataFrame:
         'company': result.company.information['name'],
         'sector': result.company.information['sector'],
         'screen': result.screen.title(),
+        'backtest_price_last': result.backtest_price_last,
+        'backtest_price_current': result.backtest_price_current,
+        'backtest_success': result.backtest_success,
     } for result in results]
 
     if items:

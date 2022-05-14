@@ -9,23 +9,23 @@ _logger = logger.get_logger()
 
 
 class Company:
-    def __init__(self, ticker: str, days: int, end: int = 0, lazy: bool = True, live: bool = False):
+    def __init__(self, ticker: str, days: int, backtest: int = 0, lazy: bool = True, live: bool = False):
+        if not store.is_ticker(ticker):
+            raise ValueError(f'Invalid ticker {ticker}')
+        if days < 1:
+            raise ValueError('Invalid number of days')
+        if backtest < 0:
+            raise ValueError('Invalid backtest days')
+
         self.ticker = ticker.upper()
         self.days = days
-        self.end = end
+        self.backtest = backtest
         self.live = live if store.is_database_connected() else True
         self.history: pd.DataFrame = pd.DataFrame()
         self.information: dict = {}
         self.price = 0.0
         self.volatility = 0.0
         self.ta: Technical
-
-        if not store.is_ticker(ticker):
-            raise ValueError(f'Invalid ticker {ticker}')
-        if days < 1:
-            raise ValueError('Invalid number of days')
-        if end < 0:
-            raise ValueError('Invalid "end" days')
 
         if not lazy:
             self._load_history()
@@ -107,17 +107,17 @@ class Company:
 
     def _load_history(self) -> bool:
         success = False
-        self.history = store.get_history(self.ticker, self.days, end=self.end, live=self.live)
+        self.history = store.get_history(self.ticker, self.days, end=self.backtest, live=self.live)
         if self.history is None:
             _logger.warning(f'{__name__}: No history for {self.ticker}')
         elif self.history.empty:
             _logger.warning(f'{__name__}: Empty history for {self.ticker}')
         else:
-            self.ta = Technical(self.ticker, self.history, self.days, end=self.end, live=self.live)
+            self.ta = Technical(self.ticker, self.history, self.days, end=self.backtest, live=self.live)
             success = True
 
             _logger.info(f'{__name__}: Fetched {len(self.history)} items from {self.ticker}. '
-                         f'{self.days} days from {self.history.iloc[0]["date"]} to {self.history.iloc[-1]["date"]} (end={self.end})')
+                         f'{self.days} days from {self.history.iloc[0]["date"]} to {self.history.iloc[-1]["date"]} (end={self.backtest})')
 
         return success
 
@@ -128,7 +128,7 @@ class Company:
 
 
 if __name__ == '__main__':
-    company = Company('IBM', days=365, end=30)
+    company = Company('IBM', days=365, backtest=30)
     val = company.get_close()
     print(val)
     val = company.get_last_price()
