@@ -203,11 +203,11 @@ class Interface:
             except ValueError as e:
                 ui.print_error(f'{__name__}: {str(e)}')
             else:
-                cache = True if self.backtest == 0 else False
-                dump = True if self.backtest == 0 else False
+                cache = (self.backtest == 0)
+                save = (self.backtest == 0)
                 self.valids = []
 
-                self.task = threading.Thread(target=self.screener.run_script, kwargs={'use_cache': cache, 'dump_results': dump})
+                self.task = threading.Thread(target=self.screener.run_script, kwargs={'use_cache': cache, 'save_results': save})
                 self.task.start()
 
                 # Show thread progress. Blocking while thread is active
@@ -228,11 +228,15 @@ class Interface:
             self.backtest = input
 
         success = self.run_screen()
+
         if success:
             for result in self.valids:
                 if result:
                     result.backtest_price_last = result.company.get_last_price()
                     result.backtest_price_current = store.get_last_price(result.company.ticker)
+
+                    if result.backtest_price_current <= 0.0:
+                        print(f'*** {result=}')
 
                     if bullish:
                         result.backtest_success = (result.backtest_price_current > result.backtest_price_last)

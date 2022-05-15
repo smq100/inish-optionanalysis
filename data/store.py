@@ -249,7 +249,7 @@ def get_ticker_index(ticker: str) -> str:
 def get_current_price(ticker: str) -> float:
     price = 0.0
     history = get_history(ticker, 5, live=True)
-    if history is not None:
+    if not history.empty:
         price = history.iloc[-1]['close']
 
     return price
@@ -260,15 +260,15 @@ def get_last_price(ticker: str) -> float:
     live = True if _session is None else False
 
     history = get_history(ticker, 30, live=live)
-    if history is not None:
+    if not history.empty:
         price = history.iloc[-1]['close']
 
     return price
 
 
-def get_history(ticker: str, days: int = -1, end: int = 0, use_last: bool = False, live: bool = False, inactive: bool = False) -> pd.DataFrame:
+def get_history(ticker: str, days: int = -1, end: int = 0, live: bool = False, inactive: bool = False) -> pd.DataFrame:
     if end < 0:
-        raise ValueError('Invalid value for "end"')
+        raise ValueError('Invalid value for \'end\'')
 
     ticker = ticker.upper()
     history = pd.DataFrame()
@@ -276,13 +276,13 @@ def get_history(ticker: str, days: int = -1, end: int = 0, use_last: bool = Fals
 
     if live:
         history = fetcher.get_history_live(ticker, days)
-        if history is not None:
+        if not history.empty:
             _logger.info(f'{__name__}: Fetched {len(history)} days of live price history for {ticker}')
         else:
             _logger.info(f'{__name__}: Unable to fetch live price history for {ticker} from {d.ACTIVE_HISTORYDATASOURCE}')
 
         if end > 0:
-            _logger.info(f'{__name__}: "end" value ignored for live queries')
+            _logger.info(f'{__name__}: \'end\' value ignored for live queries')
     else:
         with _session() as session:
             if inactive:
@@ -296,10 +296,7 @@ def get_history(ticker: str, days: int = -1, end: int = 0, use_last: bool = Fals
                     q = session.query(models.Price).filter(models.Price.security_id == symbols.id).order_by(models.Price.date)
                 elif days > 1:
                     start = dt.datetime.today() - dt.timedelta(days=days) - dt.timedelta(days=end)
-                    if use_last:
-                        q = session.query(models.Price).filter(models.Price.security_id == symbols.id).order_by(models.Price.date).limit(days)
-                    else:
-                        q = session.query(models.Price).filter(and_(models.Price.security_id == symbols.id, models.Price.date >= start)).order_by(models.Price.date)
+                    q = session.query(models.Price).filter(and_(models.Price.security_id == symbols.id, models.Price.date >= start)).order_by(models.Price.date)
                 else:
                     _logger.warning(f'{__name__}: Must specify history days > 1')
 

@@ -25,6 +25,7 @@ class Company:
         self.information: dict = {}
         self.price = 0.0
         self.volatility = 0.0
+        self.active = True
         self.ta: Technical
 
         if not lazy:
@@ -108,9 +109,8 @@ class Company:
     def _load_history(self) -> bool:
         success = False
         self.history = store.get_history(self.ticker, self.days, end=self.backtest, live=self.live)
-        if self.history is None:
-            _logger.warning(f'{__name__}: No history for {self.ticker}')
-        elif self.history.empty:
+        if self.history.empty:
+            self.active = False
             _logger.warning(f'{__name__}: Empty history for {self.ticker}')
         else:
             self.ta = Technical(self.ticker, self.history, self.days, end=self.backtest, live=self.live)

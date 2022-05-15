@@ -62,6 +62,7 @@ class Interface:
         self.quick = quick
         self.exit = exit
         self.days = 1000
+        self.backtest = 0
         self.path_screen = ''
         self.results_corr = []
         self.screener = None
@@ -103,19 +104,20 @@ class Interface:
                 '1':  'Select Table or Index',
                 '2':  'Select Screen',
                 '3':  'Run Screen',
-                '4':  'Refresh Screen',
-                '5':  'Run Option Strategy',
-                '6':  'Run Support & Resistance Analysis',
-                '7':  'Run Coorelation',
-                '8':  'Show by Sector',
-                '9':  'Show Top Results',
-                '10':  'Show All Results',
-                '11':  'Show Ticker Screen Results',
-                '12': 'Show Chart',
-                '13': 'Build Result Files',
-                '14': 'Analyze Result Files',
-                '15': 'Roll Result Files',
-                '16': 'Delete Result Files',
+                '4':  'Run Backtest Screen',
+                '5':  'Refresh Screen',
+                '6':  'Run Option Strategy',
+                '7':  'Run Support & Resistance Analysis',
+                '8':  'Run Coorelation',
+                '9':  'Show by Sector',
+                '10':  'Show Top Results',
+                '11':  'Show All Results',
+                '12':  'Show Ticker Screen Results',
+                '13': 'Show Chart',
+                '14': 'Build Result Files',
+                '15': 'Analyze Result Files',
+                '16': 'Roll Result Files',
+                '17': 'Delete Result Files',
                 '0':  'Exit'
             }
 
@@ -125,15 +127,18 @@ class Interface:
             if self.screen:
                 menu_items['2'] += f' ({self.screen})'
 
+            if self.backtest > 0:
+                menu_items['4'] += f' ({self.backtest})'
+
             if self.quick:
-                menu_items['6'] += ' (quick)'
+                menu_items['7'] += ' (quick)'
 
             if self.screener is not None and len(self.screener.valids) > 0:
                 top = len(self.screener.valids) if len(self.screener.valids) < LISTTOP_SCREEN else LISTTOP_SCREEN
-                menu_items['9'] += f' ({top})'
+                menu_items['10'] += f' ({top})'
 
             if self.screener is not None and len(self.screener.valids) > 0:
-                menu_items['10'] += f' ({len(self.screener.valids)})'
+                menu_items['11'] += f' ({len(self.screener.valids)})'
 
             if selection == 0:
                 selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1)
@@ -143,38 +148,43 @@ class Interface:
             elif selection == 2:
                 self.select_screen()
             elif selection == 3:
-                self.run_screen()
-                if len(self.screener.valids) > 0:
-                    self.show_valids(top=LISTTOP_SCREEN)
+                self.backtest = 0
+                if self.run_screen():
+                    if len(self.screener.valids) > 0:
+                        self.show_valids(top=LISTTOP_SCREEN)
             elif selection == 4:
+                if self.run_backtest():
+                    if len(self.screener.valids) > 0:
+                        self.show_backtest(top=LISTTOP_SCREEN)
+            elif selection == 5:
                 self.refresh_screen()
                 if len(self.screener.valids) > 0:
                     self.show_valids(top=LISTTOP_SCREEN)
-            elif selection == 5:
-                self.select_option_strategy()
             elif selection == 6:
-                self.select_support_resistance()
+                self.select_option_strategy()
             elif selection == 7:
+                self.select_support_resistance()
+            elif selection == 8:
                 self.run_coorelate()
                 if len(self.results_corr) > 0:
                     self.show_coorelations()
-            elif selection == 8:
-                self.filter_by_sector()
             elif selection == 9:
-                self.show_valids(top=LISTTOP_SCREEN)
+                self.filter_by_sector()
             elif selection == 10:
-                self.show_valids()
+                self.show_valids(top=LISTTOP_SCREEN)
             elif selection == 11:
-                self.show_ticker_results()
+                self.show_valids()
             elif selection == 12:
-                self.show_chart()
+                self.show_ticker_results()
             elif selection == 13:
-                self.build_result_files()
+                self.show_chart()
             elif selection == 14:
-                self.analyze_result_files()
+                self.build_result_files()
             elif selection == 15:
-                self.roll_result_files()
+                self.analyze_result_files()
             elif selection == 16:
+                self.roll_result_files()
+            elif selection == 17:
                 self.delete_result_files()
             elif selection == 0:
                 self.exit = True
@@ -289,11 +299,14 @@ class Interface:
             ui.print_error('No screen specified')
         else:
             try:
-                self.screener = Screener(self.table, screen=self.path_screen)
+                self.screener = Screener(self.table, screen=self.path_screen, backtest=self.backtest)
             except ValueError as e:
                 ui.print_error(f'{__name__}: {str(e)}')
             else:
-                self.task = threading.Thread(target=self.screener.run_script, kwargs={'use_cache': use_cache})
+                cache = False if self.backtest > 0 else use_cache
+                save = (self.backtest == 0)
+
+                self.task = threading.Thread(target=self.screener.run_script, kwargs={'use_cache': cache, 'save_results': save})
                 self.task.start()
 
                 # Show thread progress. Blocking while thread is active
@@ -305,9 +318,36 @@ class Interface:
                     if self.screener.cache_used:
                         ui.print_message(f'{len(self.screener.valids)} symbols identified. Cached results used')
                     else:
-                        ui.print_message(f'{len(self.screener.valids)} symbols identified in {self.screener.task_time:.1f} seconds', pre_creturn=0)
+                        ui.print_message(f'{len(self.screener.valids)} symbols identified in {self.screener.task_time:.1f} seconds', pre_creturn=1)
 
                     success = True
+
+        return success
+
+    def run_backtest(self, prompt: bool = True, bullish: bool = True) -> bool:
+        success = False
+
+        if not self.table:
+            ui.print_error('No exchange, index, or ticker specified')
+        elif not self.path_screen:
+            ui.print_error('No screen specified')
+        else:
+            if prompt:
+                input = ui.input_integer('Input number of days (10-100)', 10, 100)
+                self.backtest = input
+
+            success = self.run_screen()
+
+            if success:
+                for result in self.screener.valids:
+                    if result:
+                        result.backtest_price_last = result.company.get_last_price()
+                        result.backtest_price_current = store.get_last_price(result.company.ticker)
+
+                        if bullish:
+                            result.backtest_success = (result.backtest_price_current > result.backtest_price_last)
+                        else:
+                            result.backtest_success = (result.backtest_price_current < result.backtest_price_last)
 
         return success
 
@@ -458,14 +498,47 @@ class Interface:
             elif top > self.screener.task_success:
                 top = self.screener.task_success
 
-            drop = ['valid', 'screen', 'bt_price_last', 'bt_price_current', 'bt_success']
+            if self.backtest > 0:
+                drop = ['valid', 'screen']
+            else:
+                drop = ['valid', 'screen', 'backtest_price_last', 'backtest_price_current', 'backtest_success']
             summary = screener.summarize(self.screener.valids).drop(drop, axis=1)
-            headers = [header.title() for header in summary.columns]
+            headers = [header.replace('_', '\n').title() for header in summary.columns]
 
             ui.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen.title()}/{self.table})', post_creturn=1)
             print(tabulate(summary.head(top), headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
 
         print()
+
+    def show_backtest(self, top: int = -1):
+        if not self.table:
+            ui.print_error('No table specified')
+        elif not self.screen:
+            ui.print_error('No screen specified')
+        elif len(self.screener.valids) == 0:
+            ui.print_message('No results were located')
+        else:
+            if top <= 0:
+                top = self.screener.task_success
+            elif top > self.screener.task_success:
+                top = self.screener.task_success
+
+            summary = screener.summarize(self.screener.valids)
+            successes = summary[summary.backtest_success == True]
+
+            total = summary.shape[0]
+            rows = successes.shape[0]
+            successful = float(rows) / total
+
+            order = ['ticker', 'score', 'backtest_success', 'backtest_price_last', 'backtest_price_current']
+            successes = successes.reindex(columns=order)
+            headers = [header.replace('_', '\n').title() for header in successes.columns]
+
+            ui.print_message(f'Backtest Results: {top} of {self.screener.task_success} screened ({self.screen.title()}) Success = {successful*100:.2f}% ({rows}/{total})', post_creturn=1)
+            if successful > 0:
+                print(tabulate(successes.head(top), headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
+            else:
+                ui.print_message(f'None', post_creturn=1)
 
     def show_chart(self):
         ticker = ui.input_text("Enter ticker").upper()
@@ -506,6 +579,8 @@ class Interface:
 
         if self.screener.task_state == 'None':
             prefix = f'Screening {self.table}/{self.screen}'
+            if self.backtest > 0:
+                prefix += f' (-{self.backtest} days)'
             total = self.screener.task_total
             ui.progress_bar(self.screener.task_completed, self.screener.task_total, prefix=prefix, reset=True)
 
@@ -645,7 +720,7 @@ class Interface:
             elif top > len(results):
                 top = len(results)
 
-            drop = ['valid', 'bt_price_last', 'bt_price_current', 'bt_success']
+            drop = ['valid', 'backtest_price_last', 'backtest_price_current', 'backtest_success']
             summary = screener.summarize(results).drop(drop, axis=1)
             headers = [header.title() for header in summary.columns]
 
@@ -654,9 +729,9 @@ class Interface:
             print(tabulate(summary.head(top), headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
 
             # Results with multiple successes
-            groups = screener.group_duplicates(results)
+            groups = screener.group_duplicates(results).drop(drop, axis=1)
             if not groups.empty:
-                ui.print_message('Multiple Successful Results', post_creturn=1)
+                ui.print_message('Multiple Results', post_creturn=1)
                 print(tabulate(groups, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
         else:
             ui.print_message(f'No results for {table} found', post_creturn=1)

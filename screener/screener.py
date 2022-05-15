@@ -52,13 +52,22 @@ class Result:
 
 class Screener(Threaded):
     def __init__(self, table: str, screen: str, days: int = 365, backtest: int = 0, live: bool = False):
+        if not table:
+            raise ValueError(f'Table not specified')
+        if not screen:
+            raise ValueError(f'Screen not specified')
+        if days < 30:
+            raise ValueError('Invalid number of days')
+        if backtest < 0:
+            raise ValueError('Invalid backtest days')
+
         super().__init__()
 
         self.table = table.upper()
         self.screen = screen
-        self.screen_init = f'{SCREEN_BASEPATH}{SCREEN_INIT_NAME}.{SCREEN_SUFFIX}'
-        self.cache_available = False
-        self.cache_used = False
+        self.days = days
+        self.backtest = backtest
+        self.live = live if store.is_database_connected() else True
 
         if self.table == 'EVERY':
             self.type = 'every'
@@ -72,18 +81,9 @@ class Screener(Threaded):
             self.type = ''
             raise ValueError(f'Table not found: {self.table}')
 
-        if not screen:
-            raise ValueError(f'Screen not specified')
-
-        if days < 30:
-            raise ValueError('Invalid number of days')
-
-        if backtest < 0:
-            raise ValueError('Invalid backtest days')
-
-        self.days = days
-        self.backtest = backtest
-        self.live = live if store.is_database_connected() else True
+        self.screen_init = f'{SCREEN_BASEPATH}{SCREEN_INIT_NAME}.{SCREEN_SUFFIX}'
+        self.cache_available = False
+        self.cache_used = False
         self.scripts: list[dict] = []
         self.companies: list[Company] = []
         self.results: list[Result] = []
@@ -104,7 +104,7 @@ class Screener(Threaded):
         return f'{self.table} - {self.screen}'
 
     @Threaded.threaded
-    def run_script(self, use_cache: bool = True, dump_results: bool = True) -> None:
+    def run_script(self, use_cache: bool = True, save_results: bool = True) -> None:
         self.task_total = len(self.companies)
 
         if use_cache and self.cache_available:
@@ -154,8 +154,8 @@ class Screener(Threaded):
             self.valids = sorted(self.valids, reverse=True, key=lambda r: float(r))
             self.summary = summarize(self.valids)
 
-            if dump_results:
-                self._dump_results()
+            if save_results:
+                self._save_results()
 
             self.task_state = 'Done'
 
@@ -266,7 +266,7 @@ class Screener(Threaded):
 
         return bool(self.scripts)
 
-    def _dump_results(self) -> None:
+    def _save_results(self) -> None:
         if self.results:
             filename = self._build_cache_filename()
 
