@@ -235,9 +235,6 @@ class Interface:
                     result.backtest_price_last = result.company.get_last_price()
                     result.backtest_price_current = store.get_last_price(result.company.ticker)
 
-                    if result.backtest_price_current <= 0.0:
-                        print(f'*** {result=}')
-
                     if bullish:
                         result.backtest_success = (result.backtest_price_current > result.backtest_price_last)
                     else:

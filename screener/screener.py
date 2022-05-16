@@ -88,6 +88,7 @@ class Screener(Threaded):
         self.companies: list[Company] = []
         self.results: list[Result] = []
         self.valids: list[Result] = []
+        self.errors: list[Result] = []
         self.summary: pd.DataFrame = pd.DataFrame()
         self._concurrency = 10
 
@@ -130,6 +131,7 @@ class Screener(Threaded):
         else:
             self.results = []
             self.valids = []
+            self.errors = []
             self.task_state = 'None'
             self._concurrency = 10 if len(self.companies) > 10 else 1
 
@@ -331,9 +333,8 @@ def group_duplicates(results: list[Result]) -> pd.DataFrame:
     duplicated = summary[dups]
 
     if not duplicated.empty:
-        group = duplicated.groupby(['ticker'], sort=False, as_index=False)
-        for item in group:
-            items = pd.concat([items, item[1]], axis=0)
+        # items = duplicated.groupby(['ticker'], sort=False, as_index=False).first()
+        items = duplicated.groupby(['ticker'], sort=False).first()
 
     return items
 
@@ -343,4 +344,4 @@ if __name__ == '__main__':
     logger.get_logger(logging.INFO)
 
     s = Screener('SP500', 'bulltrend')
-    # s.run_script()
+    s.run_script()

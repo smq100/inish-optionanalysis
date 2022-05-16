@@ -349,6 +349,10 @@ class Interface:
                         else:
                             result.backtest_success = (result.backtest_price_current < result.backtest_price_last)
 
+                        if result.backtest_price_current <= 0.0:
+                            self.screener.errors += [result]
+                            self.screener.valids.remove(result)
+
         return success
 
     def refresh_screen(self):
@@ -540,6 +544,12 @@ class Interface:
             else:
                 ui.print_message(f'None', post_creturn=1)
 
+            if self.screener.errors:
+                summary = screener.summarize(self.screener.errors)
+                errors = summary.reindex(columns=order)
+                ui.print_message('Backtest Errors', post_creturn=1)
+                print(tabulate(errors, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
+
     def show_chart(self):
         ticker = ui.input_text("Enter ticker").upper()
         if store.is_ticker(ticker):
@@ -715,24 +725,23 @@ class Interface:
         if results:
             results = sorted(results, reverse=True, key=lambda r: float(r))
 
-            if top <= 0:
-                top = len(results)
-            elif top > len(results):
-                top = len(results)
-
             drop = ['valid', 'backtest_price_last', 'backtest_price_current', 'backtest_success']
-            summary = screener.summarize(results).drop(drop, axis=1)
+            summary = screener.summarize(results)
+            summary.drop(drop, axis=1, inplace=True)
             headers = [header.title() for header in summary.columns]
 
             # Top scores
-            ui.print_message(f'Top {top} Scores of {len(results)} ({table})', post_creturn=1)
-            print(tabulate(summary.head(top), headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
+            ui.print_message(f'Top Scores of {table}', post_creturn=1)
+            print(tabulate(summary, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
 
             # Results with multiple successes
-            groups = screener.group_duplicates(results).drop(drop, axis=1)
+            groups = screener.group_duplicates(results)
             if not groups.empty:
-                ui.print_message('Multiple Results', post_creturn=1)
-                print(tabulate(groups, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
+                order = ['company']
+                groups = groups.reindex(columns=order)
+
+                ui.print_message('Multiple Screen Successes', post_creturn=1)
+                print(tabulate(groups, tablefmt='plain'))
         else:
             ui.print_message(f'No results for {table} found', post_creturn=1)
 
