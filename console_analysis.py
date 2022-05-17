@@ -341,15 +341,14 @@ class Interface:
             if success:
                 for result in self.screener.valids:
                     if result:
-                        result.backtest_price_last = result.company.get_last_price()
-                        result.backtest_price_current = store.get_last_price(result.company.ticker)
+                        result.price_last = result.company.get_last_price()
 
                         if bullish:
-                            result.backtest_success = (result.backtest_price_current > result.backtest_price_last)
+                            result.backtest_success = (result.price_current > result.price_last)
                         else:
-                            result.backtest_success = (result.backtest_price_current < result.backtest_price_last)
+                            result.backtest_success = (result.price_current < result.price_last)
 
-                        if result.backtest_price_current <= 0.0:
+                        if result.price_current <= 0.0:
                             self.screener.errors += [result]
                             self.screener.valids.remove(result)
 
@@ -505,7 +504,7 @@ class Interface:
             if self.backtest > 0:
                 drop = ['valid', 'screen']
             else:
-                drop = ['valid', 'screen', 'backtest_price_last', 'backtest_price_current', 'backtest_success']
+                drop = ['valid', 'screen', 'price_last', 'backtest_success']
             summary = screener.summarize(self.screener.valids).drop(drop, axis=1)
             headers = [header.replace('_', '\n').title() for header in summary.columns]
 
@@ -534,7 +533,7 @@ class Interface:
             rows = successes.shape[0]
             successful = float(rows) / total
 
-            order = ['ticker', 'score', 'backtest_success', 'backtest_price_last', 'backtest_price_current']
+            order = ['ticker', 'score', 'backtest_success', 'price_last', 'price_current']
             successes = successes.reindex(columns=order)
             headers = [header.replace('_', '\n').title() for header in successes.columns]
 
@@ -725,23 +724,25 @@ class Interface:
         if results:
             results = sorted(results, reverse=True, key=lambda r: float(r))
 
-            drop = ['valid', 'backtest_price_last', 'backtest_price_current', 'backtest_success']
+            drop = ['valid', 'price_last', 'backtest_success']
             summary = screener.summarize(results)
             summary.drop(drop, axis=1, inplace=True)
-            headers = [header.title() for header in summary.columns]
+            headers = [header.replace('_', '\n').title() for header in summary.columns]
 
             # Top scores
             ui.print_message(f'Top Scores of {table}', post_creturn=1)
             print(tabulate(summary, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
 
             # Results with multiple successes
-            groups = screener.group_duplicates(results)
-            if not groups.empty:
-                order = ['company']
-                groups = groups.reindex(columns=order)
+            multiples = screener.group_duplicates(results)
+            if not multiples.empty:
+                order = ['company', 'sector', 'price_current']
+                multiples = multiples.reindex(columns=order)
+                headers = ['Ticker']
+                headers += [header.replace('_', '\n').title() for header in multiples.columns]
 
-                ui.print_message('Multiple Screen Successes', post_creturn=1)
-                print(tabulate(groups, tablefmt='plain'))
+                ui.print_message('Successes Across Multiple Screens', post_creturn=1)
+                print(tabulate(multiples, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
         else:
             ui.print_message(f'No results for {table} found', post_creturn=1)
 

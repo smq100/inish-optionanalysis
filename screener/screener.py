@@ -33,8 +33,8 @@ class Result:
     successes: list[bool]
     scores: list[float]
     descriptions: list[str]
-    backtest_price_last: float = 0.0
-    backtest_price_current: float = 0.0
+    price_current: float
+    price_last: float = 0.0
     backtest_success: bool = False
 
     def __repr__(self):
@@ -53,9 +53,9 @@ class Result:
 class Screener(Threaded):
     def __init__(self, table: str, screen: str, days: int = 365, backtest: int = 0, live: bool = False):
         if not table:
-            raise ValueError(f'Table not specified')
+            raise ValueError('Table not specified')
         if not screen:
-            raise ValueError(f'Screen not specified')
+            raise ValueError('Screen not specified')
         if days < 30:
             raise ValueError('Invalid number of days')
         if backtest < 0:
@@ -172,14 +172,14 @@ class Screener(Threaded):
         return score
 
     def _run(self, companies: list[Company]) -> None:
-        for ticker in companies:
+        for company in companies:
             successes = []
             scores = []
             descriptions = []
-            self.task_ticker = str(ticker)
+            self.task_ticker = str(company)
             for filter in self.scripts:
                 try:
-                    interpreter = Interpreter(ticker, filter)
+                    interpreter = Interpreter(company, filter)
                     successes += [interpreter.run()]
                     scores += [interpreter.score]
                     descriptions += [interpreter.description]
@@ -193,7 +193,7 @@ class Screener(Threaded):
                     break
                 except Exception as e:
                     self.task_state = str(e)
-                    _logger.error(f'{__name__}: Exception: {self.task_state} for {ticker}')
+                    _logger.error(f'{__name__}: Exception: {self.task_state} for {company}')
                     break
 
             if self.task_state == 'None':
@@ -201,7 +201,8 @@ class Screener(Threaded):
 
                 head_tail = os.path.split(self.screen)
                 head, sep, tail = head_tail[1].partition('.')
-                self.results += [Result(ticker, head, successes, scores, descriptions)]
+                price = store.get_last_price(company.ticker)
+                self.results += [Result(company, head, successes, scores, descriptions, price)]
                 if (bool(self.results[-1])):
                     self.task_success += 1
             else:
@@ -314,8 +315,8 @@ def summarize(results: list[Result]) -> pd.DataFrame:
         'company': result.company.information['name'],
         'sector': result.company.information['sector'],
         'screen': result.screen.title(),
-        'backtest_price_last': result.backtest_price_last,
-        'backtest_price_current': result.backtest_price_current,
+        'price_last': result.price_last,
+        'price_current': result.price_current,
         'backtest_success': result.backtest_success,
     } for result in results]
 
@@ -333,7 +334,6 @@ def group_duplicates(results: list[Result]) -> pd.DataFrame:
     duplicated = summary[dups]
 
     if not duplicated.empty:
-        # items = duplicated.groupby(['ticker'], sort=False, as_index=False).first()
         items = duplicated.groupby(['ticker'], sort=False).first()
 
     return items

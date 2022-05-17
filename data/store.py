@@ -246,7 +246,7 @@ def get_ticker_index(ticker: str) -> str:
     return index
 
 
-def get_current_price(ticker: str) -> float:
+def get_live_price(ticker: str) -> float:
     price = 0.0
     history = get_history(ticker, 5, live=True)
     if not history.empty:

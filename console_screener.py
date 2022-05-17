@@ -232,13 +232,13 @@ class Interface:
         if success:
             for result in self.valids:
                 if result:
-                    result.backtest_price_last = result.company.get_last_price()
-                    result.backtest_price_current = store.get_last_price(result.company.ticker)
+                    result.price_last = result.company.get_last_price()
+                    result.price_current = store.get_last_price(result.company.ticker)
 
                     if bullish:
-                        result.backtest_success = (result.backtest_price_current > result.backtest_price_last)
+                        result.backtest_success = (result.price_current > result.price_last)
                     else:
-                        result.backtest_success = (result.backtest_price_current < result.backtest_price_last)
+                        result.backtest_success = (result.price_current < result.price_last)
 
         return success
 
@@ -268,7 +268,7 @@ class Interface:
                 for result in results:
                     [print(r) for r in result.descriptions if ticker.upper().ljust(6, ' ') == r[:6]]
             elif results:
-                drop = ['valid', 'backtest_price_last', 'backtest_price_current', 'backtest_success']
+                drop = ['valid', 'price_last', 'price_current', 'backtest_success']
                 summary = screener.summarize(results).drop(drop, axis=1)
                 headers = [header.title() for header in summary.columns]
                 print(tabulate(summary.head(top), headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
