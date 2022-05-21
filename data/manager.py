@@ -616,7 +616,7 @@ class Manager(Threaded):
 
             with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
                 if self._concurrency > 1:
-                    self.task_futures = [executor.submit(recheck, item.tolist()) for item in lists]
+                    self.task_futures = [executor.submit(recheck, item) for item in lists]
                 else:
                     running = 1
                     self.task_futures = [executor.submit(recheck, tickers)]
@@ -702,7 +702,7 @@ class Manager(Threaded):
                     random.shuffle(tickers)
                     lists = np.array_split(tickers, self._concurrency)
                     lists = [item.tolist() for item in lists if item.size > 0]
-                    self.task_futures = [executor.submit(check, item.tolist()) for item in lists]
+                    self.task_futures = [executor.submit(check, item) for item in lists]
                 else:
                     self.task_futures = [executor.submit(check, tickers)]
 

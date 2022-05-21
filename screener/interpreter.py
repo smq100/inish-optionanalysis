@@ -196,7 +196,9 @@ class Interpreter:
 
             basef = f'{base:.2f}' if base < 1e5 else f'{base:.1e}'
             criteriaf = f'{criteria:.2f}' if criteria < 1e5 else f'{criteria:.1e}'
-            self.description = f'{self.company.ticker:6s} {str(self.success)[:1]} {self.score:6.2f}: {self.note:18s}: ' + \
+            pf = 'Pass' if self.success else 'Fail'
+            self.description = \
+                f'{self.company.ticker:6s} {pf} {self.score:6.2f}: {self.note:18s}: ' + \
                 f'{self.base_technical}({self.base_length})/{basef}@{self.base_factor:.2f} ' + \
                 f'{self.conditional} ' + \
                 f'{self.criteria_technical}({self.criteria_length})/{self.criteria_start}/{self.criteria_series}/{criteriaf}@{self.criteria_factor:.2f} ' + \
@@ -204,7 +206,9 @@ class Interpreter:
         else:
             _logger.warning(f'{__name__}: No technical information for {self.company}')
 
-            self.description = f'{self.company.ticker:6s} {str(self.success)[:1]} {self.score:6.2f}: {self.note:18s}: ' + \
+            pf = 'Pass' if self.success else 'Fail'
+            self.description = \
+                f'{self.company.ticker:6s} {pf} {self.score:6.2f}: {self.note:18s}: ' + \
                 f'{self.base_technical}({self.base_length})/***@{self.base_factor:.2f} ' + \
                 f'{self.conditional} ' + \
                 f'{self.criteria_technical}({self.criteria_length})/{self.criteria_start}/{self.criteria_series}/***@{self.criteria_factor:.2f} ' + \

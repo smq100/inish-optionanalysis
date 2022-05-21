@@ -417,20 +417,19 @@ class SupportResistance(Threaded):
         ax1.set_title(f'{self.company["name"]}')
         ax1.secondary_yaxis('right')
 
-        # Highs & Lows
-        length = len(self.history)
-        dates = [self.history.iloc[i]['date'].strftime(ui.DATE_FORMAT) for i in range(length)]
-
         # Grid and ticks
+        length = len(self.history)
         ax1.grid(which='major', axis='both')
-        ax1.set_xticks(range(0, length+1, int(length/12)))
+        ax1.set_xticks(range(0, length+1, length//12))
         ax1.tick_params(axis='x', labelrotation=45)
 
+        # Highs & Lows
+        dates = [self.history.iloc[i]['date'].strftime(ui.DATE_FORMAT) for i in range(length)]
         ax1.plot(dates, self.history['high'], '-g', linewidth=0.5)
         ax1.plot(dates, self.history['low'], '-r', linewidth=0.5)
         ax1.fill_between(dates, self.history['high'], self.history['low'], facecolor='gray', alpha=0.4)
 
-        # Pivot points
+        # Pivot points (high)
         dates = []
         values = []
         for line in resistance.itertuples():
@@ -441,6 +440,7 @@ class SupportResistance(Threaded):
                 values += [self.history.iloc[index]['high']]
         ax1.plot(dates, values, '.r')
 
+        # Pivot points (low)
         dates = []
         values = []
         for line in support.itertuples():
@@ -451,7 +451,7 @@ class SupportResistance(Threaded):
                 values += [self.history.iloc[index]['low']]
         ax1.plot(dates, values, '.g')
 
-        # Trend lines
+        # Trend lines (high)
         dates = []
         values = []
         for line in resistance.itertuples():
@@ -466,6 +466,7 @@ class SupportResistance(Threaded):
 
             ax1.plot(dates, values, '-r', linewidth=line_width)
 
+        # Trend lines (low)
         dates = []
         values = []
         for line in support.itertuples():
@@ -480,7 +481,7 @@ class SupportResistance(Threaded):
 
             ax1.plot(dates, values, '-g', linewidth=line_width)
 
-        # Trend line extensions
+        # Trend line extensions (high)
         dates = []
         values = []
         for line in resistance.itertuples():
@@ -495,6 +496,7 @@ class SupportResistance(Threaded):
 
             ax1.plot(dates, values, ':r', linewidth=line_width)
 
+        # Trend line extensions (low)
         dates = []
         values = []
         for line in support.itertuples():
@@ -509,7 +511,7 @@ class SupportResistance(Threaded):
 
             ax1.plot(dates, values, ':g', linewidth=line_width)
 
-        # End points
+        # End points (high)
         dates = []
         values = []
         text = []
@@ -522,6 +524,7 @@ class SupportResistance(Threaded):
                 text += [{'text': f'{line.end_point:.2f}:{index+1}', 'value': line.end_point, 'color': 'red'}]
         ax1.plot(dates, values, '.r')
 
+        # End points (low)
         dates = []
         values = []
         for index, line in enumerate(support.itertuples()):
@@ -533,7 +536,7 @@ class SupportResistance(Threaded):
                 text += [{'text': f'{line.end_point:.2f}:{index+1}', 'value': line.end_point, 'color': 'green'}]
         ax1.plot(dates, values, '.g')
 
-        # End points text
+        # End points text (high)
         ylimits = ax1.get_ylim()
         inc = (ylimits[1] - ylimits[0]) / 33.0
         text = sorted(text, key=lambda t: t['value'])
@@ -543,6 +546,7 @@ class SupportResistance(Threaded):
                 ax1.text(self.points+5, self.price+(index*inc), txt['text'], color=txt['color'], va='center', size='small')
                 index += 1
 
+        # End points text (low)
         text = sorted(text, reverse=True, key=lambda t: t['value'])
         index = 1
         for txt in text:

@@ -471,20 +471,17 @@ class Interface:
             menu_items = {f'{index}': f'{item}' for index, item in enumerate(sectors, start=1)}
             menu_items['0'] = 'Done'
 
-            while True:
-                selection = ui.menu(menu_items, 'Market Sectors', 0, len(menu_items)-1, prompt='Select desired sector')
-                if selection > 0:
-                    valids = [str(r) for r in self.screener.valids]
-                    filtered = store.get_sector_tickers(valids, sectors[selection-1])
+            selection = ui.menu(menu_items, 'Market Sectors', 0, len(menu_items)-1, prompt='Select desired sector')
+            if selection > 0:
+                valids = [str(r) for r in self.screener.valids]
+                filtered = store.get_sector_tickers(valids, sectors[selection-1])
 
-                    index = 1
-                    ui.print_message(f'Results of {self.screen}/{self.table} for the {sectors[selection-1]} sector', post_creturn=1)
-                    for result in self.screener.valids:
-                        if str(result) in filtered:
-                            print(f'{index:>3}: {str(result):<5} {float(result):.2f} - {result.company.information["name"]}')
-                            index += 1
-                else:
-                    break
+                index = 1
+                ui.print_message(f'Results of {self.screen}/{self.table} for the {sectors[selection-1]} sector', post_creturn=1)
+                for result in self.screener.valids:
+                    if str(result) in filtered:
+                        print(f'{index:>3}: {str(result):<5} {float(result):.2f} - {result.company.information["name"]}')
+                        index += 1
         else:
             ui.print_message('No results were located')
 
@@ -587,7 +584,7 @@ class Interface:
             pass
 
         if self.screener.task_state == 'None':
-            prefix = f'Screening {self.table}/{self.screen}'
+            prefix = f'Screening {self.table}/{self.screen.title()}'
             if self.backtest > 0:
                 prefix += f' (-{self.backtest} days)'
             total = self.screener.task_total

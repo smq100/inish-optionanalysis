@@ -4,7 +4,7 @@ import pickle
 import random
 from datetime import datetime as dt
 from concurrent import futures
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
@@ -143,10 +143,10 @@ class Screener(Threaded):
             # Randomize and split up the lists
             random.shuffle(self.companies)
             companies: list[np.ndarray] = np.array_split(self.companies, self._concurrency)
-            companies = [i for i in companies if i is not None]
+            companies = [i.tolist() for i in companies if i is not None]
 
             with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
-                self.task_futures = [executor.submit(self._run, list.tolist()) for list in companies]
+                self.task_futures = [executor.submit(self._run, list) for list in companies]
 
                 for future in futures.as_completed(self.task_futures):
                     _logger.info(f'{__name__}: Thread completed: {future.result()}')
@@ -241,9 +241,9 @@ class Screener(Threaded):
 
         if len(tickers) > 0:
             try:
-                self.companies = [Company(s, self.days, backtest=self.backtest, live=self.live) for s in tickers]
+                self.companies = [Company(ticker, self.days, backtest=self.backtest, live=self.live) for ticker in tickers]
             except ValueError as e:
-                _logger.warning(f'{__name__}: Invalid ticker {s}')
+                _logger.warning(f'{__name__}: Invalid ticker: {e}')
 
             if len(self.companies) > 1:
                 _logger.info(f'{__name__}: Opened {len(self.companies)} symbols from {self.table} table')
