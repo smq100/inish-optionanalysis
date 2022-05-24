@@ -94,6 +94,15 @@ def get_history_live(ticker: str, days: int = -1) -> pd.DataFrame:
     return history
 
 
+def get_company_live(ticker: str) -> dict:
+    company = {}
+
+    c = _get_yfinance_live(ticker)
+    if c is not None:
+        company = c.info
+
+    return company
+
 def get_option_expiry(ticker: str) -> tuple[str]:
     if not _connected:
         raise ConnectionError('No internet connection')
@@ -191,18 +200,8 @@ def _get_yfinance_live(ticker: str) -> yf.Ticker:
         company = _last_company
         _logger.info(f'{__name__}: Using cached company information for {ticker} from Yahoo')
     else:
-        _logger.info(f'{__name__}: Fetching live company information for {ticker} from Yahoo')
-
         company = yf.Ticker(ticker)
-
-    if company is not None:
-        try:
-            # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
-            pass
-            # _ = company.info
-        except Exception as e:
-            _logger.warning(f'{__name__}: No company found for {ticker}: {str(e)}')
-            company = pd.DataFrame()
+        _logger.info(f'{__name__}: Fetched live company information for {ticker} from Yahoo')
 
     _last_company = company
     _last_ticker = ticker
@@ -227,7 +226,6 @@ def _get_history_yfinance(ticker: str, days: int = -1) -> pd.DataFrame:
             end = dt.datetime.today()
             start = end - dt.timedelta(days=days)
 
-            # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
             for retry in range(_RETRIES):
                 try:
                     kwargs = {'debug': False}

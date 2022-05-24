@@ -233,7 +233,7 @@ class Manager(Threaded):
 
                     _logger.info(f'{__name__}: Updated company information for {ticker}')
                 else:
-                    _logger.info(f'{__name__}: No company information for {ticker}')
+                    _logger.warning(f'{__name__}: No company information for {ticker}')
 
         return updated
 
@@ -272,7 +272,7 @@ class Manager(Threaded):
 
                     for future in futures.as_completed(self.task_futures):
                         running -= 1
-                        _logger.debug(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
+                        _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
 
         self.task_state = 'Done'
 
@@ -292,14 +292,14 @@ class Manager(Threaded):
 
                     self._add_company_to_ticker(ticker)
                 else:
-                    _logger.info(f'{__name__}: No price history for {ticker}')
+                    _logger.warning(f'{__name__}: No price history for {ticker}')
             else:
                 date_db = history.iloc[-1]['date']
                 if date_db is not None:
                     _logger.info(f'{__name__}: Last {ticker} price in database: {date_db:%Y-%m-%d}')
                 else:
                     date_db = today - date(2000, 1, 1)
-                    _logger.info(f'{__name__}: No price history for {ticker} in database')
+                    _logger.warning(f'{__name__}: No price history for {ticker} in database')
 
                 delta = (today - date_db).days
                 if delta > 0:
@@ -307,7 +307,7 @@ class Manager(Threaded):
                     if history is None:
                         _logger.error(f'{__name__}: \'None\' object for {ticker} (3)')
                     elif history.empty:
-                        _logger.info(f'{__name__}: Empty pricing dataframe for {ticker}')
+                        _logger.warning(f'{__name__}: Empty pricing dataframe for {ticker}')
                     else:
                         date_cloud = history.iloc[-1]['date'].to_pydatetime().date()
                         _logger.info(f'{__name__}: Last {ticker} price in cloud: {date_cloud:%Y-%m-%d}')
@@ -343,7 +343,7 @@ class Manager(Threaded):
                 else:
                     _logger.info(f'{__name__}: {ticker} already up to date')
         else:
-            _logger.info(f'{__name__}: Unknown ticker {ticker}')
+            _logger.warning(f'{__name__}: Unknown ticker {ticker}')
 
         return days
 
@@ -361,7 +361,7 @@ class Manager(Threaded):
                 days = -1
 
                 try:
-                    time.sleep(0.5)
+                    time.sleep(0.1)
                     days = self.update_history_ticker(ticker)
                 except IntegrityError as e:
                     _logger.error(f'{__name__}: IntegrityError exception occurred for {ticker} (1): {e.__cause__}')
@@ -375,6 +375,7 @@ class Manager(Threaded):
                 elif days < 0:
                     self.invalid_tickers += [ticker]
                     _write_tickers_log(self.invalid_tickers)
+                    _logger.warning(f'{__name__}: No data for {ticker}')
 
                 toc = time.perf_counter()
                 _logger.debug(f'{__name__}: {toc-tic:.2f}s to update {ticker}')
@@ -391,13 +392,9 @@ class Manager(Threaded):
                 else:
                     self.task_futures = [executor.submit(update, tickers)]
 
-                _logger.debug(f'{__name__}: Here 1')
-
                 for future in futures.as_completed(self.task_futures):
                     running -= 1
-                    _logger.debug(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
-
-                _logger.debug(f'{__name__}: Here 2')
+                    _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
         if log:
             _write_tickers_log(self.invalid_tickers)
 
@@ -409,7 +406,7 @@ class Manager(Threaded):
                 os.remove(d.SQLITE_FILE_PATH)
                 _logger.info(f'{__name__}: Deleted {d.SQLITE_FILE_PATH}')
             else:
-                _logger.warning(f'{__name__}: File does not exist: {d.SQLITE_FILE_PATH}')
+                _logger.error(f'{__name__}: File does not exist: {d.SQLITE_FILE_PATH}')
         else:
             models.Base.metadata.drop_all(self.engine)
 
@@ -637,7 +634,7 @@ class Manager(Threaded):
 
                 for future in futures.as_completed(self.task_futures):
                     running -= 1
-                    _logger.debug(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
+                    _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
 
         self.task_state = 'Done'
 
@@ -724,7 +721,7 @@ class Manager(Threaded):
 
                 for future in futures.as_completed(self.task_futures):
                     running -= 1
-                    _logger.debug(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
+                    _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
 
             if len(self.task_object) > 1:
                 last = sorted(self.task_object)[-1]

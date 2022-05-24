@@ -332,27 +332,26 @@ def get_company(ticker: str, live: bool = False, extra: bool = False) -> dict:
     results = {}
 
     if live:
-        company = fetcher.get_history_live(ticker)
-        if company is not None:
-            if company.info is not None:
-                try:
-                    results['name'] = company.info.get('shortName')[:95] if company.info.get('shortName') is not None else UNAVAILABLE
-                    results['description'] = company.info.get('longBusinessSummary')[:4995] if company.info.get('longBusinessSummary') is not None else UNAVAILABLE
-                    results['url'] = company.info.get('website')[:195] if company.info.get('website') is not None else UNAVAILABLE
-                    results['sector'] = company.info.get('sector')[:195] if company.info.get('sector') is not None else UNAVAILABLE
-                    results['industry'] = company.info.get('industry')[:195] if company.info.get('industry') is not None else UNAVAILABLE
-                    results['marketcap'] = company.info.get('marketCap') if company.info.get('marketCap') is not None else 0
-                    results['beta'] = company.info.get('beta') if company.info.get('beta') is not None else 3.0
-                    results['indexes'] = ''
-                    results['active'] = '?'
-                    results['precords'] = 0
+        company = fetcher.get_company_live(ticker)
+        if company:
+            try:
+                results['name'] = company.get('shortName', UNAVAILABLE)[:95]
+                results['description'] = company.get('longBusinessSummary', UNAVAILABLE)[:4995]
+                results['url'] = company.get('website', UNAVAILABLE)[:195]
+                results['sector'] = company.get('sector', UNAVAILABLE)[:195]
+                results['industry'] = company.get('industry', UNAVAILABLE)[:195]
+                results['marketcap'] = company.get('marketCap', UNAVAILABLE)
+                results['beta'] = company.get('beta', UNAVAILABLE)
+                results['indexes'] = ''
+                results['active'] = '?'
+                results['precords'] = 0
 
-                    ratings = fetcher.get_ratings(ticker)
-                    results['rating'] = sum(ratings) / float(len(ratings)) if len(ratings) > 0 else 3.0
-                    results['exchange'] = '?'
-                except Exception as e:
-                    results = {}
-                    _logger.error(f'{__name__}: Exception for ticker {ticker}: {str(e)}')
+                ratings = fetcher.get_ratings(ticker)
+                results['rating'] = sum(ratings) / float(len(ratings)) if len(ratings) > 0 else 3.0
+                results['exchange'] = '?'
+            except Exception as e:
+                results = {}
+                _logger.error(f'{__name__}: Exception for ticker {ticker}: {str(e)}')
     else:
         with _session() as session:
             symbol = session.query(models.Security).filter(models.Security.ticker == ticker).one_or_none()

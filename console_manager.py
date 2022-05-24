@@ -10,7 +10,7 @@ from data import manager as manager
 from utils import ui, logger
 
 
-logger.get_logger(logging.WARNING)#, logfile='output')
+logger.get_logger(logging.ERROR, logfile='output')
 
 
 class Interface:
