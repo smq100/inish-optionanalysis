@@ -95,7 +95,7 @@ class Manager(Threaded):
 
                     for future in futures.as_completed(self.task_futures):
                         running -= 1
-                        _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
+                        _logger.debug(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
             else:
                 _logger.warning(f'{__name__}: No symbols for {exchange}')
 
@@ -118,7 +118,9 @@ class Manager(Threaded):
                     company = store.get_company(ticker, live=True)
                     if company:
                         history = store.get_history(ticker, live=True)
-                        if history is not None:
+                        if history is None:
+                            _logger.error(f'{__name__}: \'None\' object for {ticker} (1)')
+                        elif history is not None:
                             process = True
                         else:
                             self.invalid_tickers += [ticker]
@@ -270,7 +272,7 @@ class Manager(Threaded):
 
                     for future in futures.as_completed(self.task_futures):
                         running -= 1
-                        _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
+                        _logger.debug(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
 
         self.task_state = 'Done'
 
@@ -282,7 +284,9 @@ class Manager(Threaded):
             today = date.today()
 
             history = store.get_history(ticker, inactive=inactive)
-            if history.empty:
+            if history is None:
+                _logger.error(f'{__name__}: \'None\' object for {ticker} (2)')
+            elif history.empty:
                 if self._add_live_history_to_ticker(ticker):
                     _logger.info(f'{__name__}: Added full price history for {ticker}')
 
@@ -299,9 +303,9 @@ class Manager(Threaded):
 
                 delta = (today - date_db).days
                 if delta > 0:
-                    history = store.get_history(ticker, 60, live=True)  # Change days value if severely out of data
+                    history = store.get_history(ticker, days=60, live=True)  # Change days value if severely out of data
                     if history is None:
-                        _logger.info(f'{__name__}: No pricing dataframe for {ticker}')
+                        _logger.error(f'{__name__}: \'None\' object for {ticker} (3)')
                     elif history.empty:
                         _logger.info(f'{__name__}: Empty pricing dataframe for {ticker}')
                     else:
@@ -329,6 +333,7 @@ class Manager(Threaded):
                                             p.close = price.close
                                             p.volume = price.volume
 
+                                            # Add the new price record
                                             t.pricing += [p]
 
                             _logger.info(f'{__name__}: Updated {days} days pricing for {ticker} to {date_cloud:%Y-%m-%d}')
@@ -351,13 +356,17 @@ class Manager(Threaded):
 
         def update(tickers: list[str]) -> None:
             for ticker in tickers:
+                tic = time.perf_counter()
                 self.task_ticker = ticker
+                days = -1
+
                 try:
                     time.sleep(0.5)
                     days = self.update_history_ticker(ticker)
                 except IntegrityError as e:
-                    days = 0
                     _logger.error(f'{__name__}: IntegrityError exception occurred for {ticker} (1): {e.__cause__}')
+                except Exception as e:
+                    _logger.error(f'{__name__}: Unknown exception occurred for {ticker} (1): {e}')
 
                 self.task_completed += 1
 
@@ -365,10 +374,10 @@ class Manager(Threaded):
                     self.task_success += 1
                 elif days < 0:
                     self.invalid_tickers += [ticker]
-
-                # Save invalid tickers to log file every 10 invalid_tickers
-                if len(self.invalid_tickers) % 10 == 0:
                     _write_tickers_log(self.invalid_tickers)
+
+                toc = time.perf_counter()
+                _logger.debug(f'{__name__}: {toc-tic:.2f}s to update {ticker}')
 
         if self.task_total > 0:
             self.task_state = 'None'
@@ -382,10 +391,13 @@ class Manager(Threaded):
                 else:
                     self.task_futures = [executor.submit(update, tickers)]
 
+                _logger.debug(f'{__name__}: Here 1')
+
                 for future in futures.as_completed(self.task_futures):
                     running -= 1
-                    _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
+                    _logger.debug(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
 
+                _logger.debug(f'{__name__}: Here 2')
         if log:
             _write_tickers_log(self.invalid_tickers)
 
@@ -595,6 +607,8 @@ class Manager(Threaded):
                         days = self.update_history_ticker(ticker, inactive=True)
                     except IntegrityError as e:
                         _logger.error(f'{__name__}: IntegrityError exception occurred for {ticker} (2): {e.__cause__}')
+                    except Exception as e:
+                        _logger.error(f'{__name__}: Unknown exception occurred for {ticker} (2): {e}')
                     else:
                         if days > 0:
                             self.task_results += [ticker]
@@ -623,7 +637,7 @@ class Manager(Threaded):
 
                 for future in futures.as_completed(self.task_futures):
                     running -= 1
-                    _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
+                    _logger.debug(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
 
         self.task_state = 'Done'
 
@@ -685,7 +699,9 @@ class Manager(Threaded):
             for ticker in tickers:
                 self.task_ticker = ticker
                 history = store.get_history(ticker, days=90)
-                if not history.empty:
+                if history is None:
+                    _logger.error(f'{__name__}: \'None\' object for {ticker} (4)')
+                elif not history.empty:
                     date = f'{history.iloc[-1]["date"]:%Y-%m-%d}'
                     if date in self.task_object:
                         self.task_object[date] += [ticker]
@@ -708,7 +724,7 @@ class Manager(Threaded):
 
                 for future in futures.as_completed(self.task_futures):
                     running -= 1
-                    _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
+                    _logger.debug(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
 
             if len(self.task_object) > 1:
                 last = sorted(self.task_object)[-1]
@@ -774,6 +790,8 @@ class Manager(Threaded):
         except IntegrityError as e:
             c = None
             _logger.error(f'{__name__}: IntegrityError exception occurred for {ticker} (3): {e.__cause__}')
+        except Exception as e:
+            _logger.error(f'{__name__}: Unknown exception occurred for {ticker} (3): {e}')
 
         return c is not None
 
@@ -788,7 +806,9 @@ class Manager(Threaded):
                     if history is None or history.empty:
                         history = store.get_history(ticker, live=True)
 
-                    if history is not None and not history.empty:
+                    if history is None:
+                        _logger.error(f'{__name__}: \'None\' object for {ticker} (1)')
+                    if not history.empty:
                         history.reset_index(inplace=True)
                         for price in history.itertuples():
                             if price.date:
@@ -812,6 +832,8 @@ class Manager(Threaded):
                     _logger.warning(f'{__name__}: {ticker} is not a valid ticker')
         except IntegrityError as e:
             _logger.error(f'{__name__}: IntegrityError exception occurred for {ticker} (4): {e.__cause__}')
+        except Exception as e:
+            _logger.error(f'{__name__}: Unknown exception occurred for {ticker} (4): {e}')
         else:
             added = True
 

@@ -196,6 +196,8 @@ def input_table(exchange: bool = False, index: bool = False, ticker: bool = Fals
             break
         elif all and table == 'EVERY':
             break
+        elif all and table == 'BOGUS':
+            break
         elif exchange and store.is_exchange(table):
             break
         elif index and store.is_index(table):

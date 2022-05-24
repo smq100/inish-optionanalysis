@@ -24,6 +24,9 @@ _THROTTLE_ERROR = 1.00  # Min secs between calls after error
 _RETRIES = 2            # Number of fetch retries after error
 
 _logger = logger.get_logger()
+_last_company: pd.DataFrame = pd.DataFrame()
+_last_ticker: str = ''
+_elapsed = 0.0
 
 # Quandl credentials
 CREDENTIALS = os.path.join(os.path.dirname(__file__), 'quandl.ini')
@@ -63,12 +66,124 @@ def validate_ticker(ticker: str) -> bool:
     return valid
 
 
-_last_company: pd.DataFrame = pd.DataFrame()
-_last_ticker: str = ''
+def get_history_live(ticker: str, days: int = -1) -> pd.DataFrame:
+    if not _connected:
+        raise ConnectionError('No internet connection')
+
+    # Throttle requests to help avoid being cut off by data provider
+    global _elapsed
+    while (time.perf_counter() - _elapsed) < _THROTTLE_FETCH:
+        time.sleep(_THROTTLE_FETCH)
+    _elapsed = time.perf_counter()
+
+    _logger.info(f'{__name__}: Fetching {ticker} history from {d.ACTIVE_HISTORYDATASOURCE}...')
+
+    if d.ACTIVE_HISTORYDATASOURCE == 'yfinance':
+        history = _get_history_yfinance(ticker, days=days)
+    elif d.ACTIVE_HISTORYDATASOURCE == 'quandl':
+        history = _get_history_quandl(ticker, days=days)
+    else:
+        raise ValueError('Invalid data source')
+
+    if history is None:
+        history = pd.DataFrame()
+        _logger.error(f'{__name__}: \'None\' object for {ticker} (2)')
+    elif history.empty:
+        _logger.info(f'{__name__}: Empty live history for {ticker}')
+
+    return history
 
 
-def get_company_live(ticker: str) -> pd.DataFrame:
+def get_option_expiry(ticker: str) -> tuple[str]:
+    if not _connected:
+        raise ConnectionError('No internet connection')
+
+    if d.ACTIVE_OPTIONDATASOURCE == 'yfinance':
+        expiry = _get_option_expiry_yfinance(ticker)
+    elif d.ACTIVE_OPTIONDATASOURCE == 'etrade':
+        expiry = _get_option_expiry_etrade(ticker)
+    else:
+        raise ValueError('Invalid data source')
+
+    _logger.debug(f'{__name__}: Expiries: {expiry}')
+
+    return expiry
+
+
+def get_option_chain(ticker: str, expiry: dt.datetime) -> pd.DataFrame:
+    if not _connected:
+        raise ConnectionError('No internet connection')
+
+    chain = pd.DataFrame()
+    if d.ACTIVE_OPTIONDATASOURCE == 'yfinance':
+        chain = _get_option_chain_yfinance(ticker, expiry)
+    elif d.ACTIVE_OPTIONDATASOURCE == 'etrade':
+        chain = _get_option_chain_etrade(ticker, expiry)
+    else:
+        raise ValueError('Invalid data source')
+
+    _logger.debug(f'{__name__}: Chain:\n{chain}')
+
+    return chain
+
+
+def get_ratings(ticker: str) -> list[int]:
+    if not _connected:
+        raise ConnectionError('No internet connection')
+
+    if d.ACTIVE_OPTIONDATASOURCE == 'etrade':
+        _logger.warning(f'{__name__}: Datasource is E*Trade but using YFinance to fetch ratings')
+
+    ratings = pd.DataFrame()
+    results = []
+    try:
+        _logger.info(f'{__name__}: Fetching Yahoo rating information for {ticker}...')
+        company = yf.Ticker(ticker)
+        if company is not None:
+            ratings = company.recommendations
+            if ratings is not None and not ratings.empty:
+                # Clean up and normalize text
+                ratings.reset_index()
+                ratings.sort_values('Date', ascending=True, inplace=True)
+                ratings = ratings.tail(10)
+                ratings = ratings['To Grade'].replace(' ', '', regex=True)
+                ratings = ratings.replace('-', '', regex=True)
+                ratings = ratings.replace('_', '', regex=True)
+
+                results = ratings.str.lower().tolist()
+
+                # Log any unhandled ranking so we can add it to the ratings list
+                [_logger.warning(f'{__name__}: Unhandled rating: {r} for {ticker}') for r in results if not r in f.RATINGS]
+
+                # Use the known ratings and convert to their numeric values
+                results = [r for r in results if r in f.RATINGS]
+                results = [f.RATINGS[r] for r in results]
+            else:
+                _logger.info(f'{__name__}: No ratings for {ticker}')
+        else:
+            _logger.info(f'{__name__}: Unable to get ratings for {ticker}. No company info')
+    except Exception as e:
+        _logger.error(f'{__name__}: Unable to get ratings for {ticker}: {str(e)}')
+
+    return results
+
+
+def get_treasury_rate(ticker: str) -> float:
+    if not _connected:
+        raise ConnectionError('No internet connection')
+
+    df = pd.DataFrame()
+    df = qd.get(f'FRED/{ticker}')
+    if df.empty:
+        _logger.error(f'{__name__}: Unable to get Treasury Rates from Quandl')
+        raise IOError('Unable to get Treasury Rate from Quandl')
+
+    return df['Value'][0] / 100.0
+
+
+def _get_yfinance_live(ticker: str) -> yf.Ticker:
     global _last_company, _last_ticker
+
     if not _connected:
         raise ConnectionError('No internet connection')
 
@@ -77,12 +192,14 @@ def get_company_live(ticker: str) -> pd.DataFrame:
         _logger.info(f'{__name__}: Using cached company information for {ticker} from Yahoo')
     else:
         _logger.info(f'{__name__}: Fetching live company information for {ticker} from Yahoo')
+
         company = yf.Ticker(ticker)
 
     if company is not None:
         try:
             # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
-            _ = company.info
+            pass
+            # _ = company.info
         except Exception as e:
             _logger.warning(f'{__name__}: No company found for {ticker}: {str(e)}')
             company = pd.DataFrame()
@@ -97,30 +214,34 @@ def _get_history_yfinance(ticker: str, days: int = -1) -> pd.DataFrame:
     if not _connected:
         raise ConnectionError('No internet connection')
 
-    history: pd.DataFrame = pd.DataFrame()
-    company = get_company_live(ticker)
-    if company is not None:
+    history = pd.DataFrame()
+    company = _get_yfinance_live(ticker)
+
+    if company is None:
+        _logger.error(f'{__name__}: \'None\' object for {ticker} (1)')
+    else:
         if days < 0:
             days = 7300  # 20 years
 
         if days > 0:
-            start = dt.datetime.today() - dt.timedelta(days=days)
             end = dt.datetime.today()
+            start = end - dt.timedelta(days=days)
 
             # YFinance (or pandas) throws exceptions with bad info (YFinance bug)
             for retry in range(_RETRIES):
                 try:
-                    history = company.history(start=f'{start:%Y-%m-%d}', end=f'{end:%Y-%m-%d}')
-                    days = history.shape[0]
+                    kwargs = {'debug': False}
+                    history = company.history(start=start, end=end, interval='1d', timeout=2.0, back_adjust=True, **kwargs)
 
                     if history is None:
-                        _logger.info(f'{__name__}: {d.ACTIVE_HISTORYDATASOURCE} history for {ticker} is None ({retry+1})')
+                        history = pd.DataFrame()
+                        _logger.warning(f'{__name__}: {d.ACTIVE_HISTORYDATASOURCE} history for {ticker} is None ({retry+1})')
                         time.sleep(_THROTTLE_ERROR)
                     elif history.empty:
-                        history = None
                         _logger.info(f'{__name__}: {d.ACTIVE_HISTORYDATASOURCE} history for {ticker} is empty ({retry+1})')
                         time.sleep(_THROTTLE_ERROR)
                     else:
+                        days = history.shape[0]
                         history.reset_index(inplace=True)
 
                         # Clean some things up and make colums consistent with Postgres column names
@@ -128,14 +249,12 @@ def _get_history_yfinance(ticker: str, days: int = -1) -> pd.DataFrame:
                         history.drop(['dividends', 'stock splits'], axis=1, inplace=True)
                         history.sort_values('date', ascending=True, inplace=True)
 
-                        _logger.info(f'{__name__}: Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
+                        _logger.info(f'{__name__}: {ticker} Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
                         break
                 except Exception as e:
                     _logger.error(f'{__name__}: Exception: {e}: Retry {retry} to fetch history of {ticker} from {d.ACTIVE_HISTORYDATASOURCE}')
-                    history = None
+                    history = pd.DataFrame()
                     time.sleep(_THROTTLE_ERROR)
-    else:
-        _logger.info(f'{__name__}: No company information available for {ticker}')
 
     return history
 
@@ -157,10 +276,10 @@ def _get_history_quandl(ticker: str, days: int = -1) -> pd.DataFrame:
                 days = history.shape[0]
 
                 if history is None:
-                    _logger.info(f'{__name__}: {d.ACTIVE_HISTORYDATASOURCE} history for {ticker} is None ({retry+1})')
+                    history = pd.DataFrame()
+                    _logger.warning(f'{__name__}: {d.ACTIVE_HISTORYDATASOURCE} history for {ticker} is None ({retry+1})')
                     time.sleep(_THROTTLE_ERROR)
                 elif history.empty:
-                    history = None
                     _logger.info(f'{__name__}: {d.ACTIVE_HISTORYDATASOURCE} history for {ticker} is empty ({retry+1})')
                     time.sleep(_THROTTLE_ERROR)
                 else:
@@ -175,34 +294,8 @@ def _get_history_quandl(ticker: str, days: int = -1) -> pd.DataFrame:
                     break
             except Exception as e:
                 _logger.error(f'{__name__}: Exception: {e}: Retry {retry} to fetch history of {ticker} from {d.ACTIVE_HISTORYDATASOURCE}')
-                history = None
+                history = pd.DataFrame()
                 time.sleep(_THROTTLE_ERROR)
-
-    return history
-
-
-_elapsed = 0.0
-
-
-def get_history_live(ticker: str, days: int = -1) -> pd.DataFrame:
-    if not _connected:
-        raise ConnectionError('No internet connection')
-
-    # Throttle requests to help avoid being cut off by data provider
-    global _elapsed
-    while (time.perf_counter() - _elapsed) < _THROTTLE_FETCH:
-        time.sleep(_THROTTLE_FETCH)
-    _elapsed = time.perf_counter()
-
-    _logger.info(f'{__name__}: Fetching {ticker} history from {d.ACTIVE_HISTORYDATASOURCE}...')
-
-    history = pd.DataFrame()
-    if d.ACTIVE_HISTORYDATASOURCE == 'yfinance':
-        history = _get_history_yfinance(ticker, days=days)
-    elif d.ACTIVE_HISTORYDATASOURCE == 'quandl':
-        history = _get_history_quandl(ticker, days=days)
-    else:
-        raise ValueError('Invalid data source')
 
     return history
 
@@ -210,7 +303,7 @@ def get_history_live(ticker: str, days: int = -1) -> pd.DataFrame:
 def _get_option_expiry_yfinance(ticker: str) -> tuple[str]:
     expiry = ('',)
     for retry in range(_RETRIES):
-        company = get_company_live(ticker)
+        company = _get_yfinance_live(ticker)
         if company is not None:
             expiry = company.options
             break
@@ -232,26 +325,10 @@ def _get_option_expiry_etrade(ticker: str) -> tuple[str]:
     return expiry
 
 
-def get_option_expiry(ticker: str) -> tuple[str]:
-    if not _connected:
-        raise ConnectionError('No internet connection')
-
-    if d.ACTIVE_OPTIONDATASOURCE == 'yfinance':
-        expiry = _get_option_expiry_yfinance(ticker)
-    elif d.ACTIVE_OPTIONDATASOURCE == 'etrade':
-        expiry = _get_option_expiry_etrade(ticker)
-    else:
-        raise ValueError('Invalid data source')
-
-    _logger.debug(f'{__name__}: Expiries: {expiry}')
-
-    return expiry
-
-
 def _get_option_chain_yfinance(ticker: str, expiry: dt.datetime) -> pd.DataFrame:
     chain = pd.DataFrame()
     for retry in range(_RETRIES):
-        company = get_company_live(ticker)
+        company = _get_yfinance_live(ticker)
         if company is not None:
             chain_c = company.option_chain(expiry.strftime(ui.DATE_FORMAT)).calls
             chain_c['type'] = 'call'
@@ -311,83 +388,15 @@ def _get_option_chain_etrade(ticker: str, expiry: dt.datetime) -> pd.DataFrame:
     return chain
 
 
-def get_option_chain(ticker: str, expiry: dt.datetime) -> pd.DataFrame:
-    if not _connected:
-        raise ConnectionError('No internet connection')
-
-    chain = pd.DataFrame()
-    if d.ACTIVE_OPTIONDATASOURCE == 'yfinance':
-        chain = _get_option_chain_yfinance(ticker, expiry)
-    elif d.ACTIVE_OPTIONDATASOURCE == 'etrade':
-        chain = _get_option_chain_etrade(ticker, expiry)
-    else:
-        raise ValueError('Invalid data source')
-
-    _logger.debug(f'{__name__}: Chain:\n{chain}')
-
-    return chain
-
-
-def get_ratings(ticker: str) -> list[int]:
-    if not _connected:
-        raise ConnectionError('No internet connection')
-
-    ratings = pd.DataFrame()
-    results = []
-    try:
-        _logger.info(f'{__name__}: Fetching Yahoo rating information for {ticker}...')
-        company = yf.Ticker(ticker)
-        if company is not None:
-            ratings = company.recommendations
-            if ratings is not None and not ratings.empty:
-                # Clean up and normalize text
-                ratings.reset_index()
-                ratings.sort_values('Date', ascending=True, inplace=True)
-                ratings = ratings.tail(10)
-                ratings = ratings['To Grade'].replace(' ', '', regex=True)
-                ratings = ratings.replace('-', '', regex=True)
-                ratings = ratings.replace('_', '', regex=True)
-
-                results = ratings.str.lower().tolist()
-
-                # Log any unhandled ranking so we can add it to the ratings list
-                [_logger.warning(f'{__name__}: Unhandled rating: {r} for {ticker}') for r in results if not r in f.RATINGS]
-
-                # Use the known ratings and convert to their numeric values
-                results = [r for r in results if r in f.RATINGS]
-                results = [f.RATINGS[r] for r in results]
-            else:
-                _logger.info(f'{__name__}: No ratings for {ticker}')
-        else:
-            _logger.info(f'{__name__}: Unable to get ratings for {ticker}. No company info')
-    except Exception as e:
-        _logger.error(f'{__name__}: Unable to get ratings for {ticker}: {str(e)}')
-
-    return results
-
-
-def get_treasury_rate(ticker: str) -> float:
-    if not _connected:
-        raise ConnectionError('No internet connection')
-
-    df = pd.DataFrame()
-    df = qd.get(f'FRED/{ticker}')
-    if df.empty:
-        _logger.error(f'{__name__}: Unable to get Treasury Rates from Quandl')
-        raise IOError('Unable to get Treasury Rate from Quandl')
-
-    return df['Value'][0] / 100.0
-
-
 if __name__ == '__main__':
     import sys
     import logging
     logger.get_logger(logging.INFO)
 
     if len(sys.argv) > 1:
-        c = get_company_live(sys.argv[1])
+        c = _get_yfinance_live(sys.argv[1])
     else:
-        c = get_company_live('MSFT')
+        c = _get_yfinance_live('MSFT')
 
     # print(c.mutualfund_holders)
     dates = c.options
@@ -397,7 +406,7 @@ if __name__ == '__main__':
 
     '''
     YFinance ticker attributes include:
-        .history(start="2010-01-01",  end=”2020-07-21”)
+        .history
         .analysis
         .actions
         .balance_sheet

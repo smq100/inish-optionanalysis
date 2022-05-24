@@ -97,6 +97,8 @@ def is_list(list: str) -> bool:
 
     if list.lower() == 'every':
         exist = True
+    if list.lower() == 'bogus':
+        exist = True
     elif is_exchange(list):
         exist = True
     elif is_index(list):
@@ -119,6 +121,8 @@ def get_tickers(list: str, sector: str = '', inactive: bool = False) -> list[str
 
         if sector:
             tickers = get_sector_tickers(tickers, sector)
+    elif list.lower() == 'bogus':
+        tickers = [f'BOGUS{value:03d}' for value in range(1, 100)]
     elif is_exchange(list):
         tickers = get_exchange_tickers(list, sector=sector, inactive=inactive)
     elif is_index(list):
@@ -276,10 +280,13 @@ def get_history(ticker: str, days: int = -1, end: int = 0, live: bool = False, i
 
     if live:
         history = fetcher.get_history_live(ticker, days)
-        if not history.empty:
-            _logger.info(f'{__name__}: Fetched {len(history)} days of live price history for {ticker}')
-        else:
+        if history is None:
+            history = pd.DataFrame()
+            _logger.error(f'{__name__}: \'None\' object for {ticker} (1)')
+        elif history.empty:
             _logger.info(f'{__name__}: Unable to fetch live price history for {ticker} from {d.ACTIVE_HISTORYDATASOURCE}')
+        else:
+            _logger.info(f'{__name__}: Fetched {len(history)} days of live price history for {ticker}')
 
         if end > 0:
             _logger.info(f'{__name__}: \'end\' value ignored for live queries')
@@ -302,7 +309,12 @@ def get_history(ticker: str, days: int = -1, end: int = 0, live: bool = False, i
 
                 if q is not None:
                     history = pd.read_sql(q.statement, _engine)
-                    if not history.empty:
+                    if history is None:
+                        history = pd.DataFrame()
+                        _logger.error(f'{__name__}: \'None\' object for {ticker} (2)')
+                    elif history.empty:
+                        _logger.info(f'{__name__}: Empty history found for {ticker}')
+                    else:
                         history.drop(['id', 'security_id'], axis=1, inplace=True)
                         if end > 0:
                             history = history[:-end]
@@ -320,7 +332,7 @@ def get_company(ticker: str, live: bool = False, extra: bool = False) -> dict:
     results = {}
 
     if live:
-        company = fetcher.get_company_live(ticker)
+        company = fetcher.get_history_live(ticker)
         if company is not None:
             if company.info is not None:
                 try:
@@ -417,7 +429,8 @@ def get_sectors(refresh: bool = False) -> list[str]:
             'Communication Services',
             'Consumer Cyclical',
             'Consumer Defensive',
-            'Energy', 'Financial',
+            'Energy',
+            'Financial',
             'Financial Services',
             'Healthcare',
             'Industrials',
