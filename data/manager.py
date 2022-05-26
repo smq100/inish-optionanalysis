@@ -594,7 +594,6 @@ class Manager(Threaded):
     @Threaded.threaded
     def recheck_inactive(self, tickers: list[str]) -> None:
         self.task_total = len(tickers)
-        running = self._concurrency
 
         def recheck(tickers: list[str]) -> None:
             for ticker in tickers:
@@ -610,12 +609,14 @@ class Manager(Threaded):
                         if days > 0:
                             self.task_results += [ticker]
                             self.task_success += 1
+                            _logger.info(f'{__name__}: Ticker {ticker} updated')
                         elif days < 0:
                             self.invalid_tickers += [ticker]
+                            _logger.info(f'{__name__}: Ticker {ticker} not updated')
 
                 self.task_completed += 1
 
-        if self.task_total > 0:
+        if self.task_total > 1:
             self.task_state = 'None'
 
             random.shuffle(tickers)
@@ -635,6 +636,8 @@ class Manager(Threaded):
                 for future in futures.as_completed(self.task_futures):
                     running -= 1
                     _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
+        elif tickers:
+            recheck(tickers)
 
         self.task_state = 'Done'
 

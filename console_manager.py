@@ -401,8 +401,12 @@ class Interface:
             ui.print_message('No ticker errors')
 
     def recheck_inactive(self) -> None:
-        ticker = ui.input_text('Enter ticker or RETURN for all').upper()
-        tickers = [ticker] if ticker else self.manager.identify_inactive_tickers('every')
+        ticker = ui.input_text('Enter ticker or \'every\' for all').upper()
+        if ticker == 'EVERY':
+            tickers = self.manager.identify_inactive_tickers('every')
+        else:
+            tickers = [ticker]
+
         if tickers:
             self.task = threading.Thread(target=self.manager.recheck_inactive, args=[tickers])
             self.task.start()
