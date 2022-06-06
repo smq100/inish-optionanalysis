@@ -377,7 +377,7 @@ class Interface:
 
             score_screen = self.screener.get_score(ticker)
             strategies += [sl.strategy_type(ticker=ticker, strategy=strategy, product=product,
-                                            direction=direction, strike=strike, width1=width1, width2=width2, expiry=None,
+                                            direction=direction, strike=strike, width1=width1, width2=width2, expiry=dt.now(),
                                             volatility=(-1.0, 0.0), score_screen=score_screen, load_contracts=self.load_contracts)]
 
         if len(strategies) > 0:
