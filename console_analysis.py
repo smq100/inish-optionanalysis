@@ -700,48 +700,49 @@ class Interface:
                 self.run_screen(False)
 
     def analyze_result_files(self, top: int = LISTTOP_ANALYSIS):
-        table = ui.input_alphanum('Enter table').lower()
-
-        files = _get_screener_cache_files()
-
-        results: list[Result] = []
-        for item in files:
-            parts = item.split('_')
-            if parts[1] != table:
-                pass  # Wrong table
-            elif parts[0] != dt.now().strftime(ui.DATE_FORMAT):
-                pass  # Old date
-            else:
-                path = f'{screener.SCREEN_BASEPATH}{parts[2]}.{screener.SCREEN_SUFFIX}'
-                screen = Screener(parts[1], path)
-                if screen.cache_available:
-                    screen.run_script()
-                    results += screen.valids
-
-        if results:
-            results = sorted(results, reverse=True, key=lambda r: float(r))
-
-            drop = ['valid', 'price_last', 'backtest_success']
-            summary = screener.summarize(results)
-            summary.drop(drop, axis=1, inplace=True)
-            headers = [header.replace('_', '\n').title() for header in summary.columns]
-
-            # Top scores
-            ui.print_message(f'Top Scores of {table}', post_creturn=1)
-            print(tabulate(summary, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
-
-            # Results with multiple successes
-            multiples = screener.group_duplicates(results)
-            if not multiples.empty:
-                order = ['company', 'sector', 'price_current']
-                multiples = multiples.reindex(columns=order)
-                headers = ['Ticker']
-                headers += [header.replace('_', '\n').title() for header in multiples.columns]
-
-                ui.print_message('Successes Across Multiple Screens', post_creturn=1)
-                print(tabulate(multiples, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
+        if not self.table:
+            ui.print_error('No exchange or index specified')
         else:
-            ui.print_message(f'No results for {table} found', post_creturn=1)
+            files = _get_screener_cache_files()
+            table = self.table.lower()
+            results: list[Result] = []
+
+            for item in files:
+                parts = item.split('_')
+                if parts[1] != table:
+                    pass  # Wrong table
+                elif parts[0] != dt.now().strftime(ui.DATE_FORMAT):
+                    pass  # Old date
+                else:
+                    path = f'{screener.SCREEN_BASEPATH}{parts[2]}.{screener.SCREEN_SUFFIX}'
+                    screen = Screener(parts[1], path)
+                    if screen.cache_available:
+                        screen.run_script()
+                        results += screen.valids
+
+            if results:
+                results = sorted(results, reverse=True, key=lambda r: float(r))
+
+                drop = ['valid', 'price_last', 'backtest_success']
+                summary = screener.summarize(results)
+                summary.drop(drop, axis=1, inplace=True)
+                headers = [header.replace('_', '\n').title() for header in summary.columns]
+
+                # Top scores
+                ui.print_message(f'Top {LISTTOP_ANALYSIS} of {len(summary)} Scores of {table.upper()}', post_creturn=1)
+                print(tabulate(summary.head(LISTTOP_ANALYSIS), headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
+
+                # Results with successes across multiple screens
+                multiples = screener.group_duplicates(results)
+                if not multiples.empty:
+                    order = ['ticker', 'company', 'sector', 'price_current']
+                    multiples = multiples.reindex(columns=order)
+                    headers = [header.replace('_', '\n').title() for header in multiples.columns]
+
+                    ui.print_message('Successes Across Multiple Screens', post_creturn=1)
+                    print(tabulate(multiples, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
+            else:
+                ui.print_message(f'No results for {table} found', post_creturn=1)
 
     def roll_result_files(self) -> None:
         paths = _get_screener_cache_files()

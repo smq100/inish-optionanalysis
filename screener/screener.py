@@ -335,6 +335,8 @@ def group_duplicates(results: list[Result]) -> pd.DataFrame:
 
     if not duplicated.empty:
         items = duplicated.groupby(['ticker'], sort=False).first()
+        items['ticker'] = items.index
+        items.index = range(1, len(items)+1)
 
     return items
 
