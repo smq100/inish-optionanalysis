@@ -141,7 +141,7 @@ def get_ratings(ticker: str) -> list[int]:
         raise ConnectionError('No internet connection')
 
     if d.ACTIVE_OPTIONDATASOURCE == 'etrade':
-        _logger.warning(f'{__name__}: Datasource is E*Trade but using YFinance to fetch ratings')
+        _logger.warning(f'{__name__}: Option datasource is E*Trade but using YFinance to fetch ratings')
 
     ratings = pd.DataFrame()
     results = []

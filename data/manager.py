@@ -70,7 +70,7 @@ class Manager(Threaded):
         def add(tickers):
             for ticker in tickers:
                 self.task_ticker = ticker
-                if self.add_ticker_to_exchange(ticker):
+                if self.add_ticker_to_exchange(ticker, exchange):
                     self.task_success += 1
 
                 self.task_completed += 1
@@ -138,7 +138,7 @@ class Manager(Threaded):
                             _logger.info(f'{__name__}: Added {ticker} to exchange {exchange}')
 
                             self._add_live_history_to_ticker(ticker, history=history)
-                            self._add_company_to_ticker(ticker, company=company)
+                            self._add_live_company_to_ticker(ticker, company=company)
                         except (ValueError, KeyError, IndexError) as e:
                             self.invalid_tickers += [ticker]
                             _logger.warning(f'{__name__}: Company info invalid for {ticker}: {str(e)}')
@@ -290,7 +290,7 @@ class Manager(Threaded):
                 if self._add_live_history_to_ticker(ticker):
                     _logger.info(f'{__name__}: Added full price history for {ticker}')
 
-                    self._add_company_to_ticker(ticker)
+                    self._add_live_company_to_ticker(ticker)
                 else:
                     _logger.warning(f'{__name__}: No price history for {ticker}')
             else:
@@ -401,14 +401,16 @@ class Manager(Threaded):
         self.task_state = 'Done'
 
     def delete_database(self, recreate: bool = False):
-        if d.ACTIVE_DB == d.VALID_DBS[1]:
+        if d.ACTIVE_DB == d.VALID_DBS[1]: # Postfres
+            models.Base.metadata.drop_all(self.engine)
+        elif d.ACTIVE_DB == d.VALID_DBS[2]: # SQLite
             if os.path.exists(d.SQLITE_FILE_PATH):
                 os.remove(d.SQLITE_FILE_PATH)
                 _logger.info(f'{__name__}: Deleted {d.SQLITE_FILE_PATH}')
             else:
                 _logger.error(f'{__name__}: File does not exist: {d.SQLITE_FILE_PATH}')
         else:
-            models.Base.metadata.drop_all(self.engine)
+            recreate = False
 
         if recreate:
             self.create_database()
@@ -762,40 +764,41 @@ class Manager(Threaded):
 
         return incomplete
 
-    def _add_company_to_ticker(self, ticker: str, company: dict = None) -> bool:
+    def _add_live_company_to_ticker(self, ticker: str, company: dict | None = None) -> bool:
         c = None
 
         try:
             with self.session.begin() as session:
                 t = session.query(models.Security).filter(models.Security.ticker == ticker).one()
+                
                 if company is None:
                     company = store.get_company(ticker, live=True)
 
-                    if company:
-                        c = models.Company()
-                        c.name = company['name']
-                        c.description = company['description']
-                        c.url = company['url']
-                        c.sector = company['sector']
-                        c.industry = company['industry']
-                        c.beta = company['beta']
-                        c.marketcap = company['marketcap']
-                        c.rating = company['rating']
+                if company:
+                    c = models.Company()
+                    c.name = company.get('name', '')
+                    c.description = company.get('description', '')
+                    c.url = company.get('url', '')
+                    c.sector = company.get('sector', '')
+                    c.industry = company.get('industry', '')
+                    c.marketcap = company.get('marketcap', 0)
+                    c.beta = company.get('beta', 0.0)
+                    c.rating = company.get('rating', 3.0)
+                    t.company = [c]
 
-                        t.company = [c]
-                    else:
-                        _logger.warning(f'{__name__}: No company info for {ticker}')
-                else:
                     _logger.info(f'{__name__}: Added company information for {ticker}')
+                else:
+                    _logger.warning(f'{__name__}: No company info for {ticker}')
         except IntegrityError as e:
             c = None
             _logger.error(f'{__name__}: IntegrityError exception occurred for {ticker} (3): {e.__cause__}')
         except Exception as e:
+            c = None
             _logger.error(f'{__name__}: Unknown exception occurred for {ticker} (3): {e}')
 
         return c is not None
 
-    def _add_live_history_to_ticker(self, ticker: str, history: pd.DataFrame = None) -> bool:
+    def _add_live_history_to_ticker(self, ticker: str, history: pd.DataFrame | None = None) -> bool:
         added = False
 
         try:

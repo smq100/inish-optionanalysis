@@ -1,8 +1,11 @@
+from re import T
 import time
 import threading
 import logging
 
 import argparse
+
+from sqlalchemy import true
 
 import data as d
 from data import store as store
@@ -60,7 +63,12 @@ class Interface:
             ui.print_error('No databases available')
 
     def main_menu(self, selection: int = 0) -> None:
-        if not self.stop and not self.quick:
+        loop = bool(self.manager.get_database_info())
+
+        if not loop:
+            ui.print_error(f'Database {d.ACTIVE_DB} is not intialized')
+            self.reset_database()
+        elif not self.stop and not self.quick:
             self.show_database_information()
 
         menu_items = {
@@ -82,7 +90,7 @@ class Interface:
             '0':  'Exit'
         }
 
-        while True:
+        while loop:
             if not self.ticker:
                 selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1, prompt='Select operation, or 0 when done')
 
@@ -120,26 +128,20 @@ class Interface:
                 self.stop = True
 
             if self.stop:
-                break
+                loop = False
 
     def show_database_information(self) -> None:
-        ui.print_message(f'Database Information ({d.ACTIVE_DB})')
         info = self.manager.get_database_info()
-        for i in info:
-            print(f'{i["table"]:>16}:\t{i["count"]} records')
 
-        inactive = self.manager.identify_inactive_tickers('every')
-        print(f'        inactive:\t{len(inactive)} tickers')
+        if info:
+            ui.print_message(f'Database Information ({d.ACTIVE_DB})')
+            for i in info:
+                print(f'{i["table"]:>16}:\t{i["count"]} records')
 
-        # ui.print_message('Exchange Information')
-        # info = self.manager.get_exchange_info()
-        # for i in info:
-        #     print(f'{i["exchange"]:>16}:\t{i["count"]} symbols')
-
-        # ui.print_message('Index Information')
-        # info = self.manager.get_index_info()
-        # for i in info:
-        #     print(f'{i["index"]:>16}:\t{i["count"]} symbols')
+            inactive = self.manager.identify_inactive_tickers('every')
+            print(f'        inactive:\t{len(inactive)} tickers')
+        else:
+            ui.print_error(f'Database {d.ACTIVE_DB} is empty')
 
     def show_ticker_information(self, ticker: str = '', prompt: bool = False, live: bool = False) -> None:
         if not ticker:
@@ -325,7 +327,7 @@ class Interface:
             ui.print_message(f'Deleted ticker {ticker}')
 
     def reset_database(self) -> None:
-        select = ui.input_integer('Are you sure? 1 to reset or 0 to cancel', 0, 1)
+        select = ui.input_yesno('Reset the database')
         if select == 1:
             self.manager.delete_database()
             self.manager.create_database()

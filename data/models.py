@@ -3,8 +3,6 @@ from sqlalchemy import UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
-from utils import ui
-
 Base = declarative_base()
 
 
@@ -39,7 +37,6 @@ class Security(Base):
 
     pricing = relationship('Price', backref='security', passive_deletes=True)
     company = relationship('Company', backref='security', passive_deletes=True)
-    incomplete = relationship('Incomplete', backref='security', passive_deletes=True)
 
     index1 = relationship('Index', foreign_keys=index1_id, backref='index1', passive_deletes=True)
     index2 = relationship('Index', foreign_keys=index2_id, backref='index2', passive_deletes=True)
@@ -60,8 +57,6 @@ class Index(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     abbreviation = Column('abbreviation', String(20), unique=True)
     name = Column('name', String(200), nullable=False)
-
-    # index1 = relationship('Security', foreign_keys=[Security.index1_id], backref='index')
 
     def __init__(self, abbreviation, name):
         self.abbreviation = abbreviation.upper()
@@ -111,22 +106,3 @@ class Price(Base):
 
     def __str__(self):
         return f'{self.date}: {self.security_id}'
-
-
-class Incomplete(Base):
-    __tablename__ = 'incomplete'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    security_id = Column(Integer, ForeignKey('security.id', onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
-
-    def __repr__(self):
-        return '<Incomplete Model>'
-
-# class Adjustment(Base):
-#     __tablename__ = 'adjustment'
-#     id = Column(Integer, primary_key=True)
-#     date = Column('date', Date, nullable=False)
-#     factor = Column('factor', Float, nullable=False)
-#     dividend = Column('dividend', Float)
-#     split_ratio = Column('split_ratio', Float)
-#     security_id = Column(Integer, ForeignKey('security.id', onupdate="CASCADE", ondelete="CASCADE"), nullable=False)
-#     security = relationship('Security')

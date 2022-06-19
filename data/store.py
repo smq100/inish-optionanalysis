@@ -35,9 +35,6 @@ elif d.ACTIVE_DB == 'SQLite':
     _engine = create_engine(d.ACTIVE_URI)
     _session = sessionmaker(bind=_engine)
 
-UNAVAILABLE = 'unavailable'
-
-
 def is_database_connected() -> bool:
     return bool(d.ACTIVE_URI)
 
@@ -335,20 +332,21 @@ def get_company(ticker: str, live: bool = False, extra: bool = False) -> dict:
         company = fetcher.get_company_live(ticker)
         if company:
             try:
-                results['name'] = company.get('shortName', UNAVAILABLE)[:95]
-                results['description'] = company.get('longBusinessSummary', UNAVAILABLE)[:4995]
-                results['url'] = company.get('website', UNAVAILABLE)[:195]
-                results['sector'] = company.get('sector', UNAVAILABLE)[:195]
-                results['industry'] = company.get('industry', UNAVAILABLE)[:195]
-                results['marketcap'] = company.get('marketCap', UNAVAILABLE)
-                results['beta'] = company.get('beta', UNAVAILABLE)
+                ratings = fetcher.get_ratings(ticker)
+                results['name'] = company.get('shortName', '')[:95]
+                results['description'] = company.get('longBusinessSummary', '')[:4995]
+                results['url'] = company.get('website', '')[:195]
+                results['sector'] = company.get('sector', '')[:195]
+                results['industry'] = company.get('industry', '')[:195]
+                results['marketcap'] = company.get('marketCap', 0)
+                results['beta'] = company.get('beta', 0.0)
+                results['rating'] = sum(ratings) / float(len(ratings)) if len(ratings) > 0 else 3.0
+
+                # Non-database fields
+                results['active'] = 'True'
                 results['indexes'] = ''
-                results['active'] = '?'
                 results['precords'] = 0
 
-                ratings = fetcher.get_ratings(ticker)
-                results['rating'] = sum(ratings) / float(len(ratings)) if len(ratings) > 0 else 3.0
-                results['exchange'] = '?'
             except Exception as e:
                 results = {}
                 _logger.error(f'{__name__}: Exception for ticker {ticker}: {str(e)}')
@@ -366,8 +364,10 @@ def get_company(ticker: str, live: bool = False, extra: bool = False) -> dict:
                     results['marketcap'] = company.marketcap
                     results['beta'] = company.beta
                     results['rating'] = company.rating
-                    results['indexes'] = 'None'
+                    
+                    # Non-database fields
                     results['active'] = str(symbol.active)
+                    results['indexes'] = ''
                     results['precords'] = 0
 
                     # Exchange
@@ -420,8 +420,6 @@ def get_sectors(refresh: bool = False) -> list[str]:
             sectors = list(set(sectors))  # Extract unique values by converting to a set, then back to list
             if '' in sectors:
                 sectors.remove('')
-            if 'unavailable' in sectors:
-                sectors.remove('unavailable')
     else:
         sectors = [
             'Basic Materials',
