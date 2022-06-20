@@ -178,6 +178,7 @@ class Manager(Threaded):
 
         return success
 
+    @Threaded.threaded
     def populate_index(self, index: str) -> None:
         index = index.upper()
 
@@ -198,7 +199,7 @@ class Manager(Threaded):
             tickers = store.get_index_tickers_master(index)
             for ticker in tickers:
                 t = session.query(models.Security.ticker).filter(models.Security.ticker == ticker).one_or_none()
-                if ticker is not None:
+                if t is not None:
                     valid += [t.ticker]
 
             if len(valid) > 0:
@@ -770,7 +771,7 @@ class Manager(Threaded):
         try:
             with self.session.begin() as session:
                 t = session.query(models.Security).filter(models.Security.ticker == ticker).one()
-                
+
                 if company is None:
                     company = store.get_company(ticker, live=True)
 

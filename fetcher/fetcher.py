@@ -172,6 +172,7 @@ def get_ratings(ticker: str) -> list[int]:
         else:
             _logger.info(f'{__name__}: Unable to get ratings for {ticker}. No company info')
     except Exception as e:
+        results = []
         _logger.error(f'{__name__}: Unable to get ratings for {ticker}: {str(e)}')
 
     return results

@@ -333,6 +333,9 @@ def get_company(ticker: str, live: bool = False, extra: bool = False) -> dict:
         if company:
             try:
                 ratings = fetcher.get_ratings(ticker)
+                if not ratings:
+                    ratings = [3.0]
+
                 results['name'] = company.get('shortName', '')[:95]
                 results['description'] = company.get('longBusinessSummary', '')[:4995]
                 results['url'] = company.get('website', '')[:195]
@@ -364,7 +367,7 @@ def get_company(ticker: str, live: bool = False, extra: bool = False) -> dict:
                     results['marketcap'] = company.marketcap
                     results['beta'] = company.beta
                     results['rating'] = company.rating
-                    
+
                     # Non-database fields
                     results['active'] = str(symbol.active)
                     results['indexes'] = ''
