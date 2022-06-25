@@ -1,8 +1,7 @@
 import os
 import time
 import random
-from datetime import datetime as dt
-from datetime import date
+import datetime as dt
 from concurrent import futures
 from urllib.error import HTTPError
 
@@ -282,7 +281,7 @@ class Manager(Threaded):
         days = -1
 
         if store.is_ticker(ticker, inactive):
-            today = date.today()
+            today = dt.date.today()
 
             history = store.get_history(ticker, inactive=inactive)
             if history is None:
@@ -299,7 +298,7 @@ class Manager(Threaded):
                 if date_db is not None:
                     _logger.info(f'{__name__}: Last {ticker} price in database: {date_db:%Y-%m-%d}')
                 else:
-                    date_db = today - date(2000, 1, 1)
+                    date_db = today - dt.date(2000, 1, 1)
                     _logger.warning(f'{__name__}: No price history for {ticker} in database')
 
                 delta = (today - date_db).days
@@ -705,12 +704,15 @@ class Manager(Threaded):
                 if history is None:
                     _logger.error(f'{__name__}: \'None\' object for {ticker} (4)')
                 elif not history.empty:
-                    date = f'{history.iloc[-1]["date"]:%Y-%m-%d}'
-                    if date in self.task_object:
-                        self.task_object[date] += [ticker]
-                    else:
-                        self.task_object[date] = [ticker]
-                    self.task_success += 1
+                    last = history.iloc[-1].date
+                    past = dt.datetime.today() - dt.timedelta(days=7)
+                    date = f'{last:%Y-%m-%d}'
+                    if last < past.date():
+                        if date in self.task_object:
+                            self.task_object[date] += [ticker]
+                        else:
+                            self.task_object[date] = [ticker]
+                        self.task_success += 1
                 self.task_completed += 1
 
         if self.task_total > 0:
@@ -758,7 +760,7 @@ class Manager(Threaded):
                         c = session.query(models.Company.name).filter(models.Company.security_id == t.id).one_or_none()
                         if c is None:
                             incomplete += [ticker]
-                        elif c.name == store.UNAVAILABLE:
+                        elif c.name == '':
                             incomplete += [ticker]
 
         _logger.info(f'{__name__}: {len(incomplete)} incomplete companies in {table}')

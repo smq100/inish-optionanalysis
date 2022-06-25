@@ -83,7 +83,7 @@ class Interface:
             '9':  'List Inactive',
             '10': 'Mark Active/Inactive',
             '11': 'Check Integrity',
-            '12': 'Check Price Dates',
+            '12': 'Check Incomplete Pricing',
             '13': 'Populate Exchange',
             '14': 'Populate Index',
             '15': 'Reset Database',
@@ -117,7 +117,7 @@ class Interface:
             elif selection == 11:
                 self.check_integrity()
             elif selection == 12:
-                self.check_price_dates()
+                self.check_incomplete_pricing()
             elif selection == 13:
                 self.populate_exchange()
             elif selection == 14:
@@ -348,7 +348,8 @@ class Interface:
         for e in self.exchanges:
             print(f'{e:>16}:\t{len(incomplete_companies[e])}')
 
-        while True:
+        loop = True
+        while loop:
             menu_items = {
                 '1': 'List Missing Companies',
                 '2': 'List Incomplete Companies',
@@ -364,9 +365,12 @@ class Interface:
                     elif select == 2:
                         ui.print_tickers(incomplete_companies[table])
                 else:
+                    loop = False
                     ui.print_message('Cancelled')
+            else:
+                loop = False
 
-    def check_price_dates(self) -> None:
+    def check_incomplete_pricing(self) -> None:
         table = ui.input_table(exchange=True, index=True, ticker=True)
         if table:
             self.task = threading.Thread(target=self.manager.identify_incomplete_pricing, args=[table])
