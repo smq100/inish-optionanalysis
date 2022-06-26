@@ -10,7 +10,7 @@ from data import store as store
 from utils import ui, logger
 
 
-logger.get_logger(logging.DEBUG, logfile='')
+logger.get_logger(logging.WARNING, logfile='')
 
 
 class Interface:
@@ -147,8 +147,8 @@ class Interface:
 
 def main():
     parser = argparse.ArgumentParser(description='Technical Analysis')
-    parser.add_argument('-t', '--tickers', nargs='+', help='Run using tickers')
-    parser.add_argument('-d', '--days', help='Days to run analysis', default=1000)
+    parser.add_argument('-t', '--tickers', metavar='ticker(s)', nargs='+', help='Run using tickers')
+    parser.add_argument('-d', '--days', metavar='days', help='Days to run analysis', default=1000)
     parser.add_argument('-q', '--quick', help='Run quick analysis', action='store_true')
     parser.add_argument('-x', '--exit', help='Run trend analysis then exit (only valid with -t)', action='store_true')
 

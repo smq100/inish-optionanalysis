@@ -287,7 +287,7 @@ class Client:
 
 def main():
     parser = argparse.ArgumentParser(description='Database Management')
-    parser.add_argument('-q', '--quote', help='Get a quote on the specified ticker', required=False, default='')
+    parser.add_argument('-q', '--quote', help='Get a quote on the specified ticker', metavar='ticker', required=False, default='')
     parser.add_argument('-x', '--exit', help='Run the operation then exit', action='store_true')
 
     command = vars(parser.parse_args())

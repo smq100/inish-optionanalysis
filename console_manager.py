@@ -498,8 +498,8 @@ class Interface:
 
 def main():
     parser = argparse.ArgumentParser(description='Database Management')
-    parser.add_argument('-t', '--ticker', help='Get ticker information', required=False)
-    parser.add_argument('-u', '--update', help='Update ticker', required=False)
+    parser.add_argument('-t', '--ticker', help='Get ticker information', metavar='ticker', required=False)
+    parser.add_argument('-u', '--update', help='Update ticker', metavar='ticker', required=False)
     parser.add_argument('-q', '--quick', help='Start without checking database information', action='store_true')
 
     command = vars(parser.parse_args())

@@ -331,8 +331,8 @@ class Interface:
 
 def main():
     parser = argparse.ArgumentParser(description='Screener')
-    parser.add_argument('-t', '--table', help='Specify a symbol or table', required=False, default='')
-    parser.add_argument('-s', '--screen', help='Specify a screening script', required=False, default='')
+    parser.add_argument('-t', '--table', help='Specify a symbol or table', metavar='table', required=False, default='')
+    parser.add_argument('-s', '--screen', help='Specify a screening script', metavar='screen', required=False, default='')
     parser.add_argument('-b', '--backtest', help='Run a backtest (only valid with -t and -s)', required=False, default=0)
     parser.add_argument('-x', '--exit', help='Run the script and quit (only valid with -t and -s) then exit', action='store_true')
 
