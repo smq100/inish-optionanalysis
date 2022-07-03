@@ -149,7 +149,7 @@ class Manager(Threaded):
                                 exit = True
                                 _logger.error(f'{__name__}: HTTP Error for {ticker}. Too many retries: {str(e)}')
                             else:
-                                time.sleep(5.0)
+                                time.sleep(1.0)
                         except RuntimeError as e:
                             self.retry += 1
                             _logger.warning(f'{__name__}: Runtime Error for {ticker}. Retrying... {self.retry}: {str(e)}')
@@ -361,7 +361,7 @@ class Manager(Threaded):
                 days = -1
 
                 try:
-                    time.sleep(0.1)
+                    time.sleep(0.05)
                     days = self.update_history_ticker(ticker)
                 except IntegrityError as e:
                     _logger.error(f'{__name__}: IntegrityError exception occurred for {ticker} (1): {e.__cause__}')
@@ -869,7 +869,7 @@ class Manager(Threaded):
 
 def _write_tickers_log(tickers: list[str], filename: str = '') -> str:
     if tickers:
-        date_time = dt.now().strftime(ui.DATE_FORMAT)
+        date_time = dt.datetime.now().strftime(ui.DATE_FORMAT)
         filename = f'{LOG_DIR}/{date_time}.{LOG_SUFFIX}'
 
         with open(filename, 'w') as f:

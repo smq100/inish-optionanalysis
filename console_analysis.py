@@ -3,7 +3,7 @@ import time
 import math
 import threading
 import logging
-from datetime import datetime as dt
+import datetime as dt
 import webbrowser
 
 import argparse
@@ -377,7 +377,7 @@ class Interface:
 
             score_screen = self.screener.get_score(ticker)
             strategies += [sl.strategy_type(ticker=ticker, strategy=strategy, product=product,
-                                            direction=direction, strike=strike, width1=width1, width2=width2, expiry=dt.now(),
+                                            direction=direction, strike=strike, width1=width1, width2=width2, expiry=dt.datetime.now(),
                                             volatility=(-1.0, 0.0), score_screen=score_screen, load_contracts=self.load_contracts)]
 
         if len(strategies) > 0:
@@ -711,7 +711,7 @@ class Interface:
                 parts = item.split('_')
                 if parts[1] != table:
                     pass  # Wrong table
-                elif parts[0] != dt.now().strftime(ui.DATE_FORMAT):
+                elif parts[0] != dt.datetime.now().strftime(ui.DATE_FORMAT):
                     pass  # Old date
                 else:
                     path = f'{screener.SCREEN_BASEPATH}{parts[2]}.{screener.SCREEN_SUFFIX}'
@@ -748,7 +748,7 @@ class Interface:
         paths = _get_screener_cache_files()
         for screen_old in paths:
             file_old = f'{screener.CACHE_BASEPATH}{screen_old}.{screener.CACHE_SUFFIX}'
-            date_time = dt.now().strftime(ui.DATE_FORMAT)
+            date_time = dt.datetime.now().strftime(ui.DATE_FORMAT)
             screen_new = f'{date_time}{screen_old[10:]}'
             if screen_new > screen_old:
                 file_new = f'{screener.CACHE_BASEPATH}{screen_new}.{screener.CACHE_SUFFIX}'
@@ -763,7 +763,7 @@ class Interface:
         files = _get_screener_cache_files()
         if files:
             paths = []
-            date_time = dt.now().strftime(ui.DATE_FORMAT)
+            date_time = dt.datetime.now().strftime(ui.DATE_FORMAT)
             for path in files:
                 file_time = f'{path[:10]}'
                 if file_time != date_time:
