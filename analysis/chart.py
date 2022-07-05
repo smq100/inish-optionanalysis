@@ -1,8 +1,5 @@
 import matplotlib.pyplot as plt
-import datetime as dt
-
 import pandas as pd
-import numpy as np
 
 from base import Threaded
 from data import store as store
@@ -27,7 +24,7 @@ class Chart(Threaded):
         self.days = days
         self.live = live
         self.history = pd.DataFrame()
-        self.company:dict = {}
+        self.company: dict = {}
         self.figure, self.ax = plt.subplots(figsize=ui.CHART_SIZE)
 
         plt.style.use(ui.CHART_STYLE)
@@ -94,7 +91,7 @@ class Chart(Threaded):
 
         return self.figure
 
-    def plot_history(self) -> plt.Figure:
+    def plot_history(self, close: bool = False) -> plt.Figure:
         if self.history.empty:
             _logger.info(f'{__name__}: Need history for {self.ticker}. Fetching...')
             self.fetch_history()
@@ -114,11 +111,48 @@ class Chart(Threaded):
         self.ax.tick_params(axis='x', labelrotation=45)
 
         # Plot Highs & Lows using simple lines
-        self.ax.plot(dates, self.history.high, '-g', linewidth=0.5)
-        self.ax.plot(dates, self.history.low, '-r', linewidth=0.5)
-        self.ax.fill_between(dates, self.history.high, self.history.low, facecolor='gray', alpha=0.4)
+        if close:
+            self.ax.plot(dates, self.history.close, '-b', linewidth=0.8)
+        else:
+            self.ax.plot(dates, self.history.high, '-g', linewidth=0.5)
+            self.ax.plot(dates, self.history.low, '-r', linewidth=0.5)
+            self.ax.fill_between(dates, self.history.high, self.history.low, facecolor='gray', alpha=0.4)
 
         return self.figure
+
+
+def plot_technical_history(data: list[pd.DataFrame], title: str = '', show: bool = True) -> plt.Figure:
+    figure, axs = plt.subplots(nrows=len(data), figsize=ui.CHART_SIZE, sharex=True)
+
+    plt.style.use(ui.CHART_STYLE)
+    plt.margins(x=0.1)
+    plt.subplots_adjust(bottom=0.15)
+
+    if title:
+        figure.canvas.manager.set_window_title(f'{title}')
+        axs[0].set_title('History')
+        axs[1].set_title(f'{title}')
+
+    axs[0].grid(which='major', axis='both')
+    axs[1].grid(which='major', axis='both')
+
+    # Grid and ticks
+    length = len(data[0])
+    axs[0].set_xticks(range(0, length+1, int(length/12)))
+    axs[0].tick_params(axis='x', labelrotation=45)
+    axs[1].set_xticks(range(0, length+1, int(length/12)))
+    axs[1].tick_params(axis='x', labelrotation=45)
+
+    # Data
+    dates = [data[0].iloc[index]['date'].strftime(ui.DATE_FORMAT) for index in range(length)]
+    axs[0].plot(dates, data[0]['close'], '-k', linewidth=0.8)
+    axs[1].plot(dates, data[1], '-b', linewidth=0.8)
+
+    if show:
+        plt.figure(figure)
+        plt.show()
+
+    return figure
 
 
 if __name__ == '__main__':
@@ -126,14 +160,15 @@ if __name__ == '__main__':
     import logging
     from utils import logger
 
-    # logger.get_logger(logging.DEBUG)
+    logger.get_logger(logging.DEBUG)
 
     if len(sys.argv) > 1:
         chart = Chart(sys.argv[1], days=180)
     else:
         chart = Chart('IBM')
 
-    figure = chart.plot_ohlc()
-    # figure = chart.plot_history()
+    # figure = chart.plot_ohlc()
+    # figure = chart.plot_history(close=True)
+    figure = chart.plot_chart()
     plt.figure(figure)
     plt.show()

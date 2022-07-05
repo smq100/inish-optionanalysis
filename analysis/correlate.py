@@ -2,7 +2,7 @@ import pandas as pd
 
 from base import Threaded
 from data import store as store
-from utils import ui, logger
+from utils import logger
 
 _logger = logger.get_logger()
 

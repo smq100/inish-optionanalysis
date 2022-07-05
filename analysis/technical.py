@@ -6,13 +6,13 @@ import pandas as pd
 from ta import trend, momentum, volatility, volume
 
 from data import store as store
-from utils import ui, logger
+from utils import logger
 
 _logger = logger.get_logger()
 
 
 class Technical:
-    def __init__(self, ticker: str, history: pd.DataFrame, days: int, end: int = 0, live: bool = False):
+    def __init__(self, ticker: str, history: pd.DataFrame | None, days: int, end: int = 0, live: bool = False):
         if store.is_ticker(ticker):
             self.ticker = ticker.upper()
             self.days = days
@@ -94,6 +94,8 @@ class Technical:
 
 
 if __name__ == '__main__':
-    ta = Technical('HLT', None, 365)
-    value = ta.calc_rsi().iloc[-1]
-    print(f'{value:.2f}')
+    from analysis.chart import plot_technical_history
+
+    ta = Technical('IBM', None, 365)
+    rsi = ta.calc_rsi()
+    chart = plot_technical_history([ta.history, rsi], title='RSI')

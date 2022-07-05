@@ -4,6 +4,7 @@ trendln: https://github.com/GregoryMorse/trendln
 '''
 
 import math
+from dataclasses import dataclass, field
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -37,15 +38,15 @@ MAX_SCALE = 10.0
 ACCURACY = 4
 
 
+@dataclass
 class _Score:
-    def __init__(self):
-        self.fit = 0.0
-        self.width = 0.0
-        self.proximity = 0.0
-        self.points = 0.0
-        self.age = 0.0
-        self.slope = 0.0
-        self.basis = True
+    fit: float = 0.0
+    width: float = 0.0
+    proximity: float = 0.0
+    points: float = 0.0
+    age: float = 0.0
+    slope: float = 0.0
+    basis: bool = True
 
     def calculate(self) -> float:
         score = (
@@ -62,23 +63,23 @@ class _Score:
         return score
 
 
+@dataclass
 class _Line:
-    def __init__(self):
-        self.support = False
-        self.points = []
-        self.end_point = 0.0
-        self.slope = 0.0
-        self.intercept = 0.0
-        self.fit = 0
-        self.ssr = 0.0
-        self.slope_err = 0.0
-        self.intercept_err = 0.0
-        self.area_avg = 0.0
-        self.width = 0.0
-        self.age = 0.0
-        self.proximity = 0.0
-        self.score = 0.0
-        self._score = _Score()
+    support: bool = False
+    points: list[float] = field(default_factory=list)
+    end_point: float = 0.0
+    slope: float = 0.0
+    intercept: float = 0.0
+    fit: int = 0
+    ssr: float = 0.0
+    slope_err: float = 0.0
+    intercept_err: float = 0.0
+    area_avg: float = 0.0
+    width: float = 0.0
+    age: float = 0.0
+    proximity: float = 0.0
+    score: float = 0.0
+    _score: _Score = _Score()
 
     def __str__(self):
         dates = [point['date'] for point in self.points]
@@ -99,18 +100,20 @@ class _Line:
         return output
 
 
+@dataclass
 class _Stats:
-    def __init__(self):
-        self.res_slope = 0.0
-        self.res_intercept = 0.0
-        self.res_weighted_mean = 0.0
-        self.res_weighted_std = 0.0
-        self.res_level = 0.0
-        self.sup_slope = 0.0
-        self.sup_intercept = 0.0
-        self.sup_weighted_mean = 0.0
-        self.sup_weighted_std = 0.0
-        self.sup_level = 0.0
+    res_slope: float = 0.0
+    res_intercept: float = 0.0
+    res_weighted_mean: float = 0.0
+    res_weighted_std: float = 0.0
+    res_level: float = 0.0
+    sup_slope: float = 0.0
+    sup_intercept: float = 0.0
+    sup_weighted_mean: float = 0.0
+    sup_weighted_std: float = 0.0
+    sup_level: float = 0.0
+    slope: float = 0.0
+    intercept: float = 0.0
 
 
 class SupportResistance(Threaded):
@@ -177,7 +180,6 @@ class SupportResistance(Threaded):
         else:
             self.task_state = 'Unable to get history'
 
-
     def _extract_lines(self, method: str, extmethod: str) -> list[_Line]:
         if not method in METHOD:
             assert ValueError(f'Invalid method {method}')
@@ -211,6 +213,13 @@ class SupportResistance(Threaded):
 
         self.stats.sup_slope = pmin[0]
         self.stats.sup_intercept = pmin[1]
+
+        self.stats.slope = (pmax[0] + pmin[0]) / 2.0
+        self.stats.intercept = (pmax[1] + pmin[1]) / 2.0
+
+        _logger.debug(f'{__name__}: res: m={self.stats.res_slope:.2f} b={self.stats.res_intercept:.2f}')
+        _logger.debug(f'{__name__}: sup: m={self.stats.sup_slope:.2f} b={self.stats.sup_intercept:.2f}')
+        _logger.debug(f'{__name__}: tnd: m={self.stats.slope:.2f} b={self.stats.intercept:.2f}')
 
         for line in mintrend:
             newline = _Line()
@@ -396,7 +405,17 @@ class SupportResistance(Threaded):
         self.stats.sup_weighted_mean, self.stats.sup_weighted_std, self.stats.sup_level = calculate(True)
         _logger.info(f'{__name__}: Sup: wmean={self.stats.sup_weighted_mean:.2f}, wstd={self.stats.sup_weighted_std:.2f}, level={self.stats.sup_level}')
 
-    def plot(self, show: bool = False, legend: bool = True, trendlines: bool = False, filename: str = '') -> plt.Figure:
+    def plot(self, **kwargs) -> plt.Figure:
+        show = kwargs.get('show', False)
+        srlines = kwargs.get('srlines', True)
+        ppoints = kwargs.get('ppoints', True)
+        trendlines = kwargs.get('trendlines', False)
+        trend = kwargs.get('trend', False)
+        priceline = kwargs.get('priceline', True)
+        aggregate = kwargs.get('aggregate', True)
+        legend = kwargs.get('legend', True)
+        filename = kwargs.get('filename', '')
+
         resistance = self._get_resistance(method_price=False)
         support = self._get_support(method_price=False)
 
@@ -429,169 +448,175 @@ class SupportResistance(Threaded):
         ax1.plot(dates, self.history['low'], '-r', linewidth=0.5)
         ax1.fill_between(dates, self.history['high'], self.history['low'], facecolor='gray', alpha=0.4)
 
-        # Pivot points (high)
-        dates = []
-        values = []
-        for line in resistance.itertuples():
-            for point in line.points:
-                index = point['index']
+        if ppoints:
+            # Pivot points (high)
+            dates = []
+            values = []
+            for line in resistance.itertuples():
+                for point in line.points:
+                    index = point['index']
+                    date = self.history.iloc[index]['date']
+                    dates += [date.strftime(ui.DATE_FORMAT)]
+                    values += [self.history.iloc[index]['high']]
+            ax1.plot(dates, values, '.r')
+
+            # Pivot points (low)
+            dates = []
+            values = []
+            for line in support.itertuples():
+                for point in line.points:
+                    index = point['index']
+                    date = self.history.iloc[index]['date']
+                    dates += [date.strftime(ui.DATE_FORMAT)]
+                    values += [self.history.iloc[index]['low']]
+            ax1.plot(dates, values, '.g')
+
+        if srlines:
+            # Trend lines (high)
+            dates = []
+            values = []
+            for line in resistance.itertuples():
+                index = line.points[0]['index']
+                date = self.history.iloc[index]['date']
+                dates = [date.strftime(ui.DATE_FORMAT)]
+                values = [self.history.iloc[index]['high']]
+                index = line.points[-1]['index']
                 date = self.history.iloc[index]['date']
                 dates += [date.strftime(ui.DATE_FORMAT)]
                 values += [self.history.iloc[index]['high']]
-        ax1.plot(dates, values, '.r')
 
-        # Pivot points (low)
-        dates = []
-        values = []
-        for line in support.itertuples():
-            for point in line.points:
-                index = point['index']
+                ax1.plot(dates, values, '-r', linewidth=line_width)
+
+            # Trend lines (low)
+            dates = []
+            values = []
+            for line in support.itertuples():
+                index = line.points[0]['index']
+                date = self.history.iloc[index]['date']
+                dates = [date.strftime(ui.DATE_FORMAT)]
+                values = [self.history.iloc[index]['low']]
+                index = line.points[-1]['index']
                 date = self.history.iloc[index]['date']
                 dates += [date.strftime(ui.DATE_FORMAT)]
                 values += [self.history.iloc[index]['low']]
-        ax1.plot(dates, values, '.g')
 
-        # Trend lines (high)
-        dates = []
-        values = []
-        for line in resistance.itertuples():
-            index = line.points[0]['index']
-            date = self.history.iloc[index]['date']
-            dates = [date.strftime(ui.DATE_FORMAT)]
-            values = [self.history.iloc[index]['high']]
-            index = line.points[-1]['index']
-            date = self.history.iloc[index]['date']
-            dates += [date.strftime(ui.DATE_FORMAT)]
-            values += [self.history.iloc[index]['high']]
+                ax1.plot(dates, values, '-g', linewidth=line_width)
 
-            ax1.plot(dates, values, '-r', linewidth=line_width)
-
-        # Trend lines (low)
-        dates = []
-        values = []
-        for line in support.itertuples():
-            index = line.points[0]['index']
-            date = self.history.iloc[index]['date']
-            dates = [date.strftime(ui.DATE_FORMAT)]
-            values = [self.history.iloc[index]['low']]
-            index = line.points[-1]['index']
-            date = self.history.iloc[index]['date']
-            dates += [date.strftime(ui.DATE_FORMAT)]
-            values += [self.history.iloc[index]['low']]
-
-            ax1.plot(dates, values, '-g', linewidth=line_width)
-
-        # Trend line extensions (high)
-        dates = []
-        values = []
-        for line in resistance.itertuples():
-            index = line.points[-1]['index']
-            date = self.history.iloc[index]['date']
-            dates = [date.strftime(ui.DATE_FORMAT)]
-            values = [self.history.iloc[index]['high']]
-            index = self.points-1
-            date = self.history.iloc[index]['date']
-            dates += [date.strftime(ui.DATE_FORMAT)]
-            values += [line.end_point]
-
-            ax1.plot(dates, values, ':r', linewidth=line_width)
-
-        # Trend line extensions (low)
-        dates = []
-        values = []
-        for line in support.itertuples():
-            index = line.points[-1]['index']
-            date = self.history.iloc[index]['date']
-            dates = [date.strftime(ui.DATE_FORMAT)]
-            values = [self.history.iloc[index]['low']]
-            index = self.points-1
-            date = self.history.iloc[index]['date']
-            dates += [date.strftime(ui.DATE_FORMAT)]
-            values += [line.end_point]
-
-            ax1.plot(dates, values, ':g', linewidth=line_width)
-
-        # End points (high)
-        dates = []
-        values = []
-        text = []
-        for index, line in enumerate(resistance.itertuples()):
-            ep = m.mround(line.end_point, _rounding)
-            if ep not in values:
-                date = self.history['date'].iloc[-1]
+            # Trend line extensions (high)
+            dates = []
+            values = []
+            for line in resistance.itertuples():
+                index = line.points[-1]['index']
+                date = self.history.iloc[index]['date']
+                dates = [date.strftime(ui.DATE_FORMAT)]
+                values = [self.history.iloc[index]['high']]
+                index = self.points-1
+                date = self.history.iloc[index]['date']
                 dates += [date.strftime(ui.DATE_FORMAT)]
-                values += [ep]
-                text += [{'text': f'{line.end_point:.2f}:{index+1}', 'value': line.end_point, 'color': 'red'}]
-        ax1.plot(dates, values, '.r')
+                values += [line.end_point]
 
-        # End points (low)
-        dates = []
-        values = []
-        for index, line in enumerate(support.itertuples()):
-            ep = m.mround(line.end_point, _rounding)
-            if ep not in values:
-                date = self.history['date'].iloc[-1]
+                ax1.plot(dates, values, ':r', linewidth=line_width)
+
+            # Trend line extensions (low)
+            dates = []
+            values = []
+            for line in support.itertuples():
+                index = line.points[-1]['index']
+                date = self.history.iloc[index]['date']
+                dates = [date.strftime(ui.DATE_FORMAT)]
+                values = [self.history.iloc[index]['low']]
+                index = self.points-1
+                date = self.history.iloc[index]['date']
                 dates += [date.strftime(ui.DATE_FORMAT)]
-                values += [ep]
-                text += [{'text': f'{line.end_point:.2f}:{index+1}', 'value': line.end_point, 'color': 'green'}]
-        ax1.plot(dates, values, '.g')
+                values += [line.end_point]
 
-        # End points text (high)
-        ylimits = ax1.get_ylim()
-        inc = (ylimits[1] - ylimits[0]) / 33.0
-        text = sorted(text, key=lambda t: t['value'])
-        index = 1
-        for txt in text:
-            if txt['value'] > self.price:
-                ax1.text(self.points+5, self.price+(index*inc), txt['text'], color=txt['color'], va='center', size='small')
-                index += 1
+                ax1.plot(dates, values, ':g', linewidth=line_width)
 
-        # End points text (low)
-        text = sorted(text, reverse=True, key=lambda t: t['value'])
-        index = 1
-        for txt in text:
-            if txt['value'] < self.price:
-                ax1.text(self.points+5, self.price-(index*inc), txt['text'], color=txt['color'], va='center', size='small')
-                index += 1
+            # End points (high)
+            dates = []
+            values = []
+            text = []
+            for index, line in enumerate(resistance.itertuples()):
+                ep = m.mround(line.end_point, _rounding)
+                if ep not in values:
+                    date = self.history['date'].iloc[-1]
+                    dates += [date.strftime(ui.DATE_FORMAT)]
+                    values += [ep]
+                    text += [{'text': f'{line.end_point:.2f}:{index+1}', 'value': line.end_point, 'color': 'red'}]
+            ax1.plot(dates, values, '.r')
+
+            # End points (low)
+            dates = []
+            values = []
+            for index, line in enumerate(support.itertuples()):
+                ep = m.mround(line.end_point, _rounding)
+                if ep not in values:
+                    date = self.history['date'].iloc[-1]
+                    dates += [date.strftime(ui.DATE_FORMAT)]
+                    values += [ep]
+                    text += [{'text': f'{line.end_point:.2f}:{index+1}', 'value': line.end_point, 'color': 'green'}]
+            ax1.plot(dates, values, '.g')
+
+            # End points text (high)
+            ylimits = ax1.get_ylim()
+            inc = (ylimits[1] - ylimits[0]) / 33.0
+            text = sorted(text, key=lambda t: t['value'])
+            index = 1
+            for txt in text:
+                if txt['value'] > self.price:
+                    ax1.text(self.points+5, self.price+(index*inc), txt['text'], color=txt['color'], va='center', size='small')
+                    index += 1
+
+            # End points text (low)
+            text = sorted(text, reverse=True, key=lambda t: t['value'])
+            index = 1
+            for txt in text:
+                if txt['value'] < self.price:
+                    ax1.text(self.points+5, self.price-(index*inc), txt['text'], color=txt['color'], va='center', size='small')
+                    index += 1
 
         # Price line
-        ax1.hlines(self.price, -20, self.points, color='black', linestyle='--', label='Current Price', linewidth=1.0)
-        ax1.text(self.points+5, self.price, f'{self.price:.2f}', color='black', va='center', size='small')
+        if priceline:
+            ax1.hlines(self.price, -20, self.points, color='black', linestyle='--', label='Current Price', linewidth=1.0)
+            ax1.text(self.points+5, self.price, f'{self.price:.2f}', color='black', va='center', size='small')
 
         # Aggregate resistance & support lines
-        if self.stats.res_level > 0.0:
-            ax1.hlines(self.stats.res_level, -20, self.points, color='red', linestyle='-.', label='Aggregate Resistance', linewidth=1.0)
+        if aggregate:
+            if self.stats.res_level > 0.0:
+                ax1.hlines(self.stats.res_level, -20, self.points, color='red', linestyle='-.', label='Aggregate Resistance', linewidth=1.0)
 
-        if self.stats.sup_level > 0.0:
-            ax1.hlines(self.stats.sup_level, -20, self.points, color='green', linestyle='-.', label='Aggregate Support', linewidth=1.0)
+            if self.stats.sup_level > 0.0:
+                ax1.hlines(self.stats.sup_level, -20, self.points, color='green', linestyle='-.', label='Aggregate Support', linewidth=1.0)
 
-        # Trendlines
+        if trendlines or trend:
+            index = 0
+            date = self.history.iloc[index]['date']
+            dates = [date.strftime(ui.DATE_FORMAT)]
+            index = self.points-1
+            date = self.history.iloc[index]['date']
+            dates += [date.strftime(ui.DATE_FORMAT)]
+
+        # Sup & Res trendlines
         if trendlines:
-            index = 0
-            date = self.history.iloc[index]['date']
-            dates = [date.strftime(ui.DATE_FORMAT)]
             values = [self.stats.res_intercept]
-            index = self.points-1
-            date = self.history.iloc[index]['date']
-            dates += [date.strftime(ui.DATE_FORMAT)]
             values += [self.stats.res_slope * self.points + self.stats.res_intercept]
+            ax1.plot(dates, values, '--', color='darkgreen', label='Avg Resistance', linewidth=1.5)
 
-            ax1.plot(dates, values, '--', color='darkgreen', label='Avg Resistance', linewidth=1.7)
-
-            index = 0
-            date = self.history.iloc[index]['date']
-            dates = [date.strftime(ui.DATE_FORMAT)]
             values = [self.stats.sup_intercept]
-            index = self.points-1
-            date = self.history.iloc[index]['date']
-            dates += [date.strftime(ui.DATE_FORMAT)]
             values += [self.stats.sup_slope * self.points + self.stats.sup_intercept]
+            ax1.plot(dates, values, '--', color='darkred', label='Avg Support', linewidth=1.5)
 
-            ax1.plot(dates, values, '--', color='darkred', label='Avg Support', linewidth=1.7)
+        # Overall trend
+        if trend:
+            values = [self.stats.intercept]
+            values += [self.stats.slope * self.points + self.stats.intercept]
+            ax1.plot(dates, values, '--', color='black', label='Trend', linewidth=1.5)
 
+        # Legend
         if legend:
             plt.legend(loc='upper left')
 
+        # Output file
         if filename:
             figure.savefig(filename, dpi=150)
             _logger.info(f'{__name__}: Saved plot as {filename}')
