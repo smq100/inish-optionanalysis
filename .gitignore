@@ -4,8 +4,10 @@ __pycache__
 # Other directories
 venv*
 *._*
-.ipynb_checkpoints
+log
 models
+wip
+.ipynb_checkpoints
 
 # Other file types
 *.code-workspace

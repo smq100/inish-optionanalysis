@@ -1,12 +1,13 @@
 # Securities and Market Analysis Framework
 
-* This is my personal securities and markets analysis framework
-* The state and functionality of this code is variable and should not be considered released
-* Developed and tested with Python 3.10 (the only 3.10 feature used is union type hints)
-
+* Securities and markets analysis framework
 ## Features
-* Option Strategy Analysis (calls, puts, vertical spreads, iron condors, and iron butterflys currently supported)
-* Script-based security screening and scoring
+* Option Strategy Analysis (calls, puts, vertical spreads, iron condors, and iron butterfly strategies) providing:
+    - What-if profitability based on volatility and expiration
+    - Real option data or theoretical
+    - Black-Scholes and Greeks calculations
+* Script-based security screening and scoring (example JSON scripts provided)
 * Technical Analysis with sophisticated support & resistance analysis
 * Local pricing history database support and data manager
 * E*Trade API support
+* Console scripts (console_*.py) provided to support basic operations and provide example implementations

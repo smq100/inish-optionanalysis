@@ -851,7 +851,7 @@ def main():
     parser.add_argument('-1', '--width1', help='Specify the inner width', metavar='width', required=False, default='1')
     parser.add_argument('-2', '--width2', help='Specify the outer width', metavar='width', required=False, default='1')
     parser.add_argument('-q', '--quantity', help='Specify the quantity', metavar='qty', required=False, default='1')
-    parser.add_argument('-e', '--expiry', help='Specify the expiry date (ex: "2022-03-29")', metavar='date', required=False, default='')
+    parser.add_argument('-e', '--expiry', help='Specify the expiry date (ex: "YYYY-MM-DD")', metavar='date', required=False, default='')
     parser.add_argument('-v', '--volatility', help='Specify the option volatility', metavar='pct', required=False, default=-1.0)
     parser.add_argument('-f', '--default', help='Load the default options', required=False, action='store_true')
     parser.add_argument('-a', '--analyze', help='Analyze the strategy', required=False, action='store_true')
