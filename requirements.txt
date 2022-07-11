@@ -15,7 +15,7 @@ idna==3.3
 imageio==2.19.3
 inflection==0.5.1
 kiwisolver==1.4.3
-lxml==4.9.0
+lxml==4.9.1
 matplotlib==3.5.2
 more-itertools==8.13.0
 mpmath==1.2.1
