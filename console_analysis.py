@@ -17,7 +17,7 @@ import data as d
 import screener.screener as screener
 from screener.screener import Screener, Result
 from strategies.strategy import Strategy
-from analysis.trend import SupportResistance
+from analysis.support_resistance import SupportResistance
 from analysis.correlate import Correlate
 from analysis.chart import Chart
 from data import store as store

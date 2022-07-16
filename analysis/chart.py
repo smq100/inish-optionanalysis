@@ -121,40 +121,6 @@ class Chart(Threaded):
         return self.figure
 
 
-def plot_technical_history(data: list[pd.DataFrame], title: str = '', show: bool = True) -> plt.Figure:
-    figure, axs = plt.subplots(nrows=len(data), figsize=ui.CHART_SIZE, sharex=True)
-
-    plt.style.use(ui.CHART_STYLE)
-    plt.margins(x=0.1)
-    plt.subplots_adjust(bottom=0.15)
-
-    if title:
-        figure.canvas.manager.set_window_title(f'{title}')
-        axs[0].set_title('History')
-        axs[1].set_title(f'{title}')
-
-    axs[0].grid(which='major', axis='both')
-    axs[1].grid(which='major', axis='both')
-
-    # Grid and ticks
-    length = len(data[0])
-    axs[0].set_xticks(range(0, length+1, int(length/12)))
-    axs[0].tick_params(axis='x', labelrotation=45)
-    axs[1].set_xticks(range(0, length+1, int(length/12)))
-    axs[1].tick_params(axis='x', labelrotation=45)
-
-    # Data
-    dates = [data[0].iloc[index]['date'].strftime(ui.DATE_FORMAT) for index in range(length)]
-    axs[0].plot(dates, data[0]['close'], '-k', linewidth=0.8)
-    axs[1].plot(dates, data[1], '-b', linewidth=0.8)
-
-    if show:
-        plt.figure(figure)
-        plt.show()
-
-    return figure
-
-
 if __name__ == '__main__':
     import sys
     import logging

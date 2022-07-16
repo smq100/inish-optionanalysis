@@ -94,8 +94,7 @@ class Technical:
 
 
 if __name__ == '__main__':
+    import sys
     from analysis.chart import plot_technical_history
 
-    ta = Technical('IBM', None, 365)
-    rsi = ta.calc_rsi()
-    chart = plot_technical_history([ta.history, rsi], title='RSI')
+    ticker = sys.argv[1].upper() if len(sys.argv) > 1 else 'IBM'

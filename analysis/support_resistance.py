@@ -410,6 +410,7 @@ class SupportResistance(Threaded):
         srlines = kwargs.get('srlines', True)
         ppoints = kwargs.get('ppoints', True)
         trendlines = kwargs.get('trendlines', False)
+        extensions = kwargs.get('extensions', True)
         trend = kwargs.get('trend', False)
         priceline = kwargs.get('priceline', True)
         aggregate = kwargs.get('aggregate', True)
@@ -502,78 +503,79 @@ class SupportResistance(Threaded):
 
                 ax1.plot(dates, values, '-g', linewidth=line_width)
 
-            # Trend line extensions (high)
-            dates = []
-            values = []
-            for line in resistance.itertuples():
-                index = line.points[-1]['index']
-                date = self.history.iloc[index]['date']
-                dates = [date.strftime(ui.DATE_FORMAT)]
-                values = [self.history.iloc[index]['high']]
-                index = self.points-1
-                date = self.history.iloc[index]['date']
-                dates += [date.strftime(ui.DATE_FORMAT)]
-                values += [line.end_point]
-
-                ax1.plot(dates, values, ':r', linewidth=line_width)
-
-            # Trend line extensions (low)
-            dates = []
-            values = []
-            for line in support.itertuples():
-                index = line.points[-1]['index']
-                date = self.history.iloc[index]['date']
-                dates = [date.strftime(ui.DATE_FORMAT)]
-                values = [self.history.iloc[index]['low']]
-                index = self.points-1
-                date = self.history.iloc[index]['date']
-                dates += [date.strftime(ui.DATE_FORMAT)]
-                values += [line.end_point]
-
-                ax1.plot(dates, values, ':g', linewidth=line_width)
-
-            # End points (high)
-            dates = []
-            values = []
-            text = []
-            for index, line in enumerate(resistance.itertuples()):
-                ep = m.mround(line.end_point, _rounding)
-                if ep not in values:
-                    date = self.history['date'].iloc[-1]
+            if extensions:
+                # Trend line extensions (high)
+                dates = []
+                values = []
+                for line in resistance.itertuples():
+                    index = line.points[-1]['index']
+                    date = self.history.iloc[index]['date']
+                    dates = [date.strftime(ui.DATE_FORMAT)]
+                    values = [self.history.iloc[index]['high']]
+                    index = self.points-1
+                    date = self.history.iloc[index]['date']
                     dates += [date.strftime(ui.DATE_FORMAT)]
-                    values += [ep]
-                    text += [{'text': f'{line.end_point:.2f}:{index+1}', 'value': line.end_point, 'color': 'red'}]
-            ax1.plot(dates, values, '.r')
+                    values += [line.end_point]
 
-            # End points (low)
-            dates = []
-            values = []
-            for index, line in enumerate(support.itertuples()):
-                ep = m.mround(line.end_point, _rounding)
-                if ep not in values:
-                    date = self.history['date'].iloc[-1]
+                    ax1.plot(dates, values, ':r', linewidth=line_width)
+
+                # Trend line extensions (low)
+                dates = []
+                values = []
+                for line in support.itertuples():
+                    index = line.points[-1]['index']
+                    date = self.history.iloc[index]['date']
+                    dates = [date.strftime(ui.DATE_FORMAT)]
+                    values = [self.history.iloc[index]['low']]
+                    index = self.points-1
+                    date = self.history.iloc[index]['date']
                     dates += [date.strftime(ui.DATE_FORMAT)]
-                    values += [ep]
-                    text += [{'text': f'{line.end_point:.2f}:{index+1}', 'value': line.end_point, 'color': 'green'}]
-            ax1.plot(dates, values, '.g')
+                    values += [line.end_point]
 
-            # End points text (high)
-            ylimits = ax1.get_ylim()
-            inc = (ylimits[1] - ylimits[0]) / 33.0
-            text = sorted(text, key=lambda t: t['value'])
-            index = 1
-            for txt in text:
-                if txt['value'] > self.price:
-                    ax1.text(self.points+5, self.price+(index*inc), txt['text'], color=txt['color'], va='center', size='small')
-                    index += 1
+                    ax1.plot(dates, values, ':g', linewidth=line_width)
 
-            # End points text (low)
-            text = sorted(text, reverse=True, key=lambda t: t['value'])
-            index = 1
-            for txt in text:
-                if txt['value'] < self.price:
-                    ax1.text(self.points+5, self.price-(index*inc), txt['text'], color=txt['color'], va='center', size='small')
-                    index += 1
+                # End points (high)
+                dates = []
+                values = []
+                text = []
+                for index, line in enumerate(resistance.itertuples()):
+                    ep = m.mround(line.end_point, _rounding)
+                    if ep not in values:
+                        date = self.history['date'].iloc[-1]
+                        dates += [date.strftime(ui.DATE_FORMAT)]
+                        values += [ep]
+                        text += [{'text': f'{line.end_point:.2f}:{index+1}', 'value': line.end_point, 'color': 'red'}]
+                ax1.plot(dates, values, '.r')
+
+                # End points (low)
+                dates = []
+                values = []
+                for index, line in enumerate(support.itertuples()):
+                    ep = m.mround(line.end_point, _rounding)
+                    if ep not in values:
+                        date = self.history['date'].iloc[-1]
+                        dates += [date.strftime(ui.DATE_FORMAT)]
+                        values += [ep]
+                        text += [{'text': f'{line.end_point:.2f}:{index+1}', 'value': line.end_point, 'color': 'green'}]
+                ax1.plot(dates, values, '.g')
+
+                # End points text (high)
+                ylimits = ax1.get_ylim()
+                inc = (ylimits[1] - ylimits[0]) / 33.0
+                text = sorted(text, key=lambda t: t['value'])
+                index = 1
+                for txt in text:
+                    if txt['value'] > self.price:
+                        ax1.text(self.points+5, self.price+(index*inc), txt['text'], color=txt['color'], va='center', size='small')
+                        index += 1
+
+                # End points text (low)
+                text = sorted(text, reverse=True, key=lambda t: t['value'])
+                index = 1
+                for txt in text:
+                    if txt['value'] < self.price:
+                        ax1.text(self.points+5, self.price-(index*inc), txt['text'], color=txt['color'], va='center', size='small')
+                        index += 1
 
         # Price line
         if priceline:

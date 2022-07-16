@@ -5,7 +5,7 @@ import logging
 import argparse
 import matplotlib.pyplot as plt
 
-from analysis.support_resistance import SupportResistance
+from analysis.divergence import Divergence
 from data import store as store
 from utils import ui, logger
 
@@ -14,13 +14,12 @@ logger.get_logger(logging.WARNING, logfile='')
 
 
 class Interface:
-    def __init__(self, tickers: list[str] = [], days: int = 1000, quick: bool = False, exit: bool = False):
+    def __init__(self, tickers: list[str] = [], days: int = 1000, exit: bool = False):
         self.tickers = [t.upper() for t in tickers]
         self.days = days
-        self.quick = quick
         self.exit = exit
-        self.trend: SupportResistance = None
-        self.task: threading.Thread = None
+        self.trend: Divergence | None = None
+        self.task: threading.Thread | None = None
 
         quit = False
         for ticker in tickers:
@@ -32,7 +31,7 @@ class Interface:
         if quit:
             pass
         elif self.exit:
-            self.calculate_support_and_resistance()
+            self.calculate_divergence()
         else:
             self.main_menu()
 
@@ -42,15 +41,12 @@ class Interface:
                 '1': 'Change Ticker',
                 '2': 'Add Ticker',
                 '3': f'Days ({self.days})',
-                '4': 'Calculate Support & Resistance',
+                '4': 'Calculate Divergence',
                 '0': 'Exit'
             }
 
             if self.tickers:
                 menu_items['1'] = f'Change Ticker ({", ".join(self.tickers)})'
-
-            if self.quick:
-                menu_items['4'] += ' (quick)'
 
             selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1, prompt='Select operation, or 0 when done')
 
@@ -61,7 +57,7 @@ class Interface:
             elif selection == 3:
                 self.select_days()
             elif selection == 4:
-                self.calculate_support_and_resistance()
+                self.calculate_divergence()
             elif selection == 0:
                 self.exit = True
 
@@ -101,23 +97,19 @@ class Interface:
         while self.days < 30:
             self.days = ui.input_integer('Enter number of days', 30, 9999)
 
-    def calculate_support_and_resistance(self) -> None:
+    def calculate_divergence(self) -> None:
         if self.tickers:
             for ticker in self.tickers:
-                if self.quick:
-                    self.trend = SupportResistance(ticker, days=self.days)
-                else:
-                    methods = ['NSQUREDLOGN', 'NCUBED', 'HOUGHLINES', 'PROBHOUGH']
-                    extmethods = ['NAIVE', 'NAIVECONSEC', 'NUMDIFF']
-                    self.trend = SupportResistance(ticker, methods=methods, extmethods=extmethods, days=self.days)
+                self.trend = Divergence(ticker, days=self.days)
+                self.trend.calculate()
 
-                self.task = threading.Thread(target=self.trend.calculate)
-                self.task.start()
+                # self.task = threading.Thread(target=self.trend.calculate)
+                # self.task.start()
 
-                # Show thread progress. Blocking while thread is active
-                self.show_progress()
+                # # Show thread progress. Blocking while thread is active
+                # self.show_progress()
 
-                figure = self.trend.plot()
+                figure = self.trend.plot(show=False)
                 plt.figure(figure)
 
             plt.show()
@@ -138,7 +130,7 @@ class Interface:
             if self.trend.task_state == 'Hold':
                 pass
             elif self.trend.task_state == 'Done':
-                ui.print_message(f'{self.trend.task_state}: {self.trend.task_total} lines extracted in {self.trend.task_time:.1f} seconds')
+                ui.print_message(f'{self.trend.task_state}: {self.trend.task_total} lines extracted in {self.trend.task_time:.1f} seconds', post_creturn=1)
             else:
                 ui.print_error(f'{self.trend.task_state}: Error extracting lines')
         else:
@@ -148,15 +140,14 @@ class Interface:
 def main():
     parser = argparse.ArgumentParser(description='Technical Analysis')
     parser.add_argument('-t', '--tickers', metavar='ticker(s)', nargs='+', help='Run using tickers')
-    parser.add_argument('-d', '--days', metavar='days', help='Days to run analysis', default=1000)
-    parser.add_argument('-q', '--quick', help='Run quick analysis', action='store_true')
-    parser.add_argument('-x', '--exit', help='Run trend analysis then exit (only valid with -t)', action='store_true')
+    parser.add_argument('-d', '--days', metavar='days', help='Days to run analysis', default=200)
+    parser.add_argument('-x', '--exit', help='Run divergence analysis then exit (only valid with -t)', action='store_true')
 
     command = vars(parser.parse_args())
     if command['tickers']:
-        Interface(tickers=command['tickers'], days=int(command['days']), quick=command['quick'], exit=command['exit'])
+        Interface(tickers=command['tickers'], days=int(command['days']), exit=command['exit'])
     else:
-        Interface(days=int(command['days']), quick=command['quick'])
+        Interface(days=int(command['days']))
 
 
 if __name__ == '__main__':
