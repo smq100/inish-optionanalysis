@@ -130,22 +130,22 @@ class Interface:
             if self.trend.task_state == 'Hold':
                 pass
             elif self.trend.task_state == 'Done':
-                ui.print_message(f'{self.trend.task_state}: {self.trend.task_total} lines extracted in {self.trend.task_time:.1f} seconds', post_creturn=1)
+                ui.print_message(f'{self.trend.task_state}: {self.trend.task_total} lines calculated in {self.trend.task_time:.1f} seconds', post_creturn=1)
             else:
-                ui.print_error(f'{self.trend.task_state}: Error extracting lines')
+                ui.print_error(f'{self.trend.task_state}: Error calculating lines')
         else:
             ui.print_message(f'{self.trend.task_state}')
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Technical Analysis')
-    parser.add_argument('-t', '--tickers', metavar='ticker(s)', nargs='+', help='Run using tickers')
+    parser = argparse.ArgumentParser(description='Divergence Analysis')
+    parser.add_argument('-t', '--ticker', metavar='ticker', help='Run using ticker')
     parser.add_argument('-d', '--days', metavar='days', help='Days to run analysis', default=200)
-    parser.add_argument('-x', '--exit', help='Run divergence analysis then exit (only valid with -t)', action='store_true')
+    parser.add_argument('-x', '--exit', help='Run divergence analysis then exit (valid only with -t)', action='store_true')
 
     command = vars(parser.parse_args())
-    if command['tickers']:
-        Interface(tickers=command['tickers'], days=int(command['days']), exit=command['exit'])
+    if command['ticker']:
+        Interface(tickers=command['ticker'], days=int(command['days']), exit=command['exit'])
     else:
         Interface(days=int(command['days']))
 

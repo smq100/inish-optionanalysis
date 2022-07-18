@@ -745,7 +745,7 @@ class Interface():
         else:
             ax = fig.add_subplot(111)
 
-        plt.style.use('seaborn')
+        plt.style.use(ui.CHART_STYLE)
         plt.title(title)
 
         # X Axis

@@ -8,6 +8,7 @@ from data import store as store
 
 
 DATE_FORMAT = '%Y-%m-%d'
+DATE_FORMAT2 = '%m-%d-%Y'
 TABULATE_FORMAT = 'simple'
 CHART_STYLE = 'seaborn-bright'
 CHART_SIZE = (17, 10)
