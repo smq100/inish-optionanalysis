@@ -1,8 +1,9 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import pandas as pd
 import matplotlib.pyplot as plt
 from ta import trend
+from sklearn.preprocessing import MinMaxScaler
 
 from analysis.technical import Technical
 from base import Threaded
@@ -15,21 +16,24 @@ _logger = logger.get_logger()
 
 @dataclass
 class _Data:
-    data:pd.DataFrame = pd.DataFrame()
-    data_sma:pd.Series = pd.Series(dtype=float)
-    data_sma_diff:pd.Series = pd.Series(dtype=float)
+    interval: int = 14
+    periods: int = 5
+    data: pd.DataFrame = pd.DataFrame()
+    data_sma: pd.Series = pd.Series(dtype=float)
+    data_sma_scaled: pd.Series = pd.Series(dtype=float)
+    data_scaled_sma_diff: pd.Series = pd.Series(dtype=float)
+
 
 class Divergence(Threaded):
     def __init__(self, ticker: str, window: int = 15, days: int = 365):
         self.ticker = ''
         self.window = window
         self.days = days
+        self.history = pd.DataFrame()
         self.price = _Data()
         self.technical = _Data()
         self.divergence = pd.Series(dtype=float)
         self.type = 'rsi'
-        self.interval = 14
-        self.periods = 5
 
         if (store.is_ticker(ticker)):
             self.ticker = ticker
@@ -38,24 +42,27 @@ class Divergence(Threaded):
 
     @Threaded.threaded
     def calculate(self) -> None:
+        scaler = MinMaxScaler(feature_range=(0, 1))
         ta_history = Technical(self.ticker, None, self.days)
+        self.history = ta_history.history
 
-        self.price.data = ta_history.history[self.interval:]
-        self.price.data_sma = ta_history.calc_sma(self.window)[self.interval:]
-        self.price.data_sma_diff = self.price.data_sma.diff(periods=self.periods).fillna(0.0)
+        self.price.data = self.history['close'][self.price.interval:]
+        self.price.data_sma = trend.sma_indicator(self.price.data, window=self.window, fillna=True)
+        scaled = scaler.fit_transform(self.price.data_sma.values.reshape(-1, 1))
+        scaled = [value[0] for value in scaled]
+        self.price.data_sma_scaled = pd.Series(scaled)
+        self.price.data_scaled_sma_diff = self.price.data_sma.diff(periods=self.price.periods).fillna(0.0)
 
-        self.technical.data = ta_history.calc_rsi(self.interval)[self.interval:]
+        self.technical.data = ta_history.calc_rsi(self.technical.interval)[self.technical.interval:]
         self.technical.data_sma = trend.sma_indicator(self.technical.data, window=self.window, fillna=True)
-        self.technical.data_sma_diff = self.technical.data_sma.diff(periods=self.periods).fillna(0.0)
+        scaled = scaler.fit_transform(self.technical.data_sma.values.reshape(-1, 1))
+        scaled = [value[0] for value in scaled]
+        self.technical.data_sma_scaled = pd.Series(scaled)
+        self.technical.data_scaled_sma_diff = self.technical.data_sma.diff(periods=self.technical.periods).fillna(0.0)
+        # print(self.price.data_scaled_sma_diff)
+        # print(self.technical.data_scaled_sma_diff)
 
-        self.divergence = abs(self.price.data_sma_diff - self.technical.data_sma_diff)
-
-        self.price.data_sma.name = f'history_sma{self.window}'
-        self.price.data_sma_diff.name = f'history_sma{self.window}_diff'
-        self.technical.data.name = self.type
-        self.technical.data_sma.name = f'{self.type}_sma{self.window}'
-        self.technical.data_sma_diff.name = f'{self.type}_sma{self.window}_diff'
-        self.divergence.name = 'divergence'
+        self.divergence = abs(self.price.data_scaled_sma_diff - self.technical.data_scaled_sma_diff)
 
     def plot(self, show: bool = True) -> plt.Figure:
         if len(self.price.data) == 0:
@@ -76,12 +83,8 @@ class Divergence(Threaded):
         axs[1].set_title(self.type.upper())
         axs[2].set_title('Divergence')
 
-        axs[0].grid(which='major', axis='both')
-        axs[1].grid(which='major', axis='both')
-        axs[2].grid(which='major', axis='both')
-
         # Data
-        data  = [self.price.data['close']]
+        data  = [self.price.data]
         data += [self.price.data_sma]
         data += [self.technical.data]
         data += [self.technical.data_sma]
@@ -89,13 +92,16 @@ class Divergence(Threaded):
 
         # Grid and ticks
         length = len(data[0])
+        axs[0].grid(which='major', axis='both')
         axs[0].set_xticks(range(0, length+1, int(length/12)))
+        axs[1].grid(which='major', axis='both')
         axs[1].set_xticks(range(0, length+1, int(length/12)))
         axs[1].set_ylim([-5, 105])
+        axs[2].grid(which='major', axis='both')
         axs[2].tick_params(axis='x', labelrotation=45)
 
         # Plot
-        dates = [self.price.data.iloc[index]['date'].strftime(ui.DATE_FORMAT2) for index in range(length)]
+        dates = [self.history.iloc[index]['date'].strftime(ui.DATE_FORMAT2) for index in range(length)]
         axs[0].plot(dates, data[0], '-', c='blue', label='Price', linewidth=0.5)
         axs[0].plot(dates, data[1], '-', c='orange', label='SMA', linewidth=1.5)
         axs[1].plot(dates, data[2], '-', c='blue', label=self.type.upper(), linewidth=0.5)
