@@ -21,7 +21,7 @@ class _Data:
     data: pd.DataFrame = pd.DataFrame()
     data_sma: pd.Series = pd.Series(dtype=float)
     data_sma_scaled: pd.Series = pd.Series(dtype=float)
-    data_scaled_sma_diff: pd.Series = pd.Series(dtype=float)
+    data_sma_scaled_diff: pd.Series = pd.Series(dtype=float)
 
 
 class Divergence(Threaded):
@@ -42,27 +42,28 @@ class Divergence(Threaded):
 
     @Threaded.threaded
     def calculate(self) -> None:
-        scaler = MinMaxScaler(feature_range=(0, 1))
         ta_history = Technical(self.ticker, None, self.days)
         self.history = ta_history.history
+        scaler = MinMaxScaler(feature_range=(0, 1))
 
+        # Calculate 0-1 scaled series of day-to-day price differences
         self.price.data = self.history['close'][self.price.interval:]
-        self.price.data_sma = trend.sma_indicator(self.price.data, window=self.window, fillna=True)
+        self.price.data_sma = trend.sma_indicator(self.price.data, window=self.window, fillna=True).reset_index(drop=True)
         scaled = scaler.fit_transform(self.price.data_sma.values.reshape(-1, 1))
         scaled = [value[0] for value in scaled]
         self.price.data_sma_scaled = pd.Series(scaled)
-        self.price.data_scaled_sma_diff = self.price.data_sma.diff(periods=self.price.periods).fillna(0.0)
+        self.price.data_sma_scaled_diff = self.price.data_sma.diff(periods=self.price.periods).fillna(0.0)
 
+        # Calculate 0-1 scaled series of day-to-day rsi differences
         self.technical.data = ta_history.calc_rsi(self.technical.interval)[self.technical.interval:]
-        self.technical.data_sma = trend.sma_indicator(self.technical.data, window=self.window, fillna=True)
+        self.technical.data_sma = trend.sma_indicator(self.technical.data, window=self.window, fillna=True).reset_index(drop=True)
         scaled = scaler.fit_transform(self.technical.data_sma.values.reshape(-1, 1))
         scaled = [value[0] for value in scaled]
         self.technical.data_sma_scaled = pd.Series(scaled)
-        self.technical.data_scaled_sma_diff = self.technical.data_sma.diff(periods=self.technical.periods).fillna(0.0)
-        # print(self.price.data_scaled_sma_diff)
-        # print(self.technical.data_scaled_sma_diff)
+        self.technical.data_sma_scaled_diff = self.technical.data_sma_scaled.diff(periods=self.technical.periods).fillna(0.0)
 
-        self.divergence = abs(self.price.data_scaled_sma_diff - self.technical.data_scaled_sma_diff)
+        # Calculate differences in the slopes between prices and RSI's
+        self.divergence = (self.price.data_sma_scaled_diff - self.technical.data_sma_scaled_diff)
 
     def plot(self, show: bool = True) -> plt.Figure:
         if len(self.price.data) == 0:
