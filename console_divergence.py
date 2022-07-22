@@ -14,7 +14,7 @@ logger.get_logger(logging.WARNING, logfile='')
 
 
 class Interface:
-    def __init__(self, tickers: list[str] = [], days: int = 1000, exit: bool = False):
+    def __init__(self, tickers: list[str] = [], days: int = 200, exit: bool = False):
         self.tickers = [t.upper() for t in tickers]
         self.days = days
         self.exit = exit

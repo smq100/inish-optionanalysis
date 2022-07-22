@@ -52,7 +52,7 @@ class Divergence(Threaded):
         scaled = scaler.fit_transform(self.price.data_sma.values.reshape(-1, 1))
         scaled = [value[0] for value in scaled]
         self.price.data_sma_scaled = pd.Series(scaled)
-        self.price.data_sma_scaled_diff = self.price.data_sma.diff(periods=self.price.periods).fillna(0.0)
+        self.price.data_sma_scaled_diff = self.price.data_sma_scaled.diff(periods=self.price.periods).fillna(0.0)
 
         # Calculate 0-1 scaled series of day-to-day rsi differences
         self.technical.data = ta_history.calc_rsi(self.technical.interval)[self.technical.interval:]
@@ -104,14 +104,14 @@ class Divergence(Threaded):
         # Plot
         dates = [self.history.iloc[index]['date'].strftime(ui.DATE_FORMAT2) for index in range(length)]
         axs[0].plot(dates, data[0], '-', c='blue', label='Price', linewidth=0.5)
-        axs[0].plot(dates, data[1], '-', c='orange', label='SMA', linewidth=1.5)
+        axs[0].plot(dates, data[1], '-', c='orange', label=f'SMA{self.price.interval}', linewidth=1.5)
         axs[1].plot(dates, data[2], '-', c='blue', label=self.type.upper(), linewidth=0.5)
-        axs[1].plot(dates, data[3], '-', c='orange', label='SMA', linewidth=1.5)
-        axs[2].plot(dates, data[4], '-', c='green', label='Divergence', linewidth=1.0)
+        axs[1].plot(dates, data[3], '-', c='orange', label=f'SMA{self.price.interval}', linewidth=1.5)
+        axs[2].plot(dates[self.price.periods:], data[4][self.price.periods:], '-', c='green', label='Divergence', linewidth=1.0)
 
         # Legend
-        axs[0].legend(loc='lower left')
-        axs[1].legend(loc='lower left')
+        axs[0].legend(loc='best')
+        axs[1].legend(loc='best')
 
         if show:
             plt.figure(figure)
