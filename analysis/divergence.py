@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 from ta import trend
 from sklearn.preprocessing import MinMaxScaler
@@ -33,6 +34,7 @@ class Divergence(Threaded):
         self.price = _Data()
         self.technical = _Data()
         self.divergence = pd.Series(dtype=float)
+        self.divergence_only = pd.Series(dtype=float)
         self.type = 'rsi'
 
         if (store.is_ticker(ticker)):
@@ -42,8 +44,8 @@ class Divergence(Threaded):
 
     @Threaded.threaded
     def calculate(self) -> None:
-        ta_history = Technical(self.ticker, None, self.days)
-        self.history = ta_history.history
+        ta = Technical(self.ticker, None, self.days)
+        self.history = ta.history
         scaler = MinMaxScaler(feature_range=(0, 1))
 
         # Calculate 0-1 scaled series of day-to-day price differences
@@ -55,7 +57,7 @@ class Divergence(Threaded):
         self.price.data_sma_scaled_diff = self.price.data_sma_scaled.diff(periods=self.price.periods).fillna(0.0)
 
         # Calculate 0-1 scaled series of day-to-day rsi differences
-        self.technical.data = ta_history.calc_rsi(self.technical.interval)[self.technical.interval:]
+        self.technical.data = ta.calc_rsi(self.technical.interval)[self.technical.interval:]
         self.technical.data_sma = trend.sma_indicator(self.technical.data, window=self.window, fillna=True).reset_index(drop=True)
         scaled = scaler.fit_transform(self.technical.data_sma.values.reshape(-1, 1))
         scaled = [value[0] for value in scaled]
@@ -63,7 +65,15 @@ class Divergence(Threaded):
         self.technical.data_sma_scaled_diff = self.technical.data_sma_scaled.diff(periods=self.technical.periods).fillna(0.0)
 
         # Calculate differences in the slopes between prices and RSI's
-        self.divergence = (self.price.data_sma_scaled_diff - self.technical.data_sma_scaled_diff)
+        self.divergence = self.price.data_sma_scaled_diff - self.technical.data_sma_scaled_diff
+
+        # Calculate differences in the slopes between prices and RSI's for opposite slopes only
+        div = []
+        for i in range(len(self.price.data_sma_scaled_diff)):
+            p = self.price.data_sma_scaled_diff[i]
+            t = self.technical.data_sma_scaled_diff[i]
+            div += [p - t if p * t < 0.0 else np.NaN]
+        self.divergence_only = pd.Series(div)
 
     def plot(self, show: bool = True) -> plt.Figure:
         if len(self.price.data) == 0:
@@ -90,24 +100,27 @@ class Divergence(Threaded):
         data += [self.technical.data]
         data += [self.technical.data_sma]
         data += [self.divergence]
+        data += [self.divergence_only]
 
         # Grid and ticks
         length = len(data[0])
         axs[0].grid(which='major', axis='both')
-        axs[0].set_xticks(range(0, length+1, int(length/12)))
+        axs[0].set_xticks(range(0, length+1, length//12))
         axs[1].grid(which='major', axis='both')
-        axs[1].set_xticks(range(0, length+1, int(length/12)))
+        axs[1].set_xticks(range(0, length+1, length//12))
         axs[1].set_ylim([-5, 105])
         axs[2].grid(which='major', axis='both')
         axs[2].tick_params(axis='x', labelrotation=45)
 
         # Plot
         dates = [self.history.iloc[index]['date'].strftime(ui.DATE_FORMAT2) for index in range(length)]
-        axs[0].plot(dates, data[0], '-', c='blue', label='Price', linewidth=0.5)
-        axs[0].plot(dates, data[1], '-', c='orange', label=f'SMA{self.price.interval}', linewidth=1.5)
-        axs[1].plot(dates, data[2], '-', c='blue', label=self.type.upper(), linewidth=0.5)
-        axs[1].plot(dates, data[3], '-', c='orange', label=f'SMA{self.price.interval}', linewidth=1.5)
-        axs[2].plot(dates[self.price.periods:], data[4][self.price.periods:], '-', c='green', label='Divergence', linewidth=1.0)
+        axs[0].plot(dates, data[0], '-', color='blue', label='Price', linewidth=0.5)
+        axs[0].plot(dates, data[1], '-', color='orange', label=f'SMA{self.price.interval}', linewidth=1.5)
+        axs[1].plot(dates, data[2], '-', color='blue', label=self.type.upper(), linewidth=0.5)
+        axs[1].plot(dates, data[3], '-', color='orange', label=f'SMA{self.price.interval}', linewidth=1.5)
+        axs[2].plot(dates[self.price.periods:], data[4][self.price.periods:], '-', color='orange', label='Divergence', linewidth=1.0)
+        axs[2].plot(dates[self.price.periods:], data[5][self.price.periods:], '-', color='green', label='Divergence', linewidth=1.0)
+        axs[2].hlines(y=0.0, xmin=dates[0], xmax=dates[-1], color='black', linewidth=1.5)
 
         # Legend
         axs[0].legend(loc='best')
