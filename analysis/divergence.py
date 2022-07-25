@@ -76,7 +76,7 @@ class Divergence(Threaded):
             div += [p - t if p * t < 0.0 else np.NaN]
         self.divergence_only = pd.Series(div)
 
-    def plot(self, show: bool = True) -> plt.Figure:
+    def plot(self, show: bool = True, cursor: bool = True) -> plt.Figure:
         if len(self.price.data) == 0:
             raise ValueError('No price history. Run calculate()')
         if len(self.technical.data) == 0:
@@ -127,30 +127,32 @@ class Divergence(Threaded):
         axes[0].legend(loc='best')
         axes[1].legend(loc='best')
 
-        if show:
-            cursor = self.custom_cursor(axes, color='black', xlimits=[0, 100], ylimits=[0, 100])
+        if show and cursor:
+            cursor = self.custom_cursor(axes, dates=dates)
             figure.canvas.mpl_connect('motion_notify_event', cursor.show_xy)
             figure.canvas.mpl_connect('axes_leave_event', cursor.hide_y)
 
+        if show:
             plt.figure(figure)
             plt.show()
 
         return figure
 
     class custom_cursor(object):
-        def __init__(self, axes: list[plt.Axes], color: str, xlimits: list[int], ylimits: list[int], showy: bool = True):
+        def __init__(self, axes: list[plt.Axes], dates: list[str], showy: bool = True):
             self.items = np.zeros(shape=(len(axes), 4), dtype=object)
+            self.dates = dates
             self.showy = showy
             self.focus = 0
 
-            ax: plt.Axes
             for i, ax in enumerate(axes):
                 ax.set_gid(i)
-                lx = ax.axvline(ymin=ylimits[0], ymax=ylimits[1], color=color, linewidth=0.5)
-                ly = ax.axhline(xmin=xlimits[0], xmax=xlimits[1], color=color, linewidth=0.5)
-                an = ax.annotate('', xy=(0, 0), xytext=(-20, 20), textcoords='offset points', bbox=dict(boxstyle='round4', fc='linen', ec='k', lw=1))
-                an.set_visible(True)
-                item = [ax,lx, ly, an]
+                lx = ax.axvline(ymin=0, ymax=100, color='k', linewidth=0.5)
+                ly = ax.axhline(xmin=0, xmax=100, color='k', linewidth=0.5)
+                props = dict(boxstyle='round', fc='linen', alpha=0.4)
+                an = ax.annotate('', xy=(0, 0), xytext=(-20, 20), textcoords='offset points', bbox=props)
+                an.set_visible(False)
+                item = [ax, lx, ly, an]
                 self.items[i] = item
 
         def show_xy(self, event):
@@ -158,21 +160,27 @@ class Divergence(Threaded):
                 self.focus = event.inaxes.get_gid()
 
                 ax: plt.Axes
-                for ax in self.items[:,0]:
+                for ax in self.items[:, 0]:
                     self.gid = ax.get_gid()
-                    for lx in self.items[:,1]:
+                    for lx in self.items[:, 1]:
                         lx.set_xdata(event.xdata)
 
                     if self.showy and event.inaxes.get_gid() == ax.get_gid():
                         ln = self.items[self.gid, 2]
                         ln.set_ydata(event.ydata)
                         ln.set_visible(True)
+                        an = self.items[self.gid, 3]
+                        an.set_visible(True)
 
                     x = event.xdata
                     y = event.ydata
+                    if self.dates and x >= 0 and x < len(self.dates):
+                        text = f'{self.dates[int(x)]}: {y:.1f}'
+                    else:
+                        text = f'{y:.1f}'
+
                     an = self.items[self.gid, 3]
                     an.xy = (x, y)
-                    text = f'({x:.0f}, {y:.1f})'
                     an.set_text(text)
 
             plt.draw()
@@ -180,7 +188,8 @@ class Divergence(Threaded):
         def hide_y(self, event):
             for ax in self.items[:, 0]:
                 if self.focus == ax.get_gid():
-                    self.items[self.focus][2].set_visible(False)
+                    self.items[self.focus, 2].set_visible(False)
+                    self.items[self.focus, 3].set_visible(False)
 
 
 if __name__ == '__main__':
