@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.widgets import Cursor
 from ta import trend
 from sklearn.preprocessing import MinMaxScaler
 
@@ -18,7 +19,7 @@ _logger = logger.get_logger()
 @dataclass
 class _Data:
     interval: int = 14
-    periods: int = 5
+    periods: int = 3
     data: pd.DataFrame = pd.DataFrame()
     data_sma: pd.Series = pd.Series(dtype=float)
     data_sma_scaled: pd.Series = pd.Series(dtype=float)
@@ -26,7 +27,7 @@ class _Data:
 
 
 class Divergence(Threaded):
-    def __init__(self, ticker: str, window: int = 15, days: int = 365):
+    def __init__(self, ticker: str, window: int = 15, days: int = 200):
         self.ticker = ''
         self.window = window
         self.days = days
@@ -81,21 +82,21 @@ class Divergence(Threaded):
         if len(self.technical.data) == 0:
             raise ValueError('No technical history. Run calculate()')
 
-        axs: list[plt.Axes]
+        axes: list[plt.Axes]
         figure: plt.Figure
-        figure, axs = plt.subplots(nrows=3, figsize=ui.CHART_SIZE, sharex=True)
+        figure, axes = plt.subplots(nrows=3, figsize=ui.CHART_SIZE, sharex=True)
 
         plt.style.use(ui.CHART_STYLE)
         plt.margins(x=0.1)
         plt.subplots_adjust(bottom=0.15)
 
         figure.canvas.manager.set_window_title(self.ticker)
-        axs[0].set_title('Price')
-        axs[1].set_title(self.type.upper())
-        axs[2].set_title('Divergence')
+        axes[0].set_title('Price')
+        axes[1].set_title(self.type.upper())
+        axes[2].set_title('Divergence')
 
         # Data
-        data  = [self.price.data]
+        data = [self.price.data]
         data += [self.price.data_sma]
         data += [self.technical.data]
         data += [self.technical.data_sma]
@@ -104,33 +105,82 @@ class Divergence(Threaded):
 
         # Grid and ticks
         length = len(data[0])
-        axs[0].grid(which='major', axis='both')
-        axs[0].set_xticks(range(0, length+1, length//12))
-        axs[1].grid(which='major', axis='both')
-        axs[1].set_xticks(range(0, length+1, length//12))
-        axs[1].set_ylim([-5, 105])
-        axs[2].grid(which='major', axis='both')
-        axs[2].tick_params(axis='x', labelrotation=45)
+        axes[0].grid(which='major', axis='both')
+        axes[0].set_xticks(range(0, length+1, length//10))
+        axes[1].grid(which='major', axis='both')
+        axes[1].set_xticks(range(0, length+1, length//10))
+        axes[1].set_ylim([-5, 105])
+        axes[2].grid(which='major', axis='both')
+        axes[2].tick_params(axis='x', labelrotation=45)
 
         # Plot
         dates = [self.history.iloc[index]['date'].strftime(ui.DATE_FORMAT2) for index in range(length)]
-        axs[0].plot(dates, data[0], '-', color='blue', label='Price', linewidth=0.5)
-        axs[0].plot(dates, data[1], '-', color='orange', label=f'SMA{self.price.interval}', linewidth=1.5)
-        axs[1].plot(dates, data[2], '-', color='blue', label=self.type.upper(), linewidth=0.5)
-        axs[1].plot(dates, data[3], '-', color='orange', label=f'SMA{self.price.interval}', linewidth=1.5)
-        axs[2].plot(dates[self.price.periods:], data[4][self.price.periods:], '-', color='orange', label='Divergence', linewidth=1.0)
-        axs[2].plot(dates[self.price.periods:], data[5][self.price.periods:], '-', color='green', label='Divergence', linewidth=1.0)
-        axs[2].hlines(y=0.0, xmin=dates[0], xmax=dates[-1], color='black', linewidth=1.5)
+        axes[0].plot(dates, data[0], '-', color='blue', label='Price', linewidth=0.5)
+        axes[0].plot(dates, data[1], '-', color='orange', label=f'SMA{self.price.interval}', linewidth=1.5)
+        axes[1].plot(dates, data[2], '-', color='blue', label=self.type.upper(), linewidth=0.5)
+        axes[1].plot(dates, data[3], '-', color='orange', label=f'SMA{self.price.interval}', linewidth=1.5)
+        axes[2].plot(dates[self.price.interval:], data[4][self.price.interval:], '-', color='orange', label='Divergence', linewidth=1.0)
+        axes[2].plot(dates[self.price.interval:], data[5][self.price.interval:], '-', color='green', label='Divergence', linewidth=1.0)
+        axes[2].axhline(y=0.0, xmin=0, xmax=100, color='black', linewidth=1.5)
 
         # Legend
-        axs[0].legend(loc='best')
-        axs[1].legend(loc='best')
+        axes[0].legend(loc='best')
+        axes[1].legend(loc='best')
 
         if show:
+            cursor = self.custom_cursor(axes, color='black', xlimits=[0, 100], ylimits=[0, 100])
+            figure.canvas.mpl_connect('motion_notify_event', cursor.show_xy)
+            figure.canvas.mpl_connect('axes_leave_event', cursor.hide_y)
+
             plt.figure(figure)
             plt.show()
 
         return figure
+
+    class custom_cursor(object):
+        def __init__(self, axes: list[plt.Axes], color: str, xlimits: list[int], ylimits: list[int], showy: bool = True):
+            self.items = np.zeros(shape=(len(axes), 4), dtype=object)
+            self.showy = showy
+            self.focus = 0
+
+            ax: plt.Axes
+            for i, ax in enumerate(axes):
+                ax.set_gid(i)
+                lx = ax.axvline(ymin=ylimits[0], ymax=ylimits[1], color=color, linewidth=0.5)
+                ly = ax.axhline(xmin=xlimits[0], xmax=xlimits[1], color=color, linewidth=0.5)
+                an = ax.annotate('', xy=(0, 0), xytext=(-20, 20), textcoords='offset points', bbox=dict(boxstyle='round4', fc='linen', ec='k', lw=1))
+                an.set_visible(True)
+                item = [ax,lx, ly, an]
+                self.items[i] = item
+
+        def show_xy(self, event):
+            if event.inaxes:
+                self.focus = event.inaxes.get_gid()
+
+                ax: plt.Axes
+                for ax in self.items[:,0]:
+                    self.gid = ax.get_gid()
+                    for lx in self.items[:,1]:
+                        lx.set_xdata(event.xdata)
+
+                    if self.showy and event.inaxes.get_gid() == ax.get_gid():
+                        ln = self.items[self.gid, 2]
+                        ln.set_ydata(event.ydata)
+                        ln.set_visible(True)
+
+                    x = event.xdata
+                    y = event.ydata
+                    an = self.items[self.gid, 3]
+                    an.xy = (x, y)
+                    text = f'({x:.0f}, {y:.1f})'
+                    an.set_text(text)
+
+            plt.draw()
+
+        def hide_y(self, event):
+            for ax in self.items[:, 0]:
+                if self.focus == ax.get_gid():
+                    self.items[self.focus][2].set_visible(False)
 
 
 if __name__ == '__main__':
