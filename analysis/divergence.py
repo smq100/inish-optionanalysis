@@ -139,9 +139,9 @@ class Divergence(Threaded):
         return figure
 
     class custom_cursor(object):
-        def __init__(self, axes: list[plt.Axes], dates: list[str], showy: bool = True):
+        def __init__(self, axes: list[plt.Axes], data: pd.DataFrame, showy: bool = True):
             self.items = np.zeros(shape=(len(axes), 4), dtype=object)
-            self.dates = dates
+            self.data = data
             self.showy = showy
             self.focus = 0
 
@@ -174,14 +174,11 @@ class Divergence(Threaded):
 
                     x = event.xdata
                     y = event.ydata
-                    if self.dates and x >= 0 and x < len(self.dates):
-                        text = f'{self.dates[int(x)]}: {y:.1f}'
-                    else:
-                        text = f'{y:.1f}'
-
-                    an = self.items[self.gid, 3]
-                    an.xy = (x, y)
-                    an.set_text(text)
+                    if x >= 0 and x < len(self.dates):
+                        text = f'{self.data.iloc[int(x)]["close"]}'
+                        an = self.items[self.gid, 3]
+                        an.xy = (x, y)
+                        an.set_text(text)
 
             plt.draw()
 
