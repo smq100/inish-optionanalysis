@@ -17,7 +17,7 @@ _logger = logger.get_logger()
 
 
 class Divergence(Threaded):
-    def __init__(self, ticker: str, window: int = 15, days: int = 200):
+    def __init__(self, ticker: str, window: int = 15, days: int = 100):
         self.ticker: str = ticker
         self.window: int = window
         self.days: int = days
@@ -85,6 +85,7 @@ class Divergence(Threaded):
 
         self.data = pd.concat([self.data, self.divergence], axis=1)
         self.data = pd.concat([self.data, self.divergence_only], axis=1)
+        # print(self.data)
 
     def plot(self, show: bool = True, cursor: bool = True) -> plt.Figure:
         if len(self.data) == 0:
@@ -119,16 +120,21 @@ class Divergence(Threaded):
         axes[0].plot(dates, self.data['close_sma'], '-', color='orange', label=f'SMA{self.interval}', linewidth=1.5)
         axes[1].plot(dates, self.data['rsi'], '-', color='blue', label=self.type.upper(), linewidth=0.5)
         axes[1].plot(dates, self.data['rsi_sma'], '-', color='orange', label=f'SMA{self.interval}', linewidth=1.5)
-        axes[2].plot(dates[self.interval:], self.data['divergence'][self.interval:], '-', color='orange', label='Div', linewidth=1.0)
-        axes[2].plot(dates[self.interval:], self.data['divergenceHL'][self.interval:], '-', color='green', label='DivHL', linewidth=1.0)
+        axes[2].plot(dates[self.periods:], self.data['divergence'][self.periods:], '-', color='orange', label='Div', linewidth=1.0)
+        axes[2].plot(dates[self.periods:], self.data['divergenceHL'][self.periods:], '-', color='green', label='DivHL', linewidth=1.0)
         axes[2].axhline(y=0.0, xmin=0, xmax=100, color='black', linewidth=1.5)
+
+        # Price line limits
+        min = self.data['close'].min()
+        max = self.data['close'].max()
+        axes[0].set_ylim([min*0.95, max*1.05])
 
         # Legend
         axes[0].legend(loc='best')
         axes[1].legend(loc='best')
 
         if show and cursor:
-            cursor = self.custom_cursor(axes, dates=dates)
+            cursor = self.custom_cursor(axes, data=self.data)
             figure.canvas.mpl_connect('motion_notify_event', cursor.show_xy)
             figure.canvas.mpl_connect('axes_leave_event', cursor.hide_y)
 
@@ -165,7 +171,7 @@ class Divergence(Threaded):
                     for lx in self.items[:, 1]:
                         lx.set_xdata(event.xdata)
 
-                    if self.showy and event.inaxes.get_gid() == ax.get_gid():
+                    if self.showy and (self.focus == ax.get_gid()):
                         ln = self.items[self.gid, 2]
                         ln.set_ydata(event.ydata)
                         ln.set_visible(True)
@@ -174,10 +180,18 @@ class Divergence(Threaded):
 
                     x = event.xdata
                     y = event.ydata
-                    if x >= 0 and x < len(self.dates):
-                        text = f'{self.data.iloc[int(x)]["close"]}'
+                    if x >= 0 and x < len(self.data):
                         an = self.items[self.gid, 3]
                         an.xy = (x, y)
+
+                        if self.focus == 0:
+                            text = f'{self.data.iloc[int(x)]["close"]:.2f} ({self.data.iloc[int(x)]["close_sma"]:.2f})'
+                        elif self.focus == 1:
+                            text = f'{self.data.iloc[int(x)]["rsi"]:.2f} ({self.data.iloc[int(x)]["rsi_sma"]:.2f})'
+                        elif self.focus == 2:
+                            text = f'{self.data.iloc[int(x)]["divergence"]:.2f}'
+                        else:
+                            text = ''
                         an.set_text(text)
 
             plt.draw()
