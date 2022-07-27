@@ -41,51 +41,59 @@ class Divergence(Threaded):
         scaler = MinMaxScaler(feature_range=(0, 1))
 
         # Calculate 0-1 scaled series of day-to-day price differences
-        price_data = self.history['close'][self.interval:]
-        price_data_sma = trend.sma_indicator(price_data, window=self.window, fillna=True).reset_index(drop=True)
-        price_data_sma.name = 'close_sma'
-        scaled = scaler.fit_transform(price_data_sma.values.reshape(-1, 1))
+        dates = self.history['date'][self.interval:].reset_index(drop=True)
+        price = self.history['close'][self.interval:].reset_index(drop=True)
+        price.name = 'price'
+        price_sma = trend.sma_indicator(price, window=self.window, fillna=True).reset_index(drop=True)
+        price_sma.name = 'price_sma'
+        price_sma_diff = price_sma.diff(periods=self.periods).fillna(0.0)
+        price_sma_diff.name = 'price_sma_diff'
+        scaled = scaler.fit_transform(price_sma.values.reshape(-1, 1))
         scaled = [value[0] for value in scaled]
-        price_data_sma_scaled = pd.Series(scaled)
-        price_data_sma_scaled.name = 'close_sma_scaled'
-        price_data_sma_scaled_diff = price_data_sma_scaled.diff(periods=self.periods).fillna(0.0)
-        price_data_sma_scaled_diff.name = 'close_sma_scaled_diff'
+        price_sma_scaled = pd.Series(scaled)
+        price_sma_scaled.name = 'price_sma_scaled'
+        price_sma_scaled_diff = price_sma_scaled.diff(periods=self.periods).fillna(0.0)
+        price_sma_scaled_diff.name = 'price_sma_scaled_diff'
 
         # Calculate 0-1 scaled series of day-to-day rsi differences
-        technical_data = ta.calc_rsi(self.interval)[self.interval:]
-        technical_data_sma = trend.sma_indicator(technical_data, window=self.window, fillna=True).reset_index(drop=True)
-        technical_data_sma.name = f'{self.type}_sma'
-        scaled = scaler.fit_transform(technical_data_sma.values.reshape(-1, 1))
+        technical = ta.calc_rsi(self.interval)[self.interval:]
+        technical_sma = trend.sma_indicator(technical, window=self.window, fillna=True).reset_index(drop=True)
+        technical_sma.name = f'{self.type}_sma'
+        technical_sma_diff = technical_sma.diff(periods=self.periods).fillna(0.0)
+        technical_sma_diff.name = f'{self.type}_sma_diff'
+        scaled = scaler.fit_transform(technical_sma.values.reshape(-1, 1))
         scaled = [value[0] for value in scaled]
-        technical_data_sma_scaled = pd.Series(scaled)
-        technical_data_sma_scaled.name = f'{self.type}_sma_scaled'
-        technical_data_sma_scaled_diff = technical_data_sma_scaled.diff(periods=self.periods).fillna(0.0)
-        technical_data_sma_scaled_diff.name = f'{self.type}_sma_scaled_diff'
+        technical_sma_scaled = pd.Series(scaled)
+        technical_sma_scaled.name = f'{self.type}_sma_scaled'
+        technical_sma_scaled_diff = technical_sma_scaled.diff(periods=self.periods).fillna(0.0)
+        technical_sma_scaled_diff.name = f'{self.type}_sma_scaled_diff'
 
         # Calculate differences in the slopes between prices and RSI's
-        self.divergence = price_data_sma_scaled_diff - technical_data_sma_scaled_diff
-        self.divergence.name = 'divergence'
+        self.divergence = price_sma_scaled_diff - technical_sma_scaled_diff
+        self.divergence.name = 'div'
 
         # Calculate differences in the slopes between prices and RSI's for opposite slopes only
         div = []
-        for i in range(len(price_data_sma_scaled_diff)):
-            p = price_data_sma_scaled_diff[i]
-            t = technical_data_sma_scaled_diff[i]
+        for i in range(len(price_sma_scaled_diff)):
+            p = price_sma_scaled_diff[i]
+            t = technical_sma_scaled_diff[i]
             div += [p - t if p * t < 0.0 else np.NaN]
         self.divergence_only = pd.Series(div)
-        self.divergence_only.name = 'divergenceHL'
+        self.divergence_only.name = 'divHL'
 
-        # Overall data dataframe
-        self.data = self.history[['date', 'close']][self.interval:].reset_index(drop=True)
-        self.data = pd.concat([self.data, price_data_sma], axis=1)
+        # Overall dataframe
+        self.data = dates
+        self.data = pd.concat([self.data, price], axis=1)
+        self.data = pd.concat([self.data, price_sma], axis=1)
+        self.data = pd.concat([self.data, price_sma_diff], axis=1)
 
-        tech = technical_data.reset_index(drop=True)
+        tech = technical.reset_index(drop=True)
         self.data = pd.concat([self.data, tech], axis=1)
-        self.data = pd.concat([self.data, technical_data_sma], axis=1)
+        self.data = pd.concat([self.data, technical_sma], axis=1)
+        self.data = pd.concat([self.data, technical_sma_diff], axis=1)
 
         self.data = pd.concat([self.data, self.divergence], axis=1)
         self.data = pd.concat([self.data, self.divergence_only], axis=1)
-        # print(self.data)
 
     def plot(self, show: bool = True, cursor: bool = True) -> plt.Figure:
         if len(self.data) == 0:
@@ -116,24 +124,24 @@ class Divergence(Threaded):
 
         # Plot
         dates = [self.data.iloc[index]['date'].strftime(ui.DATE_FORMAT2) for index in range(length)]
-        axes[0].plot(dates, self.data['close'], '-', color='blue', label='Price', linewidth=0.5)
-        axes[0].plot(dates, self.data['close_sma'], '-', color='orange', label=f'SMA{self.interval}', linewidth=1.5)
+        axes[0].plot(dates, self.data['price'], '-', color='blue', label='Price', linewidth=0.5)
+        axes[0].plot(dates, self.data['price_sma'], '-', color='orange', label=f'SMA{self.interval}', linewidth=1.5)
         axes[1].plot(dates, self.data['rsi'], '-', color='blue', label=self.type.upper(), linewidth=0.5)
         axes[1].plot(dates, self.data['rsi_sma'], '-', color='orange', label=f'SMA{self.interval}', linewidth=1.5)
-        axes[2].plot(dates[self.periods:], self.data['divergence'][self.periods:], '-', color='orange', label='Div', linewidth=1.0)
-        axes[2].plot(dates[self.periods:], self.data['divergenceHL'][self.periods:], '-', color='green', label='DivHL', linewidth=1.0)
+        axes[2].plot(dates[self.periods:], self.data['div'][self.periods:], '-', color='orange', label='Div', linewidth=1.0)
+        axes[2].plot(dates[self.periods:], self.data['divHL'][self.periods:], '-', color='green', label='DivHL', linewidth=1.0)
         axes[2].axhline(y=0.0, xmin=0, xmax=100, color='black', linewidth=1.5)
 
         # Price line limits
-        min = self.data['close'].min()
-        max = self.data['close'].max()
+        min = self.data['price'].min()
+        max = self.data['price'].max()
         axes[0].set_ylim([min*0.95, max*1.05])
 
         # Legend
         axes[0].legend(loc='best')
         axes[1].legend(loc='best')
 
-        if show and cursor:
+        if cursor and show:
             cursor = self.custom_cursor(axes, data=self.data)
             figure.canvas.mpl_connect('motion_notify_event', cursor.show_xy)
             figure.canvas.mpl_connect('axes_leave_event', cursor.hide_y)
@@ -185,11 +193,9 @@ class Divergence(Threaded):
                         an.xy = (x, y)
 
                         if self.focus == 0:
-                            text = f'{self.data.iloc[int(x)]["close"]:.2f} ({self.data.iloc[int(x)]["close_sma"]:.2f})'
+                            text = f'{self.data.iloc[int(x)]["price"]:.2f} ({self.data.iloc[int(x)]["price_sma"]:.2f} / {self.data.iloc[int(x)]["price_sma_diff"]:.2f})'
                         elif self.focus == 1:
-                            text = f'{self.data.iloc[int(x)]["rsi"]:.2f} ({self.data.iloc[int(x)]["rsi_sma"]:.2f})'
-                        elif self.focus == 2:
-                            text = f'{self.data.iloc[int(x)]["divergence"]:.2f}'
+                            text = f'{self.data.iloc[int(x)]["rsi"]:.2f} ({self.data.iloc[int(x)]["rsi_sma"]:.2f} / {self.data.iloc[int(x)]["rsi_sma_diff"]:.2f})'
                         else:
                             text = ''
                         an.set_text(text)

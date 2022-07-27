@@ -109,10 +109,10 @@ class Interface:
                 # # Show thread progress. Blocking while thread is active
                 # self.show_progress()
 
-                figure = self.trend.plot(show=False)
+                figure = self.trend.plot()
                 plt.figure(figure)
 
-            plt.show()
+            # plt.show()
         else:
             ui.print_error('Enter a ticker before calculating')
 
@@ -145,7 +145,7 @@ def main():
 
     command = vars(parser.parse_args())
     if command['ticker']:
-        Interface(tickers=command['ticker'], days=int(command['days']), exit=command['exit'])
+        Interface(tickers=[command['ticker']], days=int(command['days']), exit=command['exit'])
     else:
         Interface(days=int(command['days']))
 
