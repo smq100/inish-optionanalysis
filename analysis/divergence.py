@@ -21,7 +21,7 @@ class Divergence(Threaded):
         self.ticker: str = ticker
         self.window: int = window
         self.days: int = days
-        self.data: pd.DataFrame = pd.DataFrame()
+        self.results: pd.DataFrame = pd.DataFrame()
         self.history: pd.DataFrame = pd.DataFrame()
         self.divergence: pd.Series = pd.Series(dtype=float)
         self.divergence_only: pd.Series = pd.Series(dtype=float)
@@ -34,8 +34,7 @@ class Divergence(Threaded):
         else:
             raise ValueError('{__name__}: Error initializing {__class__} with ticker {ticker}')
 
-    @Threaded.threaded
-    def calculate(self) -> None:
+    def calculate(self) -> pd.DataFrame:
         ta = Technical(self.ticker, None, self.days)
         self.history = ta.history
         scaler = MinMaxScaler(feature_range=(0, 1))
@@ -82,21 +81,27 @@ class Divergence(Threaded):
         self.divergence_only.name = 'divHL'
 
         # Overall dataframe
-        self.data = dates
-        self.data = pd.concat([self.data, price], axis=1)
-        self.data = pd.concat([self.data, price_sma], axis=1)
-        self.data = pd.concat([self.data, price_sma_diff], axis=1)
+        self.results = dates
+        self.results = pd.concat([self.results, price], axis=1)
+        self.results = pd.concat([self.results, price_sma], axis=1)
+        self.results = pd.concat([self.results, price_sma_diff], axis=1)
+        self.results = pd.concat([self.results, price_sma_scaled], axis=1)
+        self.results = pd.concat([self.results, price_sma_scaled_diff], axis=1)
 
         tech = technical.reset_index(drop=True)
-        self.data = pd.concat([self.data, tech], axis=1)
-        self.data = pd.concat([self.data, technical_sma], axis=1)
-        self.data = pd.concat([self.data, technical_sma_diff], axis=1)
+        self.results = pd.concat([self.results, tech], axis=1)
+        self.results = pd.concat([self.results, technical_sma], axis=1)
+        self.results = pd.concat([self.results, technical_sma_diff], axis=1)
+        self.results = pd.concat([self.results, technical_sma_scaled], axis=1)
+        self.results = pd.concat([self.results, technical_sma_scaled_diff], axis=1)
 
-        self.data = pd.concat([self.data, self.divergence], axis=1)
-        self.data = pd.concat([self.data, self.divergence_only], axis=1)
+        self.results = pd.concat([self.results, self.divergence], axis=1)
+        self.results = pd.concat([self.results, self.divergence_only], axis=1)
+
+        return self.results.copy()
 
     def plot(self, show: bool = True, cursor: bool = True) -> plt.Figure:
-        if len(self.data) == 0:
+        if len(self.results) == 0:
             raise ValueError('Must first run calculate()')
 
         axes: list[plt.Axes]
@@ -113,7 +118,7 @@ class Divergence(Threaded):
         axes[2].set_title('Divergence')
 
         # Grid and ticks
-        length = len(self.data)
+        length = len(self.results)
         axes[0].grid(which='major', axis='both')
         axes[0].set_xticks(range(0, length+1, length//10))
         axes[1].grid(which='major', axis='both')
@@ -123,26 +128,26 @@ class Divergence(Threaded):
         axes[2].tick_params(axis='x', labelrotation=45)
 
         # Plot
-        dates = [self.data.iloc[index]['date'].strftime(ui.DATE_FORMAT2) for index in range(length)]
-        axes[0].plot(dates, self.data['price'], '-', color='blue', label='Price', linewidth=0.5)
-        axes[0].plot(dates, self.data['price_sma'], '-', color='orange', label=f'SMA{self.interval}', linewidth=1.5)
-        axes[1].plot(dates, self.data['rsi'], '-', color='blue', label=self.type.upper(), linewidth=0.5)
-        axes[1].plot(dates, self.data['rsi_sma'], '-', color='orange', label=f'SMA{self.interval}', linewidth=1.5)
-        axes[2].plot(dates[self.periods:], self.data['div'][self.periods:], '-', color='orange', label='Div', linewidth=1.0)
-        axes[2].plot(dates[self.periods:], self.data['divHL'][self.periods:], '-', color='green', label='DivHL', linewidth=1.0)
+        dates = [self.results.iloc[index]['date'].strftime(ui.DATE_FORMAT2) for index in range(length)]
+        axes[0].plot(dates, self.results['price'], '-', color='blue', label='Price', linewidth=0.5)
+        axes[0].plot(dates, self.results['price_sma'], '-', color='orange', label=f'SMA{self.interval}', linewidth=1.5)
+        axes[1].plot(dates, self.results['rsi'], '-', color='blue', label=self.type.upper(), linewidth=0.5)
+        axes[1].plot(dates, self.results['rsi_sma'], '-', color='orange', label=f'SMA{self.interval}', linewidth=1.5)
+        axes[2].plot(dates[self.periods:], self.results['div'][self.periods:], '-', color='orange', label='Div', linewidth=1.0)
+        axes[2].plot(dates[self.periods:], self.results['divHL'][self.periods:], '-', color='green', label='DivHL', linewidth=1.0)
         axes[2].axhline(y=0.0, xmin=0, xmax=100, color='black', linewidth=1.5)
 
         # Price line limits
-        min = self.data['price'].min()
-        max = self.data['price'].max()
+        min = self.results['price'].min()
+        max = self.results['price'].max()
         axes[0].set_ylim([min*0.95, max*1.05])
 
         # Legend
         axes[0].legend(loc='best')
         axes[1].legend(loc='best')
 
-        if cursor and show:
-            cursor = self.custom_cursor(axes, data=self.data)
+        if cursor:
+            cursor = self.custom_cursor(axes, data=self.results)
             figure.canvas.mpl_connect('motion_notify_event', cursor.show_xy)
             figure.canvas.mpl_connect('axes_leave_event', cursor.hide_y)
 

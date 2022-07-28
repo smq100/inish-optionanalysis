@@ -3,7 +3,9 @@ import threading
 import logging
 
 import argparse
+import pandas as pd
 import matplotlib.pyplot as plt
+from tabulate import tabulate
 
 from analysis.divergence import Divergence
 from data import store as store
@@ -14,11 +16,13 @@ logger.get_logger(logging.WARNING, logfile='')
 
 
 class Interface:
-    def __init__(self, tickers: list[str] = [], days: int = 200, exit: bool = False):
-        self.tickers = [t.upper() for t in tickers]
-        self.days = days
-        self.exit = exit
-        self.trend: Divergence | None = None
+    def __init__(self, tickers: list[str] = [], days: int = 100, exit: bool = False):
+        self.tickers: str = [t.upper() for t in tickers]
+        self.days: int = days
+        self.exit: bool = exit
+        self.plot: bool = False
+        self.results: pd.DataFrame = pd.DataFrame()
+        self.divergence: Divergence | None = None
         self.task: threading.Thread | None = None
 
         quit = False
@@ -42,6 +46,7 @@ class Interface:
                 '2': 'Add Ticker',
                 '3': f'Days ({self.days})',
                 '4': 'Calculate Divergence',
+                '5': 'Show Results',
                 '0': 'Exit'
             }
 
@@ -58,6 +63,8 @@ class Interface:
                 self.select_days()
             elif selection == 4:
                 self.calculate_divergence()
+            elif selection == 5:
+                self.show_results()
             elif selection == 0:
                 self.exit = True
 
@@ -97,11 +104,11 @@ class Interface:
         while self.days < 30:
             self.days = ui.input_integer('Enter number of days', 30, 9999)
 
-    def calculate_divergence(self) -> None:
+    def calculate_divergence(self, show: bool = True) -> None:
         if self.tickers:
             for ticker in self.tickers:
-                self.trend = Divergence(ticker, days=self.days)
-                self.trend.calculate()
+                self.divergence = Divergence(ticker, days=self.days)
+                self.results = self.divergence.calculate()
 
                 # self.task = threading.Thread(target=self.trend.calculate)
                 # self.task.start()
@@ -109,38 +116,44 @@ class Interface:
                 # # Show thread progress. Blocking while thread is active
                 # self.show_progress()
 
-                figure = self.trend.plot()
-                plt.figure(figure)
+                if show:
+                    self.show_results()
 
-            # plt.show()
+                if self.plot:
+                    figure = self.divergence.plot()
+                    plt.figure(figure)
         else:
             ui.print_error('Enter a ticker before calculating')
 
+    def show_results(self) -> None:
+        headers = [header.replace('_', '\n').lower() for header in self.results.columns]
+        print(tabulate(self.results, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
+
     def show_progress(self) -> None:
-        while not self.trend.task_state:
+        while not self.divergence.task_state:
             pass
 
-        if self.trend.task_state == 'None':
-            ui.progress_bar(0, 0, suffix=self.trend.task_message, reset=True)
+        if self.divergence.task_state == 'None':
+            ui.progress_bar(0, 0, suffix=self.divergence.task_message, reset=True)
 
-            while self.trend.task_state == 'None':
+            while self.divergence.task_state == 'None':
                 time.sleep(0.20)
-                ui.progress_bar(0, 0, suffix=self.trend.task_message)
+                ui.progress_bar(0, 0, suffix=self.divergence.task_message)
 
-            if self.trend.task_state == 'Hold':
+            if self.divergence.task_state == 'Hold':
                 pass
-            elif self.trend.task_state == 'Done':
-                ui.print_message(f'{self.trend.task_state}: {self.trend.task_total} lines calculated in {self.trend.task_time:.1f} seconds', post_creturn=1)
+            elif self.divergence.task_state == 'Done':
+                ui.print_message(f'{self.divergence.task_state}: {self.divergence.task_total} lines calculated in {self.divergence.task_time:.1f} seconds', post_creturn=1)
             else:
-                ui.print_error(f'{self.trend.task_state}: Error calculating lines')
+                ui.print_error(f'{self.divergence.task_state}: Error calculating lines')
         else:
-            ui.print_message(f'{self.trend.task_state}')
+            ui.print_message(f'{self.divergence.task_state}')
 
 
 def main():
     parser = argparse.ArgumentParser(description='Divergence Analysis')
     parser.add_argument('-t', '--ticker', metavar='ticker', help='Run using ticker')
-    parser.add_argument('-d', '--days', metavar='days', help='Days to run analysis', default=200)
+    parser.add_argument('-d', '--days', metavar='days', help='Days to run analysis', default=100)
     parser.add_argument('-x', '--exit', help='Run divergence analysis then exit (valid only with -t)', action='store_true')
 
     command = vars(parser.parse_args())
