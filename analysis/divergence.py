@@ -27,7 +27,7 @@ class Divergence(Threaded):
         self.divergence_only: pd.Series = pd.Series(dtype=float)
         self.type: str = 'rsi'
         self.interval: int = 14
-        self.periods: int = 3
+        self.periods: int = days // 50
 
         if (store.is_ticker(ticker)):
             self.ticker = ticker

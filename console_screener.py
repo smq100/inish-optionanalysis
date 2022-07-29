@@ -291,7 +291,7 @@ class Interface:
             summary = screener.summarize(self.valids)
             order = ['ticker', 'score', 'backtest_success']
             summary = summary.reindex(columns=order)
-            headers = [header.replace('_', '\n').title() for header in summary.columns]
+            headers = ui.format_headers(summary.columns)
 
             ui.print_message(f'Backtest Results {top} of {self.screener.task_success} ({self.screen_base})')
             print(tabulate(summary.head(top), headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))

@@ -1,3 +1,4 @@
+from audioop import mul
 import os
 import time
 import math
@@ -398,14 +399,14 @@ class Interface:
                 drop = ['breakeven', 'breakeven1', 'breakeven2']
                 table = sl.strategy_results.drop(drop, axis=1, errors='ignore')
                 strategy = table.iloc[:, :6]
-                headers = [header.replace('_', '\n').title() for header in strategy]
+                headers = headers = ui.format_headers(strategy)
 
                 ui.print_message(f'Strategy Analysis ({task_time:.1f}s)', pre_creturn=2, post_creturn=1)
                 print(tabulate(strategy, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
                 print()
 
                 summary = table.iloc[:, 6:]
-                headers = [header.replace('_', '\n').title() for header in summary]
+                headers = headers = ui.format_headers(summary)
                 print(tabulate(summary, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
             else:
                 ui.print_warning(f'No results returned: {sl.strategy_state}', pre_creturn=2, post_creturn=1)
@@ -503,7 +504,7 @@ class Interface:
             else:
                 drop = ['valid', 'screen', 'price_last', 'backtest_success']
             summary = screener.summarize(self.screener.valids).drop(drop, axis=1)
-            headers = [header.replace('_', '\n').title() for header in summary.columns]
+            headers = ui.format_headers(summary.columns)
 
             ui.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen.title()}/{self.table})', post_creturn=1)
             print(tabulate(summary.head(top), headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
@@ -532,7 +533,7 @@ class Interface:
 
             order = ['ticker', 'score', 'backtest_success', 'price_last', 'price_current']
             successes = successes.reindex(columns=order)
-            headers = [header.replace('_', '\n').title() for header in successes.columns]
+            headers = ui.format_headers(successes.columns)
 
             ui.print_message(f'Backtest Results: {top} of {self.screener.task_success} screened ({self.screen.title()}) Success = {successful*100:.2f}% ({rows}/{total})', post_creturn=1)
             if successful > 0:
@@ -726,7 +727,7 @@ class Interface:
                 drop = ['valid', 'price_last', 'backtest_success']
                 summary = screener.summarize(results)
                 summary.drop(drop, axis=1, inplace=True)
-                headers = [header.replace('_', '\n').title() for header in summary.columns]
+                headers = ui.format_headers(summary.columns)
 
                 # Top scores
                 ui.print_message(f'Top {LISTTOP_ANALYSIS} of {len(summary)} Scores of {table.upper()}', post_creturn=1)
@@ -737,7 +738,7 @@ class Interface:
                 if not multiples.empty:
                     order = ['ticker', 'company', 'sector', 'price_current']
                     multiples = multiples.reindex(columns=order)
-                    headers = [header.replace('_', '\n').title() for header in multiples.columns]
+                    headers = ui.format_headers(multiples.columns)
 
                     ui.print_message('Successes Across Multiple Screens', post_creturn=1)
                     print(tabulate(multiples, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))

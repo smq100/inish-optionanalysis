@@ -126,8 +126,8 @@ class Interface:
             ui.print_error('Enter a ticker before calculating')
 
     def show_results(self) -> None:
-        headers = [header.replace('_', '\n').lower() for header in self.results.columns]
-        print(tabulate(self.results, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
+        headers = ui.format_headers(self.results.columns, case='lower')
+        print(tabulate(self.results, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.3f'))
 
     def show_progress(self) -> None:
         while not self.divergence.task_state:
@@ -160,7 +160,7 @@ def main():
     if command['ticker']:
         Interface(tickers=[command['ticker']], days=int(command['days']), exit=command['exit'])
     else:
-        Interface(days=int(command['days']))
+        Interface()
 
 
 if __name__ == '__main__':

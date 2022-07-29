@@ -15,7 +15,8 @@ CHART_SIZE = (17, 10)
 
 TERMINAL_SIZE = os.get_terminal_size()
 
-def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int, prompt:str='Please select') -> int:
+
+def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int, prompt: str = 'Please select') -> int:
     print(f'\n{header}')
     print('-' * 50)
 
@@ -75,13 +76,24 @@ def print_tickers(tickers: list[str], group: int = 15) -> None:
         print()
 
 
-def erase_line():
+def erase_line() -> None:
     global position, forward
 
     erase = TERMINAL_SIZE.columns * ' '
     position = 0
     forward = True
     print(f'{erase}', end='\r')
+
+
+def format_headers(columns: str, case: str = 'title'):
+    if case == 'upper':
+        header = [header.replace('_', '\n').upper() for header in columns]
+    elif case == 'lower':
+        header = [header.replace('_', '\n').lower() for header in columns]
+    else:
+        header = [header.replace('_', '\n').title() for header in columns]
+
+    return header
 
 
 def input_integer(message: str, min_: int, max_: int) -> int:
@@ -266,7 +278,7 @@ def progress_bar(iteration, total: int, prefix: str = 'Working', suffix: str = '
                 position -= 1
                 forward = False
         elif position > 1:
-                position -= 1
+            position -= 1
         else:
             position = 2
             forward = True
