@@ -16,12 +16,14 @@ logger.get_logger(logging.WARNING, logfile='')
 
 
 class Interface:
-    def __init__(self, tickers: list[str] = [], days: int = 100, exit: bool = False):
+    def __init__(self, tickers: list[str] = [], days: int = 100, show_table: bool = False, show_plot: bool = False, exit: bool = False):
         self.tickers: str = [t.upper() for t in tickers]
         self.days: int = days
         self.exit: bool = exit
-        self.plot: bool = False
-        self.results: pd.DataFrame = pd.DataFrame()
+        self.show_table: bool = show_table
+        self.show_plot: bool = show_plot
+        self.results: list[pd.DataFrame] = []
+        self.analysis: list[pd.DataFrame] = []
         self.divergence: Divergence | None = None
         self.task: threading.Thread | None = None
 
@@ -104,30 +106,36 @@ class Interface:
         while self.days < 30:
             self.days = ui.input_integer('Enter number of days', 30, 9999)
 
-    def calculate_divergence(self, show: bool = True) -> None:
+    def calculate_divergence(self) -> None:
+        self.results = []
+        self.analysis = []
+
         if self.tickers:
-            for ticker in self.tickers:
-                self.divergence = Divergence(ticker, days=self.days)
-                self.results = self.divergence.calculate()
+            self.divergence = Divergence(self.tickers, days=self.days)
+            self.results += self.divergence.calculate()
+            self.analysis += self.divergence.analyze()
 
-                # self.task = threading.Thread(target=self.trend.calculate)
-                # self.task.start()
+            # self.task = threading.Thread(target=self.divergence.calculate)
+            # self.task.start()
 
-                # # Show thread progress. Blocking while thread is active
-                # self.show_progress()
+            # # Show thread progress. Blocking while thread is active
+            # self.show_progress()
 
-                if show:
-                    self.show_results()
+            if self.show_table:
+                self.show_results()
 
-                if self.plot:
-                    figure = self.divergence.plot()
-                    plt.figure(figure)
+            if self.show_plot:
+                figure = self.divergence.plot(0)
+                plt.figure(figure)
         else:
             ui.print_error('Enter a ticker before calculating')
 
     def show_results(self) -> None:
-        headers = ui.format_headers(self.results.columns, case='lower')
-        print(tabulate(self.results, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.3f'))
+        for result in self.results:
+            name = store.get_company_name(result.name)
+            headers = ui.format_headers(result.columns, case='lower')
+            ui.print_message(f'{name} ({result.name})', post_creturn=1)
+            print(tabulate(result, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.3f'))
 
     def show_progress(self) -> None:
         while not self.divergence.task_state:
@@ -155,10 +163,12 @@ def main():
     parser.add_argument('-t', '--ticker', metavar='ticker', help='Run using ticker')
     parser.add_argument('-d', '--days', metavar='days', help='Days to run analysis', default=100)
     parser.add_argument('-x', '--exit', help='Run divergence analysis then exit (valid only with -t)', action='store_true')
+    parser.add_argument('-s', '--show_table', help='Show results table', action='store_true')
+    parser.add_argument('-S', '--show_plot', help='Show results plot', action='store_true')
 
     command = vars(parser.parse_args())
     if command['ticker']:
-        Interface(tickers=[command['ticker']], days=int(command['days']), exit=command['exit'])
+        Interface(tickers=[command['ticker']], days=int(command['days']), show_table=command['show_table'], show_plot=command['show_plot'], exit=command['exit'])
     else:
         Interface()
 
