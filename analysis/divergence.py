@@ -46,8 +46,7 @@ class Divergence(Threaded):
             price_sma_diff.name = 'price_sma_diff'
             scaled = scaler.fit_transform(price_sma.values.reshape(-1, 1))
             scaled = [value[0] for value in scaled]
-            price_sma_scaled = pd.Series(scaled)
-            price_sma_scaled.name = 'price_sma_scaled'
+            price_sma_scaled = pd.Series(scaled, name='price_sma_scaled')
             price_sma_scaled_diff = price_sma_scaled.diff(periods=self.periods).fillna(0.0)
             price_sma_scaled_diff.name = 'price_sma_scaled_diff'
 
@@ -59,8 +58,7 @@ class Divergence(Threaded):
             technical_sma_diff.name = f'{self.type}_sma_diff'
             scaled = scaler.fit_transform(technical_sma.values.reshape(-1, 1))
             scaled = [value[0] for value in scaled]
-            technical_sma_scaled = pd.Series(scaled)
-            technical_sma_scaled.name = f'{self.type}_sma_scaled'
+            technical_sma_scaled = pd.Series(scaled, name=f'{self.type}_sma_scaled')
             technical_sma_scaled_diff = technical_sma_scaled.diff(periods=self.periods).fillna(0.0)
             technical_sma_scaled_diff.name = f'{self.type}_sma_scaled_diff'
 
@@ -74,8 +72,7 @@ class Divergence(Threaded):
                 p = price_sma_scaled_diff[i]
                 t = technical_sma_scaled_diff[i]
                 div += [p - t if p * t < 0.0 else np.NaN]
-            divergence_only = pd.Series(div)
-            divergence_only.name = 'divHL'
+            divergence_only = pd.Series(div, name='divhl')
 
             # Overall dataframe
             result = dates
@@ -94,17 +91,27 @@ class Divergence(Threaded):
             result = pd.concat([result, divergence], axis=1)
             result = pd.concat([result, divergence_only], axis=1)
 
-            result.name = f'{ticker}'
+            result.index.name = f'{ticker.upper()}'
             self.results += [result]
 
         return self.results.copy()
 
     def analyze(self) -> list[pd.DataFrame]:
-        return []
+        analyses = []
+        for result in self.results:
+            analysis = result[['date', 'divhl']].copy()
+            analysis['tmp1'] = analysis['divhl'].notna() == True
+            analysis['tmp2'] = analysis['tmp1'].ne(analysis['tmp1'].shift())
+            analysis['tmp3'] = analysis['tmp2'].cumsum()
+            analysis['tmp4'] = analysis.groupby('tmp3').cumcount() + 1
+            analysis['streak'] = np.where(analysis['tmp1']==True, analysis['tmp4'], 0)
+            analyses += [analysis[['date', 'divhl', 'streak']]]
+
+        return analyses
 
     def plot(self, index: int, show: bool = True, cursor: bool = True) -> plt.Figure:
         if index >= len(self.results):
-            raise ValueError('Bad index')
+            raise ValueError('Invalid index')
 
         axes: list[plt.Axes]
         figure: plt.Figure
@@ -218,12 +225,14 @@ class Divergence(Threaded):
 
 if __name__ == '__main__':
     import sys
-    import logging
+    from tabulate import tabulate
     from utils import logger
-
-    # logger.get_logger(logging.DEBUG)
 
     ticker = sys.argv[1].upper() if len(sys.argv) > 1 else 'IBM'
     div = Divergence([ticker])
     div.calculate()
-    div.plot(0)
+    results = div.analyze()[0]
+    headers = ui.format_headers(results.columns, case='lower')
+    print(tabulate(results, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
+
+    # div.plot(0)
