@@ -132,9 +132,10 @@ class Interface:
 
     def show_results(self) -> None:
         for result in self.results:
+            result = result[['date', 'price', 'rsi', 'divhl', 'streak']]
             name = store.get_company_name(result.index.name)
-            headers = ui.format_headers(result.columns, case='lower')
             ui.print_message(f'{name} ({result.index.name})', post_creturn=1)
+            headers = ui.format_headers(result.columns, case='lower')
             print(tabulate(result, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.3f'))
 
     def show_progress(self) -> None:

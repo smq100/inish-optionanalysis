@@ -74,7 +74,7 @@ class Divergence(Threaded):
                 div += [p - t if p * t < 0.0 else np.NaN]
             divergence_only = pd.Series(div, name='divhl')
 
-            # Overall dataframe
+            # Price data
             result = dates
             result = pd.concat([result, price], axis=1)
             result = pd.concat([result, price_sma], axis=1)
@@ -82,6 +82,7 @@ class Divergence(Threaded):
             result = pd.concat([result, price_sma_scaled], axis=1)
             result = pd.concat([result, price_sma_scaled_diff], axis=1)
 
+            # Technical data
             tech = technical.reset_index(drop=True)
             result = pd.concat([result, tech], axis=1)
             result = pd.concat([result, technical_sma], axis=1)
@@ -91,6 +92,15 @@ class Divergence(Threaded):
             result = pd.concat([result, divergence], axis=1)
             result = pd.concat([result, divergence_only], axis=1)
 
+            # Streak data
+            analysis = result.loc[:, ('date', 'divhl')]
+            analysis['tmp1'] = analysis['divhl'].notna() == True
+            analysis['tmp2'] = analysis['tmp1'].ne(analysis['tmp1'].shift())
+            analysis['tmp3'] = analysis['tmp2'].cumsum()
+            analysis['tmp4'] = analysis.groupby('tmp3').cumcount() + 1
+            analysis['streak'] = np.where(analysis['tmp1']==True, analysis['tmp4'], 0)
+            result = pd.concat([result, analysis['streak']], axis=1)
+
             result.index.name = f'{ticker.upper()}'
             self.results += [result]
 
@@ -98,14 +108,6 @@ class Divergence(Threaded):
 
     def analyze(self) -> list[pd.DataFrame]:
         analyses = []
-        for result in self.results:
-            analysis = result[['date', 'divhl']].copy()
-            analysis['tmp1'] = analysis['divhl'].notna() == True
-            analysis['tmp2'] = analysis['tmp1'].ne(analysis['tmp1'].shift())
-            analysis['tmp3'] = analysis['tmp2'].cumsum()
-            analysis['tmp4'] = analysis.groupby('tmp3').cumcount() + 1
-            analysis['streak'] = np.where(analysis['tmp1']==True, analysis['tmp4'], 0)
-            analyses += [analysis[['date', 'divhl', 'streak']]]
 
         return analyses
 
@@ -230,8 +232,8 @@ if __name__ == '__main__':
 
     ticker = sys.argv[1].upper() if len(sys.argv) > 1 else 'IBM'
     div = Divergence([ticker])
-    div.calculate()
-    results = div.analyze()[0]
+    results = div.calculate()[0]
+    # results = div.analyze()[0]
     headers = ui.format_headers(results.columns, case='lower')
     print(tabulate(results, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
 
