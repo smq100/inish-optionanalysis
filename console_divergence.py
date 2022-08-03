@@ -132,7 +132,7 @@ class Interface:
 
     def show_results(self) -> None:
         for result in self.results:
-            result = result[['date', 'price', 'rsi', 'divhl', 'streak']]
+            result = result[['date', 'price', 'rsi', 'div', 'streak']]
             name = store.get_company_name(result.index.name)
             ui.print_message(f'{name} ({result.index.name})', post_creturn=1)
             headers = ui.format_headers(result.columns, case='lower')

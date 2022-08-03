@@ -64,7 +64,7 @@ class Divergence(Threaded):
 
             # Calculate differences in the slopes between prices and RSI's
             divergence = price_sma_scaled_diff - technical_sma_scaled_diff
-            divergence.name = 'div'
+            divergence.name = 'diff'
 
             # Calculate differences in the slopes between prices and RSI's for opposite slopes only
             div = []
@@ -72,7 +72,7 @@ class Divergence(Threaded):
                 p = price_sma_scaled_diff[i]
                 t = technical_sma_scaled_diff[i]
                 div += [p - t if p * t < 0.0 else np.NaN]
-            divergence_only = pd.Series(div, name='divhl')
+            divergence_only = pd.Series(div, name='div')
 
             # Price data
             result = dates
@@ -93,8 +93,8 @@ class Divergence(Threaded):
             result = pd.concat([result, divergence_only], axis=1)
 
             # Streak data
-            analysis = result.loc[:, ('date', 'divhl')]
-            analysis['tmp1'] = analysis['divhl'].notna() == True
+            analysis = result.loc[:, ('date', 'div')]
+            analysis['tmp1'] = analysis['div'].notna() == True
             analysis['tmp2'] = analysis['tmp1'].ne(analysis['tmp1'].shift())
             analysis['tmp3'] = analysis['tmp2'].cumsum()
             analysis['tmp4'] = analysis.groupby('tmp3').cumcount() + 1
@@ -144,8 +144,8 @@ class Divergence(Threaded):
         axes[0].plot(dates, self.results[index]['price_sma'], '-', color='orange', label=f'SMA{self.interval}', linewidth=1.5)
         axes[1].plot(dates, self.results[index]['rsi'], '-', color='blue', label=self.type.upper(), linewidth=0.5)
         axes[1].plot(dates, self.results[index]['rsi_sma'], '-', color='orange', label=f'SMA{self.interval}', linewidth=1.5)
-        axes[2].plot(dates[self.periods:], self.results[index]['div'][self.periods:], '-', color='orange', label='Div', linewidth=1.0)
-        axes[2].plot(dates[self.periods:], self.results[index]['divHL'][self.periods:], '-', color='green', label='DivHL', linewidth=1.0)
+        axes[2].plot(dates[self.periods:], self.results[index]['diff'][self.periods:], '-', color='orange', label='diff', linewidth=1.0)
+        axes[2].plot(dates[self.periods:], self.results[index]['div'][self.periods:], '-', color='green', label='div', linewidth=1.0)
         axes[2].axhline(y=0.0, xmin=0, xmax=100, color='black', linewidth=1.5)
 
         # Price line limits
@@ -233,7 +233,7 @@ if __name__ == '__main__':
     ticker = sys.argv[1].upper() if len(sys.argv) > 1 else 'IBM'
     div = Divergence([ticker])
     results = div.calculate()[0]
-    # results = div.analyze()[0]
+    results = results[['date', 'price', 'rsi', 'div', 'streak']]
     headers = ui.format_headers(results.columns, case='lower')
     print(tabulate(results, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
 
