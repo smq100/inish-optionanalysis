@@ -28,88 +28,92 @@ class Divergence(Threaded):
             if not store.is_ticker(ticker):
                 raise ValueError(f'{__name__}: Not a valid ticker: {ticker}')
 
-    def calculate(self) -> list[pd.DataFrame]:
+    @Threaded.threaded
+    def calculate_list(self) -> None:
         self.results = []
 
         for ticker in self.tickers:
-            ta = Technical(ticker, None, self.days)
-            history = ta.history
-            scaler = MinMaxScaler(feature_range=(0, 1))
-
-            # Calculate 0-1 scaled series of day-to-day price differences
-            dates = history['date'][self.interval:].reset_index(drop=True)
-            price = history['close'][self.interval:].reset_index(drop=True)
-            price.name = 'price'
-            price_sma = trend.sma_indicator(price, window=self.window, fillna=True).reset_index(drop=True)
-            price_sma.name = 'price_sma'
-            price_sma_diff = price_sma.diff(periods=self.periods).fillna(0.0)
-            price_sma_diff.name = 'price_sma_diff'
-            scaled = scaler.fit_transform(price_sma.values.reshape(-1, 1))
-            scaled = [value[0] for value in scaled]
-            price_sma_scaled = pd.Series(scaled, name='price_sma_scaled')
-            price_sma_scaled_diff = price_sma_scaled.diff(periods=self.periods).fillna(0.0)
-            price_sma_scaled_diff.name = 'price_sma_scaled_diff'
-
-            # Calculate 0-1 scaled series of day-to-day rsi differences
-            technical = ta.calc_rsi(self.interval)[self.interval:]
-            technical_sma = trend.sma_indicator(technical, window=self.window, fillna=True).reset_index(drop=True)
-            technical_sma.name = f'{self.type}_sma'
-            technical_sma_diff = technical_sma.diff(periods=self.periods).fillna(0.0)
-            technical_sma_diff.name = f'{self.type}_sma_diff'
-            scaled = scaler.fit_transform(technical_sma.values.reshape(-1, 1))
-            scaled = [value[0] for value in scaled]
-            technical_sma_scaled = pd.Series(scaled, name=f'{self.type}_sma_scaled')
-            technical_sma_scaled_diff = technical_sma_scaled.diff(periods=self.periods).fillna(0.0)
-            technical_sma_scaled_diff.name = f'{self.type}_sma_scaled_diff'
-
-            # Calculate differences in the slopes between prices and RSI's
-            divergence = price_sma_scaled_diff - technical_sma_scaled_diff
-            divergence.name = 'diff'
-
-            # Calculate differences in the slopes between prices and RSI's for opposite slopes only
-            div = []
-            for i in range(len(price_sma_scaled_diff)):
-                p = price_sma_scaled_diff[i]
-                t = technical_sma_scaled_diff[i]
-                div += [p - t if p * t < 0.0 else np.NaN]
-            divergence_only = pd.Series(div, name='div')
-
-            # Price data
-            result = dates
-            result = pd.concat([result, price], axis=1)
-            result = pd.concat([result, price_sma], axis=1)
-            result = pd.concat([result, price_sma_diff], axis=1)
-            result = pd.concat([result, price_sma_scaled], axis=1)
-            result = pd.concat([result, price_sma_scaled_diff], axis=1)
-
-            # Technical data
-            tech = technical.reset_index(drop=True)
-            result = pd.concat([result, tech], axis=1)
-            result = pd.concat([result, technical_sma], axis=1)
-            result = pd.concat([result, technical_sma_diff], axis=1)
-            result = pd.concat([result, technical_sma_scaled], axis=1)
-            result = pd.concat([result, technical_sma_scaled_diff], axis=1)
-            result = pd.concat([result, divergence], axis=1)
-            result = pd.concat([result, divergence_only], axis=1)
-
-            # Streak data
-            analysis = result.loc[:, ('date', 'div')]
-            analysis['tmp1'] = analysis['div'].notna() == True
-            analysis['tmp2'] = analysis['tmp1'].ne(analysis['tmp1'].shift())
-            analysis['tmp3'] = analysis['tmp2'].cumsum()
-            analysis['tmp4'] = analysis.groupby('tmp3').cumcount() + 1
-            analysis['streak'] = np.where(analysis['tmp1']==True, analysis['tmp4'], 0)
-            result = pd.concat([result, analysis['streak']], axis=1)
-
-            result.index.name = f'{ticker.upper()}'
+            result = self.calculate(ticker)
             self.results += [result]
 
-        return self.results.copy()
-
-    def analyze(self) -> list[pd.DataFrame]:
+    def analyze(self) -> None:
         analyses = []
 
-        return analyses
+    def calculate(self, ticker) -> pd.DataFrame:
+        ta = Technical(ticker, None, self.days)
+        history = ta.history
+        scaler = MinMaxScaler(feature_range=(0, 1))
+
+        # Calculate 0-1 scaled series of day-to-day price differences
+        dates = history['date'][self.interval:].reset_index(drop=True)
+        price = history['close'][self.interval:].reset_index(drop=True)
+        price.name = 'price'
+        price_sma = trend.sma_indicator(price, window=self.window, fillna=True).reset_index(drop=True)
+        price_sma.name = 'price_sma'
+        price_sma_diff = price_sma.diff(periods=self.periods).fillna(0.0)
+        price_sma_diff.name = 'price_sma_diff'
+        scaled = scaler.fit_transform(price_sma.values.reshape(-1, 1))
+        scaled = [value[0] for value in scaled]
+        price_sma_scaled = pd.Series(scaled, name='price_sma_scaled')
+        price_sma_scaled_diff = price_sma_scaled.diff(periods=self.periods).fillna(0.0)
+        price_sma_scaled_diff.name = 'price_sma_scaled_diff'
+
+        # Calculate 0-1 scaled series of day-to-day rsi differences
+        technical = ta.calc_rsi(self.interval)[self.interval:]
+        technical_sma = trend.sma_indicator(technical, window=self.window, fillna=True).reset_index(drop=True)
+        technical_sma.name = f'{self.type}_sma'
+        technical_sma_diff = technical_sma.diff(periods=self.periods).fillna(0.0)
+        technical_sma_diff.name = f'{self.type}_sma_diff'
+        scaled = scaler.fit_transform(technical_sma.values.reshape(-1, 1))
+        scaled = [value[0] for value in scaled]
+        technical_sma_scaled = pd.Series(scaled, name=f'{self.type}_sma_scaled')
+        technical_sma_scaled_diff = technical_sma_scaled.diff(periods=self.periods).fillna(0.0)
+        technical_sma_scaled_diff.name = f'{self.type}_sma_scaled_diff'
+
+        # Calculate differences in the slopes between prices and RSI's
+        divergence = price_sma_scaled_diff - technical_sma_scaled_diff
+        divergence.name = 'diff'
+
+        # Calculate differences in the slopes between prices and RSI's for opposite slopes only
+        div = []
+        for i in range(len(price_sma_scaled_diff)):
+            p = price_sma_scaled_diff[i]
+            t = technical_sma_scaled_diff[i]
+            div += [p - t if p * t < 0.0 else np.NaN]
+        divergence_only = pd.Series(div, name='div')
+
+        # Begin overall result dataframe with the dates
+        result = dates
+
+        # Price data
+        result = pd.concat([result, price], axis=1)
+        result = pd.concat([result, price_sma], axis=1)
+        result = pd.concat([result, price_sma_diff], axis=1)
+        result = pd.concat([result, price_sma_scaled], axis=1)
+        result = pd.concat([result, price_sma_scaled_diff], axis=1)
+
+        # Technical data
+        tech = technical.reset_index(drop=True)
+        result = pd.concat([result, tech], axis=1)
+        result = pd.concat([result, technical_sma], axis=1)
+        result = pd.concat([result, technical_sma_diff], axis=1)
+        result = pd.concat([result, technical_sma_scaled], axis=1)
+        result = pd.concat([result, technical_sma_scaled_diff], axis=1)
+        result = pd.concat([result, divergence], axis=1)
+        result = pd.concat([result, divergence_only], axis=1)
+
+        # Streak data
+        analysis = result.loc[:, ('date', 'div')]
+        analysis['tmp1'] = analysis['div'].notna() == True
+        analysis['tmp2'] = analysis['tmp1'].ne(analysis['tmp1'].shift())
+        analysis['tmp3'] = analysis['tmp2'].cumsum()
+        analysis['tmp4'] = analysis.groupby('tmp3').cumcount() + 1
+        analysis['streak'] = np.where(analysis['tmp1']==True, analysis['tmp4'], 0)
+        result = pd.concat([result, analysis['streak']], axis=1)
+
+        result.index.name = f'{ticker.upper()}'
+
+        return result
 
     def plot(self, index: int, show: bool = True, cursor: bool = True) -> plt.Figure:
         if index >= len(self.results):
@@ -231,10 +235,9 @@ if __name__ == '__main__':
     from utils import logger
 
     ticker = sys.argv[1].upper() if len(sys.argv) > 1 else 'IBM'
+
     div = Divergence([ticker])
-    results = div.calculate()[0]
-    results = results[['date', 'price', 'rsi', 'div', 'streak']]
+    div.calculate_list()
+    results = div.results[0][['date', 'price', 'rsi', 'div', 'streak']]
     headers = ui.format_headers(results.columns, case='lower')
     print(tabulate(results, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
-
-    # div.plot(0)

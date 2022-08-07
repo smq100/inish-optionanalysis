@@ -112,8 +112,7 @@ class Interface:
 
         if self.tickers:
             self.divergence = Divergence(self.tickers, days=self.days)
-            self.results += self.divergence.calculate()
-            self.analysis += self.divergence.analyze()
+            self.divergence.calculate_list()
 
             # self.task = threading.Thread(target=self.divergence.calculate)
             # self.task.start()
@@ -131,7 +130,7 @@ class Interface:
             ui.print_error('Enter a ticker before calculating')
 
     def show_results(self) -> None:
-        for result in self.results:
+        for result in self.divergence.results:
             result = result[['date', 'price', 'rsi', 'div', 'streak']]
             name = store.get_company_name(result.index.name)
             ui.print_message(f'{name} ({result.index.name})', post_creturn=1)
