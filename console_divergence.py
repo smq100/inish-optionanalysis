@@ -16,27 +16,22 @@ logger.get_logger(logging.WARNING, logfile='')
 
 
 class Interface:
-    def __init__(self, tickers: list[str] = [], days: int = 100, show_table: bool = False, show_plot: bool = False, exit: bool = False):
-        self.tickers: str = [t.upper() for t in tickers]
+    def __init__(self, list: str = '', days: int = 100, show_table: bool = False, show_plot: bool = False, exit: bool = False):
+        self.list = list.upper()
         self.days: int = days
         self.exit: bool = exit
         self.show_table: bool = show_table
         self.show_plot: bool = show_plot
+        self.tickers: list[str] = []
         self.results: list[pd.DataFrame] = []
         self.analysis: list[pd.DataFrame] = []
         self.divergence: Divergence | None = None
         self.task: threading.Thread | None = None
 
-        quit = False
-        for ticker in tickers:
-            if not store.is_ticker(ticker.upper()):
-                ui.print_error(f'Invalid ticker: {ticker}')
-                quit = True
-                break
+        if list:
+            self.select_tickers(list)
 
-        if quit:
-            pass
-        elif self.exit:
+        if exit and self.tickers:
             self.calculate_divergence()
         else:
             self.main_menu()
@@ -44,28 +39,25 @@ class Interface:
     def main_menu(self) -> None:
         while True:
             menu_items = {
-                '1': 'Change Ticker',
-                '2': 'Add Ticker',
-                '3': f'Days ({self.days})',
-                '4': 'Calculate Divergence',
-                '5': 'Show Results',
+                '1': 'Select Tickers',
+                '2': f'Days ({self.days})',
+                '3': 'Calculate Divergence',
+                '4': 'Show Results',
                 '0': 'Exit'
             }
 
             if self.tickers:
-                menu_items['1'] = f'Change Ticker ({", ".join(self.tickers)})'
+                menu_items['1'] += f' ({self.list})'
 
             selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1, prompt='Select operation, or 0 when done')
 
             if selection == 1:
-                self.select_ticker()
-            if selection == 2:
-                self.add_ticker()
-            elif selection == 3:
+                self.select_tickers()
+            elif selection == 2:
                 self.select_days()
-            elif selection == 4:
+            elif selection == 3:
                 self.calculate_divergence()
-            elif selection == 5:
+            elif selection == 4:
                 self.show_results()
             elif selection == 0:
                 self.exit = True
@@ -73,33 +65,25 @@ class Interface:
             if self.exit:
                 break
 
-    def select_ticker(self) -> None:
-        valid = False
+    def select_tickers(self, list='') -> None:
+        if not list:
+            list = ui.input_text('Enter exchange, index, ticker, or \'every\'')
 
-        while not valid:
-            ticker = input('Please enter symbol, or 0 to cancel: ').upper()
-            if ticker != '0':
-                valid = store.is_ticker(ticker)
-                if valid:
-                    self.tickers = [ticker]
-                else:
-                    ui.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
-            else:
-                break
+        self.list = list.upper()
 
-    def add_ticker(self) -> None:
-        valid = False
-
-        while not valid:
-            ticker = input('Please enter ticker, or 0 to cancel: ').upper()
-            if ticker != '0':
-                valid = store.is_ticker(ticker)
-                if valid:
-                    self.tickers += [ticker]
-                else:
-                    ui.print_error('Invalid ticker. Try again or enter 0 to cancel')
-            else:
-                break
+        if self.list == 'EVERY':
+            self.tickers = store.get_tickers('every')
+            self.list = list.lower()
+        elif store.is_exchange(list):
+            self.tickers = store.get_exchange_tickers(self.list)
+        elif store.is_index(list):
+            self.tickers = store.get_index_tickers(self.list)
+        elif store.is_ticker(list):
+            self.tickers = [self.list]
+        else:
+            self.tickers = []
+            self.list = ''
+            ui.print_error(f'List \'{list}\' is not valid')
 
     def select_days(self):
         self.days = 0
@@ -112,16 +96,17 @@ class Interface:
 
         if self.tickers:
             self.divergence = Divergence(self.tickers, days=self.days)
-            self.divergence.calculate_list()
+            self.task = threading.Thread(target=self.divergence.calculate)
+            self.task.start()
 
-            # self.task = threading.Thread(target=self.divergence.calculate)
-            # self.task.start()
+            # Show thread progress. Blocking while thread is active
+            self.show_progress()
 
-            # # Show thread progress. Blocking while thread is active
-            # self.show_progress()
+            if self.divergence.task_state == 'Done':
+                ui.print_message(f'{len(self.divergence.results)} symbols identified in {self.divergence.task_time:.1f} seconds', pre_creturn=1)
 
             if self.show_table:
-                self.show_results()
+                self.show_results('Progress', '')
 
             if self.show_plot:
                 figure = self.divergence.plot(0)
@@ -145,30 +130,27 @@ class Interface:
             ui.progress_bar(0, 0, suffix=self.divergence.task_message, reset=True)
 
             while self.divergence.task_state == 'None':
-                time.sleep(0.20)
-                ui.progress_bar(0, 0, suffix=self.divergence.task_message)
-
-            if self.divergence.task_state == 'Hold':
-                pass
-            elif self.divergence.task_state == 'Done':
-                ui.print_message(f'{self.divergence.task_state}: {self.divergence.task_total} lines calculated in {self.divergence.task_time:.1f} seconds', post_creturn=1)
-            else:
-                ui.print_error(f'{self.divergence.task_state}: Error calculating lines')
+                time.sleep(ui.PROGRESS_SLEEP)
+                total = self.divergence.task_total
+                completed = self.divergence.task_completed
+                success = self.divergence.task_success
+                ticker = self.divergence.task_ticker
+                ui.progress_bar(completed, total, ticker=ticker, success=success)
         else:
             ui.print_message(f'{self.divergence.task_state}')
 
 
 def main():
     parser = argparse.ArgumentParser(description='Divergence Analysis')
-    parser.add_argument('-t', '--ticker', metavar='ticker', help='Run using ticker')
+    parser.add_argument('-t', '--tickers', metavar='tickers', help='Specify a ticker or list')
     parser.add_argument('-d', '--days', metavar='days', help='Days to run analysis', default=100)
     parser.add_argument('-x', '--exit', help='Run divergence analysis then exit (valid only with -t)', action='store_true')
     parser.add_argument('-s', '--show_table', help='Show results table', action='store_true')
     parser.add_argument('-S', '--show_plot', help='Show results plot', action='store_true')
 
     command = vars(parser.parse_args())
-    if command['ticker']:
-        Interface(tickers=[command['ticker']], days=int(command['days']), show_table=command['show_table'], show_plot=command['show_plot'], exit=command['exit'])
+    if command['tickers']:
+        Interface(list=command['tickers'], days=int(command['days']), show_table=command['show_table'], show_plot=command['show_plot'], exit=command['exit'])
     else:
         Interface()
 

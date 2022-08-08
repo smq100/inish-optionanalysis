@@ -132,7 +132,7 @@ class Interface:
             ui.progress_bar(0, 0, suffix=self.trend.task_message, reset=True)
 
             while self.trend.task_state == 'None':
-                time.sleep(0.20)
+                time.sleep(ui.PROGRESS_SLEEP)
                 ui.progress_bar(0, 0, suffix=self.trend.task_message)
 
             if self.trend.task_state == 'Hold':

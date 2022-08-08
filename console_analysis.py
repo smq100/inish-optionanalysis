@@ -452,7 +452,6 @@ class Interface:
             self.coorelate = Correlate(table)
 
             self.task = threading.Thread(target=self.coorelate.compute_correlation)
-
             self.task.start()
 
             # Show thread progress. Blocking while thread is active
@@ -592,7 +591,7 @@ class Interface:
             ui.progress_bar(self.screener.task_completed, self.screener.task_total, prefix=prefix, reset=True)
 
             while self.screener.task_state == 'None':
-                time.sleep(0.20)
+                time.sleep(ui.PROGRESS_SLEEP)
                 completed = self.screener.task_completed
                 success = self.screener.task_success
                 ticker = self.screener.task_ticker
@@ -608,7 +607,7 @@ class Interface:
         ui.progress_bar(0, 0, prefix=prefix, reset=True)
         if sl.strategy_state == 'None':
             while sl.strategy_state == 'None':
-                time.sleep(0.20)
+                time.sleep(ui.PROGRESS_SLEEP)
                 ui.progress_bar(0, 0, prefix=prefix, suffix=sl.strategy_msg)
 
             if sl.strategy_state == 'Next':
@@ -617,7 +616,7 @@ class Interface:
                 ui.progress_bar(0, 0, prefix=prefix)
 
                 while sl.strategy_state == 'Next':
-                    time.sleep(0.20)
+                    time.sleep(ui.PROGRESS_SLEEP)
 
                     # Catch case of a task exception not allowing normal completion
                     tasks = len([True for future in sl.strategy_futures if future.running()])
@@ -634,13 +633,13 @@ class Interface:
             prefix = 'Retrieving History'
             ui.progress_bar(0, 0, prefix=prefix, reset=True)
             while self.trend.task_state == 'History':
-                time.sleep(0.20)
+                time.sleep(ui.PROGRESS_SLEEP)
                 ui.progress_bar(0, 0, prefix=prefix, suffix=self.trend.task_message)
 
         if self.trend.task_state == 'None':
             prefix = 'Analyzing S & R'
             while self.trend.task_state == 'None':
-                time.sleep(0.20)
+                time.sleep(ui.PROGRESS_SLEEP)
                 ui.progress_bar(0, 0, prefix=prefix, suffix=self.trend.task_message)
 
             if self.trend.task_state == 'Done':
@@ -662,7 +661,7 @@ class Interface:
             ui.progress_bar(self.coorelate.task_completed, self.coorelate.task_total, success=self.coorelate.task_success, prefix=prefix, reset=True)
 
             while self.task.is_alive() and self.coorelate.task_state == 'None':
-                time.sleep(0.20)
+                time.sleep(ui.PROGRESS_SLEEP)
                 completed = self.coorelate.task_completed
                 success = completed
                 ticker = self.coorelate.task_ticker
@@ -679,7 +678,7 @@ class Interface:
             ui.progress_bar(0, 0, prefix=prefix, reset=True)
 
             while self.chart.task_state == 'None':
-                time.sleep(0.20)
+                time.sleep(ui.PROGRESS_SLEEP)
                 ui.progress_bar(0, 0, prefix=prefix, suffix=self.chart.task_ticker)
 
         print()

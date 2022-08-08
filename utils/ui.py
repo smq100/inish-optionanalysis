@@ -12,6 +12,7 @@ DATE_FORMAT2 = '%m-%d-%Y'
 TABULATE_FORMAT = 'simple'
 CHART_STYLE = 'seaborn-bright'
 CHART_SIZE = (17, 10)
+PROGRESS_SLEEP = 0.20
 
 TERMINAL_SIZE = os.get_terminal_size()
 

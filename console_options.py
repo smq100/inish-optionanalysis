@@ -726,7 +726,7 @@ class Interface():
         ui.progress_bar(0, 0, prefix='Analyzing', suffix=self.strategy.ticker, reset=True)
 
         while self.task.is_alive():
-            time.sleep(0.20)
+            time.sleep(ui.PROGRESS_SLEEP)
             ui.progress_bar(0, 0, prefix='Analyzing', suffix=self.strategy.ticker)
 
     def _show_chart(self, table: str, title: str, charttype: str) -> None:
