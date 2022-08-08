@@ -1,8 +1,5 @@
-from typing import Iterable
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.widgets import Cursor
 from ta import trend
 from sklearn.preprocessing import MinMaxScaler
 
@@ -21,6 +18,7 @@ class Divergence(Threaded):
         self.window: int = window
         self.days: int = days
         self.results: list[pd.DataFrame] = []
+        self.analysis: list[pd.DataFrame] = []
         self.type: str = 'rsi'
         self.interval: int = 14
         self.periods: int = days // 50
@@ -28,27 +26,6 @@ class Divergence(Threaded):
         for ticker in tickers:
             if not store.is_ticker(ticker):
                 raise ValueError(f'{__name__}: Not a valid ticker: {ticker}')
-
-    @Threaded.threaded
-    def calculate(self) -> None:
-        if not self.tickers:
-            assert ValueError('No valid tickers specified')
-
-        self.results = []
-        self.task_total = len(self.tickers)
-        self.task_state = 'None'
-
-        for ticker in self.tickers:
-            self.task_ticker = ticker
-            result = self._run(ticker)
-            self.task_completed += 1
-            if not result.empty:
-                self.results += [result]
-
-        self.task_state = 'Done'
-
-    def analyze(self) -> None:
-        analyses = []
 
     def _run(self, ticker) -> pd.DataFrame:
         ta = Technical(ticker, None, self.days)
@@ -122,7 +99,7 @@ class Divergence(Threaded):
             analysis['tmp2'] = analysis['tmp1'].ne(analysis['tmp1'].shift())
             analysis['tmp3'] = analysis['tmp2'].cumsum()
             analysis['tmp4'] = analysis.groupby('tmp3').cumcount() + 1
-            analysis['streak'] = np.where(analysis['tmp1']==True, analysis['tmp4'], 0)
+            analysis['streak'] = np.where(analysis['tmp1'] == True, analysis['tmp4'], 0)
             result = pd.concat([result, analysis['streak']], axis=1)
 
             result.index.name = f'{ticker.upper()}'
@@ -131,118 +108,37 @@ class Divergence(Threaded):
 
         return result
 
-    def plot(self, index: int, show: bool = True, cursor: bool = True) -> plt.Figure:
-        if index >= len(self.results):
-            raise ValueError('Invalid index')
+    @Threaded.threaded
+    def calculate(self) -> None:
+        if not self.tickers:
+            assert ValueError('No valid tickers specified')
 
-        axes: list[plt.Axes]
-        figure: plt.Figure
-        figure, axes = plt.subplots(nrows=3, figsize=ui.CHART_SIZE, sharex=True)
+        self.results = []
+        self.task_total = len(self.tickers)
+        self.task_state = 'None'
 
-        plt.style.use(ui.CHART_STYLE)
-        plt.margins(x=0.1)
-        plt.subplots_adjust(bottom=0.15)
+        for ticker in self.tickers:
+            self.task_ticker = ticker
+            result = self._run(ticker)
+            self.task_completed += 1
+            if not result.empty:
+                self.results += [result]
 
-        figure.canvas.manager.set_window_title(self.tickers[0])
-        axes[0].set_title('Price')
-        axes[1].set_title(self.type.upper())
-        axes[2].set_title('Divergence')
+        self.task_state = 'Done'
 
-        # Grid and ticks
-        length = len(self.results[index])
-        axes[0].grid(which='major', axis='both')
-        axes[0].set_xticks(range(0, length+1, length//10))
-        axes[1].grid(which='major', axis='both')
-        axes[1].set_xticks(range(0, length+1, length//10))
-        axes[1].set_ylim([-5, 105])
-        axes[2].grid(which='major', axis='both')
-        axes[2].tick_params(axis='x', labelrotation=45)
+    def analyze(self, streak: int = 3) -> None:
+        if not self.results:
+            assert ValueError('No valid results specified')
 
-        # Plot
-        dates = [self.results[index].iloc[i]['date'].strftime(ui.DATE_FORMAT2) for i in range(length)]
-        axes[0].plot(dates, self.results[index]['price'], '-', color='blue', label='Price', linewidth=0.5)
-        axes[0].plot(dates, self.results[index]['price_sma'], '-', color='orange', label=f'SMA{self.interval}', linewidth=1.5)
-        axes[1].plot(dates, self.results[index]['rsi'], '-', color='blue', label=self.type.upper(), linewidth=0.5)
-        axes[1].plot(dates, self.results[index]['rsi_sma'], '-', color='orange', label=f'SMA{self.interval}', linewidth=1.5)
-        axes[2].plot(dates[self.periods:], self.results[index]['diff'][self.periods:], '-', color='orange', label='diff', linewidth=1.0)
-        axes[2].plot(dates[self.periods:], self.results[index]['div'][self.periods:], '-', color='green', label='div', linewidth=1.0)
-        axes[2].axhline(y=0.0, xmin=0, xmax=100, color='black', linewidth=1.5)
+        self.analysis = pd.DataFrame()
+        for result in self.results:
+            max = result['streak'].max()
+            if max >= streak:
+                data = [[result.index.name, max]]
+                df = pd.DataFrame(data, columns=['ticker', 'streak'])
+                self.analysis = pd.concat([self.analysis, df], ignore_index = True)
 
-        # Price line limits
-        min = self.results[index]['price'].min()
-        max = self.results[index]['price'].max()
-        axes[0].set_ylim([min*0.95, max*1.05])
-
-        # Legend
-        axes[0].legend(loc='best')
-        axes[1].legend(loc='best')
-
-        if cursor:
-            cursor = self.custom_cursor(axes, data=self.results[index])
-            figure.canvas.mpl_connect('motion_notify_event', cursor.show_xy)
-            figure.canvas.mpl_connect('axes_leave_event', cursor.hide_y)
-
-        if show:
-            plt.figure(figure)
-            plt.show()
-
-        return figure
-
-    class custom_cursor(object):
-        def __init__(self, axes: list[plt.Axes], data: pd.DataFrame, showy: bool = True):
-            self.items = np.zeros(shape=(len(axes), 4), dtype=object)
-            self.data = data
-            self.showy = showy
-            self.focus = 0
-
-            for i, ax in enumerate(axes):
-                ax.set_gid(i)
-                lx = ax.axvline(ymin=0, ymax=100, color='k', linewidth=0.5)
-                ly = ax.axhline(xmin=0, xmax=100, color='k', linewidth=0.5)
-                props = dict(boxstyle='round', fc='linen', alpha=0.4)
-                an = ax.annotate('', xy=(0, 0), xytext=(-20, 20), textcoords='offset points', bbox=props)
-                an.set_visible(False)
-                item = [ax, lx, ly, an]
-                self.items[i] = item
-
-        def show_xy(self, event):
-            if event.inaxes:
-                self.focus = event.inaxes.get_gid()
-
-                ax: plt.Axes
-                for ax in self.items[:, 0]:
-                    self.gid = ax.get_gid()
-                    for lx in self.items[:, 1]:
-                        lx.set_xdata(event.xdata)
-
-                    if self.showy and (self.focus == ax.get_gid()):
-                        ln = self.items[self.gid, 2]
-                        ln.set_ydata(event.ydata)
-                        ln.set_visible(True)
-                        an = self.items[self.gid, 3]
-                        an.set_visible(True)
-
-                    x = event.xdata
-                    y = event.ydata
-                    if x >= 0 and x < len(self.data):
-                        an = self.items[self.gid, 3]
-                        an.xy = (x, y)
-
-                        if self.focus == 0:
-                            text = f'{self.data.iloc[int(x)]["price"]:.2f} ({self.data.iloc[int(x)]["price_sma"]:.2f} / {self.data.iloc[int(x)]["price_sma_diff"]:.2f})'
-                        elif self.focus == 1:
-                            text = f'{self.data.iloc[int(x)]["rsi"]:.2f} ({self.data.iloc[int(x)]["rsi_sma"]:.2f} / {self.data.iloc[int(x)]["rsi_sma_diff"]:.2f})'
-                        else:
-                            text = ''
-                        an.set_text(text)
-
-            plt.draw()
-
-        def hide_y(self, event):
-            for ax in self.items[:, 0]:
-                if self.focus == ax.get_gid():
-                    self.items[self.focus, 2].set_visible(False)
-                    self.items[self.focus, 3].set_visible(False)
+        self.analysis.reset_index()
 
 
 if __name__ == '__main__':
@@ -257,3 +153,6 @@ if __name__ == '__main__':
     results = div.results[0][['date', 'price', 'rsi', 'div', 'streak']]
     headers = ui.format_headers(results.columns, case='lower')
     print(tabulate(results, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
+
+    div.analyze()
+    print(div.analysis)
