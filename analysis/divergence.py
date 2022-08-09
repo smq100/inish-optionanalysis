@@ -104,8 +104,6 @@ class Divergence(Threaded):
 
             result.index.name = f'{ticker.upper()}'
 
-            self.task_success += 1
-
         return result
 
     @Threaded.threaded
@@ -126,19 +124,22 @@ class Divergence(Threaded):
 
         self.task_state = 'Done'
 
-    def analyze(self, streak: int = 3) -> None:
+    def analyze(self, streak: int = 5) -> None:
         if not self.results:
             assert ValueError('No valid results specified')
 
         self.analysis = pd.DataFrame()
         for result in self.results:
-            max = result['streak'].max()
+            idx = result[::-1]['streak'].idxmax()
+            max = result.iloc[idx]['streak']
+            date = result.iloc[idx]['date']
             if max >= streak:
-                data = [[result.index.name, max]]
-                df = pd.DataFrame(data, columns=['ticker', 'streak'])
+                data = [[result.index.name, date, max]]
+                df = pd.DataFrame(data, columns=['ticker', 'date', 'streak'])
                 self.analysis = pd.concat([self.analysis, df], ignore_index = True)
 
         self.analysis.reset_index()
+        self.analysis.sort_values(by=['streak'], ascending=False, inplace=True)
 
 
 if __name__ == '__main__':
