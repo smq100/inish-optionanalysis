@@ -27,9 +27,9 @@ class Interface:
         self.disp_anly: bool = disp_anly
         self.tickers: list[str] = []
         self.results: list[pd.DataFrame] = []
-        self.analysis: list[pd.DataFrame] = []
-        self.divergence: Divergence | None = None
-        self.task: threading.Thread | None = None
+        self.analysis: pd.DataFrame
+        self.divergence: Divergence
+        self.task: threading.Thread
 
         if list:
             self.select_tickers(list)
@@ -48,14 +48,17 @@ class Interface:
                 '1': 'Select Tickers',
                 '2': f'Days ({self.days})',
                 '3': 'Calculate',
-                '4': 'Show Results',
-                '5': 'Show Analysis',
+                '4': 'Show Analysis',
+                '5': 'Show Results',
                 '6': 'Show Plot',
                 '0': 'Exit'
             }
 
             if self.tickers:
                 menu_items['1'] += f' ({self.list})'
+
+            if not self.analysis.empty:
+                menu_items['4'] += f' ({len(self.analysis)})'
 
             selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1, prompt='Select operation, or 0 when done')
 
@@ -66,9 +69,9 @@ class Interface:
             elif selection == 3:
                 self.calculate_divergence()
             elif selection == 4:
-                self.show_results()
-            elif selection == 5:
                 self.show_analysis()
+            elif selection == 5:
+                self.show_results()
             elif selection == 6:
                 self.show_plot()
             elif selection == 0:
@@ -150,9 +153,11 @@ class Interface:
             print(tabulate(result, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.3f'))
 
     def show_analysis(self) -> None:
+        level = ui.input_integer('Enter level', self.divergence.streak, 100)
+        df = self.analysis[self.analysis['streak'] > level]
         ui.print_message(f'Divergence Summary', post_creturn=1)
-        headers = ui.format_headers(self.analysis.columns, case='title')
-        print(tabulate(self.analysis, headers=headers, tablefmt=ui.TABULATE_FORMAT))
+        headers = ui.format_headers(df.columns, case='title')
+        print(tabulate(df, headers=headers, tablefmt=ui.TABULATE_FORMAT))
 
     def show_plot(self, show: bool = True, cursor: bool = True) -> None:
         ticker = ui.input_text('Enter ticker')
@@ -169,7 +174,9 @@ class Interface:
             plt.margins(x=0.1)
             plt.subplots_adjust(bottom=0.15)
 
-            figure.canvas.manager.set_window_title(self.divergence.tickers[0])
+            name = store.get_company_name(ticker)
+            figure.canvas.manager.set_window_title(name)
+
             axes[0].set_title('Price')
             axes[1].set_title(self.divergence.type.upper())
             axes[2].set_title('Divergence')

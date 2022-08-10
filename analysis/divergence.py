@@ -22,10 +22,47 @@ class Divergence(Threaded):
         self.type: str = 'rsi'
         self.interval: int = 14
         self.periods: int = days // 50
+        self.streak: int = 5
 
         for ticker in tickers:
             if not store.is_ticker(ticker):
                 raise ValueError(f'{__name__}: Not a valid ticker: {ticker}')
+
+    @Threaded.threaded
+    def calculate(self) -> None:
+        if not self.tickers:
+            assert ValueError('No valid tickers specified')
+
+        self.results = []
+        self.task_total = len(self.tickers)
+        self.task_state = 'None'
+
+        for ticker in self.tickers:
+            self.task_ticker = ticker
+            result = self._run(ticker)
+            self.task_completed += 1
+            if not result.empty:
+                self.results += [result]
+
+        self.task_state = 'Done'
+
+    def analyze(self, streak: int = 5) -> None:
+        if not self.results:
+            assert ValueError('No valid results specified')
+
+        self.streak = streak
+        self.analysis = pd.DataFrame()
+        for result in self.results:
+            idx = result[::-1]['streak'].idxmax()
+            date = result.iloc[idx]['date']
+            max = result.iloc[idx]['streak']
+            if max >= streak:
+                data = [[result.index.name, date, max]]
+                df = pd.DataFrame(data, columns=['ticker', 'date', 'streak'])
+                self.analysis = pd.concat([self.analysis, df], ignore_index=True)
+
+        self.analysis.reset_index()
+        self.analysis.sort_values(by=['streak'], ascending=False, inplace=True)
 
     def _run(self, ticker) -> pd.DataFrame:
         ta = Technical(ticker, None, self.days)
@@ -105,41 +142,6 @@ class Divergence(Threaded):
             result.index.name = f'{ticker.upper()}'
 
         return result
-
-    @Threaded.threaded
-    def calculate(self) -> None:
-        if not self.tickers:
-            assert ValueError('No valid tickers specified')
-
-        self.results = []
-        self.task_total = len(self.tickers)
-        self.task_state = 'None'
-
-        for ticker in self.tickers:
-            self.task_ticker = ticker
-            result = self._run(ticker)
-            self.task_completed += 1
-            if not result.empty:
-                self.results += [result]
-
-        self.task_state = 'Done'
-
-    def analyze(self, streak: int = 5) -> None:
-        if not self.results:
-            assert ValueError('No valid results specified')
-
-        self.analysis = pd.DataFrame()
-        for result in self.results:
-            idx = result[::-1]['streak'].idxmax()
-            max = result.iloc[idx]['streak']
-            date = result.iloc[idx]['date']
-            if max >= streak:
-                data = [[result.index.name, date, max]]
-                df = pd.DataFrame(data, columns=['ticker', 'date', 'streak'])
-                self.analysis = pd.concat([self.analysis, df], ignore_index = True)
-
-        self.analysis.reset_index()
-        self.analysis.sort_values(by=['streak'], ascending=False, inplace=True)
 
 
 if __name__ == '__main__':
