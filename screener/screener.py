@@ -90,7 +90,7 @@ class Screener(Threaded):
         self.valids: list[Result] = []
         self.errors: list[Result] = []
         self.summary: pd.DataFrame = pd.DataFrame()
-        self._concurrency = 10
+        self.concurrency = 10
 
         if self._load(screen, init=self.screen_init):
             self._open()
@@ -133,7 +133,7 @@ class Screener(Threaded):
             self.valids = []
             self.errors = []
             self.task_state = 'None'
-            self._concurrency = 10 if len(self.companies) > 10 else 1
+            self.concurrency = 10 if len(self.companies) > 10 else 1
 
             if self.task_total > 1:
                 _logger.info(f'{__name__}: Screening {self.task_total} symbols from {self.table} table (days={self.days}, end={self.backtest})')
@@ -142,10 +142,10 @@ class Screener(Threaded):
 
             # Randomize and split up the lists
             random.shuffle(self.companies)
-            companies: list[np.ndarray] = np.array_split(self.companies, self._concurrency)
+            companies: list[np.ndarray] = np.array_split(self.companies, self.concurrency)
             companies = [i.tolist() for i in companies if i is not None]
 
-            with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
+            with futures.ThreadPoolExecutor(max_workers=self.concurrency) as executor:
                 self.task_futures = [executor.submit(self._run, list) for list in companies]
 
                 for future in futures.as_completed(self.task_futures):

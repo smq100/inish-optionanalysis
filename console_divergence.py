@@ -27,7 +27,7 @@ class Interface:
         self.disp_anly: bool = disp_anly
         self.tickers: list[str] = []
         self.results: list[pd.DataFrame] = []
-        self.analysis: pd.DataFrame
+        self.analysis: pd.DataFrame = pd.DataFrame()
         self.divergence: Divergence
         self.task: threading.Thread
 
@@ -139,85 +139,102 @@ class Interface:
             self.analysis = self.divergence.analysis
 
     def show_results(self) -> None:
-        ticker = ui.input_text('Enter ticker')
-        index = self._get_index(ticker)
+        if len(self.tickers) > 0:
+            if len(self.tickers) > 1:
+                ticker = ui.input_text('Enter ticker')
+            else:
+                ticker = self.tickers[0]
 
-        if index < 0:
-            ui.print_error('Ticker not found in results')
+            index = self._get_index(ticker)
+
+            if index < 0:
+                ui.print_error('Ticker not found in results')
+            else:
+                result = self.divergence.results[index]
+                result = result[['date', 'price', 'rsi', 'div', 'streak']]
+                name = store.get_company_name(result.index.name)
+                ui.print_message(f'{name} ({result.index.name})', post_creturn=1)
+                headers = ui.format_headers(result.columns, case='title')
+                print(tabulate(result, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
         else:
-            result = self.divergence.results[index]
-            result = result[['date', 'price', 'rsi', 'div', 'streak']]
-            name = store.get_company_name(result.index.name)
-            ui.print_message(f'{name} ({result.index.name})', post_creturn=1)
-            headers = ui.format_headers(result.columns, case='lower')
-            print(tabulate(result, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.3f'))
+            ui.print_error(f'No ticker(s) specified', post_creturn=1)
 
     def show_analysis(self) -> None:
-        level = ui.input_integer('Enter level', self.divergence.streak, 100)
-        df = self.analysis[self.analysis['streak'] > level]
-        ui.print_message(f'Divergence Summary', post_creturn=1)
-        headers = ui.format_headers(df.columns, case='title')
-        print(tabulate(df, headers=headers, tablefmt=ui.TABULATE_FORMAT))
+        if len(self.analysis) > 0:
+            level = ui.input_integer('Enter minimum streak length', self.divergence.streak, 100)
+            df = self.analysis[self.analysis['streak'] > level]
+            ui.print_message(f'Divergence Summary', post_creturn=1)
+            headers = ui.format_headers(df.columns, case='title')
+            print(tabulate(df, headers=headers, tablefmt=ui.TABULATE_FORMAT))
+        else:
+            ui.print_message(f'No divergences found', post_creturn=1)
 
     def show_plot(self, show: bool = True, cursor: bool = True) -> None:
-        ticker = ui.input_text('Enter ticker')
-        index = self._get_index(ticker)
+        if len(self.tickers) > 0:
+            if len(self.tickers) > 1:
+                ticker = ui.input_text('Enter ticker')
+            else:
+                ticker = self.tickers[0]
 
-        if index < 0:
-            ui.print_error('Ticker not found in results')
+            index = self._get_index(ticker)
+
+            if index < 0:
+                ui.print_error('Ticker not found in results')
+            else:
+                axes: list[plt.Axes]
+                figure: plt.Figure
+                figure, axes = plt.subplots(nrows=3, figsize=ui.CHART_SIZE, sharex=True)
+
+                plt.style.use(ui.CHART_STYLE)
+                plt.margins(x=0.1)
+                plt.subplots_adjust(bottom=0.15)
+
+                name = store.get_company_name(ticker)
+                figure.canvas.manager.set_window_title(name)
+
+                axes[0].set_title('Price')
+                axes[1].set_title(self.divergence.type.upper())
+                axes[2].set_title('Divergence')
+
+                # Grid and ticks
+                length = len(self.divergence.results[index])
+                axes[0].grid(which='major', axis='both')
+                axes[0].set_xticks(range(0, length+1, length//10))
+                axes[1].grid(which='major', axis='both')
+                axes[1].set_xticks(range(0, length+1, length//10))
+                axes[1].set_ylim([-5, 105])
+                axes[2].grid(which='major', axis='both')
+                axes[2].tick_params(axis='x', labelrotation=45)
+
+                # Plot
+                dates = [self.divergence.results[index].iloc[i]['date'].strftime(ui.DATE_FORMAT2) for i in range(length)]
+                axes[0].plot(dates, self.divergence.results[index]['price'], '-', color='blue', label='Price', linewidth=0.5)
+                axes[0].plot(dates, self.divergence.results[index]['price_sma'], '-', color='orange', label=f'SMA{self.divergence.interval}', linewidth=1.5)
+                axes[1].plot(dates, self.divergence.results[index]['rsi'], '-', color='blue', label=self.divergence.type.upper(), linewidth=0.5)
+                axes[1].plot(dates, self.divergence.results[index]['rsi_sma'], '-', color='orange', label=f'SMA{self.divergence.interval}', linewidth=1.5)
+                axes[2].plot(dates[self.divergence.periods:], self.divergence.results[index]['diff'][self.divergence.periods:], '-', color='orange', label='diff', linewidth=1.0)
+                axes[2].plot(dates[self.divergence.periods:], self.divergence.results[index]['div'][self.divergence.periods:], '-', color='green', label='div', linewidth=1.0)
+                axes[2].axhline(y=0.0, xmin=0, xmax=100, color='black', linewidth=1.5)
+
+                # Price line limits
+                min = self.divergence.results[index]['price'].min()
+                max = self.divergence.results[index]['price'].max()
+                axes[0].set_ylim([min*0.95, max*1.05])
+
+                # Legend
+                axes[0].legend(loc='best')
+                axes[1].legend(loc='best')
+
+                if cursor:
+                    cursor = self.custom_cursor(axes, data=self.divergence.results[index])
+                    figure.canvas.mpl_connect('motion_notify_event', cursor.show_xy)
+                    figure.canvas.mpl_connect('axes_leave_event', cursor.hide_y)
+
+                if show:
+                    plt.figure(figure)
+                    plt.show()
         else:
-            axes: list[plt.Axes]
-            figure: plt.Figure
-            figure, axes = plt.subplots(nrows=3, figsize=ui.CHART_SIZE, sharex=True)
-
-            plt.style.use(ui.CHART_STYLE)
-            plt.margins(x=0.1)
-            plt.subplots_adjust(bottom=0.15)
-
-            name = store.get_company_name(ticker)
-            figure.canvas.manager.set_window_title(name)
-
-            axes[0].set_title('Price')
-            axes[1].set_title(self.divergence.type.upper())
-            axes[2].set_title('Divergence')
-
-            # Grid and ticks
-            length = len(self.divergence.results[index])
-            axes[0].grid(which='major', axis='both')
-            axes[0].set_xticks(range(0, length+1, length//10))
-            axes[1].grid(which='major', axis='both')
-            axes[1].set_xticks(range(0, length+1, length//10))
-            axes[1].set_ylim([-5, 105])
-            axes[2].grid(which='major', axis='both')
-            axes[2].tick_params(axis='x', labelrotation=45)
-
-            # Plot
-            dates = [self.divergence.results[index].iloc[i]['date'].strftime(ui.DATE_FORMAT2) for i in range(length)]
-            axes[0].plot(dates, self.divergence.results[index]['price'], '-', color='blue', label='Price', linewidth=0.5)
-            axes[0].plot(dates, self.divergence.results[index]['price_sma'], '-', color='orange', label=f'SMA{self.divergence.interval}', linewidth=1.5)
-            axes[1].plot(dates, self.divergence.results[index]['rsi'], '-', color='blue', label=self.divergence.type.upper(), linewidth=0.5)
-            axes[1].plot(dates, self.divergence.results[index]['rsi_sma'], '-', color='orange', label=f'SMA{self.divergence.interval}', linewidth=1.5)
-            axes[2].plot(dates[self.divergence.periods:], self.divergence.results[index]['diff'][self.divergence.periods:], '-', color='orange', label='diff', linewidth=1.0)
-            axes[2].plot(dates[self.divergence.periods:], self.divergence.results[index]['div'][self.divergence.periods:], '-', color='green', label='div', linewidth=1.0)
-            axes[2].axhline(y=0.0, xmin=0, xmax=100, color='black', linewidth=1.5)
-
-            # Price line limits
-            min = self.divergence.results[index]['price'].min()
-            max = self.divergence.results[index]['price'].max()
-            axes[0].set_ylim([min*0.95, max*1.05])
-
-            # Legend
-            axes[0].legend(loc='best')
-            axes[1].legend(loc='best')
-
-            if cursor:
-                cursor = self.custom_cursor(axes, data=self.divergence.results[index])
-                figure.canvas.mpl_connect('motion_notify_event', cursor.show_xy)
-                figure.canvas.mpl_connect('axes_leave_event', cursor.hide_y)
-
-            if show:
-                plt.figure(figure)
-                plt.show()
+            ui.print_error(f'No ticker(s) specified', post_creturn=1)
 
     def show_progress(self) -> None:
         while not self.divergence.task_state:
