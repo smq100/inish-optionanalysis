@@ -30,6 +30,7 @@ class Interface:
         self.analysis: pd.DataFrame = pd.DataFrame()
         self.divergence: Divergence
         self.task: threading.Thread
+        self.use_cache: bool = False
 
         if list:
             self.select_tickers(list)
@@ -91,8 +92,10 @@ class Interface:
             self.list = list.lower()
         elif store.is_exchange(list):
             self.tickers = store.get_exchange_tickers(self.list)
+            self.use_cache = True
         elif store.is_index(list):
             self.tickers = store.get_index_tickers(self.list)
+            self.use_cache = True
         elif store.is_ticker(list):
             self.tickers = [self.list]
         else:
@@ -111,16 +114,19 @@ class Interface:
         if self.tickers:
             self.divergence = Divergence(self.tickers, name=self.list, days=self.days)
             if len(self.tickers) > 1:
-                self.task = threading.Thread(target=self.divergence.calculate)
+                self.task = threading.Thread(target=self.divergence.calculate, kwargs={'cache': self.use_cache})
                 self.task.start()
 
                 # Show thread progress. Blocking while thread is active
                 self.show_progress()
 
                 if self.divergence.task_state == 'Done':
-                    ui.print_message(f'{len(self.divergence.results)} symbols identified in {self.divergence.task_time:.1f} seconds', pre_creturn=1)
+                    if self.divergence.cache_used:
+                        ui.print_message(f'{len(self.divergence.results)} symbols identified. Cached results used')
+                    else:
+                        ui.print_message(f'{len(self.divergence.results)} symbols identified in {self.divergence.task_time:.1f} seconds', pre_creturn=1)
             else:
-                self.divergence.calculate()
+                self.divergence.calculate(cache=self.use_cache)
 
                 if self.disp_calc:
                     self.show_results()
@@ -155,8 +161,10 @@ class Interface:
             else:
                 result = self.divergence.results[index]
                 result = result[['date', 'price', 'rsi', 'div', 'streak']]
+
                 name = store.get_company_name(result.index.name)
                 ui.print_message(f'{name} ({result.index.name})', post_creturn=1)
+
                 headers = ui.format_headers(result.columns, case='title')
                 print(tabulate(result, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
         else:
@@ -166,6 +174,7 @@ class Interface:
         if len(self.analysis) > 0:
             level = ui.input_integer('Enter minimum streak length', self.divergence.streak, 100)
             df = self.analysis[self.analysis['streak'] > level]
+
             ui.print_message(f'Divergence Summary', post_creturn=1)
             headers = ui.format_headers(df.columns, case='title')
             print(tabulate(df, headers=headers, tablefmt=ui.TABULATE_FORMAT))
@@ -252,6 +261,8 @@ class Interface:
                 completed = self.divergence.task_completed
                 ticker = self.divergence.task_ticker
                 ui.progress_bar(completed, total, ticker=ticker, success=-1)
+        elif self.divergence.task_state == 'Done':
+            pass # Nothing processed. Cached results used
         else:
             ui.print_message(f'{self.divergence.task_state}')
 

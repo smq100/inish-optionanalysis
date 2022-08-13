@@ -36,6 +36,7 @@ class Divergence(Threaded):
         self.streak: int = 5
         self.concurrency: int = 10
         self.cache_available: bool = False
+        self.cache_used: bool = False
 
         for ticker in tickers:
             if not store.is_ticker(ticker):
@@ -44,13 +45,14 @@ class Divergence(Threaded):
         self.cache_available = self._load_results() and self.results
 
     @Threaded.threaded
-    def calculate(self, cache: bool = True) -> None:
+    def calculate(self, cache: bool = True, scaled: bool = True) -> None:
         if not self.tickers:
             assert ValueError('No valid tickers specified')
 
         if cache and self.cache_available:
             # We already have daily results. Just run the analysis
             self.analyze()
+            self.cache_used = True
         else:
             self.task_total = len(self.tickers)
             self.task_state = 'None'
@@ -82,7 +84,7 @@ class Divergence(Threaded):
         self.streak = streak
         self.analysis = pd.DataFrame()
         for result in self.results:
-            idx = result[::-1]['streak'].idxmax() # Index of most recent largest streak
+            idx = result[::-1]['streak'].idxmax()  # Index of most recent largest streak
             date = result.iloc[idx]['date']
             max = result.iloc[idx]['streak']
             if max >= streak:
@@ -94,7 +96,7 @@ class Divergence(Threaded):
             self.analysis.reset_index()
             self.analysis.sort_values(by=['streak'], ascending=False, inplace=True)
 
-    def _run(self, tickers: list[str]) -> None:
+    def _run(self, tickers: list[str], scaled: bool = True) -> None:
         for ticker in tickers:
             ta = Technical(ticker, None, self.days)
             history = ta.history
@@ -132,15 +134,19 @@ class Divergence(Threaded):
                 technical_sma_scaled_diff.name = f'{self.type}_sma_scaled_diff'
 
                 # Calculate differences in the slopes between prices and RSI's
-                divergence = price_sma_scaled_diff - technical_sma_scaled_diff
+                if scaled:
+                    divergence = technical_sma_scaled_diff - price_sma_scaled_diff
+                else:
+                    divergence = technical_sma_diff - price_sma_diff
+
                 divergence.name = 'diff'
 
                 # Calculate differences in the slopes between prices and RSI's for opposite slopes only
                 div = []
                 for i in range(len(price_sma_scaled_diff)):
-                    p = price_sma_scaled_diff[i]
-                    t = technical_sma_scaled_diff[i]
-                    div += [p - t if p * t < 0.0 else np.NaN]
+                    p = price_sma_scaled_diff[i] if scaled else price_sma_diff[i]
+                    t = technical_sma_scaled_diff[i] if scaled else technical_sma_diff[i]
+                    div += [t - p if p * t < 0.0 else np.NaN]
                 divergence_only = pd.Series(div, name='div')
 
                 # Begin overall result dataframe with the dates
@@ -183,13 +189,14 @@ class Divergence(Threaded):
         if self.results:
             filename = self._cache_filename()
 
-            with open(filename, 'wb') as f:
-                try:
-                    pickle.dump(self.results, f, protocol=pickle.HIGHEST_PROTOCOL)  # TODO Understand why dump() sends LF's to console
-                except Exception as e:
-                    _logger.error(f'{__name__}: Exception for pickle dump: {str(e)}')
+            if filename:
+                with open(filename, 'wb') as f:
+                    try:
+                        pickle.dump(self.results, f, protocol=pickle.HIGHEST_PROTOCOL)  # TODO Understand why dump() sends LF's to console
+                    except Exception as e:
+                        _logger.error(f'{__name__}: Exception for pickle dump: {str(e)}')
 
-            self.cache_available = True
+                self.cache_available = True
 
     def _load_results(self) -> bool:
         filename = self._cache_filename()
@@ -223,5 +230,8 @@ if __name__ == '__main__':
     ticker = sys.argv[1].upper() if len(sys.argv) > 1 else 'IBM'
 
     div = Divergence([ticker])
-    div.calculate()
-    div.analyze()
+    div.calculate(scaled=False)
+    # div.analyze()
+
+    headers = ui.format_headers(div.results[0].columns, case='lower')
+    print(tabulate(div.results[0], headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))

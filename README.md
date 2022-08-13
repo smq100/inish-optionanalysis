@@ -11,6 +11,7 @@
     - Greeks calculations
 * Script-based security screening and scoring (example JSON scripts provided)
 * Technical Analysis with sophisticated support & resistance analysis
+* RSI divergence screening
 * Local pricing history database support and data manager
 * E\*Trade API support (E\*Trade account required)
 * Console scripts (console_\*.py) provided to support basic operations and provide example implementations
