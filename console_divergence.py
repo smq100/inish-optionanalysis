@@ -109,21 +109,24 @@ class Interface:
         self.results = []
 
         if self.tickers:
-            self.divergence = Divergence(self.tickers, days=self.days)
-            self.task = threading.Thread(target=self.divergence.calculate)
-            self.task.start()
+            self.divergence = Divergence(self.tickers, name=self.list, days=self.days)
+            if len(self.tickers) > 1:
+                self.task = threading.Thread(target=self.divergence.calculate)
+                self.task.start()
 
-            # Show thread progress. Blocking while thread is active
-            self.show_progress()
+                # Show thread progress. Blocking while thread is active
+                self.show_progress()
 
-            if self.divergence.task_state == 'Done':
-                ui.print_message(f'{len(self.divergence.results)} symbols identified in {self.divergence.task_time:.1f} seconds', pre_creturn=1)
+                if self.divergence.task_state == 'Done':
+                    ui.print_message(f'{len(self.divergence.results)} symbols identified in {self.divergence.task_time:.1f} seconds', pre_creturn=1)
+            else:
+                self.divergence.calculate()
 
-            if self.disp_calc:
-                self.show_results()
+                if self.disp_calc:
+                    self.show_results()
 
-            if self.disp_plot:
-                self.disp_plot(0)
+                if self.disp_plot:
+                    self.show_plot()
 
             self.calculate_analysis()
 

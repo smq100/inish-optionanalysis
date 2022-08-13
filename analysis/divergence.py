@@ -1,10 +1,15 @@
+import os
+import pickle
+import datetime as dt
+import random
+from concurrent import futures
+
 import pandas as pd
 import numpy as np
 from ta import trend
-import random
-from concurrent import futures
 from sklearn.preprocessing import MinMaxScaler
 
+import data as d
 from analysis.technical import Technical
 from base import Threaded
 from data import store as store
@@ -13,46 +18,60 @@ from utils import ui, logger
 
 _logger = logger.get_logger()
 
+CACHE_BASEPATH = './analysis/cache'
+CACHE_SUFFIX = 'pickle'
+
 
 class Divergence(Threaded):
-    def __init__(self, tickers: list[str], window: int = 15, days: int = 100):
+    def __init__(self, tickers: list[str], name: str = '', window: int = 15, days: int = 100):
         self.tickers: list[str] = tickers
+        self.name: str = name
         self.window: int = window
         self.days: int = days
         self.results: list[pd.DataFrame] = []
-        self.analysis: list[pd.DataFrame] = []
+        self.analysis: pd.DataFrame = pd.DataFrame()
         self.type: str = 'rsi'
         self.interval: int = 14
         self.periods: int = days // 50
         self.streak: int = 5
         self.concurrency: int = 10
+        self.cache_available: bool = False
 
         for ticker in tickers:
             if not store.is_ticker(ticker):
                 raise ValueError(f'{__name__}: Not a valid ticker: {ticker}')
 
+        self.cache_available = self._load_results() and self.results
+
     @Threaded.threaded
-    def calculate(self) -> None:
+    def calculate(self, cache: bool = True) -> None:
         if not self.tickers:
             assert ValueError('No valid tickers specified')
 
-        self.results = []
-        self.task_total = len(self.tickers)
-        self.task_state = 'None'
-
-        # Break up the tickers and run concurrently if a large list, otherwise just run the single list
-        random.shuffle(self.tickers)
-        if len(self.tickers) > 100:
-            tickers: list[np.ndarray] = np.array_split(self.tickers, self.concurrency)
-            tickers = [i.tolist() for i in tickers]
-
-            with futures.ThreadPoolExecutor(max_workers=self.concurrency) as executor:
-                self.task_futures = [executor.submit(self._run, list) for list in tickers]
-
-                for future in futures.as_completed(self.task_futures):
-                    _logger.info(f'{__name__}: Thread completed: {future.result()}')
+        if cache and self.cache_available:
+            # We already have daily results. Just run the analysis
+            self.analyze()
         else:
-            self._run(self.tickers)
+            self.task_total = len(self.tickers)
+            self.task_state = 'None'
+            self.results = []
+
+            # Break up the tickers and run concurrently if a large list, otherwise just run the single list
+            random.shuffle(self.tickers)
+            if len(self.tickers) > 100:
+                tickers: list[np.ndarray] = np.array_split(self.tickers, self.concurrency)
+                tickers = [i.tolist() for i in tickers]
+
+                with futures.ThreadPoolExecutor(max_workers=self.concurrency) as executor:
+                    self.task_futures = [executor.submit(self._run, list) for list in tickers]
+
+                    for future in futures.as_completed(self.task_futures):
+                        _logger.info(f'{__name__}: Thread completed: {future.result()}')
+            else:
+                self._run(self.tickers)
+
+            if cache:
+                self._save_results()
 
         self.task_state = 'Done'
 
@@ -63,7 +82,7 @@ class Divergence(Threaded):
         self.streak = streak
         self.analysis = pd.DataFrame()
         for result in self.results:
-            idx = result[::-1]['streak'].idxmax()
+            idx = result[::-1]['streak'].idxmax() # Index of most recent largest streak
             date = result.iloc[idx]['date']
             max = result.iloc[idx]['streak']
             if max >= streak:
@@ -75,7 +94,7 @@ class Divergence(Threaded):
             self.analysis.reset_index()
             self.analysis.sort_values(by=['streak'], ascending=False, inplace=True)
 
-    def _run(self, tickers:list[str]) -> None:
+    def _run(self, tickers: list[str]) -> None:
         for ticker in tickers:
             ta = Technical(ticker, None, self.days)
             history = ta.history
@@ -160,6 +179,41 @@ class Divergence(Threaded):
 
             self.task_completed += 1
 
+    def _save_results(self) -> None:
+        if self.results:
+            filename = self._cache_filename()
+
+            with open(filename, 'wb') as f:
+                try:
+                    pickle.dump(self.results, f, protocol=pickle.HIGHEST_PROTOCOL)  # TODO Understand why dump() sends LF's to console
+                except Exception as e:
+                    _logger.error(f'{__name__}: Exception for pickle dump: {str(e)}')
+
+            self.cache_available = True
+
+    def _load_results(self) -> bool:
+        filename = self._cache_filename()
+
+        cached = False
+        if filename and os.path.exists(filename):
+            with open(filename, 'rb') as f:
+                try:
+                    self.results = pickle.load(f)
+                except Exception as e:
+                    _logger.error(f'{__name__}: Exception for pickle load: {str(e)}')
+                else:
+                    cached = True
+
+        return cached
+
+    def _cache_filename(self) -> str:
+        filename = ''
+        if self.name:
+            date_time = dt.datetime.now().strftime(ui.DATE_FORMAT)
+            filename = f'{CACHE_BASEPATH}/{date_time}_{self.name.lower()}.{CACHE_SUFFIX}'
+
+        return filename
+
 
 if __name__ == '__main__':
     import sys
@@ -170,9 +224,4 @@ if __name__ == '__main__':
 
     div = Divergence([ticker])
     div.calculate()
-    results = div.results[0][['date', 'price', 'rsi', 'div', 'streak']]
-    headers = ui.format_headers(results.columns, case='lower')
-    print(tabulate(results, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
-
     div.analyze()
-    print(div.analysis)

@@ -271,7 +271,7 @@ class Screener(Threaded):
 
     def _save_results(self) -> None:
         if self.results:
-            filename = self._build_cache_filename()
+            filename = self._cache_filename()
 
             with open(filename, 'wb') as f:
                 try:
@@ -282,7 +282,7 @@ class Screener(Threaded):
             self.cache_available = True
 
     def _load_results(self) -> bool:
-        filename = self._build_cache_filename()
+        filename = self._cache_filename()
 
         cached = False
         if os.path.exists(filename):
@@ -296,7 +296,7 @@ class Screener(Threaded):
 
         return cached
 
-    def _build_cache_filename(self) -> str:
+    def _cache_filename(self) -> str:
         date_time = dt.datetime.now().strftime(ui.DATE_FORMAT)
         head_tail = os.path.split(self.screen)
         head, sep, tail = head_tail[1].partition('.')
