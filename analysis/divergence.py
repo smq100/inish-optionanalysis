@@ -37,6 +37,7 @@ class Divergence(Threaded):
         self.concurrency: int = 10
         self.cache_available: bool = False
         self.cache_used: bool = False
+        self.scaled: bool = True
 
         for ticker in tickers:
             if not store.is_ticker(ticker):
@@ -53,7 +54,10 @@ class Divergence(Threaded):
             # We already have daily results. Just run the analysis
             self.analyze()
             self.cache_used = True
+
+            _logger.info(f'{__name__}: Using cached results. Scaled={scaled}')
         else:
+            self.scaled = scaled
             self.task_total = len(self.tickers)
             self.task_state = 'None'
             self.results = []
@@ -61,6 +65,8 @@ class Divergence(Threaded):
             # Break up the tickers and run concurrently if a large list, otherwise just run the single list
             random.shuffle(self.tickers)
             if len(self.tickers) > 100:
+                _logger.info(f'{__name__}: Running with thread pool. Scaled={scaled}')
+
                 tickers: list[np.ndarray] = np.array_split(self.tickers, self.concurrency)
                 tickers = [i.tolist() for i in tickers]
 
@@ -70,6 +76,7 @@ class Divergence(Threaded):
                     for future in futures.as_completed(self.task_futures):
                         _logger.info(f'{__name__}: Thread completed: {future.result()}')
             else:
+                _logger.info(f'{__name__}: Running without thread pool. Scaled={scaled}')
                 self._run(self.tickers)
 
             if cache:
@@ -96,7 +103,9 @@ class Divergence(Threaded):
             self.analysis.reset_index()
             self.analysis.sort_values(by=['streak'], ascending=False, inplace=True)
 
-    def _run(self, tickers: list[str], scaled: bool = True) -> None:
+    def _run(self, tickers: list[str]) -> None:
+        _logger.info(f'{__name__}: Running {len(tickers)} ticker(s). Scaled={self.scaled}')
+
         for ticker in tickers:
             ta = Technical(ticker, None, self.days)
             history = ta.history
@@ -134,7 +143,7 @@ class Divergence(Threaded):
                 technical_sma_scaled_diff.name = f'{self.type}_sma_scaled_diff'
 
                 # Calculate differences in the slopes between prices and RSI's
-                if scaled:
+                if self.scaled:
                     divergence = technical_sma_scaled_diff - price_sma_scaled_diff
                 else:
                     divergence = technical_sma_diff - price_sma_diff
@@ -144,8 +153,8 @@ class Divergence(Threaded):
                 # Calculate differences in the slopes between prices and RSI's for opposite slopes only
                 div = []
                 for i in range(len(price_sma_scaled_diff)):
-                    p = price_sma_scaled_diff[i] if scaled else price_sma_diff[i]
-                    t = technical_sma_scaled_diff[i] if scaled else technical_sma_diff[i]
+                    p = price_sma_scaled_diff[i] if self.scaled else price_sma_diff[i]
+                    t = technical_sma_scaled_diff[i] if self.scaled else technical_sma_diff[i]
                     div += [t - p if p * t < 0.0 else np.NaN]
                 divergence_only = pd.Series(div, name='div')
 
@@ -227,11 +236,16 @@ if __name__ == '__main__':
     from tabulate import tabulate
     from utils import logger
 
+    import logging
+    logger.get_logger(logging.INFO)
+
     ticker = sys.argv[1].upper() if len(sys.argv) > 1 else 'IBM'
 
     div = Divergence([ticker])
-    div.calculate(scaled=False)
-    # div.analyze()
+    # div.calculate(scaled=False)
+    div.calculate()
 
     headers = ui.format_headers(div.results[0].columns, case='lower')
-    print(tabulate(div.results[0], headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
+    print(tabulate(div.results[0], headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.3f'))
+
+    # div.analyze()
