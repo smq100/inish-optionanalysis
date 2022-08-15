@@ -114,7 +114,7 @@ class Interface:
         if self.tickers:
             self.divergence = Divergence(self.tickers, name=self.list, days=self.days)
             if len(self.tickers) > 1:
-                self.task = threading.Thread(target=self.divergence.calculate, kwargs={'cache': self.use_cache})
+                self.task = threading.Thread(target=self.divergence.calculate, kwargs={'use_cache': self.use_cache})
                 self.task.start()
 
                 # Show thread progress. Blocking while thread is active
@@ -126,7 +126,7 @@ class Interface:
                     else:
                         ui.print_message(f'{len(self.divergence.results)} symbols identified in {self.divergence.task_time:.1f} seconds', pre_creturn=1)
             else:
-                self.divergence.calculate(cache=self.use_cache)
+                self.divergence.calculate(use_cache=self.use_cache)
 
                 if self.disp_calc:
                     self.show_results()
@@ -142,7 +142,7 @@ class Interface:
             ui.print_error('Enter a ticker before calculating')
 
     def calculate_analysis(self) -> None:
-        self.analysis = []
+        self.analysis = pd.DataFrame()
         if len(self.divergence.results) > 0:
             self.divergence.analyze()
             self.analysis = self.divergence.analysis

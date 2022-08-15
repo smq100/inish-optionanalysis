@@ -207,7 +207,7 @@ class Interface:
                 save = (self.backtest == 0)
                 self.valids = []
 
-                self.task = threading.Thread(target=self.screener.run_script, kwargs={'use_cache': cache, 'save_results': save})
+                self.task = threading.Thread(target=self.screener.run, kwargs={'use_cache': cache, 'save_results': save})
                 self.task.start()
 
                 # Show thread progress. Blocking while thread is active
@@ -269,7 +269,7 @@ class Interface:
                     [print(r) for r in result.descriptions if ticker.upper().ljust(6, ' ') == r[:6]]
             elif results:
                 drop = ['valid', 'price_last', 'price_current', 'backtest_success']
-                summary = screener.summarize(results).drop(drop, axis=1)
+                summary = screener.summarize_results(results).drop(drop, axis=1)
                 headers = [header.title() for header in summary.columns]
                 print(tabulate(summary.head(top), headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
 
@@ -288,7 +288,7 @@ class Interface:
             elif top > self.screener.task_success:
                 top = self.screener.task_success
 
-            summary = screener.summarize(self.valids)
+            summary = screener.summarize_results(self.valids)
             order = ['ticker', 'score', 'backtest_success']
             summary = summary.reindex(columns=order)
             headers = ui.format_headers(summary.columns)

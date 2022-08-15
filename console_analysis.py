@@ -47,7 +47,6 @@ class Interface:
     quick: bool
     exit: bool
     days: int
-    path_screen: str
     results_corr: list[tuple[str, pd.Series]]
     screener: Screener | None
     trend: SupportResistance
@@ -64,7 +63,6 @@ class Interface:
         self.exit = exit
         self.days = 1000
         self.backtest = 0
-        self.path_screen = ''
         self.results_corr = []
         self.screener = None
 
@@ -85,16 +83,15 @@ class Interface:
                 ui.print_error('Exchange, index or ticker not found')
 
         if self.screen:
-            if os.path.exists(screener.SCREEN_BASEPATH+screen+'.'+screener.SCREEN_SUFFIX):
-                self.path_screen = f'{screener.SCREEN_BASEPATH}{self.screen}.{screener.SCREEN_SUFFIX}'
-            else:
-                ui.print_error(f'File "{self.screen}" not found')
+            screens = screener.get_screen_names()
+            if not self.screen in screens:
+                ui.print_error(f'Screen \'{self.screen}\' not found')
                 abort = True
                 self.screen = ''
 
         if abort:
             pass  # We're done
-        elif self.table and self.path_screen:
+        elif self.table and self.screen:
             self.main_menu(selection=3)
         else:
             self.main_menu()
@@ -111,9 +108,9 @@ class Interface:
                 '7':  'Run Support & Resistance Analysis',
                 '8':  'Run Coorelation',
                 '9':  'Show by Sector',
-                '10':  'Show Top Results',
-                '11':  'Show All Results',
-                '12':  'Show Ticker Screen Results',
+                '10': 'Show Top Results',
+                '11': 'Show All Results',
+                '12': 'Show Ticker Screen Results',
                 '13': 'Show Chart',
                 '14': 'Build Result Files',
                 '15': 'Analyze Result Files',
@@ -203,25 +200,22 @@ class Interface:
             self.table = ''
             ui.print_error(f'List {list} is not valid')
 
-        if self.table and self.path_screen:
-            self.screener = Screener(self.table, screen=self.path_screen)
+        if self.table and self.screen:
+            self.screener = Screener(self.table, screen=self.screen)
             if self.screener.cache_available:
                 self.run_screen()
 
     def select_screen(self) -> None:
-        paths = _get_screener_script_files()
-
-        if paths:
-            menu_items = {f'{index}': f'{item[1].title()}' for index, item in enumerate(paths, start=1)}
+        screens = screener.get_screen_names()
+        if screens:
+            menu_items = {f'{index}': f'{item.title()}' for index, item in enumerate(screens, start=1)}
             menu_items['0'] = 'Cancel'
 
             selection = ui.menu(menu_items, 'Available Screens', 0, len(menu_items)-1, prompt='Select screen, or 0 to cancel')
             if selection > 0:
-                self.path_screen = paths[selection-1][0]
-                self.screen = paths[selection-1][1]
-
                 if self.table:
-                    self.screener = Screener(self.table, screen=self.path_screen)
+                    self.screen = screens[selection-1]
+                    self.screener = Screener(self.table, screen=self.screen)
                     if self.screener.cache_available:
                         self.run_screen()
         else:
@@ -296,18 +290,18 @@ class Interface:
 
         if not self.table:
             ui.print_error('No exchange, index, or ticker specified')
-        elif not self.path_screen:
+        elif not self.screen:
             ui.print_error('No screen specified')
         else:
             try:
-                self.screener = Screener(self.table, screen=self.path_screen, backtest=self.backtest)
+                self.screener = Screener(self.table, screen=self.screen, backtest=self.backtest)
             except ValueError as e:
                 ui.print_error(f'{__name__}: {str(e)}')
             else:
                 cache = False if self.backtest > 0 else use_cache
                 save = (self.backtest == 0)
 
-                self.task = threading.Thread(target=self.screener.run_script, kwargs={'use_cache': cache, 'save_results': save})
+                self.task = threading.Thread(target=self.screener.run, kwargs={'use_cache': cache, 'save_results': save})
                 self.task.start()
 
                 # Show thread progress. Blocking while thread is active
@@ -330,7 +324,7 @@ class Interface:
 
         if not self.table:
             ui.print_error('No exchange, index, or ticker specified')
-        elif not self.path_screen:
+        elif not self.screen:
             ui.print_error('No screen specified')
         else:
             if prompt:
@@ -502,7 +496,7 @@ class Interface:
                 drop = ['valid', 'screen']
             else:
                 drop = ['valid', 'screen', 'price_last', 'backtest_success']
-            summary = screener.summarize(self.screener.valids).drop(drop, axis=1)
+            summary = screener.summarize_results(self.screener.valids).drop(drop, axis=1)
             headers = ui.format_headers(summary.columns)
 
             ui.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen.title()}/{self.table})', post_creturn=1)
@@ -523,7 +517,7 @@ class Interface:
             elif top > self.screener.task_success:
                 top = self.screener.task_success
 
-            summary = screener.summarize(self.screener.valids)
+            summary = screener.summarize_results(self.screener.valids)
             successes = summary[summary.backtest_success == True]
 
             total = summary.shape[0]
@@ -541,7 +535,7 @@ class Interface:
                 ui.print_message(f'None', post_creturn=1)
 
             if self.screener.errors:
-                summary = screener.summarize(self.screener.errors)
+                summary = screener.summarize_results(self.screener.errors)
                 errors = summary.reindex(columns=order)
                 ui.print_message('Backtest Errors', post_creturn=1)
                 print(tabulate(errors, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
@@ -684,7 +678,7 @@ class Interface:
         print()
 
     def build_result_files(self) -> None:
-        screens = _get_screener_script_files()
+        screens = screener.get_screen_names()
         screens.sort()
 
         tables = store.get_exchanges()
@@ -694,138 +688,46 @@ class Interface:
 
         for screen in screens:
             for table in tables:
-                self.path_screen = screen[0]
-                self.screen = screen[1].title()
+                self.screen = screen
                 self.table = table
-                self.run_screen(False)
+                self.run_screen(use_cache=False)
 
-    def analyze_result_files(self, top: int = LISTTOP_ANALYSIS):
-        if not self.table:
-            ui.print_error('No exchange or index specified')
+    def analyze_result_files(self):
+        if self.table:
+            summary, multiples = screener.analyze_results(self.table)
+
+            # Top scores
+            headers = ui.format_headers(summary.columns)
+            top = LISTTOP_ANALYSIS if len(summary) > LISTTOP_ANALYSIS else len(summary)
+            ui.print_message(f'Top {top} of {len(summary)} Scores of {self.table.upper()}', post_creturn=1)
+            print(tabulate(summary.head(LISTTOP_ANALYSIS), headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
+
+            if not multiples.empty:
+                headers = ui.format_headers(multiples.columns)
+                ui.print_message('Successes Across Multiple Screens', post_creturn=1)
+                print(tabulate(multiples, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
+
         else:
-            files = _get_screener_cache_files()
-            table = self.table.lower()
-            results: list[Result] = []
-
-            for item in files:
-                parts = item.split('_')
-                if parts[1] != table:
-                    pass  # Wrong table
-                elif parts[0] != dt.datetime.now().strftime(ui.DATE_FORMAT):
-                    pass  # Old date
-                else:
-                    path = f'{screener.SCREEN_BASEPATH}{parts[2]}.{screener.SCREEN_SUFFIX}'
-                    screen = Screener(parts[1], path)
-                    if screen.cache_available:
-                        screen.run_script()
-                        results += screen.valids
-
-            if results:
-                results = sorted(results, reverse=True, key=lambda r: float(r))
-
-                drop = ['valid', 'price_last', 'backtest_success']
-                summary = screener.summarize(results)
-                summary.drop(drop, axis=1, inplace=True)
-                headers = ui.format_headers(summary.columns)
-
-                # Top scores
-                ui.print_message(f'Top {LISTTOP_ANALYSIS} of {len(summary)} Scores of {table.upper()}', post_creturn=1)
-                print(tabulate(summary.head(LISTTOP_ANALYSIS), headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
-
-                # Results with successes across multiple screens
-                multiples = screener.group_duplicates(results)
-                if not multiples.empty:
-                    order = ['ticker', 'company', 'sector', 'price_current']
-                    multiples = multiples.reindex(columns=order)
-                    headers = ui.format_headers(multiples.columns)
-
-                    ui.print_message('Successes Across Multiple Screens', post_creturn=1)
-                    print(tabulate(multiples, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
-            else:
-                ui.print_message(f'No results for {table} found', post_creturn=1)
+            ui.print_error('No exchange or index specified')
 
     def roll_result_files(self) -> None:
-        paths = _get_screener_cache_files()
-        for screen_old in paths:
-            file_old = f'{screener.CACHE_BASEPATH}{screen_old}.{screener.CACHE_SUFFIX}'
-            date_time = dt.datetime.now().strftime(ui.DATE_FORMAT)
-            screen_new = f'{date_time}{screen_old[10:]}'
-            if screen_new > screen_old:
-                file_new = f'{screener.CACHE_BASEPATH}{screen_new}.{screener.CACHE_SUFFIX}'
-                try:
-                    os.replace(file_old, file_new)
-                except OSError as e:
-                    ui.print_error(f'File error for {e.filename}: {e.strerror}')
-                else:
-                    ui.print_message(f'Renamed {screen_old} to {screen_new}')
+        success, message = screener.roll_results()
+        if success:
+            ui.print_message(message)
+        else:
+            ui.print_error(message)
 
     def delete_result_files(self):
-        files = _get_screener_cache_files()
-        if files:
-            paths = []
-            date_time = dt.datetime.now().strftime(ui.DATE_FORMAT)
-            for path in files:
-                file_time = f'{path[:10]}'
-                if file_time != date_time:
-                    file = f'{screener.CACHE_BASEPATH}{path}.{screener.CACHE_SUFFIX}'
-                    paths += [file]
-
-            if paths:
-                deleted = 0
-                select = ui.input_text(f'Delete {len(paths)} files? (y/n)').lower()
-                if select == 'y':
-                    for path in paths:
-                        try:
-                            os.remove(path)
-                        except OSError as e:
-                            ui.print_error(f'{__name__}: File error for {e.filename}: {e.strerror}')
-                        else:
-                            deleted += 1
-                    ui.print_message(f'Deleted {deleted} files')
-                else:
-                    ui.print_message('No files deleted')
+        select = ui.input_text('Delete files? (y/n)').lower()
+        if select == 'y':
+            success, message = screener.delete_results()
+            if success:
+                ui.print_message(message)
             else:
-                ui.print_message('All files up to date')
+                ui.print_error(message)
         else:
-            ui.print_message('No files to delete')
+            ui.print_message('Nothing deleted')
 
-
-def _get_screener_cache_files() -> list[str]:
-    files = []
-    with os.scandir(screener.CACHE_BASEPATH) as entries:
-        for entry in entries:
-            if entry.is_file():
-                head, sep, tail = entry.name.partition('.')
-                if tail != screener.CACHE_SUFFIX:
-                    pass
-                elif head == screener.SCREEN_INIT_NAME:
-                    pass
-                else:
-                    files += [head]
-
-    files.sort()
-
-    return files
-
-def _get_screener_script_files() -> list[tuple[str, str]]:
-    files = []
-    with os.scandir(screener.SCREEN_BASEPATH) as entries:
-        for entry in entries:
-            if entry.is_file():
-                head, sep, tail = entry.name.partition('.')
-                if tail != screener.SCREEN_SUFFIX:
-                    pass
-                elif head == screener.SCREEN_INIT_NAME:
-                    pass
-                elif head == 'test':
-                    pass
-                else:
-                    file = (f'{screener.SCREEN_BASEPATH}{head}.{screener.SCREEN_SUFFIX}', head)
-                    files += [file]
-
-    files.sort()
-
-    return files
 
 
 def main():

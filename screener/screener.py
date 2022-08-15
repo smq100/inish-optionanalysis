@@ -1,6 +1,5 @@
 import os
 import json
-import pickle
 import random
 import datetime as dt
 from concurrent import futures
@@ -13,17 +12,16 @@ from base import Threaded
 from company.company import Company
 from data import store as store
 from .interpreter import Interpreter
-from utils import ui, logger
+from utils import ui, cache, logger
 
 
 _logger = logger.get_logger()
 
-SCREEN_BASEPATH = './screener/screens/'
+SCREEN_BASEPATH = './screener/screens'
 SCREEN_SUFFIX = 'screen'
 SCREEN_INIT_NAME = 'init'
 
-CACHE_BASEPATH = './screener/cache/'
-CACHE_SUFFIX = 'pickle'
+CACHE_TYPE = 'scr'
 
 
 @dataclass
@@ -81,7 +79,9 @@ class Screener(Threaded):
             self.type = ''
             raise ValueError(f'Table not found: {self.table}')
 
-        self.screen_init = f'{SCREEN_BASEPATH}{SCREEN_INIT_NAME}.{SCREEN_SUFFIX}'
+        self.script_path: str = f'{SCREEN_BASEPATH}/{screen}.{SCREEN_SUFFIX}'
+        self.init_path = f'{SCREEN_BASEPATH}/{SCREEN_INIT_NAME}.{SCREEN_SUFFIX}'
+        self.cache_name: str = ''
         self.cache_available = False
         self.cache_used = False
         self.scripts: list[dict] = []
@@ -92,9 +92,13 @@ class Screener(Threaded):
         self.summary: pd.DataFrame = pd.DataFrame()
         self.concurrency = 10
 
-        if self._load(screen, init=self.screen_init):
-            self._open()
-            self.cache_available = self._load_results() if self.backtest == 0 else False
+        if self._load_screen():
+            self._open_screen()
+
+            self.cache_name = f'{table.lower()}_{screen.lower()}'
+            self.cache_available = cache.exists(self.cache_name, CACHE_TYPE)
+            if self.cache_available:
+                self.results = cache.load(self.cache_name, CACHE_TYPE)
         else:
             raise ValueError(f'Script not found or invalid format: {screen}')
 
@@ -105,7 +109,7 @@ class Screener(Threaded):
         return f'{self.table} - {self.screen}'
 
     @Threaded.threaded
-    def run_script(self, use_cache: bool = True, save_results: bool = True) -> None:
+    def run(self, use_cache: bool = True, save_results: bool = True) -> None:
         self.task_total = len(self.companies)
 
         if use_cache and self.cache_available:
@@ -154,12 +158,12 @@ class Screener(Threaded):
             # Extract the successful screens, sort based on score, then summarize
             self.valids = [result for result in self.results if result]
             self.valids = sorted(self.valids, reverse=True, key=lambda r: float(r))
-            self.summary = summarize(self.valids)
-
-            if save_results:
-                self._save_results()
+            self.summary = summarize_results(self.valids)
 
             self.task_state = 'Done'
+
+            if save_results:
+                cache.dump(self.results, self.cache_name, CACHE_TYPE)
 
     def get_score(self, ticker: str) -> float:
         ticker = ticker.upper()
@@ -211,23 +215,23 @@ class Screener(Threaded):
                 self.valids = []
                 break
 
-    def _load(self, script: str, init: str = '') -> bool:
+    def _load_screen(self) -> bool:
         self.scripts = []
-        if os.path.exists(script):
+        if os.path.exists(self.script_path):
             try:
-                with open(script) as f:
+                with open(self.script_path) as f:
                     self.scripts = json.load(f)
             except:
                 self.scripts = []
                 _logger.error(f'{__name__}: File format error')
             else:
-                self._add_init_script(init)
+                self._add_init_script()
         else:
-            _logger.error(f'{__name__}: File "{script}" not found')
+            _logger.error(f'{__name__}: File "{self.screen}" not found')
 
         return bool(self.scripts)
 
-    def _open(self) -> bool:
+    def _open_screen(self) -> bool:
         tickers = []
 
         if self.type == 'every':
@@ -254,58 +258,62 @@ class Screener(Threaded):
 
         return len(self.companies) > 0
 
-    def _add_init_script(self, script: str) -> bool:
-        if not script:
+    def _add_init_script(self) -> bool:
+        if not self.init_path:
             pass
-        elif os.path.exists(script):
+        elif os.path.exists(self.init_path):
             try:
-                with open(script) as f:
+                with open(self.init_path) as f:
                     self.scripts += json.load(f)
             except:
                 self.scripts = []
                 _logger.error(f'{__name__}: File format error')
         else:
-            _logger.error(f'{__name__}: File "{script}" not found')
+            _logger.error(f'{__name__}: File \'init\' not found')
 
         return bool(self.scripts)
 
-    def _save_results(self) -> None:
-        if self.results:
-            filename = self._cache_filename()
 
-            with open(filename, 'wb') as f:
-                try:
-                    pickle.dump(self.results, f, protocol=pickle.HIGHEST_PROTOCOL)  # TODO Understand why dump() sends LF's to console
-                except Exception as e:
-                    _logger.error(f'{__name__}: Exception for pickle dump: {str(e)}')
+def analyze_results(table: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+    files = _get_result_filenames()
+    results: list[Result] = []
+    summary: pd.DataFrame = pd.DataFrame()
+    multiples: pd.DataFrame = pd.DataFrame()
 
-            self.cache_available = True
+    for item in files:
+        parts = item.split('_')
+        if len(parts) != 4:
+            pass # Bad filename
+        elif parts[0] != dt.datetime.now().strftime(ui.DATE_FORMAT):
+            pass  # Old date
+        elif parts[1] != table.lower():
+            pass  # Wrong table
+        elif parts[3] != CACHE_TYPE:
+            pass  # Wrong type
+        else:
+            screen = Screener(parts[1], parts[2])
+            if screen.cache_available:
+                screen.run()
+                results += screen.valids
 
-    def _load_results(self) -> bool:
-        filename = self._cache_filename()
+    if results:
+        results = sorted(results, reverse=True, key=lambda r: float(r))
 
-        cached = False
-        if os.path.exists(filename):
-            with open(filename, 'rb') as f:
-                try:
-                    self.results = pickle.load(f)
-                except Exception as e:
-                    _logger.error(f'{__name__}: Exception for pickle load: {str(e)}')
-                else:
-                    cached = True
+        drop = ['valid', 'price_last', 'backtest_success']
+        summary = summarize_results(results)
+        summary.drop(drop, axis=1, inplace=True)
 
-        return cached
+        # Results with successes across multiple screens
+        multiples = group_duplicates(results)
+        if not multiples.empty:
+            order = ['ticker', 'company', 'sector', 'price_current']
+            multiples = multiples.reindex(columns=order)
+    else:
+        _logger.error(f'{__name__}: No results for {table} found')
 
-    def _cache_filename(self) -> str:
-        date_time = dt.datetime.now().strftime(ui.DATE_FORMAT)
-        head_tail = os.path.split(self.screen)
-        head, sep, tail = head_tail[1].partition('.')
-        filename = f'{CACHE_BASEPATH}/{date_time}_{self.table.lower()}_{head.lower()}.{CACHE_SUFFIX}'
+    return summary, multiples
 
-        return filename
-
-
-def summarize(results: list[Result]) -> pd.DataFrame:
+def summarize_results(results: list[Result]) -> pd.DataFrame:
     summary = pd.DataFrame()
 
     items = [{
@@ -322,14 +330,15 @@ def summarize(results: list[Result]) -> pd.DataFrame:
 
     if items:
         summary = pd.DataFrame(items)
-        summary.index += 1 # Use 1-based index
+        summary.index += 1  # Use 1-based index
 
     return summary
+
 
 def group_duplicates(results: list[Result]) -> pd.DataFrame:
     items = pd.DataFrame()
 
-    summary = summarize(results)
+    summary = summarize_results(results)
     dups = summary.duplicated(subset=['ticker'], keep=False)
     duplicated = summary[dups]
 
@@ -341,9 +350,116 @@ def group_duplicates(results: list[Result]) -> pd.DataFrame:
     return items
 
 
+def get_screen_names() -> list[str]:
+    files = []
+    with os.scandir(SCREEN_BASEPATH) as entries:
+        for entry in entries:
+            if entry.is_file():
+                head, sep, tail = entry.name.partition('.')
+                if tail != SCREEN_SUFFIX:
+                    pass
+                elif head == SCREEN_INIT_NAME:
+                    pass
+                elif head == 'test':
+                    pass
+                else:
+                    files += [head]
+
+    files.sort()
+
+    return files
+
+
+def roll_results() -> tuple[bool, str]:
+    success = True
+    message = ''
+
+    paths = _get_result_filenames()
+    for result_old in paths:
+        file_old = f'{cache.CACHE_BASEPATH}/{result_old}.{cache.CACHE_SUFFIX}'
+        date_time = dt.datetime.now().strftime(ui.DATE_FORMAT)
+        result_new = f'{date_time}{result_old[10:]}'
+        if result_new > result_old:
+            file_new = f'{cache.CACHE_BASEPATH}/{result_new}.{cache.CACHE_SUFFIX}'
+            try:
+                os.replace(file_old, file_new)
+            except OSError as e:
+                success = False
+                message = f'File error for {e.filename}: {e.strerror}'
+            else:
+                message = f'Renamed {result_old} to {result_new}'
+        else:
+            message = 'No files to roll'
+
+    if success:
+        _logger.info(f'{__name__}: {message}')
+    else:
+        _logger.error(f'{__name__}: {message}')
+
+    return success, message
+
+
+def delete_results() -> tuple[bool, str]:
+    success = True
+    message = ''
+    deleted = 0
+
+    files = _get_result_filenames()
+    if files:
+        paths = []
+        date_time = dt.datetime.now().strftime(ui.DATE_FORMAT)
+        for path in files:
+            file_time = f'{path[:10]}'
+            if file_time != date_time:
+                file = f'{cache.CACHE_BASEPATH}/{path}.{cache.CACHE_SUFFIX}'
+                paths += [file]
+
+        if paths:
+            for path in paths:
+                try:
+                    os.remove(path)
+                except OSError as e:
+                    success = False
+                    message = f'File error for {e.filename}: {e.strerror}'
+                else:
+                    deleted += 1
+
+            if deleted > 0:
+                message = f'Deleted {deleted} file(s)'
+        else:
+            message = 'All files up to date'
+    else:
+        message = 'No files to delete'
+
+    if success:
+        _logger.info(f'{__name__}: {message}')
+    else:
+        _logger.error(f'{__name__}: {message}')
+
+    return success, message
+
+
+def _get_result_filenames() -> list[str]:
+    files = []
+    with os.scandir(cache.CACHE_BASEPATH) as entries:
+        for entry in entries:
+            if entry.is_file():
+                head, sep, tail = entry.name.partition('.')
+                if tail != cache.CACHE_SUFFIX:
+                    pass
+                elif head == SCREEN_INIT_NAME:
+                    pass
+                else:
+                    files += [head]
+
+    files.sort()
+
+    return files
+
+
 if __name__ == '__main__':
     import logging
     logger.get_logger(logging.INFO)
 
     s = Screener('SP500', 'bulltrend')
-    s.run_script()
+    s.run()

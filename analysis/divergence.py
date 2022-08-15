@@ -1,6 +1,3 @@
-import os
-import pickle
-import datetime as dt
 import random
 from concurrent import futures
 
@@ -9,21 +6,19 @@ import numpy as np
 from ta import trend
 from sklearn.preprocessing import MinMaxScaler
 
-import data as d
 from analysis.technical import Technical
 from base import Threaded
 from data import store as store
-from utils import ui, logger
+from utils import ui, cache, logger
 
 
 _logger = logger.get_logger()
 
-CACHE_BASEPATH = './analysis/cache'
-CACHE_SUFFIX = 'pickle'
+CACHE_TYPE = 'div'
 
 
 class Divergence(Threaded):
-    def __init__(self, tickers: list[str], name: str = '', window: int = 15, days: int = 100):
+    def __init__(self, tickers: list[str], name: str, window: int = 15, days: int = 100):
         self.tickers: list[str] = tickers
         self.name: str = name
         self.window: int = window
@@ -43,16 +38,16 @@ class Divergence(Threaded):
             if not store.is_ticker(ticker):
                 raise ValueError(f'{__name__}: Not a valid ticker: {ticker}')
 
-        self.cache_available = self._load_results() and self.results
+        self.cache_available = cache.exists(name, CACHE_TYPE)
+        if self.cache_available:
+            self.results = cache.load(name, CACHE_TYPE)
 
     @Threaded.threaded
-    def calculate(self, cache: bool = True, scaled: bool = True) -> None:
+    def calculate(self, use_cache: bool = True, scaled: bool = True) -> None:
         if not self.tickers:
             assert ValueError('No valid tickers specified')
 
-        if cache and self.cache_available:
-            # We already have daily results. Just run the analysis
-            self.analyze()
+        if use_cache and self.cache_available:
             self.cache_used = True
 
             _logger.info(f'{__name__}: Using cached results. Scaled={scaled}')
@@ -77,10 +72,12 @@ class Divergence(Threaded):
                         _logger.info(f'{__name__}: Thread completed: {future.result()}')
             else:
                 _logger.info(f'{__name__}: Running without thread pool. Scaled={scaled}')
+
+                use_cache = False
                 self._run(self.tickers)
 
-            if cache:
-                self._save_results()
+            if use_cache:
+                cache.dump(self.results, self.name, CACHE_TYPE)
 
         self.task_state = 'Done'
 
@@ -193,42 +190,6 @@ class Divergence(Threaded):
                     self.results += [result]
 
             self.task_completed += 1
-
-    def _save_results(self) -> None:
-        if self.results:
-            filename = self._cache_filename()
-
-            if filename:
-                with open(filename, 'wb') as f:
-                    try:
-                        pickle.dump(self.results, f, protocol=pickle.HIGHEST_PROTOCOL)  # TODO Understand why dump() sends LF's to console
-                    except Exception as e:
-                        _logger.error(f'{__name__}: Exception for pickle dump: {str(e)}')
-
-                self.cache_available = True
-
-    def _load_results(self) -> bool:
-        filename = self._cache_filename()
-
-        cached = False
-        if filename and os.path.exists(filename):
-            with open(filename, 'rb') as f:
-                try:
-                    self.results = pickle.load(f)
-                except Exception as e:
-                    _logger.error(f'{__name__}: Exception for pickle load: {str(e)}')
-                else:
-                    cached = True
-
-        return cached
-
-    def _cache_filename(self) -> str:
-        filename = ''
-        if self.name:
-            date_time = dt.datetime.now().strftime(ui.DATE_FORMAT)
-            filename = f'{CACHE_BASEPATH}/{date_time}_{self.name.lower()}.{CACHE_SUFFIX}'
-
-        return filename
 
 
 if __name__ == '__main__':
