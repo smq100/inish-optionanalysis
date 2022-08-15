@@ -23,7 +23,7 @@ from analysis.correlate import Correlate
 from analysis.chart import Chart
 from data import store as store
 import etrade.auth as auth
-from utils import ui, logger
+from utils import ui, cache, logger
 from utils import math as m
 
 logger.get_logger(logging.WARNING, logfile='')
@@ -711,7 +711,7 @@ class Interface:
             ui.print_error('No exchange or index specified')
 
     def roll_result_files(self) -> None:
-        success, message = screener.roll_results()
+        success, message = cache.roll(screener.CACHE_TYPE)
         if success:
             ui.print_message(message)
         else:
@@ -720,7 +720,7 @@ class Interface:
     def delete_result_files(self):
         select = ui.input_text('Delete files? (y/n)').lower()
         if select == 'y':
-            success, message = screener.delete_results()
+            success, message = cache.delete(screener.CACHE_TYPE)
             if success:
                 ui.print_message(message)
             else:

@@ -275,7 +275,7 @@ class Screener(Threaded):
 
 
 def analyze_results(table: str) -> tuple[pd.DataFrame, pd.DataFrame]:
-    files = _get_result_filenames()
+    files = cache.get_filenames(CACHE_TYPE)
     results: list[Result] = []
     summary: pd.DataFrame = pd.DataFrame()
     multiples: pd.DataFrame = pd.DataFrame()
@@ -361,93 +361,6 @@ def get_screen_names() -> list[str]:
                 elif head == SCREEN_INIT_NAME:
                     pass
                 elif head == 'test':
-                    pass
-                else:
-                    files += [head]
-
-    files.sort()
-
-    return files
-
-
-def roll_results() -> tuple[bool, str]:
-    success = True
-    message = ''
-
-    paths = _get_result_filenames()
-    for result_old in paths:
-        file_old = f'{cache.CACHE_BASEPATH}/{result_old}.{cache.CACHE_SUFFIX}'
-        date_time = dt.datetime.now().strftime(ui.DATE_FORMAT)
-        result_new = f'{date_time}{result_old[10:]}'
-        if result_new > result_old:
-            file_new = f'{cache.CACHE_BASEPATH}/{result_new}.{cache.CACHE_SUFFIX}'
-            try:
-                os.replace(file_old, file_new)
-            except OSError as e:
-                success = False
-                message = f'File error for {e.filename}: {e.strerror}'
-            else:
-                message = f'Renamed {result_old} to {result_new}'
-        else:
-            message = 'No files to roll'
-
-    if success:
-        _logger.info(f'{__name__}: {message}')
-    else:
-        _logger.error(f'{__name__}: {message}')
-
-    return success, message
-
-
-def delete_results() -> tuple[bool, str]:
-    success = True
-    message = ''
-    deleted = 0
-
-    files = _get_result_filenames()
-    if files:
-        paths = []
-        date_time = dt.datetime.now().strftime(ui.DATE_FORMAT)
-        for path in files:
-            file_time = f'{path[:10]}'
-            if file_time != date_time:
-                file = f'{cache.CACHE_BASEPATH}/{path}.{cache.CACHE_SUFFIX}'
-                paths += [file]
-
-        if paths:
-            for path in paths:
-                try:
-                    os.remove(path)
-                except OSError as e:
-                    success = False
-                    message = f'File error for {e.filename}: {e.strerror}'
-                else:
-                    deleted += 1
-
-            if deleted > 0:
-                message = f'Deleted {deleted} file(s)'
-        else:
-            message = 'All files up to date'
-    else:
-        message = 'No files to delete'
-
-    if success:
-        _logger.info(f'{__name__}: {message}')
-    else:
-        _logger.error(f'{__name__}: {message}')
-
-    return success, message
-
-
-def _get_result_filenames() -> list[str]:
-    files = []
-    with os.scandir(cache.CACHE_BASEPATH) as entries:
-        for entry in entries:
-            if entry.is_file():
-                head, sep, tail = entry.name.partition('.')
-                if tail != cache.CACHE_SUFFIX:
-                    pass
-                elif head == SCREEN_INIT_NAME:
                     pass
                 else:
                     files += [head]
