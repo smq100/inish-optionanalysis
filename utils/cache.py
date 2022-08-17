@@ -13,20 +13,22 @@ CACHE_SUFFIX = 'pickle'
 
 
 def exists(name: str, type: str) -> bool:
-    exist = False
+    if not name:
+        raise AssertionError('Must include \'name\'')
+    if not type:
+        raise AssertionError('Must include \'type\'')
 
-    filename = build_filename(name, type)
-    if filename and os.path.exists(filename):
-        try:
-            with open(filename, 'rb') as f:
-                exist = True
-        except Exception as e:
-            _logger.error(f'{__name__}: Exception for pickle exists: {str(e)}')
+    filenames = get_filenames(name, type)
 
-    return exist
+    return bool(filenames)
 
 
 def load(name: str, type: str) -> object:
+    if not name:
+        raise AssertionError('Must include \'name\'')
+    if not type:
+        raise AssertionError('Must include \'type\'')
+
     object = None
 
     filename = build_filename(name, type)
@@ -40,8 +42,11 @@ def load(name: str, type: str) -> object:
     return object
 
 
-def dump(object: object, name: str, type: str) -> bool:
-    success = False
+def dump(object: object, name: str, type: str) -> str:
+    if not name:
+        raise AssertionError('Must include \'name\'')
+    if not type:
+        raise AssertionError('Must include \'type\'')
 
     filename = build_filename(name, type)
     if filename:
@@ -49,14 +54,16 @@ def dump(object: object, name: str, type: str) -> bool:
             with open(filename, 'wb') as f:
                 pickle.dump(object, f, protocol=pickle.HIGHEST_PROTOCOL)  # TODO Why does dump() send LF's to console
         except Exception as e:
+            filename = ''
             _logger.error(f'{__name__}: Exception for pickle dump: {str(e)}')
-        else:
-            success = True
 
-    return success
+    return filename
 
 
 def roll(type: str) -> tuple[bool, str]:
+    if not type:
+        raise AssertionError('Must include \'type\'')
+
     success = True
     message = ''
     rolled = 0
@@ -129,30 +136,49 @@ def delete(type: str) -> tuple[bool, str]:
     return success, message
 
 
-def get_filenames(type: str) -> list[str]:
+def get_filenames(name: str, type: str) -> list[str]:
+    if not type:
+        raise AssertionError('Must include \'type\'')
+
     files = []
     with os.scandir(CACHE_BASEPATH) as entries:
         for item in entries:
             if item.is_file():
                 head, sep, tail = item.name.partition('.')
                 parts = head.split('_')
-                if tail != CACHE_SUFFIX:
-                    pass # Wrong file type
-                elif len(parts) != 4:
+                print(head)
+
+                if len(parts) != 3:
                     pass # Bad filename structure
-                elif parts[3] == type:
+                elif tail != CACHE_SUFFIX:
+                    pass # Wrong file type
+                elif name and name != parts[1]:
+                    pass # Bad name
+                elif type == parts[2]:
                     files += [head]
 
-    files.sort()
-
-    return files
+    # Return most recent first
+    return files.sort(reverse=True)
 
 
 def build_filename(name: str, type: str) -> str:
     filename = ''
-
     if name:
         date_time = dt.datetime.now().strftime(ui.DATE_FORMAT)
         filename = f'{CACHE_BASEPATH}/{date_time}_{name.lower()}_{type}.{CACHE_SUFFIX}'
 
     return filename
+
+
+if __name__ == '__main__':
+    import sys
+
+    if len(sys.argv) > 2:
+        name = sys.argv[1]
+        type = sys.argv[2]
+    elif len(sys.argv) > 1:
+        name = ''
+        type = sys.argv[1]
+
+    files = get_filenames(name, type)
+    print(files)

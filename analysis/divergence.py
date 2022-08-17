@@ -41,6 +41,7 @@ class Divergence(Threaded):
         self.cache_available = cache.exists(name, CACHE_TYPE)
         if self.cache_available:
             self.results = cache.load(name, CACHE_TYPE)
+            _logger.info(f'{__name__}: Cached results available')
 
     @Threaded.threaded
     def calculate(self, use_cache: bool = True, scaled: bool = True) -> None:

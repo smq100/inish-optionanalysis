@@ -95,7 +95,7 @@ class Screener(Threaded):
         if self._load_screen():
             self._open_screen()
 
-            self.cache_name = f'{table.lower()}_{screen.lower()}'
+            self.cache_name = f'{table.lower()}-{screen.lower()}'
             self.cache_available = cache.exists(self.cache_name, CACHE_TYPE)
             if self.cache_available:
                 self.results = cache.load(self.cache_name, CACHE_TYPE)
@@ -282,13 +282,13 @@ def analyze_results(table: str) -> tuple[pd.DataFrame, pd.DataFrame]:
 
     for item in files:
         parts = item.split('_')
-        if len(parts) != 4:
+        if len(parts) != 3:
             pass # Bad filename
         elif parts[0] != dt.datetime.now().strftime(ui.DATE_FORMAT):
             pass  # Old date
         elif parts[1] != table.lower():
-            pass  # Wrong table
-        elif parts[3] != CACHE_TYPE:
+            pass  # Wrong name
+        elif parts[2] != CACHE_TYPE:
             pass  # Wrong type
         else:
             screen = Screener(parts[1], parts[2])
