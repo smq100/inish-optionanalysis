@@ -12,34 +12,64 @@ CACHE_BASEPATH = './cache'
 CACHE_SUFFIX = 'pickle'
 
 
-def exists(name: str, type: str) -> bool:
+def exists(name: str, type: str, today_only: str = True) -> bool:
     if not name:
         raise AssertionError('Must include \'name\'')
     if not type:
         raise AssertionError('Must include \'type\'')
 
-    filenames = get_filenames(name, type)
+    name = name.lower()
+    type = type.lower()
+    filenames = []
+    names = get_filenames(name, type)
+    if names and today_only:
+        date = dt.datetime.now().strftime(ui.DATE_FORMAT)
+        for item in names:
+            parts = item.split('_')
+            if parts[0] == date:
+                filenames = [item]
+                break
+    else:
+        filenames = names
 
     return bool(filenames)
 
 
-def load(name: str, type: str) -> object:
+def load(name: str, type: str, today_only: str = True) -> tuple[object, str]:
     if not name:
         raise AssertionError('Must include \'name\'')
     if not type:
         raise AssertionError('Must include \'type\'')
 
     object = None
+    filename = ''
+    date = dt.datetime.now().strftime(ui.DATE_FORMAT)
 
-    filename = build_filename(name, type)
-    if filename and os.path.exists(filename):
+    name = name.lower()
+    type = type.lower()
+    names = get_filenames(name, type)
+    if not names:
+        pass
+    elif today_only:
+        for item in names:
+            parts = item.split('_')
+            if parts[0] == date:
+                filename = item
+                break
+    else:
+        filename = names[0] # The latest file
+        parts = filename.split('_')
+        date = parts[0]
+
+    if filename:
+        filename = f'{CACHE_BASEPATH}/{filename}.{CACHE_SUFFIX}'
         try:
             with open(filename, 'rb') as f:
                 object = pickle.load(f)
         except Exception as e:
             _logger.error(f'{__name__}: Exception for pickle load: {str(e)}')
 
-    return object
+    return object, date
 
 
 def dump(object: object, name: str, type: str) -> str:
@@ -48,6 +78,8 @@ def dump(object: object, name: str, type: str) -> str:
     if not type:
         raise AssertionError('Must include \'type\'')
 
+    name = name.lower()
+    type = type.lower()
     filename = build_filename(name, type)
     if filename:
         try:
@@ -64,11 +96,12 @@ def roll(type: str) -> tuple[bool, str]:
     if not type:
         raise AssertionError('Must include \'type\'')
 
+    type = type.lower()
     success = True
     message = ''
     rolled = 0
 
-    paths = get_filenames(type)
+    paths = get_filenames('', type)
     for result_old in paths:
         file_old = f'{CACHE_BASEPATH}/{result_old}.{CACHE_SUFFIX}'
         date_time = dt.datetime.now().strftime(ui.DATE_FORMAT)
@@ -94,10 +127,11 @@ def roll(type: str) -> tuple[bool, str]:
 
 
 def delete(type: str) -> tuple[bool, str]:
+    type = type.lower()
     success = True
     message = ''
 
-    files = get_filenames(type)
+    files = get_filenames('', type)
     if files:
         paths = []
         date = dt.datetime.now().strftime(ui.DATE_FORMAT)
@@ -136,36 +170,38 @@ def delete(type: str) -> tuple[bool, str]:
     return success, message
 
 
-def get_filenames(name: str, type: str) -> list[str]:
-    if not type:
-        raise AssertionError('Must include \'type\'')
-
+def get_filenames(name: str, type: str, type_only: bool = False) -> list[str]:
     files = []
-    with os.scandir(CACHE_BASEPATH) as entries:
-        for item in entries:
-            if item.is_file():
-                head, sep, tail = item.name.partition('.')
-                parts = head.split('_')
-                print(head)
+    name = name.lower()
+    type = type.lower()
 
-                if len(parts) != 3:
-                    pass # Bad filename structure
-                elif tail != CACHE_SUFFIX:
-                    pass # Wrong file type
-                elif name and name != parts[1]:
-                    pass # Bad name
-                elif type == parts[2]:
-                    files += [head]
+    for item in os.scandir(CACHE_BASEPATH):
+        if item.is_file():
+            head, sep, tail = item.name.partition('.')
+            parts = head.split('_')
+
+            if len(parts) != 3:
+                pass # Bad filename structure
+            elif tail != CACHE_SUFFIX:
+                pass # Wrong file type
+            elif name and name != parts[1]:
+                pass # Bad name
+            elif type == parts[2]:
+                files += [head]
 
     # Return most recent first
-    return files.sort(reverse=True)
+    files.sort(reverse=True)
+    return files
 
 
 def build_filename(name: str, type: str) -> str:
-    filename = ''
-    if name:
-        date_time = dt.datetime.now().strftime(ui.DATE_FORMAT)
-        filename = f'{CACHE_BASEPATH}/{date_time}_{name.lower()}_{type}.{CACHE_SUFFIX}'
+    if not name:
+        raise ValueError('\'name\' must be valid')
+    if not type:
+        raise ValueError('\'type\' must be valid')
+
+    date_time = dt.datetime.now().strftime(ui.DATE_FORMAT)
+    filename = f'{CACHE_BASEPATH}/{date_time}_{name.lower()}_{type.lower()}.{CACHE_SUFFIX}'
 
     return filename
 
@@ -180,5 +216,5 @@ if __name__ == '__main__':
         name = ''
         type = sys.argv[1]
 
-    files = get_filenames(name, type)
-    print(files)
+    ob = load(name, type, True)
+    print(ob)

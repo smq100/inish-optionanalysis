@@ -101,10 +101,7 @@ def input_integer(message: str, min_: int, max_: int) -> int:
     val = min_ - 1
     while val < min_:
         text = input(f'{message}: ')
-        if not m.isnumeric(text):
-            print_error(f'Invalid value. Enter an integer between {min_} and {max_}')
-            val = min_ - 1
-        else:
+        if m.isnumeric(text):
             val = int(text)
             if val < min_:
                 print_error(f'Invalid value. Enter an integer between {min_} and {max_}')
@@ -114,6 +111,9 @@ def input_integer(message: str, min_: int, max_: int) -> int:
                 val = min_ - 1
             else:
                 val = val
+        else:
+            print_error(f'Invalid value. Enter an integer between {min_} and {max_}')
+            val = min_ - 1
 
     return val
 
@@ -122,10 +122,7 @@ def input_float(message: str, min_: float, max_: float) -> float:
     val = min_ - 1.0
     while val < min_:
         text = input(f'{message}: ')
-        if not m.isnumeric(text):
-            print_error(f'Invalid value. Enter an integer between {min_:.2f} and {max_:.2f}')
-            val = min_ - 1.0
-        else:
+        if m.isnumeric(text):
             val = int(text)
             if float(val) < min_:
                 print_error(f'Invalid value. Enter an integer between {min_:.2f} and {max_:.2f}')
@@ -135,6 +132,9 @@ def input_float(message: str, min_: float, max_: float) -> float:
                 val = min_ - 1.0
             else:
                 val = float(val)
+        else:
+            print_error(f'Invalid value. Enter an integer between {min_:.2f} and {max_:.2f}')
+            val = min_ - 1.0
 
     return val
 

@@ -1,4 +1,5 @@
 import random
+import datetime as dt
 from concurrent import futures
 
 import pandas as pd
@@ -33,15 +34,17 @@ class Divergence(Threaded):
         self.cache_available: bool = False
         self.cache_used: bool = False
         self.scaled: bool = True
+        self.date: str = dt.datetime.now().strftime(ui.DATE_FORMAT)
+        self.today_only: bool = False
 
         for ticker in tickers:
             if not store.is_ticker(ticker):
                 raise ValueError(f'{__name__}: Not a valid ticker: {ticker}')
 
-        self.cache_available = cache.exists(name, CACHE_TYPE)
+        self.cache_available = cache.exists(name, CACHE_TYPE, today_only=self.today_only)
         if self.cache_available:
-            self.results = cache.load(name, CACHE_TYPE)
-            _logger.info(f'{__name__}: Cached results available')
+            self.results, self.date = cache.load(name, CACHE_TYPE, today_only=self.today_only)
+            _logger.info(f'{__name__}: Cached results from {self.date} available')
 
     @Threaded.threaded
     def calculate(self, use_cache: bool = True, scaled: bool = True) -> None:

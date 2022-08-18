@@ -311,7 +311,7 @@ class Interface:
                     self.screener.valids = self.screener.valids
 
                     if self.screener.cache_used:
-                        ui.print_message(f'{len(self.screener.valids)} symbols identified. Cached results used')
+                        ui.print_message(f'{len(self.screener.valids)} symbols identified. Cached results from {self.screener.date} used')
                     else:
                         ui.print_message(f'{len(self.screener.valids)} symbols identified in {self.screener.task_time:.1f} seconds', pre_creturn=1)
 

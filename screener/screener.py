@@ -90,17 +90,20 @@ class Screener(Threaded):
         self.valids: list[Result] = []
         self.errors: list[Result] = []
         self.summary: pd.DataFrame = pd.DataFrame()
-        self.concurrency = 10
+        self.concurrency: int = 10
+        self.date: str = dt.datetime.now().strftime(ui.DATE_FORMAT)
+        self.today_only: bool = False
 
-        if self._load_screen():
-            self._open_screen()
-
-            self.cache_name = f'{table.lower()}-{screen.lower()}'
-            self.cache_available = cache.exists(self.cache_name, CACHE_TYPE)
-            if self.cache_available:
-                self.results = cache.load(self.cache_name, CACHE_TYPE)
-        else:
+        if not self._load_screen():
             raise ValueError(f'Script not found or invalid format: {screen}')
+        if not self._open_screen():
+            raise AssertionError('Error opening screen')
+
+        self.cache_name = f'{table.lower()}-{screen.lower()}'
+        self.cache_available = cache.exists(self.cache_name, CACHE_TYPE, today_only=self.today_only)
+        if self.cache_available:
+            self.results, self.date = cache.load(self.cache_name, CACHE_TYPE, today_only=self.today_only)
+            _logger.info(f'{__name__}: Cached results from {self.date} available')
 
     def __repr__(self):
         return f'<Screener ({self.table} - {self.screen})>'
@@ -256,7 +259,7 @@ class Screener(Threaded):
         else:
             _logger.warning(f'{__name__}: No symbols available')
 
-        return len(self.companies) > 0
+        return bool(self.companies)
 
     def _add_init_script(self) -> bool:
         if not self.init_path:

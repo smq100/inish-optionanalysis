@@ -56,7 +56,7 @@ class Interface:
 
             if selection == 1:
                 self.select_ticker()
-            if selection == 2:
+            elif selection == 2:
                 self.add_ticker()
             elif selection == 3:
                 self.select_days()
