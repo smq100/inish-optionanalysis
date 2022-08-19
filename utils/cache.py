@@ -85,7 +85,7 @@ def dump(object: object, name: str, type: str) -> str:
     if filename:
         try:
             with open(filename, 'wb') as f:
-                pickle.dump(object, f, protocol=pickle.HIGHEST_PROTOCOL)  # TODO Why does dump() send LF's to console
+                pickle.dump(object, f, protocol=pickle.HIGHEST_PROTOCOL)
         except Exception as e:
             filename = ''
             _logger.error(f'{__name__}: Exception for pickle dump: {str(e)}')

@@ -32,6 +32,15 @@ class Interface:
         self.task: threading.Thread
         self.use_cache: bool = False
 
+        self.commands = [
+            {'menu': 'Select Tickers', 'function': self.select_tickers,     'condition': 'self.tickers', 'value': 'self.list'},
+            {'menu': 'Days',           'function': self.select_days,        'condition': 'True', 'value': 'self.days'},
+            {'menu': 'Calculate',      'function': self.calculate_divergence, 'condition': 'not self.analysis.empty', 'value': 'len(self.analysis)'},
+            {'menu': 'Show Analysis',  'function': self.show_analysis,      'condition': '', 'value': ''},
+            {'menu': 'Show Results',   'function': self.show_results,       'condition': '', 'value': ''},
+            {'menu': 'Show Plot',      'function': self.show_plot,          'condition': '', 'value': ''}
+        ]
+
         if list:
             self.select_tickers(list)
 
@@ -44,42 +53,28 @@ class Interface:
             self.main_menu()
 
     def main_menu(self) -> None:
+
+        menu_items = {str(i+1): f'{self.commands[i]["menu"]}' for i in range(len(self.commands))}
+        menu_items['0'] = 'Quit'
+
         while True:
-            menu_items = {
-                '1': 'Select Tickers',
-                '2': f'Days ({self.days})',
-                '3': 'Calculate',
-                '4': 'Show Analysis',
-                '5': 'Show Results',
-                '6': 'Show Plot',
-                '0': 'Exit'
-            }
-
-            if self.tickers:
-                menu_items['1'] += f' ({self.list})'
-
-            if not self.analysis.empty:
-                menu_items['4'] += f' ({len(self.analysis)})'
-
+            self._update_menu(menu_items)
             selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1, prompt='Select operation, or 0 when done')
-
-            if selection == 1:
-                self.select_tickers()
-            elif selection == 2:
-                self.select_days()
-            elif selection == 3:
-                self.calculate_divergence()
-            elif selection == 4:
-                self.show_analysis()
-            elif selection == 5:
-                self.show_results()
-            elif selection == 6:
-                self.show_plot()
-            elif selection == 0:
+            if selection > 0:
+                self.commands[selection-1]['function']()
+            else:
                 self.exit = True
 
             if self.exit:
                 break
+
+    def _update_menu(self, menu: dict):
+        for i, item in enumerate(self.commands, start=1):
+            if item['condition']:
+                menu[str(i)] = f'{self.commands[i-1]["menu"]}'
+                if eval(item['condition']):
+                    menu[str(i)] += f' ({eval(item["value"])})'
+
 
     def select_tickers(self, list='') -> None:
         if not list:
