@@ -28,17 +28,17 @@ class Interface:
         self.tickers: list[str] = []
         self.results: list[pd.DataFrame] = []
         self.analysis: pd.DataFrame = pd.DataFrame()
-        self.divergence: Divergence
+        self.divergence: Divergence | None = None
         self.task: threading.Thread
         self.use_cache: bool = False
 
         self.commands = [
-            {'menu': 'Select Tickers', 'function': self.select_tickers,     'condition': 'self.tickers', 'value': 'self.list'},
-            {'menu': 'Days',           'function': self.select_days,        'condition': 'True', 'value': 'self.days'},
+            {'menu': 'Select Tickers', 'function': self.select_tickers, 'condition': 'self.tickers', 'value': 'self.list'},
+            {'menu': 'Days',           'function': self.select_days,    'condition': 'True', 'value': 'self.days'},
             {'menu': 'Calculate',      'function': self.calculate_divergence, 'condition': 'not self.analysis.empty', 'value': 'len(self.analysis)'},
-            {'menu': 'Show Analysis',  'function': self.show_analysis,      'condition': '', 'value': ''},
-            {'menu': 'Show Results',   'function': self.show_results,       'condition': '', 'value': ''},
-            {'menu': 'Show Plot',      'function': self.show_plot,          'condition': '', 'value': ''}
+            {'menu': 'Show Analysis',  'function': self.show_analysis,  'condition': '', 'value': ''},
+            {'menu': 'Show Results',   'function': self.show_results,   'condition': '', 'value': ''},
+            {'menu': 'Show Plot',      'function': self.show_plot,      'condition': '', 'value': ''}
         ]
 
         if list:
@@ -53,12 +53,20 @@ class Interface:
             self.main_menu()
 
     def main_menu(self) -> None:
-
+        # Create the menu text
         menu_items = {str(i+1): f'{self.commands[i]["menu"]}' for i in range(len(self.commands))}
         menu_items['0'] = 'Quit'
 
+        # Update menu items with dynamic info
+        def update(menu: dict):
+            for i, item in enumerate(self.commands):
+                if item['condition']:
+                    menu[str(i+1)] = f'{self.commands[i]["menu"]}'
+                    if eval(item['condition']):
+                        menu[str(i+1)] += f' ({eval(item["value"])})'
+
         while True:
-            self._update_menu(menu_items)
+            update(menu_items)
             selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1, prompt='Select operation, or 0 when done')
             if selection > 0:
                 self.commands[selection-1]['function']()
@@ -67,14 +75,6 @@ class Interface:
 
             if self.exit:
                 break
-
-    def _update_menu(self, menu: dict):
-        for i, item in enumerate(self.commands, start=1):
-            if item['condition']:
-                menu[str(i)] = f'{self.commands[i-1]["menu"]}'
-                if eval(item['condition']):
-                    menu[str(i)] += f' ({eval(item["value"])})'
-
 
     def select_tickers(self, list='') -> None:
         if not list:
@@ -143,14 +143,13 @@ class Interface:
             self.analysis = self.divergence.analysis
 
     def show_results(self) -> None:
-        if len(self.tickers) > 0:
+        if self.divergence:
             if len(self.tickers) > 1:
                 ticker = ui.input_text('Enter ticker')
             else:
                 ticker = self.tickers[0]
 
             index = self._get_index(ticker)
-
             if index < 0:
                 ui.print_error('Ticker not found in results')
             else:
@@ -163,18 +162,21 @@ class Interface:
                 headers = ui.format_headers(result.columns, case='title')
                 print(tabulate(result, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
         else:
-            ui.print_error(f'No ticker(s) specified', post_creturn=1)
+            ui.print_error(f'Must first run calculation', post_creturn=1)
 
     def show_analysis(self) -> None:
-        if len(self.analysis) > 0:
-            level = ui.input_integer('Enter minimum streak length', self.divergence.streak, 100)
-            df = self.analysis[self.analysis['streak'] > level]
+        if self.divergence:
+            if len(self.analysis) > 0:
+                level = ui.input_integer('Enter minimum streak length', self.divergence.streak, 100)
+                df = self.analysis[self.analysis['streak'] > level]
 
-            ui.print_message(f'Divergence Summary', post_creturn=1)
-            headers = ui.format_headers(df.columns, case='title')
-            print(tabulate(df, headers=headers, tablefmt=ui.TABULATE_FORMAT))
+                ui.print_message(f'Divergence Summary', post_creturn=1)
+                headers = ui.format_headers(df.columns, case='title')
+                print(tabulate(df, headers=headers, tablefmt=ui.TABULATE_FORMAT))
+            else:
+                ui.print_message(f'No divergences found', post_creturn=1)
         else:
-            ui.print_message(f'No divergences found', post_creturn=1)
+            ui.print_error(f'Must first run calculation', post_creturn=1)
 
     def show_plot(self, show: bool = True, cursor: bool = True) -> None:
         if len(self.tickers) > 0:
@@ -263,9 +265,10 @@ class Interface:
 
     def _get_index(self, ticker:str):
         index = -1
-        for i, item in enumerate(self.divergence.results):
-            if ticker.upper() == item.index.name:
-                index = i
+        if self.divergence:
+            for i, item in enumerate(self.divergence.results):
+                if ticker.upper() == item.index.name:
+                    index = i
 
         return index
 
