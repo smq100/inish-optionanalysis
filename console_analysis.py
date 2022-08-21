@@ -95,8 +95,9 @@ class Interface:
             {'menu': 'Select Table or Index', 'function': self.m_select_table, 'condition': 'self.table', 'value': 'self.table'},
             {'menu': 'Select Screen', 'function': self.m_select_screen, 'condition': 'self.screen', 'value': 'self.screen'},
             {'menu': 'Run Screen', 'function': self.m_run_screen, 'condition': '', 'value': ''},
-            {'menu': 'Run Backtest Screen', 'function': self.m_run_backtest, 'condition': 'self.backtest', 'value': 'self.backtest'},
             {'menu': 'Refresh Screen', 'function': self.m_refresh_screen, 'condition': '', 'value': ''},
+            {'menu': 'Analyze Results', 'function': self.m_analyze_result_files, 'condition': '', 'value': ''},
+            {'menu': 'Run Backtest Screen', 'function': self.m_run_backtest, 'condition': 'self.backtest', 'value': 'self.backtest'},
             {'menu': 'Run Option Strategy', 'function': self.m_select_option_strategy, 'condition': '', 'value': ''},
             {'menu': 'Run Support & Resistance Analysis', 'function': self.m_select_support_resistance, 'condition': 'self.quick', 'value': '"quick"'},
             {'menu': 'Run Coorelation', 'function': self.m_run_coorelate, 'condition': '', 'value': ''},
@@ -106,7 +107,6 @@ class Interface:
             {'menu': 'Show Ticker Screen Results', 'function': self.m_show_ticker_results, 'condition': '', 'value': ''},
             {'menu': 'Show Chart', 'function': self.m_show_chart, 'condition': '', 'value': ''},
             {'menu': 'Build Result Files', 'function': self.m_build_result_files, 'condition': '', 'value': ''},
-            {'menu': 'Analyze Result Files', 'function': self.m_analyze_result_files, 'condition': '', 'value': ''},
             {'menu': 'Roll Result Files', 'function': self.m_roll_result_files, 'condition': '', 'value': ''},
             {'menu': 'Delete Result Files', 'function': self.m_delete_result_files, 'condition': '', 'value': ''},
         ]
@@ -674,7 +674,7 @@ class Interface:
 
     def m_analyze_result_files(self):
         if self.table:
-            summary, multiples = screener.analyze_results(f'{self.table}-{self.screen}')
+            summary, multiples = screener.analyze_results(self.table)
 
             # Top scores
             headers = ui.format_headers(summary.columns)

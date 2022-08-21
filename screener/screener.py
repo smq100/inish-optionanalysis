@@ -278,35 +278,42 @@ class Screener(Threaded):
 
 
 def analyze_results(table: str) -> tuple[pd.DataFrame, pd.DataFrame]:
-    files = cache.get_filenames(table, CACHE_TYPE)
-    print(files)
+    table = table.lower()
     results: list[Result] = []
     summary: pd.DataFrame = pd.DataFrame()
     multiples: pd.DataFrame = pd.DataFrame()
 
-    for item in files:
-        parts = item.split('_')
-        print(parts)
-        if len(parts) != 3:
-            pass # Bad filename
-        elif parts[0] != dt.datetime.now().strftime(ui.DATE_FORMAT):
-            pass  # Old date
-        elif parts[1] != table.lower():
-            pass  # Wrong name
-        elif parts[2] != CACHE_TYPE:
-            pass  # Wrong type
-        else:
-            screen = Screener(parts[1], parts[2])
-            if screen.cache_available:
-                screen.run()
-                results += screen.valids
+    def filter(files, table):
+        results = []
+        for file in files:
+            parts = file.split('_')
+            parts = parts[2].split('-')
+            if parts[0] == table:
+                results += [file]
+
+        return results
+
+    files = cache.get_filenames('', CACHE_TYPE)
+    files = filter(files, table)
+    for file in files:
+        parts = file.split('_')
+        if len(parts) == 3:
+            subparts = parts[2].split('-') # Extract table and screen names
+
+            if parts[1] != CACHE_TYPE:
+                pass  # Wrong cache type
+            elif subparts[0] != table:
+                pass  # Wrong table name
+            else:
+                screen = Screener(subparts[0], subparts[1])
+                if screen.cache_available:
+                    screen.run()
+                    results += screen.valids
 
     if results:
-        results = sorted(results, reverse=True, key=lambda r: float(r))
-
+        results = sorted(results, reverse=True, key=lambda r: float(r)) # Sort results by score
         summary = summarize_results(results)
-        drop = ['valid', 'price_last', 'backtest_success']
-        summary.drop(drop, axis=1, inplace=True)
+        summary.drop(['valid', 'price_last', 'backtest_success'], axis=1, inplace=True)
 
         # Results with successes across multiple screens
         multiples = group_duplicates(results)
@@ -314,9 +321,10 @@ def analyze_results(table: str) -> tuple[pd.DataFrame, pd.DataFrame]:
             order = ['ticker', 'company', 'sector', 'price_current']
             multiples = multiples.reindex(columns=order)
     else:
-        _logger.error(f'{__name__}: No results for {table} found')
+        _logger.info(f'{__name__}: No results for {table} found')
 
     return summary, multiples
+
 
 def summarize_results(results: list[Result]) -> pd.DataFrame:
     summary = pd.DataFrame()
