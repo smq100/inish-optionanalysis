@@ -17,7 +17,7 @@ PROGRESS_SLEEP = 0.20
 TERMINAL_SIZE = os.get_terminal_size()
 
 
-def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int, prompt: str = 'Please select') -> int:
+def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int, prompt: str = 'Select operation') -> int:
     print(f'\n{header}')
     print('-' * 50)
 

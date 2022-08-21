@@ -1,11 +1,8 @@
-from re import T
 import time
 import threading
 import logging
 
 import argparse
-
-from sqlalchemy import true
 
 import data as d
 from data import store as store

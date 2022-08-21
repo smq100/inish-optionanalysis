@@ -33,27 +33,27 @@ class Interface:
         self.use_cache: bool = False
 
         self.commands = [
-            {'menu': 'Select Tickers', 'function': self.select_tickers, 'condition': 'self.tickers', 'value': 'self.list'},
-            {'menu': 'Days',           'function': self.select_days,    'condition': 'True', 'value': 'self.days'},
-            {'menu': 'Calculate',      'function': self.calculate_divergence, 'condition': 'not self.analysis.empty', 'value': 'len(self.analysis)'},
-            {'menu': 'Show Analysis',  'function': self.show_analysis,  'condition': '', 'value': ''},
-            {'menu': 'Show Results',   'function': self.show_results,   'condition': '', 'value': ''},
-            {'menu': 'Show Plot',      'function': self.show_plot,      'condition': '', 'value': ''}
+            {'menu': 'Select Tickers', 'function': self.m_select_tickers, 'condition': 'self.tickers', 'value': 'self.list'},
+            {'menu': 'Days',           'function': self.m_select_days,    'condition': 'True', 'value': 'self.days'},
+            {'menu': 'Calculate',      'function': self.m_calculate_divergence, 'condition': 'not self.analysis.empty', 'value': 'len(self.analysis)'},
+            {'menu': 'Show Analysis',  'function': self.m_show_analysis,  'condition': '', 'value': ''},
+            {'menu': 'Show Results',   'function': self.m_show_results,   'condition': '', 'value': ''},
+            {'menu': 'Show Plot',      'function': self.m_show_plot,      'condition': '', 'value': ''}
         ]
 
         if list:
-            self.select_tickers(list)
+            self.m_select_tickers(list)
 
         if exit and self.tickers:
-            self.calculate_divergence()
+            self.m_calculate_divergence()
         elif self.tickers:
-            self.calculate_divergence()
+            self.m_calculate_divergence()
             self.main_menu()
         else:
             self.main_menu()
 
     def main_menu(self) -> None:
-        # Create the menu text
+        # Create the menu
         menu_items = {str(i+1): f'{self.commands[i]["menu"]}' for i in range(len(self.commands))}
         menu_items['0'] = 'Quit'
 
@@ -67,7 +67,7 @@ class Interface:
 
         while True:
             update(menu_items)
-            selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1, prompt='Select operation, or 0 when done')
+            selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1)
             if selection > 0:
                 self.commands[selection-1]['function']()
             else:
@@ -76,7 +76,7 @@ class Interface:
             if self.exit:
                 break
 
-    def select_tickers(self, list='') -> None:
+    def m_select_tickers(self, list='') -> None:
         if not list:
             list = ui.input_text('Enter exchange, index, ticker, or \'every\'')
 
@@ -98,12 +98,12 @@ class Interface:
             self.list = ''
             ui.print_error(f'List \'{list}\' is not valid')
 
-    def select_days(self):
+    def m_select_days(self):
         self.days = 0
         while self.days < 30:
             self.days = ui.input_integer('Enter number of days', 30, 9999)
 
-    def calculate_divergence(self) -> None:
+    def m_calculate_divergence(self) -> None:
         self.results = []
 
         if self.tickers:
@@ -124,15 +124,15 @@ class Interface:
                 self.divergence.calculate(use_cache=self.use_cache)
 
                 if self.disp_calc:
-                    self.show_results()
+                    self.m_show_results()
 
                 if self.disp_plot:
-                    self.show_plot()
+                    self.m_show_plot()
 
             self.calculate_analysis()
 
             if self.disp_anly:
-                self.show_analysis()
+                self.m_show_analysis()
         else:
             ui.print_error('Enter a ticker before calculating')
 
@@ -142,7 +142,7 @@ class Interface:
             self.divergence.analyze()
             self.analysis = self.divergence.analysis
 
-    def show_results(self) -> None:
+    def m_show_results(self) -> None:
         if self.divergence:
             if len(self.tickers) > 1:
                 ticker = ui.input_text('Enter ticker')
@@ -164,7 +164,7 @@ class Interface:
         else:
             ui.print_error(f'Must first run calculation', post_creturn=1)
 
-    def show_analysis(self) -> None:
+    def m_show_analysis(self) -> None:
         if self.divergence:
             if len(self.analysis) > 0:
                 level = ui.input_integer('Enter minimum streak length', self.divergence.streak, 100)
@@ -178,7 +178,7 @@ class Interface:
         else:
             ui.print_error(f'Must first run calculation', post_creturn=1)
 
-    def show_plot(self, show: bool = True, cursor: bool = True) -> None:
+    def m_show_plot(self, show: bool = True, cursor: bool = True) -> None:
         if len(self.tickers) > 0:
             if len(self.tickers) > 1:
                 ticker = ui.input_text('Enter ticker')

@@ -89,6 +89,28 @@ class Interface:
                 abort = True
                 self.screen = ''
 
+        _condition = 'self.screener is not None and len(self.screener.valids) > 0'
+        _value = 'len(self.screener.valids) if len(self.screener.valids) < LISTTOP_SCREEN else LISTTOP_SCREEN'
+        self.commands = [
+            {'menu': 'Select Table or Index', 'function': self.m_select_table, 'condition': 'self.table', 'value': 'self.table'},
+            {'menu': 'Select Screen', 'function': self.m_select_screen, 'condition': 'self.screen', 'value': 'self.screen'},
+            {'menu': 'Run Screen', 'function': self.m_run_screen, 'condition': '', 'value': ''},
+            {'menu': 'Run Backtest Screen', 'function': self.m_run_backtest, 'condition': 'self.backtest', 'value': 'self.backtest'},
+            {'menu': 'Refresh Screen', 'function': self.m_refresh_screen, 'condition': '', 'value': ''},
+            {'menu': 'Run Option Strategy', 'function': self.m_select_option_strategy, 'condition': '', 'value': ''},
+            {'menu': 'Run Support & Resistance Analysis', 'function': self.m_select_support_resistance, 'condition': 'self.quick', 'value': '"quick"'},
+            {'menu': 'Run Coorelation', 'function': self.m_run_coorelate, 'condition': '', 'value': ''},
+            {'menu': 'Show by Sector', 'function': self.m_filter_by_sector, 'condition': '', 'value': ''},
+            {'menu': 'Show Top Results', 'function': self.m_show_top, 'condition': _condition, 'value': _value},
+            {'menu': 'Show All Results', 'function': self.m_show_valids, 'condition': _condition, 'value': 'len(self.screener.valids)'},
+            {'menu': 'Show Ticker Screen Results', 'function': self.m_show_ticker_results, 'condition': '', 'value': ''},
+            {'menu': 'Show Chart', 'function': self.m_show_chart, 'condition': '', 'value': ''},
+            {'menu': 'Build Result Files', 'function': self.m_build_result_files, 'condition': '', 'value': ''},
+            {'menu': 'Analyze Result Files', 'function': self.m_analyze_result_files, 'condition': '', 'value': ''},
+            {'menu': 'Roll Result Files', 'function': self.m_roll_result_files, 'condition': '', 'value': ''},
+            {'menu': 'Delete Result Files', 'function': self.m_delete_result_files, 'condition': '', 'value': ''},
+        ]
+
         if abort:
             pass  # We're done
         elif self.table and self.screen:
@@ -98,93 +120,26 @@ class Interface:
 
     def main_menu(self, selection: int = 0) -> None:
         while True:
-            menu_items = {
-                '1':  'Select Table or Index',
-                '2':  'Select Screen',
-                '3':  'Run Screen',
-                '4':  'Run Backtest Screen',
-                '5':  'Refresh Screen',
-                '6':  'Run Option Strategy',
-                '7':  'Run Support & Resistance Analysis',
-                '8':  'Run Coorelation',
-                '9':  'Show by Sector',
-                '10': 'Show Top Results',
-                '11': 'Show All Results',
-                '12': 'Show Ticker Screen Results',
-                '13': 'Show Chart',
-                '14': 'Build Result Files',
-                '15': 'Analyze Result Files',
-                '16': 'Roll Result Files',
-                '17': 'Delete Result Files',
-                '0':  'Exit'
-            }
+            # Create the menu
+            menu_items = {str(i+1): f'{self.commands[i]["menu"]}' for i in range(len(self.commands))}
+            menu_items['0'] = 'Quit'
 
-            if self.table:
-                menu_items['1'] += f' ({self.table})'
+            # Update menu items with dynamic info
+            def update(menu: dict):
+                for i, item in enumerate(self.commands):
+                    if item['condition']:
+                        menu[str(i+1)] = f'{self.commands[i]["menu"]}'
+                        if eval(item['condition']):
+                            menu[str(i+1)] += f' ({eval(item["value"])})'
 
-            if self.screen:
-                menu_items['2'] += f' ({self.screen})'
-
-            if self.backtest > 0:
-                menu_items['4'] += f' ({self.backtest})'
-
-            if self.quick:
-                menu_items['7'] += ' (quick)'
-
-            if self.screener is not None and len(self.screener.valids) > 0:
-                top = len(self.screener.valids) if len(self.screener.valids) < LISTTOP_SCREEN else LISTTOP_SCREEN
-                menu_items['10'] += f' ({top})'
-
-            if self.screener is not None and len(self.screener.valids) > 0:
-                menu_items['11'] += f' ({len(self.screener.valids)})'
+            update(menu_items)
 
             if selection == 0:
                 selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1)
 
-            if selection == 1:
-                self.select_table()
-            elif selection == 2:
-                self.select_screen()
-            elif selection == 3:
-                self.backtest = 0
-                if self.run_screen():
-                    if len(self.screener.valids) > 0:
-                        self.show_valids(top=LISTTOP_SCREEN)
-            elif selection == 4:
-                if self.run_backtest():
-                    if len(self.screener.valids) > 0:
-                        self.show_backtest(top=LISTTOP_SCREEN)
-            elif selection == 5:
-                self.refresh_screen()
-                if len(self.screener.valids) > 0:
-                    self.show_valids(top=LISTTOP_SCREEN)
-            elif selection == 6:
-                self.select_option_strategy()
-            elif selection == 7:
-                self.select_support_resistance()
-            elif selection == 8:
-                self.run_coorelate()
-                if len(self.results_corr) > 0:
-                    self.show_coorelations()
-            elif selection == 9:
-                self.filter_by_sector()
-            elif selection == 10:
-                self.show_valids(top=LISTTOP_SCREEN)
-            elif selection == 11:
-                self.show_valids()
-            elif selection == 12:
-                self.show_ticker_results()
-            elif selection == 13:
-                self.show_chart()
-            elif selection == 14:
-                self.build_result_files()
-            elif selection == 15:
-                self.analyze_result_files()
-            elif selection == 16:
-                self.roll_result_files()
-            elif selection == 17:
-                self.delete_result_files()
-            elif selection == 0:
+            if selection > 0:
+                self.commands[selection-1]['function']()
+            else:
                 self.exit = True
 
             selection = 0
@@ -192,7 +147,7 @@ class Interface:
             if self.exit:
                 break
 
-    def select_table(self) -> None:
+    def m_select_table(self) -> None:
         list = ui.input_alphanum('Enter exchange or index').upper()
         if store.is_list(list):
             self.table = list
@@ -205,7 +160,7 @@ class Interface:
             if self.screener.cache_available:
                 self.run_screen()
 
-    def select_screen(self) -> None:
+    def m_select_screen(self) -> None:
         screens = screener.get_screen_names()
         if screens:
             menu_items = {f'{index}': f'{item.title()}' for index, item in enumerate(screens, start=1)}
@@ -221,7 +176,23 @@ class Interface:
         else:
             ui.print_message('No screener files found')
 
-    def select_option_strategy(self) -> None:
+    def m_run_screen(self):
+        self.backtest = 0
+        if self.run_screen():
+            if len(self.screener.valids) > 0:
+                self.m_show_valids(top=LISTTOP_SCREEN)
+
+    def m_run_backtest(self):
+        if self.run_backtest():
+            if len(self.screener.valids) > 0:
+                self.show_backtest(top=LISTTOP_SCREEN)
+
+    def m_refresh_screen(self):
+        self.refresh_screen()
+        if len(self.screener.valids) > 0:
+            self.m_show_valids(top=LISTTOP_SCREEN)
+
+    def m_select_option_strategy(self) -> None:
         if len(self.screener.valids) > 0:
             menu_items = {
                 '1': 'Call',
@@ -270,7 +241,7 @@ class Interface:
         else:
             ui.print_error('No valid results to analyze')
 
-    def select_support_resistance(self) -> None:
+    def m_select_support_resistance(self) -> None:
         tickers = []
         ticker = ui.input_text("Enter ticker or 'valids'").upper()
         if store.is_ticker(ticker):
@@ -284,6 +255,11 @@ class Interface:
 
         if tickers:
             self.run_support_resistance(tickers)
+
+    def m_run_coorelate(self):
+        self.run_coorelate()
+        if len(self.results_corr) > 0:
+            self.show_coorelations()
 
     def run_screen(self, use_cache: bool = True) -> bool:
         success = False
@@ -457,7 +433,7 @@ class Interface:
                 df = self.coorelate.get_ticker_coorelation(ticker)
                 self.results_corr += [(ticker, df.iloc[-1])]
 
-    def filter_by_sector(self):
+    def m_filter_by_sector(self):
         if self.screener.valids:
             sectors = store.get_sectors()
             sectors.sort()
@@ -477,9 +453,13 @@ class Interface:
                         print(f'{index:>3}: {str(result):<5} {float(result):.2f} - {result.company.information["name"]}')
                         index += 1
         else:
+
             ui.print_message('No results were located')
 
-    def show_valids(self, top: int = -1) -> None:
+    def m_show_top(self):
+        self.m_show_valids(top=LISTTOP_SCREEN)
+
+    def m_show_valids(self, top: int = -1) -> None:
         if not self.table:
             ui.print_error('No table specified')
         elif not self.screen:
@@ -540,7 +520,7 @@ class Interface:
                 ui.print_message('Backtest Errors', post_creturn=1)
                 print(tabulate(errors, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
 
-    def show_chart(self):
+    def m_show_chart(self):
         ticker = ui.input_text("Enter ticker").upper()
         if store.is_ticker(ticker):
             self.chart = Chart(ticker, days=180)
@@ -557,7 +537,7 @@ class Interface:
         else:
             ui.print_error('Not a valid ticker')
 
-    def show_ticker_results(self):
+    def m_show_ticker_results(self):
         ticker = ui.input_text('Enter ticker').upper()
         if ticker:
             ui.print_message('Ticker Screen Results')
@@ -677,7 +657,7 @@ class Interface:
 
         print()
 
-    def build_result_files(self) -> None:
+    def m_build_result_files(self) -> None:
         screens = screener.get_screen_names()
         screens.sort()
 
@@ -692,9 +672,9 @@ class Interface:
                 self.table = table
                 self.run_screen(use_cache=False)
 
-    def analyze_result_files(self):
+    def m_analyze_result_files(self):
         if self.table:
-            summary, multiples = screener.analyze_results(self.table)
+            summary, multiples = screener.analyze_results(f'{self.table}-{self.screen}')
 
             # Top scores
             headers = ui.format_headers(summary.columns)
@@ -710,14 +690,14 @@ class Interface:
         else:
             ui.print_error('No exchange or index specified')
 
-    def roll_result_files(self) -> None:
+    def m_roll_result_files(self) -> None:
         success, message = cache.roll(screener.CACHE_TYPE)
         if success:
             ui.print_message(message)
         else:
             ui.print_error(message)
 
-    def delete_result_files(self):
+    def m_delete_result_files(self):
         select = ui.input_text('Delete files? (y/n)').lower()
         if select == 'y':
             success, message = cache.delete(screener.CACHE_TYPE)

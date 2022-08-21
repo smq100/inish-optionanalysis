@@ -278,13 +278,15 @@ class Screener(Threaded):
 
 
 def analyze_results(table: str) -> tuple[pd.DataFrame, pd.DataFrame]:
-    files = cache.get_filenames(CACHE_TYPE)
+    files = cache.get_filenames(table, CACHE_TYPE)
+    print(files)
     results: list[Result] = []
     summary: pd.DataFrame = pd.DataFrame()
     multiples: pd.DataFrame = pd.DataFrame()
 
     for item in files:
         parts = item.split('_')
+        print(parts)
         if len(parts) != 3:
             pass # Bad filename
         elif parts[0] != dt.datetime.now().strftime(ui.DATE_FORMAT):
@@ -302,8 +304,8 @@ def analyze_results(table: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     if results:
         results = sorted(results, reverse=True, key=lambda r: float(r))
 
-        drop = ['valid', 'price_last', 'backtest_success']
         summary = summarize_results(results)
+        drop = ['valid', 'price_last', 'backtest_success']
         summary.drop(drop, axis=1, inplace=True)
 
         # Results with successes across multiple screens
