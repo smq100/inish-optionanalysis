@@ -295,6 +295,24 @@ class Interface:
 
         return success
 
+    def m_analyze_result_files(self):
+        if self.table:
+            summary, multiples = screener.analyze_results(self.table)
+
+            # Top scores
+            headers = ui.format_headers(summary.columns)
+            top = LISTTOP_ANALYSIS if len(summary) > LISTTOP_ANALYSIS else len(summary)
+            ui.print_message(f'Top {top} of {len(summary)} Scores of {self.table.upper()}', post_creturn=1)
+            print(tabulate(summary.head(LISTTOP_ANALYSIS), headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
+
+            if not multiples.empty:
+                headers = ui.format_headers(multiples.columns)
+                ui.print_message('Successes Across Multiple Screens', post_creturn=1)
+                print(tabulate(multiples, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
+
+        else:
+            ui.print_error('No exchange or index specified')
+
     def run_backtest(self, prompt: bool = True, bullish: bool = True) -> bool:
         success = False
 
@@ -671,24 +689,6 @@ class Interface:
                 self.screen = screen
                 self.table = table
                 self.run_screen(use_cache=False)
-
-    def m_analyze_result_files(self):
-        if self.table:
-            summary, multiples = screener.analyze_results(self.table)
-
-            # Top scores
-            headers = ui.format_headers(summary.columns)
-            top = LISTTOP_ANALYSIS if len(summary) > LISTTOP_ANALYSIS else len(summary)
-            ui.print_message(f'Top {top} of {len(summary)} Scores of {self.table.upper()}', post_creturn=1)
-            print(tabulate(summary.head(LISTTOP_ANALYSIS), headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
-
-            if not multiples.empty:
-                headers = ui.format_headers(multiples.columns)
-                ui.print_message('Successes Across Multiple Screens', post_creturn=1)
-                print(tabulate(multiples, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
-
-        else:
-            ui.print_error('No exchange or index specified')
 
     def m_roll_result_files(self) -> None:
         success, message = cache.roll(screener.CACHE_TYPE)

@@ -279,20 +279,25 @@ class Screener(Threaded):
 
 def analyze_results(table: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     table = table.lower()
-    results: list[Result] = []
-    summary: pd.DataFrame = pd.DataFrame()
-    multiples: pd.DataFrame = pd.DataFrame()
 
     def filter(files, table):
         results = []
+        dates = []
         for file in files:
             parts = file.split('_')
+            date = parts[0]
             parts = parts[2].split('-')
             if parts[0] == table:
                 results += [file]
+                dates += [date]
+
+        # Only return results if all dates are equal (and exist)
+        if len(set(dates)) != 1:
+            results = []
 
         return results
 
+    results: list[Result] = []
     files = cache.get_filenames('', CACHE_TYPE)
     files = filter(files, table)
     for file in files:
@@ -310,6 +315,8 @@ def analyze_results(table: str) -> tuple[pd.DataFrame, pd.DataFrame]:
                     screen.run()
                     results += screen.valids
 
+    summary: pd.DataFrame = pd.DataFrame()
+    multiples: pd.DataFrame = pd.DataFrame()
     if results:
         results = sorted(results, reverse=True, key=lambda r: float(r)) # Sort results by score
         summary = summarize_results(results)
