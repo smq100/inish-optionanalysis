@@ -100,15 +100,15 @@ class Interface:
             {'menu': 'Run Backtest Screen', 'function': self.m_run_backtest, 'condition': 'self.backtest', 'value': 'self.backtest'},
             {'menu': 'Run Option Strategy', 'function': self.m_select_option_strategy, 'condition': '', 'value': ''},
             {'menu': 'Run Support & Resistance Analysis', 'function': self.m_select_support_resistance, 'condition': 'self.quick', 'value': '"quick"'},
-            {'menu': 'Run Coorelation', 'function': self.m_run_coorelate, 'condition': '', 'value': ''},
+            {'menu': 'Run Correlation', 'function': self.m_run_coorelate, 'condition': '', 'value': ''},
             {'menu': 'Show by Sector', 'function': self.m_filter_by_sector, 'condition': '', 'value': ''},
             {'menu': 'Show Top Results', 'function': self.m_show_top, 'condition': _condition, 'value': _value},
             {'menu': 'Show All Results', 'function': self.m_show_valids, 'condition': _condition, 'value': 'len(self.screener.valids)'},
             {'menu': 'Show Ticker Screen Results', 'function': self.m_show_ticker_results, 'condition': '', 'value': ''},
             {'menu': 'Show Chart', 'function': self.m_show_chart, 'condition': '', 'value': ''},
             {'menu': 'Build Result Files', 'function': self.m_build_result_files, 'condition': '', 'value': ''},
-            {'menu': 'Roll Result Files', 'function': self.m_roll_result_files, 'condition': '', 'value': ''},
-            {'menu': 'Delete Result Files', 'function': self.m_delete_result_files, 'condition': '', 'value': ''},
+            # {'menu': 'Roll Result Files', 'function': self.m_roll_result_files, 'condition': '', 'value': ''},
+            # {'menu': 'Delete Result Files', 'function': self.m_delete_result_files, 'condition': '', 'value': ''},
         ]
 
         if abort:
@@ -259,7 +259,7 @@ class Interface:
     def m_run_coorelate(self):
         self.run_coorelate()
         if len(self.results_corr) > 0:
-            self.show_coorelations()
+            self.show_correlations()
 
     def run_screen(self, use_cache: bool = True) -> bool:
         success = False
@@ -432,24 +432,21 @@ class Interface:
 
     def run_coorelate(self) -> None:
         if len(self.screener.valids) == 0:
-            ui.print_error('Please run screen before correlating')
+            ui.print_error('No valid results to coorelate')
         elif not store.is_list(self.table):
             ui.print_error('List is not valid')
         else:
             table = store.get_tickers(self.table)
             self.coorelate = Correlate(table)
 
-            self.task = threading.Thread(target=self.coorelate.compute_correlation)
+            self.task = threading.Thread(target=self.coorelate.compute)
             self.task.start()
 
             # Show thread progress. Blocking while thread is active
             self.show_progress_correlate()
 
-            self.results_corr = []
-            for valid in self.screener.valids:
-                ticker = valid.company.ticker
-                df = self.coorelate.get_ticker_coorelation(ticker)
-                self.results_corr += [(ticker, df.iloc[-1])]
+            valids = [result.company.ticker for result in self.screener.valids]
+            self.results_corr = self.coorelate.get_correlations(valids)
 
     def m_filter_by_sector(self):
         if self.screener.valids:
@@ -562,14 +559,14 @@ class Interface:
             for result in self.screener.results:
                 [print(r) for r in result.descriptions if ticker.ljust(6, ' ') == r[:6]]
 
-    def show_coorelations(self):
-        results = [f'{result[0]:<5}/ {result[1]["ticker"]:<5} {result[1]["value"]:.5f}' for result in self.results_corr if result[1]['value'] > COOR_CUTOFF]
+    def show_correlations(self):
+        results = [f'{result[0]:<5} <> {result[1]:<5} {result[2]:.5f}' for result in self.results_corr if result[2] > COOR_CUTOFF]
         if results:
-            ui.print_message('Coorelation Results')
+            ui.print_message('Correlation Results', post_creturn=1)
             for result in results[:LISTTOP_CORR]:
                 print(result)
         else:
-            ui.print_message('No significant coorelations found')
+            ui.print_message('No significant correlations found')
 
     def show_progress_screen(self) -> None:
         while not self.screener.task_state:

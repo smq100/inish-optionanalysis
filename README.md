@@ -11,7 +11,7 @@
     - Greeks calculations
 * Script-based security screening and scoring (example JSON scripts provided)
 * Technical Analysis with sophisticated support & resistance analysis
-* Coorelation analysis
+* Correlation analysis
 * RSI divergence screening
 * Local pricing history database support and data manager
 * E\*Trade API support (E\*Trade account required)

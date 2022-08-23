@@ -8,88 +8,99 @@ _logger = logger.get_logger()
 
 
 class Correlate(Threaded):
-    def __init__(self, tickers: list[str]):
+    def __init__(self, tickers: list[str], days: int = 365):
         if tickers is None:
             raise ValueError('Invalid list of tickers')
         if not tickers:
             raise ValueError('Invalid list of tickers')
 
         self.tickers = tickers
-        self.correlation: pd.DataFrame = None
+        self.correlation: pd.DataFrame = pd.DataFrame()
+        self.days: int = days
 
     @Threaded.threaded
-    def compute_correlation(self) -> None:
-        main_df = pd.DataFrame()
+    def compute(self) -> None:
+        self.correlation = pd.DataFrame()
+        combined_df = pd.DataFrame()
         self.task_total = len(self.tickers)
         self.task_state = 'None'
-        self.correlation = None
 
         for ticker in self.tickers:
             self.task_ticker = ticker
 
-            df = store.get_history(ticker, 365)
+            df = store.get_history(ticker, self.days)
             if not df.empty:
                 df.set_index('date', inplace=True)
                 df.rename(columns={'close': ticker}, inplace=True)
                 df.drop(['high', 'low', 'open', 'volume'], axis=1, inplace=True)
 
-                if main_df.empty:
-                    main_df = df
+                if combined_df.empty:
+                    combined_df = df
                 else:
-                    main_df = main_df.join(df, how='outer')
+                    combined_df = pd.concat([combined_df, df], axis=1)
 
             self.task_completed += 1
 
-        if not main_df.empty:
-            self.correlation = main_df.fillna(main_df.mean())
-            self.correlation = main_df.corr()
+        if not combined_df.empty:
+            self.correlation = combined_df.fillna(combined_df.mean())
+            self.correlation = combined_df.corr()
+
             self.task_object = self.correlation
             self.task_success += 1
 
         self.task_state = 'Done'
 
-    def get_sorted_coorelations(self, count: int, best: bool) -> list[tuple[str, str, float]]:
-        all = self.get_all_coorelations()
-        if all is not None:
-            all.sort(key=lambda sym: sym[2], reverse=best)
-
-        return all[:count]
-
-    def get_all_coorelations(self) -> list[tuple[str, str, float]]:
+    def get_correlations(self, sublist: list[str]=[]) -> list[tuple[str, str, float]]:
         all = []
-        if self.correlation is not None and not self.correlation.empty:
-            coors = (self.get_ticker_coorelation(sym) for sym in self.correlation)
-            for sym in coors:
-                for s in sym.iteritems():
+        df = pd.DataFrame()
+        if not self.correlation.empty:
+            if sublist:
+                coors_gen = (self.get_ticker_correlation(ticker) for ticker in self.correlation if ticker in sublist)
+            else:
+                coors_gen = (self.get_ticker_correlation(ticker) for ticker in self.correlation)
+
+            df2 = pd.DataFrame()
+            for df in coors_gen:
+                for s in df.itertuples():
                     # Arrange the symbol names so we can more easily remove duplicates
-                    if sym.name < tuple(s)[0]:
-                        t = (sym.name, tuple(s)[0], tuple(s)[1])
+                    if df.index.name < s[1]:
+                        t = (df.index.name, s[1], s[2])
                     else:
-                        t = (tuple(s)[0], sym.name, tuple(s)[1])
+                        t = (s[1], df.index.name, s[2])
 
                     if t not in all:
                         all += [t]
+                        new = pd.Series({'t1':t[0], 't2':t[1], 'v':t[2]}).to_frame().T
+                        df2 = pd.concat([df2, new])
+                        print(new)
 
         return all
 
-    def get_ticker_coorelation(self, ticker: str) -> pd.DataFrame:
-        series = pd.Series
+    def get_ticker_correlation(self, ticker: str) -> pd.DataFrame:
         ticker = ticker.upper()
+        df = pd.DataFrame()
 
-        if self.correlation is not None and not self.correlation.empty:
+        series = pd.Series(dtype=float)
+        if not self.correlation.empty:
             if ticker in self.correlation.index:
                 series = self.correlation[ticker].sort_values()
                 series.drop(ticker, inplace=True)  # Drop own entry (coor = 1.0)
             else:
                 _logger.warning(f'{__name__}: Invalid ticker {ticker}')
         else:
-            _logger.warning(f'{__name__}: No dataframe')
+            _logger.warning(f'{__name__}: Must first compute correlation')
 
-        return pd.DataFrame({'ticker': series.index, 'value': series.values})
+        df = pd.DataFrame({'ticker': series.index, 'value': series.values})
+        df.index.name = ticker
+
+        return df
 
 
 if __name__ == '__main__':
     symbols = store.get_tickers('DOW')
     c = Correlate(symbols)
-    df = c.compute_correlation()
-    print(df)
+    c.compute()
+    # print(c.correlation)
+    tickers = ['CRM', 'DIS']
+    all = c.get_correlations(tickers)
+    print(all)

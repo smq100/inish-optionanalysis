@@ -336,13 +336,13 @@ def get_company(ticker: str, live: bool = False, extra: bool = False) -> dict:
                 if not ratings:
                     ratings = [3.0]
 
-                results['name'] = company.get('shortName', '')[:95]
-                results['description'] = company.get('longBusinessSummary', '')[:4995]
-                results['url'] = company.get('website', '')[:195]
-                results['sector'] = company.get('sector', '')[:195]
-                results['industry'] = company.get('industry', '')[:195]
-                results['marketcap'] = company.get('marketCap', 0)
-                results['beta'] = company.get('beta', 0.0)
+                results['name'] = company.get('shortName', '')[:95] if results['shortName'] is not None else ''
+                results['description'] = company.get('longBusinessSummary', '')[:4995] if results['longBusinessSummary'] is not None else ''
+                results['url'] = company.get('website', '')[:195] if results['website'] is not None else ''
+                results['sector'] = company.get('sector', '')[:195] if results['sector'] is not None else ''
+                results['industry'] = company.get('industry', '')[:195] if results['industry'] is not None else ''
+                results['marketcap'] = company.get('marketCap', 0) if results['marketcap'] is not None else 0
+                results['beta'] = company.get('beta', 0.0) if results['beta'] is not None else 0.0
                 results['rating'] = sum(ratings) / float(len(ratings)) if len(ratings) > 0 else 3.0
 
                 # Non-database fields

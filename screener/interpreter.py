@@ -204,7 +204,7 @@ class Interpreter:
                 f'{self.criteria_technical}({self.criteria_length})/{self.criteria_start}/{self.criteria_series}/{criteriaf}@{self.criteria_factor:.2f} ' + \
                 f'w={self.weight:.1f}'
         else:
-            _logger.warning(f'{__name__}: No technical information for {self.company}')
+            _logger.info(f'{__name__}: No technical information for {self.company}')
 
             pf = 'Pass' if self.success else 'Fail'
             self.description = \
