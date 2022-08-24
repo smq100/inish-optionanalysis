@@ -50,31 +50,31 @@ class Correlate(Threaded):
 
         self.task_state = 'Done'
 
-    def get_correlations(self, sublist: list[str]=[]) -> list[tuple[str, str, float]]:
+    def get_correlations(self, sublist: list[str]=[]) -> pd.DataFrame:
+        all_df = pd.DataFrame()
         all = []
-        df = pd.DataFrame()
         if not self.correlation.empty:
             if sublist:
                 coors_gen = (self.get_ticker_correlation(ticker) for ticker in self.correlation if ticker in sublist)
             else:
                 coors_gen = (self.get_ticker_correlation(ticker) for ticker in self.correlation)
 
-            df2 = pd.DataFrame()
             for df in coors_gen:
                 for s in df.itertuples():
                     # Arrange the symbol names so we can more easily remove duplicates
                     if df.index.name < s[1]:
-                        t = (df.index.name, s[1], s[2])
+                        t = (df.index.name, s[1])
                     else:
-                        t = (s[1], df.index.name, s[2])
+                        t = (s[1], df.index.name)
 
                     if t not in all:
                         all += [t]
-                        new = pd.Series({'t1':t[0], 't2':t[1], 'v':t[2]}).to_frame().T
-                        df2 = pd.concat([df2, new])
-                        print(new)
+                        new = pd.Series({'ticker1':t[0], 'ticker2':t[1], 'correlation':s[2]}).to_frame().T
+                        all_df = pd.concat([all_df, new])
 
-        return all
+            all_df.reset_index(drop=True, inplace=True)
+
+        return all_df
 
     def get_ticker_correlation(self, ticker: str) -> pd.DataFrame:
         ticker = ticker.upper()

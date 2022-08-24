@@ -560,11 +560,12 @@ class Interface:
                 [print(r) for r in result.descriptions if ticker.ljust(6, ' ') == r[:6]]
 
     def show_correlations(self):
-        results = [f'{result[0]:<5} <> {result[1]:<5} {result[2]:.5f}' for result in self.results_corr if result[2] > COOR_CUTOFF]
-        if results:
+        results = self.results_corr[self.results_corr['correlation'] > COOR_CUTOFF]
+        if not results.empty:
+            results.reset_index(drop=True, inplace=True)
+            headers = ui.format_headers(results.columns)
             ui.print_message('Correlation Results', post_creturn=1)
-            for result in results[:LISTTOP_CORR]:
-                print(result)
+            print(tabulate(results.head(LISTTOP_CORR), headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.4f'))
         else:
             ui.print_message('No significant correlations found')
 
