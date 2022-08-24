@@ -16,6 +16,12 @@ PROGRESS_SLEEP = 0.20
 
 TERMINAL_SIZE = os.get_terminal_size()
 
+# Globals for progress bar
+_completed = 0
+_position = 0
+_forward = True
+_start = 0.0
+
 
 def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int, prompt: str = 'Select operation') -> int:
     print(f'\n{header}')
@@ -78,11 +84,11 @@ def print_tickers(tickers: list[str], group: int = 15) -> None:
 
 
 def erase_line() -> None:
-    global position, forward
+    global _position, _forward
 
+    _position = 0
+    _forward = True
     erase = TERMINAL_SIZE.columns * ' '
-    position = 0
-    forward = True
     print(f'{erase}', end='\r')
 
 
@@ -224,31 +230,25 @@ def input_table(exchange: bool = False, index: bool = False, ticker: bool = Fals
     return table
 
 
-completed = 0
-position = 0
-forward = True
-start = 0.0
-
-
 def progress_bar(iteration, total: int, prefix: str = 'Working', suffix: str = '', ticker: str = '',
-                 length: int = 50, fill='█', reset: bool = False, success: int = -1, tasks: int = 0) -> None:
+                 length: int = 50, fill='█', success: int = -1, tasks: int = 0, reset: bool = False) -> None:
 
-    global completed, position, forward, start
+    global _completed, _position, _forward, _start
 
     if reset:
-        completed = 0
-        position = 0
-        forward = True
-        start = time.perf_counter()
-        print('\r')
+        _completed = 0
+        _position = 0
+        _forward = True
+        _start = time.perf_counter()
+        erase_line()
 
     if total > 0:
         filled = int(length * iteration // total)
         bar = (fill * filled) + ('-' * (length - filled))
 
-        elapsed = time.perf_counter() - start
-        if completed > 5:
-            per = elapsed / completed
+        elapsed = time.perf_counter() - _start
+        if _completed > 5:
+            per = elapsed / _completed
             remaining = per * (total - iteration)
             minutes, seconds = divmod(remaining, 60)
             hours, minutes = divmod(minutes, 60)
@@ -257,35 +257,32 @@ def progress_bar(iteration, total: int, prefix: str = 'Working', suffix: str = '
             minutes = 0.0
             seconds = 0.0
 
-        if iteration == completed:
-            pass  # Nothing new to draw
+        if iteration == _completed:
+            pass # Nothing new to show
         elif success < 0:
-            print(f'{prefix} |{bar}| {iteration}/{total} {suffix} {ticker}     ', end='\r')
+            print(f'{prefix:<13} |{bar}| {iteration}/{total} {suffix} {ticker}     ', end='\r')
         elif tasks > 0:
-            print(f'{prefix} |{bar}| {success}/{iteration}/{total} [{tasks}] {ticker:<5} {hours:02.0f}:{minutes:02.0f}:{seconds:02.0f} {suffix}     ', end='\r')
+            print(f'{prefix:<13} |{bar}| {success}/{iteration}/{total} [{tasks}] {ticker:<5} {hours:02.0f}:{minutes:02.0f}:{seconds:02.0f} {suffix}     ', end='\r')
         else:
-            print(f'{prefix} |{bar}| {success}/{iteration}/{total} {ticker:<5} {hours:02.0f}:{minutes:02.0f}:{seconds:02.0f} {suffix}     ', end='\r')
+            print(f'{prefix:<13} |{bar}| {success}/{iteration}/{total} {ticker:<5} {hours:02.0f}:{minutes:02.0f}:{seconds:02.0f} {suffix}     ', end='\r')
 
-        completed = iteration
-
-        if completed == total:
-            print()
+        _completed = iteration
 
     else:  # Use oscillating marker when the total is not known
-        if forward:
-            if position < length:
-                position += 1
+        if _forward:
+            if _position < length:
+                _position += 1
             else:
-                position -= 1
-                forward = False
-        elif position > 1:
-            position -= 1
+                _position -= 1
+                _forward = False
+        elif _position > 1:
+            _position -= 1
         else:
-            position = 2
-            forward = True
+            _position = 2
+            _forward = True
 
-        front = position - 1
-        back = length - position
+        front = _position - 1
+        back = length - _position
         bar = ('-' * front) + fill + ('-' * back)
 
         print(f'{prefix} |{bar}| {suffix}             ', end='\r')

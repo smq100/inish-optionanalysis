@@ -101,11 +101,11 @@ class Interface:
             {'menu': 'Run Option Strategy', 'function': self.m_select_option_strategy, 'condition': '', 'value': ''},
             {'menu': 'Run Support & Resistance Analysis', 'function': self.m_select_support_resistance, 'condition': 'self.quick', 'value': '"quick"'},
             {'menu': 'Run Correlation', 'function': self.m_run_coorelate, 'condition': '', 'value': ''},
+            {'menu': 'Show Chart', 'function': self.m_show_chart, 'condition': '', 'value': ''},
             {'menu': 'Show by Sector', 'function': self.m_filter_by_sector, 'condition': '', 'value': ''},
             {'menu': 'Show Top Results', 'function': self.m_show_top, 'condition': _condition, 'value': _value},
             {'menu': 'Show All Results', 'function': self.m_show_valids, 'condition': _condition, 'value': 'len(self.screener.valids)'},
             {'menu': 'Show Ticker Screen Results', 'function': self.m_show_ticker_results, 'condition': '', 'value': ''},
-            {'menu': 'Show Chart', 'function': self.m_show_chart, 'condition': '', 'value': ''},
             {'menu': 'Build Result Files', 'function': self.m_build_result_files, 'condition': '', 'value': ''},
             # {'menu': 'Roll Result Files', 'function': self.m_roll_result_files, 'condition': '', 'value': ''},
             # {'menu': 'Delete Result Files', 'function': self.m_delete_result_files, 'condition': '', 'value': ''},
@@ -176,18 +176,18 @@ class Interface:
         else:
             ui.print_message('No screener files found')
 
-    def m_run_screen(self):
+    def m_run_screen(self) -> None:
         self.backtest = 0
         if self.run_screen():
             if len(self.screener.valids) > 0:
                 self.m_show_valids(top=LISTTOP_SCREEN)
 
-    def m_run_backtest(self):
+    def m_run_backtest(self) -> None:
         if self.run_backtest():
             if len(self.screener.valids) > 0:
                 self.show_backtest(top=LISTTOP_SCREEN)
 
-    def m_refresh_screen(self):
+    def m_refresh_screen(self) -> None:
         self.refresh_screen()
         if len(self.screener.valids) > 0:
             self.m_show_valids(top=LISTTOP_SCREEN)
@@ -256,10 +256,28 @@ class Interface:
         if tickers:
             self.run_support_resistance(tickers)
 
-    def m_run_coorelate(self):
+    def m_run_coorelate(self) -> None:
         self.run_coorelate()
-        if len(self.results_corr) > 0:
-            self.show_correlations()
+        # if len(self.results_corr) > 0:
+        #     self.show_correlations()
+
+    def m_analyze_result_files(self) -> None:
+        if self.table:
+            summary, multiples = screener.analyze_results(self.table)
+
+            # Top scores
+            headers = ui.format_headers(summary.columns)
+            top = LISTTOP_ANALYSIS if len(summary) > LISTTOP_ANALYSIS else len(summary)
+            ui.print_message(f'Top {top} of {len(summary)} Scores of {self.table.upper()}', post_creturn=1)
+            print(tabulate(summary.head(LISTTOP_ANALYSIS), headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
+
+            if not multiples.empty:
+                headers = ui.format_headers(multiples.columns)
+                ui.print_message('Successes Across Multiple Screens', post_creturn=1)
+                print(tabulate(multiples, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
+
+        else:
+            ui.print_error('No exchange or index specified')
 
     def run_screen(self, use_cache: bool = True) -> bool:
         success = False
@@ -277,6 +295,7 @@ class Interface:
                 cache = False if self.backtest > 0 else use_cache
                 save = (self.backtest == 0)
 
+                # Start the working thread
                 self.task = threading.Thread(target=self.screener.run, kwargs={'use_cache': cache, 'save_results': save})
                 self.task.start()
 
@@ -294,24 +313,6 @@ class Interface:
                     success = True
 
         return success
-
-    def m_analyze_result_files(self):
-        if self.table:
-            summary, multiples = screener.analyze_results(self.table)
-
-            # Top scores
-            headers = ui.format_headers(summary.columns)
-            top = LISTTOP_ANALYSIS if len(summary) > LISTTOP_ANALYSIS else len(summary)
-            ui.print_message(f'Top {top} of {len(summary)} Scores of {self.table.upper()}', post_creturn=1)
-            print(tabulate(summary.head(LISTTOP_ANALYSIS), headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
-
-            if not multiples.empty:
-                headers = ui.format_headers(multiples.columns)
-                ui.print_message('Successes Across Multiple Screens', post_creturn=1)
-                print(tabulate(multiples, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
-
-        else:
-            ui.print_error('No exchange or index specified')
 
     def run_backtest(self, prompt: bool = True, bullish: bool = True) -> bool:
         success = False
@@ -343,7 +344,7 @@ class Interface:
 
         return success
 
-    def refresh_screen(self):
+    def refresh_screen(self) -> None:
         self.run_screen(False)
 
     def run_strategies(self, strategy: str, product: str, direction: str) -> None:
@@ -371,8 +372,9 @@ class Interface:
 
         if len(strategies) > 0:
             sl.reset()
-            self.task = threading.Thread(target=sl.analyze, args=[strategies])
 
+            # Start the working thread
+            self.task = threading.Thread(target=sl.analyze, args=[strategies])
             tic = time.perf_counter()
             self.task.start()
 
@@ -417,6 +419,7 @@ class Interface:
                     extmethods = ['NAIVE', 'NAIVECONSEC', 'NUMDIFF']
                     self.trend = SupportResistance(ticker, methods=methods, extmethods=extmethods, days=self.days)
 
+                # Start the working thread
                 self.task = threading.Thread(target=self.trend.calculate)
                 self.task.start()
 
@@ -439,16 +442,19 @@ class Interface:
             table = store.get_tickers(self.table)
             self.coorelate = Correlate(table)
 
+            # Start the working thread
             self.task = threading.Thread(target=self.coorelate.compute)
             self.task.start()
 
             # Show thread progress. Blocking while thread is active
             self.show_progress_correlate()
 
-            valids = [result.company.ticker for result in self.screener.valids]
-            self.results_corr = self.coorelate.get_correlations(valids)
+            ui.print_message(f'Coorelation completed in {self.coorelate.task_time:.1f} seconds')
 
-    def m_filter_by_sector(self):
+            # valids = [result.company.ticker for result in self.screener.valids]
+            # self.results_corr = self.coorelate.get_correlations(valids)
+
+    def m_filter_by_sector(self) -> None:
         if self.screener.valids:
             sectors = store.get_sectors()
             sectors.sort()
@@ -471,7 +477,7 @@ class Interface:
 
             ui.print_message('No results were located')
 
-    def m_show_top(self):
+    def m_show_top(self) -> None:
         self.m_show_valids(top=LISTTOP_SCREEN)
 
     def m_show_valids(self, top: int = -1) -> None:
@@ -499,7 +505,7 @@ class Interface:
 
         print()
 
-    def show_backtest(self, top: int = -1):
+    def show_backtest(self, top: int = -1) -> None:
         if not self.table:
             ui.print_error('No table specified')
         elif not self.screen:
@@ -535,11 +541,12 @@ class Interface:
                 ui.print_message('Backtest Errors', post_creturn=1)
                 print(tabulate(errors, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
 
-    def m_show_chart(self):
+    def m_show_chart(self) -> None:
         ticker = ui.input_text("Enter ticker").upper()
         if store.is_ticker(ticker):
             self.chart = Chart(ticker, days=180)
 
+            # Start the working thread
             self.task = threading.Thread(target=self.chart.fetch_history)
             self.task.start()
 
@@ -552,14 +559,14 @@ class Interface:
         else:
             ui.print_error('Not a valid ticker')
 
-    def m_show_ticker_results(self):
+    def m_show_ticker_results(self) -> None:
         ticker = ui.input_text('Enter ticker').upper()
         if ticker:
             ui.print_message('Ticker Screen Results')
             for result in self.screener.results:
                 [print(r) for r in result.descriptions if ticker.ljust(6, ' ') == r[:6]]
 
-    def show_correlations(self):
+    def show_correlations(self) -> None:
         results = self.results_corr[self.results_corr['correlation'] > COOR_CUTOFF]
         if not results.empty:
             results.reset_index(drop=True, inplace=True)
@@ -641,12 +648,12 @@ class Interface:
 
         print()
 
-    def show_progress_correlate(self):
+    def show_progress_correlate(self) -> None:
         while not self.coorelate.task_state:
             pass
 
         if self.coorelate.task_state == 'None':
-            prefix = 'Correlating'
+            prefix = 'Fetching'
             total = self.coorelate.task_total
             ui.progress_bar(self.coorelate.task_completed, self.coorelate.task_total, success=self.coorelate.task_success, prefix=prefix, reset=True)
 
@@ -656,6 +663,13 @@ class Interface:
                 success = completed
                 ticker = self.coorelate.task_ticker
                 ui.progress_bar(completed, total, prefix=prefix, ticker=ticker, success=success)
+
+            prefix = 'Analyzing'
+            total = 0
+            ui.erase_line()
+            while self.task.is_alive() and self.coorelate.task_state == 'Analyzing':
+                time.sleep(ui.PROGRESS_SLEEP)
+                ui.progress_bar(completed, total, prefix=prefix)
 
         print()
 
@@ -695,7 +709,7 @@ class Interface:
         else:
             ui.print_error(message)
 
-    def m_delete_result_files(self):
+    def m_delete_result_files(self) -> None:
         select = ui.input_text('Delete files? (y/n)').lower()
         if select == 'y':
             success, message = cache.delete(screener.CACHE_TYPE)

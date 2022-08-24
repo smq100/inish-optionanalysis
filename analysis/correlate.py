@@ -42,11 +42,10 @@ class Correlate(Threaded):
             self.task_completed += 1
 
         if not combined_df.empty:
+            self.task_state = 'Analyzing'
             self.correlation = combined_df.fillna(combined_df.mean())
             self.correlation = combined_df.corr()
-
             self.task_object = self.correlation
-            self.task_success += 1
 
         self.task_state = 'Done'
 
@@ -97,10 +96,17 @@ class Correlate(Threaded):
 
 
 if __name__ == '__main__':
-    symbols = store.get_tickers('DOW')
+    import time
+
+    symbols = store.get_tickers('NYSE')
     c = Correlate(symbols)
+
+    tic = time.perf_counter()
     c.compute()
-    # print(c.correlation)
-    tickers = ['CRM', 'DIS']
-    all = c.get_correlations(tickers)
-    print(all)
+    toc = time.perf_counter()
+    print(f'{toc-tic}:.2f')
+
+    print(c.correlation)
+    # tickers = ['AR', 'EQT', 'OXY', 'HRB', 'MPC', 'RRC', 'VLO', 'XOM', 'PBR', 'EQNR',]
+    # all = c.get_correlations(tickers)
+    # print(all)
