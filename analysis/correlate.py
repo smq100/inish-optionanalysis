@@ -23,7 +23,7 @@ class Correlate(Threaded):
         self.correlation = pd.DataFrame()
         combined_df = pd.DataFrame()
         self.task_total = len(self.tickers)
-        self.task_state = 'None'
+        self.task_state = 'Fetching'
 
         for ticker in self.tickers:
             self.task_ticker = ticker
@@ -42,23 +42,28 @@ class Correlate(Threaded):
             self.task_completed += 1
 
         if not combined_df.empty:
-            self.task_state = 'Analyzing'
+            self.task_state = 'Correlating'
             self.correlation = combined_df.fillna(combined_df.mean())
             self.correlation = combined_df.corr()
             self.task_object = self.correlation
 
         self.task_state = 'Done'
 
+    @Threaded.threaded
     def get_correlations(self, sublist: list[str]=[]) -> pd.DataFrame:
         all_df = pd.DataFrame()
         all = []
         if not self.correlation.empty:
             if sublist:
-                coors_gen = (self.get_ticker_correlation(ticker) for ticker in self.correlation if ticker in sublist)
+                coors_gen = [self.get_ticker_correlation(ticker) for ticker in self.correlation if ticker in sublist]
             else:
-                coors_gen = (self.get_ticker_correlation(ticker) for ticker in self.correlation)
+                coors_gen = [self.get_ticker_correlation(ticker) for ticker in self.correlation]
+
+            self.task_total = len(coors_gen)
+            self.task_state = 'Filtering'
 
             for df in coors_gen:
+                self.task_ticker = df.index.name
                 for s in df.itertuples():
                     # Arrange the symbol names so we can more easily remove duplicates
                     if df.index.name < s[1]:
@@ -66,10 +71,13 @@ class Correlate(Threaded):
                     else:
                         t = (s[1], df.index.name)
 
+                    # Add if not already in list
                     if t not in all:
                         all += [t]
                         new = pd.Series({'ticker1':t[0], 'ticker2':t[1], 'correlation':s[2]}).to_frame().T
                         all_df = pd.concat([all_df, new])
+
+                self.task_completed += 1
 
             all_df.reset_index(drop=True, inplace=True)
 
