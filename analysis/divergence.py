@@ -21,7 +21,7 @@ CACHE_TYPE = 'div'
 class Divergence(Threaded):
     def __init__(self, tickers: list[str], name: str, window: int = 15, days: int = 100):
         self.tickers: list[str] = tickers
-        self.name: str = name
+        self.cache_name: str = name
         self.window: int = window
         self.days: int = days
         self.results: list[pd.DataFrame] = []
@@ -34,17 +34,17 @@ class Divergence(Threaded):
         self.cache_available: bool = False
         self.cache_used: bool = False
         self.scaled: bool = True
-        self.date: str = dt.datetime.now().strftime(ui.DATE_FORMAT)
-        self.today_only: bool = False
+        self.cache_date: str = dt.datetime.now().strftime(ui.DATE_FORMAT)
+        self.cache_today_only: bool = cache.CACHE_TODAY_ONLY
 
         for ticker in tickers:
             if not store.is_ticker(ticker):
                 raise ValueError(f'{__name__}: Not a valid ticker: {ticker}')
 
-        self.cache_available = cache.exists(name, CACHE_TYPE, today_only=self.today_only)
+        self.cache_available = cache.exists(name, CACHE_TYPE, today_only=self.cache_today_only)
         if self.cache_available:
-            self.results, self.date = cache.load(name, CACHE_TYPE, today_only=self.today_only)
-            _logger.info(f'{__name__}: Cached results from {self.date} available')
+            self.results, self.cache_date = cache.load(name, CACHE_TYPE, today_only=self.cache_today_only)
+            _logger.info(f'{__name__}: Cached results from {self.cache_date} available')
 
     @Threaded.threaded
     def calculate(self, use_cache: bool = True, scaled: bool = True) -> None:
@@ -81,7 +81,8 @@ class Divergence(Threaded):
                 self._run(self.tickers)
 
             if use_cache:
-                cache.dump(self.results, self.name, CACHE_TYPE)
+                cache.dump(self.results, self.cache_name, CACHE_TYPE)
+                _logger.info(f'{__name__}: Results from {self.cache_name} saved to cache')
 
         self.task_state = 'Done'
 

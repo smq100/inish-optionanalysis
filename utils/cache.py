@@ -10,6 +10,7 @@ _logger = logger.get_logger()
 
 CACHE_BASEPATH = './cache'
 CACHE_SUFFIX = 'pickle'
+CACHE_TODAY_ONLY = False
 
 
 def exists(name: str, type: str, today_only: str = True) -> bool:
@@ -33,6 +34,26 @@ def exists(name: str, type: str, today_only: str = True) -> bool:
         filenames = names
 
     return bool(filenames)
+
+
+def dump(object: object, name: str, type: str) -> str:
+    if not name:
+        raise AssertionError('Must include \'name\'')
+    if not type:
+        raise AssertionError('Must include \'type\'')
+
+    name = name.lower()
+    type = type.lower()
+    filename = build_filename(name, type)
+    if filename:
+        try:
+            with open(filename, 'wb') as f:
+                pickle.dump(object, f, protocol=pickle.HIGHEST_PROTOCOL)
+        except Exception as e:
+            filename = ''
+            _logger.error(f'{__name__}: Exception for pickle dump: {str(e)}')
+
+    return filename
 
 
 def load(name: str, type: str, today_only: str = True) -> tuple[object, str]:
@@ -71,26 +92,6 @@ def load(name: str, type: str, today_only: str = True) -> tuple[object, str]:
             _logger.error(f'{__name__}: Exception for pickle load: {str(e)}')
 
     return object, date
-
-
-def dump(object: object, name: str, type: str) -> str:
-    if not name:
-        raise AssertionError('Must include \'name\'')
-    if not type:
-        raise AssertionError('Must include \'type\'')
-
-    name = name.lower()
-    type = type.lower()
-    filename = build_filename(name, type)
-    if filename:
-        try:
-            with open(filename, 'wb') as f:
-                pickle.dump(object, f, protocol=pickle.HIGHEST_PROTOCOL)
-        except Exception as e:
-            filename = ''
-            _logger.error(f'{__name__}: Exception for pickle dump: {str(e)}')
-
-    return filename
 
 
 def roll(type: str) -> tuple[bool, str]:

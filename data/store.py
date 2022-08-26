@@ -283,7 +283,7 @@ def get_history(ticker: str, days: int = -1, end: int = 0, live: bool = False, i
         elif history.empty:
             _logger.info(f'{__name__}: Unable to fetch live price history for {ticker} from {d.ACTIVE_HISTORYDATASOURCE}')
         else:
-            _logger.info(f'{__name__}: Fetched {len(history)} days of live price history for {ticker}')
+            _logger.debug(f'{__name__}: Fetched {len(history)} days of live price history for {ticker}')
 
         if end > 0:
             _logger.info(f'{__name__}: \'end\' value ignored for live queries')
@@ -316,7 +316,7 @@ def get_history(ticker: str, days: int = -1, end: int = 0, live: bool = False, i
                         if end > 0:
                             history = history[:-end]
 
-                        _logger.info(f'{__name__}: Fetched {len(history)} days of price history for {ticker} from {d.ACTIVE_DB} ({end} days prior)')
+                        _logger.debug(f'{__name__}: Fetched {len(history)} days of price history for {ticker} from {d.ACTIVE_DB} ({end} days prior)')
             else:
                 _logger.info(f'{__name__}: No history found for {ticker}')
 

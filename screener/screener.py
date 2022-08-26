@@ -82,7 +82,6 @@ class Screener(Threaded):
         self.script_path: str = f'{SCREEN_BASEPATH}/{screen}.{SCREEN_SUFFIX}'
         self.init_path = f'{SCREEN_BASEPATH}/{SCREEN_INIT_NAME}.{SCREEN_SUFFIX}'
         self.cache_name: str = ''
-        self.cache_available = False
         self.cache_used = False
         self.scripts: list[dict] = []
         self.companies: list[Company] = []
@@ -91,8 +90,9 @@ class Screener(Threaded):
         self.errors: list[Result] = []
         self.summary: pd.DataFrame = pd.DataFrame()
         self.concurrency: int = 10
-        self.date: str = dt.datetime.now().strftime(ui.DATE_FORMAT)
-        self.today_only: bool = False
+        self.cache_available = False
+        self.cache_date: str = dt.datetime.now().strftime(ui.DATE_FORMAT)
+        self.cache_today_only: bool = cache.CACHE_TODAY_ONLY
 
         if not self._load_screen():
             raise ValueError(f'Script not found or invalid format: {screen}')
@@ -100,10 +100,10 @@ class Screener(Threaded):
             raise AssertionError('Error opening screen')
 
         self.cache_name = f'{table.lower()}-{screen.lower()}'
-        self.cache_available = cache.exists(self.cache_name, CACHE_TYPE, today_only=self.today_only)
+        self.cache_available = cache.exists(self.cache_name, CACHE_TYPE, today_only=self.cache_today_only)
         if self.cache_available:
-            self.results, self.date = cache.load(self.cache_name, CACHE_TYPE, today_only=self.today_only)
-            _logger.info(f'{__name__}: Cached results from {self.date} available')
+            self.results, self.cache_date = cache.load(self.cache_name, CACHE_TYPE, today_only=self.cache_today_only)
+            _logger.info(f'{__name__}: Cached results from {self.cache_date} available')
 
     def __repr__(self):
         return f'<Screener ({self.table} - {self.screen})>'
@@ -167,6 +167,7 @@ class Screener(Threaded):
 
             if save_results:
                 cache.dump(self.results, self.cache_name, CACHE_TYPE)
+                _logger.info(f'{__name__}: Results from {self.cache_name} saved to cache')
 
     def get_score(self, ticker: str) -> float:
         ticker = ticker.upper()

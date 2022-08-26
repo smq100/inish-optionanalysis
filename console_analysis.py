@@ -1,5 +1,4 @@
 from audioop import mul
-import os
 import time
 import math
 import threading
@@ -16,7 +15,7 @@ import strategies as s
 import strategies.strategy_list as sl
 import data as d
 import screener.screener as screener
-from screener.screener import Screener, Result
+from screener.screener import Screener
 from strategies.strategy import Strategy
 from analysis.support_resistance import SupportResistance
 from analysis.correlate import Correlate
@@ -28,7 +27,6 @@ from utils import math as m
 
 logger.get_logger(logging.WARNING, logfile='')
 
-COOR_CUTOFF = 0.85
 LISTTOP_SCREEN = 10
 LISTTOP_ANALYSIS = 25
 LISTTOP_TREND = 5
@@ -47,10 +45,9 @@ class Interface:
     quick: bool
     exit: bool
     days: int
-    results_corr: list[tuple[str, pd.Series]]
     screener: Screener | None
-    trend: SupportResistance
-    correlate: Correlate
+    trend: SupportResistance | None
+    correlate: Correlate | None
     chart: Chart
     strategy: Strategy
     task: threading.Thread
@@ -63,8 +60,8 @@ class Interface:
         self.exit = exit
         self.days = 1000
         self.backtest = 0
-        self.results_corr = []
         self.screener = None
+        self.correlate = None
 
         abort = False
 
@@ -100,7 +97,7 @@ class Interface:
             {'menu': 'Run Backtest Screen', 'function': self.m_run_backtest, 'condition': 'self.backtest', 'value': 'self.backtest'},
             {'menu': 'Run Option Strategy', 'function': self.m_select_option_strategy, 'condition': '', 'value': ''},
             {'menu': 'Run Support & Resistance Analysis', 'function': self.m_select_support_resistance, 'condition': 'self.quick', 'value': '"quick"'},
-            {'menu': 'Run Correlation', 'function': self.m_run_coorelate, 'condition': '', 'value': ''},
+            {'menu': 'Run Correlation', 'function': self.m_run_correlate, 'condition': '', 'value': ''},
             {'menu': 'Show Chart', 'function': self.m_show_chart, 'condition': '', 'value': ''},
             {'menu': 'Show by Sector', 'function': self.m_filter_by_sector, 'condition': '', 'value': ''},
             {'menu': 'Show Top Results', 'function': self.m_show_top, 'condition': _condition, 'value': _value},
@@ -256,9 +253,9 @@ class Interface:
         if tickers:
             self.run_support_resistance(tickers)
 
-    def m_run_coorelate(self) -> None:
-        self.run_coorelate()
-        if len(self.results_corr) > 0:
+    def m_run_correlate(self) -> None:
+        self.run_correlate()
+        if self.correlate is not None and len(self.correlate.results) > 0:
             self.show_correlations()
 
     def m_analyze_result_files(self) -> None:
@@ -306,7 +303,7 @@ class Interface:
                     self.screener.valids = self.screener.valids
 
                     if self.screener.cache_used:
-                        ui.print_message(f'{len(self.screener.valids)} symbols identified. Cached results from {self.screener.date} used')
+                        ui.print_message(f'{len(self.screener.valids)} symbols identified. Cached results from {self.screener.cache_date} used')
                     else:
                         ui.print_message(f'{len(self.screener.valids)} symbols identified in {self.screener.task_time:.1f} seconds', pre_creturn=1)
 
@@ -433,33 +430,39 @@ class Interface:
         else:
             ui.print_error('No valid results to analyze')
 
-    def run_coorelate(self) -> None:
+    def run_correlate(self) -> None:
+        self.correlate = None
+
         if len(self.screener.valids) == 0:
-            ui.print_error('No valid results to coorelate')
+            ui.print_error('No valid results to correlate')
         elif not store.is_list(self.table):
             ui.print_error('List is not valid')
         else:
             table = store.get_tickers(self.table)
-            self.coorelate = Correlate(table)
+            self.correlate = Correlate(table, self.table)
 
-            ### Start the fetching/correlating thread
-            self.task = threading.Thread(target=self.coorelate.compute)
-            self.task.start()
+            if self.correlate.cache_available:
+                self.correlate.compute()
+                ui.print_message(f'Correlation completed using cached results from {self.correlate.cache_date}', post_creturn=1)
+            else:
+                # Start the fetching/correlating thread
+                self.task = threading.Thread(target=self.correlate.compute)
+                self.task.start()
 
-            # Show thread progress. Blocking while thread is active
-            self.show_progress_correlate()
+                # Show thread progress. Blocking while thread is active
+                self.show_progress_correlate()
 
-            ui.print_message(f'Coorelation completed in {self.coorelate.task_time:.1f} seconds', post_creturn=1)
+                ui.print_message(f'Correlation completed in {self.correlate.task_time:.1f} seconds', post_creturn=1)
 
-            ### Start the filtering thread
+            # Start the filtering thread
             valids = [result.company.ticker for result in self.screener.valids]
-            self.task = threading.Thread(target=self.coorelate.get_correlations, kwargs={'sublist': valids})
+            self.task = threading.Thread(target=self.correlate.filter, kwargs={'sublist': valids})
             self.task.start()
 
             # Show thread progress. Blocking while thread is active
             self.show_progress_correlate()
 
-            ui.print_message(f'Filtering completed in {self.coorelate.task_time:.1f} seconds')
+            ui.print_message(f'Filtering completed in {self.correlate.task_time:.1f} seconds')
 
     def m_filter_by_sector(self) -> None:
         if self.screener.valids:
@@ -574,7 +577,7 @@ class Interface:
                 [print(r) for r in result.descriptions if ticker.ljust(6, ' ') == r[:6]]
 
     def show_correlations(self) -> None:
-        results = self.results_corr[self.results_corr['correlation'] > COOR_CUTOFF]
+        results = self.correlate.filtered
         if not results.empty:
             results.reset_index(drop=True, inplace=True)
             headers = ui.format_headers(results.columns)
@@ -656,36 +659,37 @@ class Interface:
         print()
 
     def show_progress_correlate(self) -> None:
-        while not self.coorelate.task_state:
+        while not self.correlate.task_state:
             pass
 
-        if self.coorelate.task_state == 'Fetching':
+        if self.correlate.task_state == 'Fetching':
             prefix = 'Fetching Data'
-            total = self.coorelate.task_total
-            ui.progress_bar(self.coorelate.task_completed, self.coorelate.task_total, success=self.coorelate.task_success, prefix=prefix, reset=True)
+            total = self.correlate.task_total
+            ui.progress_bar(self.correlate.task_completed, self.correlate.task_total, success=self.correlate.task_success, prefix=prefix, reset=True)
 
-            while self.task.is_alive() and self.coorelate.task_state == 'Fetching':
+            while self.task.is_alive() and self.correlate.task_state == 'Fetching':
                 time.sleep(ui.PROGRESS_SLEEP)
-                completed = self.coorelate.task_completed
-                ticker = self.coorelate.task_ticker
+                completed = self.correlate.task_completed
+                ticker = self.correlate.task_ticker
                 ui.progress_bar(completed, total, prefix=prefix, ticker=ticker)
 
-        if self.coorelate.task_state == 'Correlating':
+        if self.correlate.task_state == 'Correlating':
             prefix = 'Correlating'
             total = 0
             ui.erase_line()
-            while self.task.is_alive() and self.coorelate.task_state == 'Correlating':
+            while self.task.is_alive() and self.correlate.task_state == 'Correlating':
                 time.sleep(ui.PROGRESS_SLEEP)
                 ui.progress_bar(completed, total, prefix=prefix)
             print()
 
-        if self.coorelate.task_state == 'Filtering':
+        if self.correlate.task_state == 'Filtering':
             prefix = 'Filtering'
-            total = self.coorelate.task_total
+            total = self.correlate.task_total
             ui.erase_line()
-            while self.task.is_alive() and self.coorelate.task_state == 'Filtering':
-                completed = self.coorelate.task_completed
-                ticker = self.coorelate.task_ticker
+            while self.task.is_alive() and self.correlate.task_state == 'Filtering':
+                time.sleep(ui.PROGRESS_SLEEP)
+                completed = self.correlate.task_completed
+                ticker = self.correlate.task_ticker
                 ui.progress_bar(completed, total, prefix=prefix, ticker=ticker)
             print()
 

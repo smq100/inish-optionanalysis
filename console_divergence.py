@@ -117,7 +117,7 @@ class Interface:
 
                 if self.divergence.task_state == 'Done':
                     if self.divergence.cache_used:
-                        ui.print_message(f'{len(self.divergence.results)} symbols identified. Cached results from {self.divergence.date} used')
+                        ui.print_message(f'{len(self.divergence.results)} symbols identified. Cached results from {self.divergence.cache_date} used')
                     else:
                         ui.print_message(f'{len(self.divergence.results)} symbols identified in {self.divergence.task_time:.1f} seconds', pre_creturn=1)
             else:
