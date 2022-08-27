@@ -104,6 +104,7 @@ class Correlate(Threaded):
 
                 self.task_completed += 1
 
+            all_df = all_df.sort_values(['correlation'], ascending=False)
             self.filtered = all_df.reset_index(drop=True)
 
         self.task_state = 'Done'
@@ -115,8 +116,8 @@ class Correlate(Threaded):
         series = pd.Series(dtype=float)
         if not self.results.empty:
             if ticker in self.results.index:
-                series = self.results[ticker].sort_values()
-                series.drop(ticker, inplace=True)  # Drop own entry (corr = 1.0)
+                series = self.results[ticker].sort_values(ascending=False)
+                series.drop(ticker, inplace=True) # Drop own entry (corr = 1.0)
             else:
                 _logger.warning(f'{__name__}: Invalid ticker {ticker}')
         else:
@@ -133,15 +134,14 @@ if __name__ == '__main__':
     import logging
     logger.get_logger(logging.INFO)
 
-    symbols = store.get_tickers('amex')
-    c = Correlate(symbols, 'amex')
+    symbols = store.get_tickers('nyse')
+    c = Correlate(symbols, 'nyse')
 
     tic = time.perf_counter()
     c.compute()
-
-    print(c.results)
-    # tickers = ['AR', 'EQT', 'OXY', 'HRB', 'MPC', 'RRC', 'VLO', 'XOM', 'PBR', 'EQNR',]
-    all = c.filter()
+    tickers = ['AR', 'EQT', 'OXY', 'HRB', 'MPC', 'RRC', 'VLO', 'XOM', 'PBR', 'EQNR',]
+    c.filter(tickers)
     toc = time.perf_counter()
-    print(all)
+    print(c.results)
+    print(c.filtered)
     print(f'Time={toc-tic:.2f}')

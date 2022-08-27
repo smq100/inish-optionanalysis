@@ -86,7 +86,7 @@ class Interface:
                 abort = True
                 self.screen = ''
 
-        _condition = 'self.screener is not None and len(self.screener.valids) > 0'
+        _condition = 'self.screener is not None and self.screener.valids'
         _value = 'len(self.screener.valids) if len(self.screener.valids) < LISTTOP_SCREEN else LISTTOP_SCREEN'
         self.commands = [
             {'menu': 'Select Table or Index', 'function': self.m_select_table, 'condition': 'self.table', 'value': 'self.table'},
@@ -176,21 +176,23 @@ class Interface:
     def m_run_screen(self) -> None:
         self.backtest = 0
         if self.run_screen():
-            if len(self.screener.valids) > 0:
+            if self.screener.valids:
                 self.m_show_valids(top=LISTTOP_SCREEN)
 
     def m_run_backtest(self) -> None:
         if self.run_backtest():
-            if len(self.screener.valids) > 0:
+            if self.screener.valids:
                 self.show_backtest(top=LISTTOP_SCREEN)
 
     def m_refresh_screen(self) -> None:
         self.refresh_screen()
-        if len(self.screener.valids) > 0:
+        if self.screener.valids:
             self.m_show_valids(top=LISTTOP_SCREEN)
 
     def m_select_option_strategy(self) -> None:
-        if len(self.screener.valids) > 0:
+        if self.screener is None:
+            ui.print_error('Please first run a screener')
+        elif self.screener.valids:
             menu_items = {
                 '1': 'Call',
                 '2': 'Put',
@@ -245,7 +247,9 @@ class Interface:
             tickers = [ticker]
         elif ticker != 'VALIDS':
             pass
-        elif len(self.screener.valids) > 0:
+        elif not self.screener:
+            ui.print_error('No valid results')
+        elif self.screener.valids:
             tickers = [str(result) for result in self.screener.valids[:LISTTOP_TREND]]
         else:
             ui.print_error('Not a valid ticker')
@@ -433,7 +437,9 @@ class Interface:
     def run_correlate(self) -> None:
         self.correlate = None
 
-        if len(self.screener.valids) == 0:
+        if self.screener is None:
+            ui.print_error('Please first run a screener')
+        elif not self.screener.valids:
             ui.print_error('No valid results to correlate')
         elif not store.is_list(self.table):
             ui.print_error('List is not valid')
@@ -465,7 +471,9 @@ class Interface:
             ui.print_message(f'Filtering completed in {self.correlate.task_time:.1f} seconds')
 
     def m_filter_by_sector(self) -> None:
-        if self.screener.valids:
+        if not self.screener:
+            ui.print_error('No valid results')
+        elif self.screener.valids:
             sectors = store.get_sectors()
             sectors.sort()
 
@@ -495,7 +503,9 @@ class Interface:
             ui.print_error('No table specified')
         elif not self.screen:
             ui.print_error('No screen specified')
-        elif len(self.screener.valids) == 0:
+        elif not self.screener:
+            ui.print_error('No valid results')
+        elif not self.screener.valids:
             ui.print_message('No results were located')
         else:
             if top <= 0:
@@ -520,7 +530,9 @@ class Interface:
             ui.print_error('No table specified')
         elif not self.screen:
             ui.print_error('No screen specified')
-        elif len(self.screener.valids) == 0:
+        elif not self.screener:
+            ui.print_error('No valid results')
+        elif not self.screener.valids:
             ui.print_message('No results were located')
         else:
             if top <= 0:
