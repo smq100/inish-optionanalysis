@@ -1,5 +1,6 @@
 import os
 import time
+import re
 
 from colorama import Fore, Style
 
@@ -101,6 +102,14 @@ def format_headers(columns: str, case: str = 'title'):
         header = [header.replace('_', '\n').title() for header in columns]
 
     return header
+
+
+def convert(camel_case: str) -> str:
+    name = re.sub(r'(?<!^)(?=[A-Z])', '_', camel_case).lower()
+    pattern = re.compile(r'(?<!^)(?=[A-Z])')
+    name = pattern.sub('_', name).lower()
+
+    return name
 
 
 def input_integer(message: str, min_: int, max_: int) -> int:
@@ -258,7 +267,7 @@ def progress_bar(iteration, total: int, prefix: str = 'Working', suffix: str = '
             seconds = 0.0
 
         if iteration == _completed:
-            pass # Nothing new to show
+            pass  # Nothing new to show
         elif success < 0:
             print(f'{prefix:<13} |{bar}| {iteration}/{total} {suffix} {ticker}     ', end='\r')
         elif tasks > 0:

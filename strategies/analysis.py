@@ -11,8 +11,8 @@ from utils import ui
 @dataclass()
 class Analysis:
     ticker: str = ''
-    credit_debit: str = ''
-    sentiment: str = ''
+    credit_debit: s.OutlayType = s.OutlayType.Debit
+    sentiment: s.SentimentType = s.SentimentType.Bullish
     total: float = 0.0
     max_gain: float = 0.0
     max_loss: float = 0.0
@@ -35,9 +35,9 @@ class Analysis:
             loss = 'Unlimited' if self.max_loss < 0.0 else f'${self.max_loss*100:.2f}'
             return_text = f'{self.upside * 100.0:.2f}%' if self.upside >= 0.0 else 'Unlimited'
             output = \
-                f'Type:             {self.credit_debit.title()}\n'\
-                f'Sentiment:        {self.sentiment.title()}\n'\
-                f'Total:            {abs(self.total*100.0):.2f} {self.credit_debit}\n'\
+                f'Type:             {self.credit_debit.name.title()}\n'\
+                f'Sentiment:        {ui.convert(self.sentiment.name).title()}\n'\
+                f'Total:            {abs(self.total*100.0):.2f} {self.credit_debit.name}\n'\
                 f'Max Gain:         {gain}\n'\
                 f'Max Loss:         {loss}\n'\
                 f'Return:           {return_text}\n'\
@@ -63,9 +63,9 @@ class Analysis:
                 self.score_total += self.score_screen
 
             data = {
-                'credit_debit': self.credit_debit,
-                'sentiment': self.sentiment,
-                'total': self.total * 100.0 if self.credit_debit == 'credit' else self.total * -100.0,
+                'credit_debit': self.credit_debit.name,
+                'sentiment': ui.convert(self.sentiment.name).title(),
+                'total': self.total * 100.0 if self.credit_debit == s.OutlayType.Credit else self.total * -100.0,
                 'max_gain': self.max_gain * 100.0 if self.max_gain >= 0.0 else 'unlimited',
                 'max_loss': self.max_loss * 100.0 if self.max_loss >= 0.0 else 'unlimited',
                 'return': self.upside if self.upside >= 0.0 else 'unlimited',

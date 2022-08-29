@@ -76,7 +76,7 @@ class Strategy(ABC, Threaded):
             if self.expiry < tomorrow:
                 raise ValueError('Invalid option expiry')
 
-        self.analysis.credit_debit = 'debit' if self.direction == s.DirectionType.Long else 'credit'
+        self.analysis.credit_debit = s.OutlayType.Debit if self.direction == s.DirectionType.Long else s.OutlayType.Credit
 
     def __str__(self):
         return f'{self.legs[0].direction.name} {self.type.value}'.lower()
@@ -94,7 +94,7 @@ class Strategy(ABC, Threaded):
 
             self.legs[0].calculate()
 
-            self.analysis.credit_debit = 'debit' if self.direction == s.DirectionType else 'credit'
+            self.analysis.credit_debit = s.OutlayType.Debit if self.direction == s.DirectionType else s.OutlayType.Credit
             self.analysis.total = self.legs[0].option.price_eff * self.quantity
 
             self.generate_profit_table()

@@ -66,11 +66,11 @@ class Put(Strategy):
         if self.legs[0].direction == s.DirectionType.Long:
             self.analysis.max_gain = (self.legs[0].option.strike - self.legs[0].option.price_eff) * self.quantity
             self.analysis.max_loss = self.legs[0].option.price_eff * self.quantity
-            self.analysis.sentiment = 'bearish'
+            self.analysis.sentiment = s.SentimentType.Bearish
         else:
             self.analysis.max_gain = self.legs[0].option.price_eff * self.quantity
             self.analysis.max_loss = (self.legs[0].option.strike - self.legs[0].option.price_eff) * self.quantity
-            self.analysis.sentiment = 'bullish'
+            self.analysis.sentiment = s.SentimentType.Bullish
 
         self.analysis.upside = self.analysis.max_gain / self.analysis.max_loss if self.analysis.max_loss > 0.0 else 0.0
         self.analysis.score_options = 0.0

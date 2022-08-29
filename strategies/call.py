@@ -65,11 +65,11 @@ class Call(Strategy):
         if self.legs[0].direction == s.DirectionType.Long:
             self.analysis.max_gain = -1.0
             self.analysis.max_loss = self.legs[0].option.price_eff * self.quantity
-            self.analysis.sentiment = 'bullish'
+            self.analysis.sentiment = s.SentimentType.Bullish
         else:
             self.analysis.max_gain = self.legs[0].option.price_eff * self.quantity
             self.analysis.max_loss = -1.0
-            self.analysis.sentiment = 'bearish'
+            self.analysis.sentiment = s.SentimentType.Bearish
 
         self.analysis.upside = -1.0
         self.analysis.score_options = 0.0

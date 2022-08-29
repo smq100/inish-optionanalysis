@@ -80,7 +80,7 @@ class IronCondor(Strategy):
                 _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}. Using calculated values')
 
     def __str__(self):
-        return f'{self.analysis.credit_debit} {self.type.value}'
+        return f'{self.analysis.credit_debit.name} {self.type.value}'
 
     def fetch_contracts(self, expiry: dt.datetime, strike: float = -1.0) -> list[tuple[str, pd.DataFrame]]:
         expiry_tuple = self.chain.get_expiry()
@@ -217,13 +217,13 @@ class IronCondor(Strategy):
             max_loss = (self.quantity * (self.legs[0].option.strike - self.legs[1].option.strike)) - max_gain
             if max_loss < 0.0:
                 max_loss = 0.0  # Credit is more than possible loss!
-            self.analysis.sentiment = 'low volatility'
+            self.analysis.sentiment = s.SentimentType.LowVolatility
         else:
             max_loss = self.analysis.total
             max_gain = (self.quantity * (self.legs[0].option.strike - self.legs[1].option.strike)) - max_loss
             if max_gain < 0.0:
                 max_gain = 0.0  # Debit is more than possible gain!
-            self.analysis.sentiment = 'high volatility'
+            self.analysis.sentiment = s.SentimentType.HighVolatility
 
         self.analysis.max_gain = max_gain
         self.analysis.max_loss = max_loss

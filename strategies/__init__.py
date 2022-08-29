@@ -27,6 +27,7 @@ class StrategyType(Enum):
         else:
             raise ValueError('Invalid Strategy type')
 
+
 class ProductType(IntEnum):
     Call = 0
     Put = 1
@@ -42,6 +43,7 @@ class ProductType(IntEnum):
         else:
             raise ValueError('Invalid Product type')
 
+
 class DirectionType(IntEnum):
     Long = 0
     Short = 1
@@ -55,7 +57,13 @@ class DirectionType(IntEnum):
             raise ValueError('Invalid Direction type')
 
 
-# STRATEGIES_BROAD = ['call', 'put', 'vertical', 'iron condor', 'iron butterfly']
-# STRATEGIES = ['call', 'put', 'vert', 'ic', 'ib']
-# DIRECTIONS = ['long', 'short']
-# PRODUCTS = ['call', 'put', 'hybrid']
+class OutlayType(IntEnum):
+    Debit = 0
+    Credit = 1
+
+
+class SentimentType(IntEnum):
+    Bullish = 0
+    Bearish = 1
+    LowVolatility = 2
+    HighVolatility = 3

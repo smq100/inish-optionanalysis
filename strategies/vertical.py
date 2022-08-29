@@ -77,7 +77,7 @@ class Vertical(Strategy):
                 _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}. Using calculated values')
 
     def __str__(self):
-        return f'{self.type.value} {self.product.name} {self.analysis.credit_debit} spread'.lower()
+        return f'{self.type.value} {self.product.name} {self.analysis.credit_debit.name} spread'.lower()
 
     def fetch_contracts(self, expiry: dt.datetime, strike: float = -1.0) -> list[tuple[str, pd.DataFrame]]:
         expiry_tuple = self.chain.get_expiry()
@@ -176,7 +176,7 @@ class Vertical(Strategy):
         profit = self.legs[0].value_table - self.legs[1].value_table
         profit *= self.quantity
 
-        if self.analysis.credit_debit == 'credit':
+        if self.analysis.credit_debit == s.OutlayType.Credit:
             profit += self.analysis.total
         else:
             profit -= self.analysis.total
@@ -188,33 +188,33 @@ class Vertical(Strategy):
     def calculate_metrics(self) -> bool:
         max_gain = max_loss = 0.0
 
-        debit = (self.analysis.credit_debit == 'debit')
+        debit = (self.analysis.credit_debit == s.OutlayType.Debit)
         if self.product == s.ProductType.Call:
             if debit:
                 max_loss = self.analysis.total
                 max_gain = (self.quantity * (self.legs[1].option.strike - self.legs[0].option.strike)) - max_loss
                 if max_gain < 0.0:
                     max_gain = 0.0  # Debit is more than possible gain!
-                self.analysis.sentiment = 'bullish'
+                self.analysis.sentiment = s.SentimentType.Bullish
             else:
                 max_gain = self.analysis.total
                 max_loss = (self.quantity * (self.legs[0].option.strike - self.legs[1].option.strike)) - max_gain
                 if max_loss < 0.0:
                     max_loss = 0.0  # Credit is more than possible loss!
-                self.analysis.sentiment = 'bearish'
+                self.analysis.sentiment = s.SentimentType.Bearish
         else:
             if debit:
                 max_loss = self.analysis.total
                 max_gain = (self.quantity * (self.legs[0].option.strike - self.legs[1].option.strike)) - max_loss
                 if max_gain < 0.0:
                     max_gain = 0.0  # Debit is more than possible gain!
-                self.analysis.sentiment = 'bearish'
+                self.analysis.sentiment = s.SentimentType.Bearish
             else:
                 max_gain = self.analysis.total
                 max_loss = (self.quantity * (self.legs[1].option.strike - self.legs[0].option.strike)) - max_gain
                 if max_loss < 0.0:
                     max_loss = 0.0  # Credit is more than possible loss!
-                self.analysis.sentiment = 'bullish'
+                self.analysis.sentiment = s.SentimentType.Bullish
 
         self.analysis.max_gain = max_gain
         self.analysis.max_loss = max_loss
@@ -224,7 +224,7 @@ class Vertical(Strategy):
         return True
 
     def calculate_breakeven(self) -> bool:
-        if self.analysis.credit_debit == 'debit':
+        if self.analysis.credit_debit == s.OutlayType.Debit:
             breakeven = self.legs[1].option.strike + self.analysis.total
         else:
             breakeven = self.legs[1].option.strike - self.analysis.total
@@ -251,13 +251,13 @@ class Vertical(Strategy):
             self.error = 'Incorrect number of legs'
         elif self.analysis.credit_debit:
             if self.product == s.ProductType.Call:
-                if self.analysis.credit_debit == 'debit':
+                if self.analysis.credit_debit == s.OutlayType.Debit:
                     if self.legs[0].option.strike >= self.legs[1].option.strike:
                         self.error = f'Incorrect option legs configuration (1) ({self.legs[0].option.strike:.2f} >= {self.legs[1].option.strike:.2f})'
                 elif self.legs[1].option.strike >= self.legs[0].option.strike:
                     self.error = f'Incorrect option legs configuration (2) ({self.legs[1].option.strike:.2f} >= {self.legs[0].option.strike:.2f})'
             else:
-                if self.analysis.credit_debit == 'debit':
+                if self.analysis.credit_debit == s.OutlayType.Debit:
                     if self.legs[1].option.strike >= self.legs[0].option.strike:
                         self.error = f'Incorrect option legs configuration (3) ({self.legs[1].option.strike:.2f} >= {self.legs[0].option.strike:.2f})'
                 elif self.legs[0].option.strike >= self.legs[1].option.strike:
