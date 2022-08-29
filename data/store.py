@@ -35,6 +35,7 @@ elif d.ACTIVE_DB == 'SQLite':
     _engine = create_engine(d.ACTIVE_URI)
     _session = sessionmaker(bind=_engine)
 
+
 def is_database_connected() -> bool:
     return bool(d.ACTIVE_URI)
 

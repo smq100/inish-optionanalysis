@@ -36,31 +36,29 @@ def _auth_callback(url: str) -> str:
     code = ui.input_alphanum('Please accept agreement and enter text code from browser')
     return code
 
+
 class Interface():
     def __init__(self,
-        *,
-        ticker: str,
-        strategy: str,
-        product: str,
-        direction: str,
-        strike: float = -1.0,
-        width1: int = 0,
-        width2: int = 0,
-        quantity: int = 1,
-        expiry: str = '',
-        volatility: str = '-1.0',
-        load_contracts: bool = False,
-        analyze: bool = False,
-        exit: bool = False):
+                 *,
+                 ticker: str,
+                 strategy: str,
+                 product: str,
+                 direction: str,
+                 strike: float = -1.0,
+                 width1: int = 0,
+                 width2: int = 0,
+                 quantity: int = 1,
+                 expiry: str = '',
+                 volatility: str = '-1.0',
+                 load_contracts: bool = False,
+                 analyze: bool = False,
+                 exit: bool = False):
 
-        self.strategy: Strategy = None
-        self.strategy_name: str = strategy
+        self.strategy: Strategy
         self.load_contracts = load_contracts
 
         self.dirty_analyze = True
         self.task: threading.Thread = None
-
-        pd.options.display.float_format = '{:,.2f}'.format
 
         # Set strike to closest ITM if strike < 0.0
         if direction == 'long':
@@ -116,12 +114,12 @@ class Interface():
             ui.print_error('Internet connection required')
         elif not store.is_ticker(ticker):
             ui.print_error('Invalid ticker specified')
-        elif strategy not in s.STRATEGIES:
-            ui.print_error('Invalid strategy specified')
-        elif direction not in s.DIRECTIONS:
-            ui.print_error('Invalid direction specified')
-        elif product not in s.PRODUCTS:
-            ui.print_error('Invalid product specified')
+        # elif strategy not in s.STRATEGIES:
+        #     ui.print_error('Invalid strategy specified')
+        # elif direction not in s.DIRECTIONS:
+        #     ui.print_error('Invalid direction specified')
+        # elif product not in s.PRODUCTS:
+        #     ui.print_error('Invalid product specified')
         elif width1 < 0:
             ui.print_error('Invalid width specified')
         elif width2 < 0:
@@ -135,28 +133,32 @@ class Interface():
         elif strategy == 'ib' and width1 < 1:
             ui.print_error('Invalid width specified')
         else:
+            _s = s.StrategyType.from_str(strategy)
+            _p = s.ProductType.from_str(product)
+            _d = s.DirectionType.from_str(direction)
+
             if self.load_contracts:
                 strike = float(math.floor(store.get_last_price(ticker))) if strike < 0.0 else strike
             else:
-                strike, width1, width2 = m.calculate_strike_and_widths(self.strategy_name, product, direction, store.get_last_price(ticker))
+                strike, width1, width2 = m.calculate_strike_and_widths(_s, _p, _d, store.get_last_price(ticker))
 
             if load_contracts and d.ACTIVE_OPTIONDATASOURCE == 'etrade':
                 if auth.Session is None:
                     auth.authorize(_auth_callback)
 
             if self.load_strategy(
-                ticker,
-                self.strategy_name,
-                product,
-                direction,
-                strike,
-                width1,
-                width2,
-                quantity,
-                expiry,
-                volatility,
-                load_contracts,
-                analyze or exit):
+                    ticker,
+                    _s,
+                    _p,
+                    _d,
+                    strike,
+                    width1,
+                    width2,
+                    quantity,
+                    expiry,
+                    volatility,
+                    load_contracts,
+                    analyze or exit):
 
                 if not exit:
                     self.main_menu()
@@ -180,23 +182,23 @@ class Interface():
             loaded = '' if self.strategy.legs[0].option.price_last > 0 else '*'
             expire = f'{self.strategy.legs[0].option.expiry:%Y-%m-%d}'
 
-            if self.strategy_name == s.STRATEGIES[2]: # Vertical
+            if self.strategy.type == s.StrategyType.Vertical:
                 menu_items['3'] += f's ({expire}, '\
                     f'L:${self.strategy.legs[0].option.strike:.2f}{loaded}, '\
                     f'S:${self.strategy.legs[1].option.strike:.2f}{loaded})'
-            elif self.strategy_name == s.STRATEGIES[3]: # Iron Condor
+            elif self.strategy.type == s.StrategyType.IronCondor:
                 menu_items['3'] += f's ({expire}, '\
                     f'${self.strategy.legs[0].option.strike:.2f}{loaded}, '\
                     f'${self.strategy.legs[1].option.strike:.2f}{loaded}, '\
                     f'${self.strategy.legs[2].option.strike:.2f}{loaded}, '\
                     f'${self.strategy.legs[3].option.strike:.2f}{loaded})'
-            elif self.strategy_name == s.STRATEGIES[4]: # Iron Butterfly
+            elif self.strategy.type == s.StrategyType.IronButterfly:
                 menu_items['3'] += f's ({expire}, '\
                     f'${self.strategy.legs[0].option.strike:.2f}{loaded}, '\
                     f'${self.strategy.legs[1].option.strike:.2f}{loaded}, '\
                     f'${self.strategy.legs[2].option.strike:.2f}{loaded}, '\
                     f'${self.strategy.legs[3].option.strike:.2f}{loaded})'
-            else: # Call or Put
+            else:  # Call or Put
                 menu_items['3'] += f' ({expire}, ${self.strategy.legs[0].option.strike:.2f}{loaded})'
 
             if self.dirty_analyze:
@@ -224,27 +226,27 @@ class Interface():
                 break
 
     def load_strategy(self,
-            ticker: str,
-            strategy: str,
-            product: str,
-            direction: str,
-            strike: float,
-            width1: int,
-            width2: int,
-            quantity: int,
-            expiry: str,
-            volatility: tuple[float, float],
-            load_contracts: bool = False,
-            analyze: bool = False) -> bool:
+                      ticker: str,
+                      strategy: s.StrategyType,
+                      product: s.ProductType,
+                      direction: s.DirectionType,
+                      strike: float,
+                      width1: int,
+                      width2: int,
+                      quantity: int,
+                      expiry: str,
+                      volatility: tuple[float, float],
+                      load_contracts: bool = False,
+                      analyze: bool = False) -> bool:
 
         modified = True
 
         if not store.is_ticker(ticker):
             raise ValueError('Invalid ticker')
-        if strategy not in s.STRATEGIES:
-            raise ValueError('Invalid strategy')
-        if direction not in s.DIRECTIONS:
-            raise ValueError('Invalid direction')
+        # if strategy not in s.STRATEGIES:
+        #     raise ValueError('Invalid strategy')
+        # if direction not in s.DIRECTIONS:
+        #     raise ValueError('Invalid direction')
         if strike < 0.0:
             raise ValueError('Invalid strike')
         if width1 < 0:
@@ -262,34 +264,28 @@ class Interface():
 
         expiry_dt = dt.datetime.strptime(expiry, ui.DATE_FORMAT) if expiry else dt.datetime.now()
 
-        name = strategy.lower()
-        try:
-            if name == 'call':
-                self.strategy_name = name
-                self.strategy = Call(ticker, 'call', direction, strike, quantity=quantity,
-                    expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
-            elif name == 'put':
-                self.strategy_name = name
-                self.strategy = Put(ticker, 'put', direction, strike, quantity=quantity,
-                    expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
-            elif name == 'vert':
-                self.strategy_name = name
-                self.strategy = Vertical(ticker, product, direction, strike, width=width1, quantity=quantity,
-                    expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
-            elif name == 'ic':
-                self.strategy_name = name
-                self.strategy = IronCondor(ticker, 'hybrid', direction, strike, width1=width1, width2=width2, quantity=quantity,
-                    expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
-            elif name == 'ib':
-                self.strategy_name = name
-                self.strategy = IronButterfly(ticker, 'hybrid', direction, strike, width1=width1, quantity=quantity,
-                    expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
-            else:
-                modified = False
-                ui.print_error('Unknown argument')
-        except Exception as e:
-            ui.print_error(f'{str(sys.exc_info()[1])}')
+        # try:
+        if strategy == s.StrategyType.Call:
+            self.strategy = Call(ticker, s.ProductType.Call, direction, strike, quantity=quantity,
+                expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
+        elif strategy == s.StrategyType.Put:
+            self.strategy = Put(ticker, s.ProductType.Put, direction, strike, quantity=quantity,
+                expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
+        elif strategy == s.StrategyType.Vertical:
+            self.strategy = Vertical(ticker, product, direction, strike, width=width1, quantity=quantity,
+                expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
+        elif strategy == s.StrategyType.IronCondor:
+            self.strategy = IronCondor(ticker, s.ProductType.Hybrid, direction, strike, width1=width1, width2=width2, quantity=quantity,
+                expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
+        elif strategy == s.StrategyType.IronButterfly:
+            self.strategy = IronButterfly(ticker, s.ProductType.Hybrid, direction, strike, width1=width1, quantity=quantity,
+                expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
+        else:
             modified = False
+            ui.print_error('Unknown argument')
+        # except Exception as e:
+        #     ui.print_error(f'{__name__}: 001: {e}')
+        #     modified = False
 
         if modified:
             self.dirty_analyze = True
@@ -375,8 +371,8 @@ class Interface():
                         analysis = m.compress_table(analysis, rows, cols)
 
                     name = store.get_company_name(self.strategy.ticker)
-                    expiry = analysis.columns[-1] # Expiry is the last column name
-                    title = f'Profit Summary for {self.strategy.name.title()}: {name} ({self.strategy.ticker}/{expiry})'
+                    expiry = analysis.columns[-1]  # Expiry is the last column name
+                    title = f'Profit Summary for {self.strategy.type.value.title()}: {name} ({self.strategy.ticker}/{expiry})'
 
                     if style == 1:
                         ui.print_message(title, pre_creturn=2)
@@ -465,9 +461,9 @@ class Interface():
                 strike = price
                 width1 = width2 = 1
             else:
-                strike, width1, width2 = m.calculate_strike_and_widths(self.strategy_name, self.strategy.product, self.strategy.direction, price)
+                strike, width1, width2 = m.calculate_strike_and_widths(self.strategy, self.strategy.product, self.strategy.direction, price)
 
-            self.load_strategy(ticker, self.strategy_name, self.strategy.product, self.strategy.direction, strike, width1, width2, self.strategy.quantity, expiry, volatility)
+            self.load_strategy(ticker, self.strategy.type, self.strategy.product, self.strategy.direction, strike, width1, width2, self.strategy.quantity, expiry, volatility)
 
         return modified
 
@@ -491,25 +487,27 @@ class Interface():
             volatility = (0.0, 0.0)
 
             if selection == 1:
-                strategy = product = 'call'
+                strategy = s.StrategyType.Call
+                product = s.ProductType.Call
                 d = ui.input_integer('(1) Long, or (2) Short', 1, 2)
-                direction = 'long' if d == 1 else 'short'
+                direction = s.DirectionType.Long if d == 1 else s.DirectionType.Short
                 strike = ui.input_float_range(f'Enter strike ({price:.2f})', price, 20.0)
                 modified = self.load_strategy(self.strategy.ticker, strategy, product, direction, strike, 0, 0, self.strategy.quantity, expiry, volatility)
 
             elif selection == 2:
-                strategy = product = 'put'
+                strategy = s.StrategyType.Put
+                product = s.ProductType.Put
                 d = ui.input_integer('(1) Long, or (2) Short', 1, 2)
-                direction = 'long' if d == 1 else 'short'
+                direction = s.DirectionType.Long if d == 1 else s.DirectionType.Short
                 strike = ui.input_float_range(f'Enter strike ({price:.2f})', price, 20.0)
                 modified = self.load_strategy(self.strategy.ticker, strategy, product, direction, strike, 0, 0, self.strategy.quantity, expiry, volatility)
 
             elif selection == 3:
-                strategy = 'vert'
+                strategy = s.StrategyType.Vertical
                 p = ui.input_integer('(1) Call, or (2) Put', 1, 2)
-                product = 'call' if p == 1 else 'put'
+                product = s.ProductType.Call if p == 1 else s.ProductType.Put
                 d = ui.input_integer('(1) Debit, or (2) Credit', 1, 2)
-                direction = 'long' if d == 1 else 'short'
+                direction = s.DirectionType.Long if d == 1 else s.DirectionType.Short
                 strike = ui.input_float_range(f'Enter strike ({price:.2f})', price, 20.0)
 
                 _, width1, _ = m.calculate_strike_and_widths(strategy, product, direction, store.get_last_price(self.strategy.ticker))
@@ -517,10 +515,10 @@ class Interface():
                 modified = self.load_strategy(self.strategy.ticker, strategy, product, direction, strike, width1, 0, self.strategy.quantity, expiry, volatility)
 
             elif selection == 4:
-                strategy = 'ic'
-                product = 'hybrid'
+                strategy = s.StrategyType.IronCondor
+                product = s.ProductType.Hybrid
                 d = ui.input_integer('(1) Debit, or (2) Credit', 1, 2)
-                direction = 'long' if d == 1 else 'short'
+                direction = s.DirectionType.Long if d == 1 else s.DirectionType.Short
                 strike = ui.input_float_range(f'Enter strike ({price:.2f})', price, 20.0)
 
                 _, width1, width2 = m.calculate_strike_and_widths(strategy, product, direction, store.get_last_price(self.strategy.ticker))
@@ -528,10 +526,10 @@ class Interface():
                 modified = self.load_strategy(self.strategy.ticker, strategy, product, direction, strike, width1, width2, self.strategy.quantity, expiry, volatility)
 
             elif selection == 5:
-                strategy = 'ib'
-                product = 'hybrid'
+                strategy = s.StrategyType.IronButterfly
+                product = s.ProductType.Hybrid
                 d = ui.input_integer('(1) Debit, or (2) Credit', 1, 2)
-                direction = 'long' if d == 1 else 'short'
+                direction = s.DirectionType.Long if d == 1 else s.DirectionType.Short
                 strike = ui.input_float_range(f'Enter strike ({price:.2f})', price, 20.0)
 
                 _, width1, _ = m.calculate_strike_and_widths(strategy, product, direction, store.get_last_price(self.strategy.ticker))
@@ -553,11 +551,11 @@ class Interface():
                 self.strategy.update_expiry(expiry)
 
                 # Go directly to choose option if only one leg in strategy
-                if self.strategy.name == 'call' or self.strategy.name == 'put':
-                    if self.strategy.legs[0].option.product == 'call':
-                        contracts = self.select_chain_options('call')
+                if self.strategy == s.StrategyType.Call or self.strategy == s.StrategyType.Put:
+                    if self.strategy.legs[0].option.product == s.ProductType.Call:
+                        contracts = self.select_chain_options(s.ProductType.Call)
                     else:
-                        contracts = self.select_chain_options('put')
+                        contracts = self.select_chain_options(s.ProductType.Put)
 
                     if contracts:
                         self.strategy.legs[0].option.load_contract(contracts[0], self.strategy.chain.chain)
@@ -565,7 +563,7 @@ class Interface():
 
         # Reset widths to integer indexes
         self.strategy.width1 = 1
-        self.strategy.width2 = 1 if self.strategy.name == s.STRATEGIES_BROAD[3] else 0
+        self.strategy.width2 = 1 if self.strategy.type == s.StrategyType.IronCondor else 0
 
         if not contracts and proceed:
             done = False
@@ -584,7 +582,7 @@ class Interface():
                 }
 
                 loaded = '' if self.strategy.legs[0].option.price_last > 0.0 else '*'
-                if self.strategy.name == 'vertical':
+                if self.strategy.type == 'vertical':
                     menu_items['4'] += f's '\
                         f'(L:${self.strategy.legs[0].option.strike:.2f}{loaded}'\
                         f' S:${self.strategy.legs[1].option.strike:.2f}{loaded})'
@@ -603,14 +601,14 @@ class Interface():
 
                 elif selection == 3:
                     self.strategy.width1 = ui.input_integer('Enter width (1 - 5)', 1, 5)
-                    self.strategy.width2 = 1 if self.strategy.name == s.STRATEGIES_BROAD[3] else 0
+                    self.strategy.width2 = 1 if self.strategy == s.StrategyType.IronCondor else 0
 
                 elif selection == 4:
                     if self.strategy.chain.expire > dt.datetime.now():
-                        if self.strategy.legs[0].option.product == 'call':
-                            contracts = self.select_chain_options('call')
+                        if self.strategy.legs[0].option.product == s.ProductType.Call:
+                            contracts = self.select_chain_options(s.ProductType.Call)
                         else:
-                            contracts = self.select_chain_options('put')
+                            contracts = self.select_chain_options(s.ProductType.Put)
 
                         if contracts:
                             for leg, contract in enumerate(contracts):
@@ -652,15 +650,15 @@ class Interface():
 
         return expiry
 
-    def select_chain_options(self, product: str) -> list[str]:
+    def select_chain_options(self, product: s.ProductType) -> list[str]:
         options = None
         contracts = []
         if self.strategy.chain.expire <= dt.datetime.now():
             ui.print_error('No expiry date delected')
-        elif product == 'call':
-            options = self.strategy.chain.get_chain('call')
-        elif product == 'put':
-            options = self.strategy.chain.get_chain('put')
+        elif product == s.ProductType.Call:
+            options = self.strategy.chain.get_chain(product)
+        elif product == s.ProductType.Put:
+            options = self.strategy.chain.get_chain(product)
 
         if options is not None:
             menu_items = {}
@@ -668,7 +666,7 @@ class Interface():
                 itm = 'ITM' if bool(row.inTheMoney) else 'OTM'
                 menu_items[f'{index}'] = f'${row.strike:7.2f} {itm} {row.type} (${row.lastPrice:.2f})'
 
-            prompt = 'Select long option, or 0 to cancel' if self.strategy.name == 'vertical' else 'Select option, or 0 to cancel'
+            prompt = 'Select long option, or 0 to cancel' if self.strategy == s.StrategyType.Vertical else 'Select option, or 0 to cancel'
             select = ui.menu(menu_items, 'Available Options', 0, len(options)+1, prompt=prompt)
             if select > 0:
                 option = options.iloc[select-1]
@@ -859,8 +857,8 @@ def main():
 
     command = vars(parser.parse_args())
     Interface(ticker=command['ticker'], strategy=command['strategy'], product=command['product'], direction=command['direction'],
-        width1=int(command['width1']), width2=int(command['width2']), quantity=int(command['quantity']), load_contracts=command['default'],
-        expiry=command['expiry'], analyze=command['analyze'], exit=command['exit'], strike=float(command['strike']), volatility=str(command['volatility']))
+              width1=int(command['width1']), width2=int(command['width2']), quantity=int(command['quantity']), load_contracts=command['default'],
+              expiry=command['expiry'], analyze=command['analyze'], exit=command['exit'], strike=float(command['strike']), volatility=str(command['volatility']))
 
 
 if __name__ == '__main__':

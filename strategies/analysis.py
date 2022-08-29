@@ -4,7 +4,7 @@ import datetime as dt
 import numpy as np
 import pandas as pd
 
-from . import STRATEGIES
+import strategies as s
 from utils import ui
 
 
@@ -93,26 +93,26 @@ class Analysis:
 
         self.strategy = pd.DataFrame(data, index=[self.ticker])
 
-def calculate_sentiment(strategy: str, product: str, direction: str) -> str:
+def calculate_sentiment(strategy: s.StrategyType, product: s.ProductType, direction: s.DirectionType) -> str:
     sentiment = 'bullish'
-    if strategy == STRATEGIES[0]: # Call
-        if direction == 'short':
+    if strategy == s.StrategyType.Call:
+        if direction == s.DirectionType.Short:
             sentiment = 'bearish'
-    elif strategy == STRATEGIES[1]: # Put
-        if direction == 'long':
+    elif strategy == s.StrategyType.Put:
+        if direction == s.DirectionType.Long:
             sentiment = 'bearish'
-    elif strategy == STRATEGIES[2]: # Vertical
-        if product == 'put' and direction == 'long':
+    elif strategy == s.StrategyType.Vertical:
+        if product == s.ProductType.Put and direction == s.DirectionType.Long:
             sentiment = 'bearish'
-        if product == 'call' and direction == 'short':
+        if product == s.ProductType.Call and direction == s.DirectionType.Short:
             sentiment = 'bearish'
-    elif strategy == STRATEGIES[3]: # Iron condor
-        if direction == 'long':
+    elif strategy == s.StrategyType.IronCondor:
+        if direction == s.DirectionType.Long:
             sentiment = 'high volatility'
         else:
             sentiment = 'low volatility'
-    elif strategy == STRATEGIES[4]: # Iron butterfly
-        if direction == 'long':
+    elif strategy == s.StrategyType.IronButterfly:
+        if direction == s.DirectionType.Long:
             sentiment = 'high volatility'
         else:
             sentiment = 'low volatility'

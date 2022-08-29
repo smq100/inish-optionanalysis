@@ -4,6 +4,7 @@ import collections
 
 import pandas as pd
 
+import strategies as s
 from strategies.analysis import calculate_sentiment
 from utils import ui
 
@@ -72,7 +73,7 @@ def calculate_min_max_step(strike: float) -> range_type:
     return range_type(min_, max_, step)
 
 
-def calculate_strike_and_widths(strategy: str, product: str, direction: str, strike: float) -> tuple[float, float, float]:
+def calculate_strike_and_widths(strategy: s.StrategyType, product: s.ProductType, direction: s.DirectionType, strike: float) -> tuple[float, float, float]:
     width1 = 0.0
     width2 = 0.0
 
@@ -107,7 +108,7 @@ def calculate_strike_and_widths(strategy: str, product: str, direction: str, str
     if sentiment == 'bearish':
         strike += width1
 
-    if strategy == 'ic':
+    if strategy == s.StrategyType.IronCondor:
         width2 = width1
 
     return strike, width1, width2

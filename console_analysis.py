@@ -692,6 +692,7 @@ class Interface:
             while self.task.is_alive() and self.correlate.task_state == 'Correlating':
                 time.sleep(ui.PROGRESS_SLEEP)
                 ui.progress_bar(completed, total, prefix=prefix)
+
             print()
 
         if self.correlate.task_state == 'Filtering':
@@ -703,6 +704,7 @@ class Interface:
                 completed = self.correlate.task_completed
                 ticker = self.correlate.task_ticker
                 ui.progress_bar(completed, total, prefix=prefix, ticker=ticker)
+
             print()
 
     def show_progress_chart(self) -> None:

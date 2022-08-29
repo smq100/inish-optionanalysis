@@ -18,22 +18,32 @@ from utils import math as m
 _IV_CUTOFF = 0.020
 
 _logger = logger.get_logger()
+
+
 class Leg:
     pricer: Pricing
 
-    def __init__(self, ticker: str, quantity: int, product: str, direction: str, strike: float, expiry: dt.datetime, volatility: tuple[float, float]):
-        if product not in s.PRODUCTS:
-            raise ValueError('Invalid product')
-        if direction not in s.DIRECTIONS:
-            raise ValueError('Invalid direction')
-        if quantity < 1:
-            raise ValueError('Invalid quantity')
+    def __init__(self,
+                 ticker: str,
+                 quantity: int,
+                 product: s.ProductType,
+                 direction: s.DirectionType,
+                 strike: float,
+                 expiry: dt.datetime,
+                 volatility: tuple[float, float]):
+
+        # if product not in s.PRODUCTS:
+        #     raise ValueError('Invalid product')
+        # if direction not in s.DIRECTIONS:
+        #     raise ValueError('Invalid direction')
+        # if quantity < 1:
+        #     raise ValueError('Invalid quantity')
 
         self.option = Option(ticker, product, strike, expiry, volatility)
         self.company = Company(ticker, days=1)
         self.pricing_method = pricing.PRICING_METHODS[0]
         self.quantity = quantity
-        self.direction = direction
+        self.direction: s.DirectionType = direction
         self.value_table = pd.DataFrame()
         self.range = m.range_type(0.0, 0.0, 0.0)
 
@@ -67,7 +77,7 @@ class Leg:
             volatility = self.option.volatility_implied if self.option.volatility_implied > 0.0 else self.option.volatility_calc
             self.pricer.calculate_price(volatility=volatility)
 
-            if self.option.product == 'call':
+            if self.option.product == s.ProductType.Call:
                 self.option.price_calc = self.pricer.price_call
             else:
                 self.option.price_calc = self.pricer.price_put
@@ -87,7 +97,7 @@ class Leg:
             if greeks:
                 self.pricer.calculate_greeks(volatility=self.option.volatility_eff)
 
-                if self.option.product == 'call':
+                if self.option.product == s.ProductType.Call:
                     self.option.delta = self.pricer.delta_call
                     self.option.gamma = self.pricer.gamma_call
                     self.option.theta = self.pricer.theta_call
@@ -162,7 +172,7 @@ class Leg:
 
                         price_call, price_put = self.recalculate(spot_price=spot, time_to_maturity=decimaldays_to_maturity)
 
-                        if self.option.product == 'call':
+                        if self.option.product == s.ProductType.Call:
                             row += [price_call]
                         else:
                             row += [price_put]
@@ -208,8 +218,8 @@ class Leg:
 
             output = f'{self.quantity} '\
                 f'{self.company.ticker} (${self.company.price:.2f}) '\
-                f'{self.direction} '\
-                f'{self.option.product} '\
+                f'{self.direction.name.lower()} '\
+                f'{self.option.product.name.lower()} '\
                 f'${self.option.strike:.2f} '\
                 f'({str(self.option.expiry)[:10]}) '\
                 f'${self.option.price_eff:.2f} '\
@@ -230,8 +240,8 @@ class Leg:
         else:
             output = f'{self.quantity} '\
                 f'{self.company.ticker} (${self.company.price:.2f}) '\
-                f'{self.direction} '\
-                f'{self.option.product} '\
+                f'{self.direction.name.lower()} '\
+                f'{self.option.product.name.lower()} '\
                 f'${self.option.strike:.2f} for '\
                 f'{str(self.option.expiry)[:10]}'
 

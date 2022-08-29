@@ -1,10 +1,11 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import datetime as dt
 import re
 import collections
 
 import pandas as pd
 
+import strategies as s
 from data import store as store
 from utils import ui, logger
 
@@ -16,8 +17,8 @@ MIN_CONTRACT_SIZE = 16
 
 @dataclass(order=True)
 class Option:
+    product: s.ProductType
     ticker: str = ''
-    product: str = ''
     strike: float = 0.0
     expiry: dt.datetime = dt.datetime.now()
     volatility_user: float = 0.0
@@ -52,16 +53,25 @@ class Option:
     contract_size: str = ''
     currency: str = ''
 
-    def __init__(self, ticker: str, product: str, strike: float, expiry: dt.datetime, volatility: tuple[float, float]):
+    def __init__(self, ticker: str, product: s.ProductType, strike: float, expiry: dt.datetime, volatility: tuple[float, float]):
         self.ticker = ticker
-        self.product = product
+        self.product: s.ProductType = product
         self.strike = strike
         self.expiry = expiry
         self.volatility_user = volatility[0]
         self.volatility_delta = volatility[1]
 
     def __post_init__(self):
-         self.sort_index = self.price_eff
+        self.sort_index = self.price_eff
+
+    def __str__(self):
+        output = \
+            f'{self.ticker}, ' \
+            f'${self.strike:.2f}, ' \
+            f'{self.product.name} '\
+            f'{self.expiry:%Y-%m-%d} '\
+
+        return output
 
     def load_contract(self, contract_name: str, chain: pd.DataFrame) -> bool:
         ret = False
@@ -94,7 +104,7 @@ class Option:
         parsed = parse_contract_name(contract_name)
 
         self.ticker = parsed.ticker
-        self.product = parsed.product
+        self.product = s.ProductType.Call if parsed.product == 'call' else s.ProductType.Put
         self.expiry = dt.datetime.strptime(parsed.expiry, ui.DATE_FORMAT)
         self.strike = parsed.strike
 

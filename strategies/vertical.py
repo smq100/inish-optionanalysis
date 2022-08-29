@@ -14,16 +14,16 @@ _logger = logger.get_logger()
 
 class Vertical(Strategy):
     def __init__(self,
-        ticker: str,
-        product: str,
-        direction: str,
-        strike: float,
-        *,
-        width: int,
-        quantity: int = 1,
-        expiry: dt.datetime = dt.datetime.now(),
-        volatility: tuple[float, float] = (-1.0, 0.0),
-        load_contracts: bool = False):
+                 ticker: str,
+                 product: s.ProductType,
+                 direction: s.DirectionType,
+                 strike: float,
+                 *,
+                 width: int,
+                 quantity: int = 1,
+                 expiry: dt.datetime = dt.datetime.now(),
+                 volatility: tuple[float, float] = (-1.0, 0.0),
+                 load_contracts: bool = False):
 
         if width < 1:
             raise ValueError('Invalid width')
@@ -41,26 +41,30 @@ class Vertical(Strategy):
             volatility=volatility,
             load_contracts=load_contracts)
 
-        self.name = s.STRATEGIES_BROAD[2]
+        self.type = s.StrategyType.Vertical
 
         # Add legs. Long leg is always first
         # Width1 is dollar amounts when not loading contracts
         # Width1 is indexes into the chain when loading contracts
         # Strike price will be overriden when loading contracts
-        if product == 'call':
-            if direction == 'long':
-                self.add_leg(self.quantity, self.product, 'long', self.strike, self.expiry, self.volatility)
-                self.add_leg(self.quantity, self.product, 'short', self.strike + self.width1, self.expiry, self.volatility)
+        if product == s.ProductType.Call:
+            if direction == s.DirectionType.Long:
+                print('1')
+                self.add_leg(self.quantity, self.product, s.DirectionType.Long, self.strike, self.expiry, self.volatility)
+                self.add_leg(self.quantity, self.product, s.DirectionType.Short, self.strike + self.width1, self.expiry, self.volatility)
             else:
-                self.add_leg(self.quantity, self.product, 'long', self.strike + self.width1, self.expiry, self.volatility)
-                self.add_leg(self.quantity, self.product, 'short', self.strike, self.expiry, self.volatility)
+                print('2')
+                self.add_leg(self.quantity, self.product, s.DirectionType.Long, self.strike + self.width1, self.expiry, self.volatility)
+                self.add_leg(self.quantity, self.product, s.DirectionType.Short, self.strike, self.expiry, self.volatility)
         else:
-            if direction == 'long':
-                self.add_leg(self.quantity, self.product, 'long', self.strike + self.width1, self.expiry, self.volatility)
-                self.add_leg(self.quantity, self.product, 'short', self.strike, self.expiry, self.volatility)
+            if direction == s.DirectionType.Long:
+                print('3')
+                self.add_leg(self.quantity, self.product, s.DirectionType.Long, self.strike + self.width1, self.expiry, self.volatility)
+                self.add_leg(self.quantity, self.product, s.DirectionType.Short, self.strike, self.expiry, self.volatility)
             else:
-                self.add_leg(self.quantity, self.product, 'long', self.strike, self.expiry, self.volatility)
-                self.add_leg(self.quantity, self.product, 'short', self.strike + self.width1, self.expiry, self.volatility)
+                print('4')
+                self.add_leg(self.quantity, self.product, s.DirectionType.Long, self.strike, self.expiry, self.volatility)
+                self.add_leg(self.quantity, self.product, s.DirectionType.Short, self.strike + self.width1, self.expiry, self.volatility)
 
         if load_contracts:
             items = self.fetch_contracts(self.expiry, strike=self.strike)
@@ -77,7 +81,7 @@ class Vertical(Strategy):
                 _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}. Using calculated values')
 
     def __str__(self):
-        return f'{self.name} {self.product} {self.analysis.credit_debit} spread'
+        return f'{self.type.value} {self.product.name} {self.analysis.credit_debit} spread'.lower()
 
     def fetch_contracts(self, expiry: dt.datetime, strike: float = -1.0) -> list[tuple[str, pd.DataFrame]]:
         expiry_tuple = self.chain.get_expiry()
@@ -117,12 +121,12 @@ class Vertical(Strategy):
         # Calculate the index to the short option
         if not items:
             pass
-        elif self.product == 'call':
-            if self.direction == 'long':
+        elif self.product == s.ProductType.Call:
+            if self.direction == s.DirectionType.Long:
                 chain_index += self.width1
             else:
                 chain_index -= self.width1
-        elif self.direction == 'long':
+        elif self.direction == s.DirectionType.Long:
             chain_index -= self.width1
         else:
             chain_index += self.width1
@@ -157,7 +161,6 @@ class Vertical(Strategy):
 
             # Important: Assumes the long leg is the index-0 leg
 
-            self.analysis.credit_debit = 'debit' if self.direction == 'long' else 'credit'
             self.analysis.total = abs(self.legs[0].option.price_eff - self.legs[1].option.price_eff) * self.quantity
 
             self.generate_profit_table()
@@ -190,31 +193,31 @@ class Vertical(Strategy):
         max_gain = max_loss = 0.0
 
         debit = (self.analysis.credit_debit == 'debit')
-        if self.product == 'call':
+        if self.product == s.ProductType.Call:
             if debit:
                 max_loss = self.analysis.total
                 max_gain = (self.quantity * (self.legs[1].option.strike - self.legs[0].option.strike)) - max_loss
                 if max_gain < 0.0:
-                    max_gain = 0.0 # Debit is more than possible gain!
+                    max_gain = 0.0  # Debit is more than possible gain!
                 self.analysis.sentiment = 'bullish'
             else:
                 max_gain = self.analysis.total
                 max_loss = (self.quantity * (self.legs[0].option.strike - self.legs[1].option.strike)) - max_gain
                 if max_loss < 0.0:
-                    max_loss = 0.0 # Credit is more than possible loss!
+                    max_loss = 0.0  # Credit is more than possible loss!
                 self.analysis.sentiment = 'bearish'
         else:
             if debit:
                 max_loss = self.analysis.total
                 max_gain = (self.quantity * (self.legs[0].option.strike - self.legs[1].option.strike)) - max_loss
                 if max_gain < 0.0:
-                    max_gain = 0.0 # Debit is more than possible gain!
+                    max_gain = 0.0  # Debit is more than possible gain!
                 self.analysis.sentiment = 'bearish'
             else:
                 max_gain = self.analysis.total
                 max_loss = (self.quantity * (self.legs[1].option.strike - self.legs[0].option.strike)) - max_gain
                 if max_loss < 0.0:
-                    max_loss = 0.0 # Credit is more than possible loss!
+                    max_loss = 0.0  # Credit is more than possible loss!
                 self.analysis.sentiment = 'bullish'
 
         self.analysis.max_gain = max_gain
@@ -247,22 +250,22 @@ class Vertical(Strategy):
 
     def validate(self) -> bool:
         if self.error:
-            pass # Return existing error
+            pass  # Return existing error
         elif len(self.legs) != 2:
             self.error = 'Incorrect number of legs'
         elif self.analysis.credit_debit:
-            if self.product == 'call':
+            if self.product == s.ProductType.Call:
                 if self.analysis.credit_debit == 'debit':
                     if self.legs[0].option.strike >= self.legs[1].option.strike:
-                        self.error = 'Bad option leg configuration'
+                        self.error = f'Incorrect option legs configuration (1) ({self.legs[0].option.strike:.2f} >= {self.legs[1].option.strike:.2f})'
                 elif self.legs[1].option.strike >= self.legs[0].option.strike:
-                    self.error = 'Bad option leg configuration'
+                    self.error = f'Incorrect option legs configuration (2) ({self.legs[1].option.strike:.2f} >= {self.legs[0].option.strike:.2f})'
             else:
                 if self.analysis.credit_debit == 'debit':
                     if self.legs[1].option.strike >= self.legs[0].option.strike:
-                        self.error = 'Bad option leg configuration'
+                        self.error = f'Incorrect option legs configuration (3) ({self.legs[1].option.strike:.2f} >= {self.legs[0].option.strike:.2f})'
                 elif self.legs[0].option.strike >= self.legs[1].option.strike:
-                    self.error = 'Bad option leg configuration'
+                    self.error = f'Incorrect option legs configuration (4) ({self.legs[0].option.strike:.2f} >= {self.legs[1].option.strike:.2f})'
 
         return not bool(self.error)
 
@@ -277,7 +280,7 @@ if __name__ == '__main__':
 
     ticker = 'AAPL'
     strike = float(math.ceil(store.get_last_price(ticker)))
-    vert = Vertical(ticker, 'call', 'long', strike, width=1)
+    vert = Vertical(ticker, s.ProductType.Call, s.DirectionType.Long, strike, width=1)
     vert.analyze()
 
     print(vert.legs[0])

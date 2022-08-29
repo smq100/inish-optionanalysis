@@ -4,7 +4,6 @@ import pandas as pd
 
 import strategies as s
 from strategies.strategy import Strategy
-from utils import math as m
 from utils import logger
 
 
@@ -13,17 +12,15 @@ _logger = logger.get_logger()
 
 class Call(Strategy):
     def __init__(self,
-        ticker: str,
-        product: str,
-        direction: str,
-        strike: float,
-        *,
-        quantity: int = 1,
-        expiry: dt.datetime = dt.datetime.now(),
-        volatility: tuple[float, float] = (-1.0, 0.0),
-            load_contracts: bool = False):
-
-        product = s.PRODUCTS[0]
+                 ticker: str,
+                 product: s.ProductType,
+                 direction: s.DirectionType,
+                 strike: float,
+                 *,
+                 quantity: int = 1,
+                 expiry: dt.datetime = dt.datetime.now(),
+                 volatility: tuple[float, float] = (-1.0, 0.0),
+                 load_contracts: bool = False):
 
         # Initialize the base strategy
         super().__init__(
@@ -38,7 +35,7 @@ class Call(Strategy):
             volatility=volatility,
             load_contracts=load_contracts)
 
-        self.name = s.STRATEGIES_BROAD[0]
+        self.type = s.StrategyType.Call
 
         self.add_leg(self.quantity, self.product, self.direction, self.strike, self.expiry, self.volatility)
 
@@ -54,7 +51,7 @@ class Call(Strategy):
     def generate_profit_table(self) -> bool:
         profit = pd.DataFrame()
 
-        if self.legs[0].direction == 'long':
+        if self.legs[0].direction == s.DirectionType.Long:
             profit = self.legs[0].value_table - self.legs[0].option.price_eff
         else:
             profit = self.legs[0].value_table
@@ -65,7 +62,7 @@ class Call(Strategy):
         return True
 
     def calculate_metrics(self) -> bool:
-        if self.legs[0].direction == 'long':
+        if self.legs[0].direction == s.DirectionType.Long:
             self.analysis.max_gain = -1.0
             self.analysis.max_loss = self.legs[0].option.price_eff * self.quantity
             self.analysis.sentiment = 'bullish'
@@ -80,7 +77,7 @@ class Call(Strategy):
         return True
 
     def calculate_breakeven(self) -> bool:
-        if self.legs[0].direction == 'long':
+        if self.legs[0].direction == s.DirectionType.Long:
             breakeven = self.legs[0].option.strike + self.analysis.total
         else:
             breakeven = self.legs[0].option.strike - self.analysis.total
@@ -100,7 +97,7 @@ if __name__ == '__main__':
 
     ticker = 'AAPL'
     strike = float(math.ceil(store.get_last_price(ticker)))
-    call = Call(ticker, 'call', 'long', strike)
+    call = Call(ticker, s.ProductType.Call, s.DirectionType.Long, strike)
     call.analyze()
 
     print(call.legs[0])

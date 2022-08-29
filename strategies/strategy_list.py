@@ -4,14 +4,13 @@ from concurrent import futures
 
 import pandas as pd
 
-from . import STRATEGIES
+import strategies as s
 from strategies.strategy import Strategy
 from strategies.call import Call
 from strategies.put import Put
 from strategies.vertical import Vertical
 from strategies.iron_condor import IronCondor
 from strategies.iron_butterfly import IronButterfly
-from utils import math as m
 from utils import logger
 
 
@@ -54,7 +53,7 @@ def analyze(strategies: list[strategy_type]) -> None:
         global strategy_results, strategy_msg, strategy_completed, strategy_errors
 
         if not strategy.error:
-            name = f'{strategy.direction} {strategy.name}'
+            name = f'{strategy.direction} {strategy.type}'
             strikes = [leg.option.strike for leg in strategy.legs]
             strategy.analysis.set_strategy(name, strikes, strategy.expiry, strategy.initial_spot)
 
@@ -75,37 +74,37 @@ def analyze(strategies: list[strategy_type]) -> None:
         items: list[Strategy] = []
 
         try:
-            for s in strategies:
-                decorator = ' *' if s.load_contracts else ''
-                if s.strategy == STRATEGIES[0]:  # Call
-                    strategy_msg = f'{s.ticker}: ${s.strike:.2f} {s.direction} {s.product}{decorator}'
-                    item = Call(s.ticker, 'call', s.direction, s.strike, quantity=1,
-                                expiry=s.expiry, volatility=s.volatility, load_contracts=s.load_contracts)
-                    item.set_score_screen(s.score_screen)
+            for strategy in strategies:
+                decorator = ' *' if strategy.load_contracts else ''
+                if strategy.strategy == s.StrategyType.Call.value:
+                    strategy_msg = f'{strategy.ticker}: ${strategy.strike:.2f} {strategy.direction} {strategy.product}{decorator}'
+                    item = Call(strategy.ticker, 'call', strategy.direction, strategy.strike, quantity=1,
+                                expiry=strategy.expiry, volatility=strategy.volatility, load_contracts=strategy.load_contracts)
+                    item.set_score_screen(strategy.score_screen)
                     items += [item]
-                elif s.strategy == STRATEGIES[1]:  # Put
-                    strategy_msg = f'{s.ticker}: ${s.strike:.2f} {s.direction} {s.product}{decorator}'
-                    item = Put(s.ticker, 'put', s.direction, s.strike, quantity=1,
-                               expiry=s.expiry, volatility=s.volatility, load_contracts=s.load_contracts)
-                    item.set_score_screen(s.score_screen)
+                elif strategy.strategy == s.StrategyType.Put.value:
+                    strategy_msg = f'{strategy.ticker}: ${strategy.strike:.2f} {strategy.direction} {strategy.product}{decorator}'
+                    item = Put(strategy.ticker, 'put', strategy.direction, strategy.strike, quantity=1,
+                               expiry=strategy.expiry, volatility=strategy.volatility, load_contracts=strategy.load_contracts)
+                    item.set_score_screen(strategy.score_screen)
                     items += [item]
-                elif s.strategy == STRATEGIES[2]:  # Vertical
-                    strategy_msg = f'{s.ticker}: ${s.strike:.2f} {s.direction} {s.strategy} {s.product}{decorator}'
-                    item = Vertical(s.ticker, s.product, s.direction, s.strike, width=s.width1, quantity=1,
-                                    expiry=s.expiry, volatility=s.volatility, load_contracts=s.load_contracts)
-                    item.set_score_screen(s.score_screen)
+                elif strategy.strategy == s.StrategyType.Vertical.value:
+                    strategy_msg = f'{strategy.ticker}: ${strategy.strike:.2f} {strategy.direction} {strategy.strategy} {strategy.product}{decorator}'
+                    item = Vertical(strategy.ticker, strategy.product, strategy.direction, strategy.strike, width=strategy.width1, quantity=1,
+                                    expiry=strategy.expiry, volatility=strategy.volatility, load_contracts=strategy.load_contracts)
+                    item.set_score_screen(strategy.score_screen)
                     items += [item]
-                elif s.strategy == STRATEGIES[3]:  # Iron condor
-                    strategy_msg = f'{s.ticker}: ${s.strike:.2f}{decorator}'
-                    item = IronCondor(s.ticker, 'hybrid', s.direction, s.strike, width1=s.width1, width2=s.width2, quantity=1,
-                                      expiry=s.expiry, volatility=s.volatility, load_contracts=s.load_contracts)
-                    item.set_score_screen(s.score_screen)
+                elif strategy.strategy == s.StrategyType.IronCondor.value:
+                    strategy_msg = f'{strategy.ticker}: ${strategy.strike:.2f}{decorator}'
+                    item = IronCondor(strategy.ticker, 'hybrid', strategy.direction, strategy.strike, width1=strategy.width1, width2=strategy.width2, quantity=1,
+                                      expiry=strategy.expiry, volatility=strategy.volatility, load_contracts=strategy.load_contracts)
+                    item.set_score_screen(strategy.score_screen)
                     items += [item]
-                elif s.strategy == STRATEGIES[4]:  # Iron butterfly
-                    strategy_msg = f'{s.ticker}: ${s.strike:.2f}{decorator}'
-                    item = IronButterfly(s.ticker, 'hybrid', s.direction, s.strike, width1=s.width1, quantity=1,
-                                         expiry=s.expiry, volatility=s.volatility, load_contracts=s.load_contracts)
-                    item.set_score_screen(s.score_screen)
+                elif strategy.strategy == s.StrategyType.IronButterfly.value:
+                    strategy_msg = f'{strategy.ticker}: ${strategy.strike:.2f}{decorator}'
+                    item = IronButterfly(strategy.ticker, 'hybrid', strategy.direction, strategy.strike, width1=strategy.width1, quantity=1,
+                                         expiry=strategy.expiry, volatility=strategy.volatility, load_contracts=strategy.load_contracts)
+                    item.set_score_screen(strategy.score_screen)
                     items += [item]
         except Exception as e:
             strategy_state = f'{__name__}: {items[-1].ticker}: {str(sys.exc_info()[1])}'

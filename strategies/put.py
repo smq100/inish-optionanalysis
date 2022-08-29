@@ -4,7 +4,6 @@ import pandas as pd
 
 import strategies as s
 from strategies.strategy import Strategy
-from utils import math as m
 from utils import logger
 
 
@@ -13,17 +12,15 @@ _logger = logger.get_logger()
 
 class Put(Strategy):
     def __init__(self,
-        ticker: str,
-        product: str,
-        direction: str,
-        strike: float,
-        *,
-        quantity: int = 1,
-        expiry: dt.datetime = dt.datetime.now(),
-        volatility: tuple[float, float] = (-1.0, 0.0),
-        load_contracts: bool = False):
-
-        product = s.PRODUCTS[1]
+                 ticker: str,
+                 product: s.ProductType,
+                 direction: s.DirectionType,
+                 strike: float,
+                 *,
+                 quantity: int = 1,
+                 expiry: dt.datetime = dt.datetime.now(),
+                 volatility: tuple[float, float] = (-1.0, 0.0),
+                 load_contracts: bool = False):
 
         # Initialize the base strategy
         super().__init__(
@@ -38,7 +35,7 @@ class Put(Strategy):
             volatility=volatility,
             load_contracts=load_contracts)
 
-        self.name = s.STRATEGIES_BROAD[1]
+        self.type = s.StrategyType.Put
 
         self.add_leg(self.quantity, self.product, self.direction, self.strike, self.expiry, self.volatility)
 
@@ -54,7 +51,7 @@ class Put(Strategy):
     def generate_profit_table(self) -> bool:
         profit = pd.DataFrame()
 
-        if self.legs[0].direction == 'long':
+        if self.legs[0].direction == s.DirectionType.Long:
             profit = self.legs[0].value_table - self.legs[0].option.price_eff
             profit = profit.applymap(lambda x: x if x > -self.legs[0].option.price_eff else -self.legs[0].option.price_eff)
         else:
@@ -66,7 +63,7 @@ class Put(Strategy):
         return True
 
     def calculate_metrics(self) -> bool:
-        if self.legs[0].direction == 'long':
+        if self.legs[0].direction == s.DirectionType.Long:
             self.analysis.max_gain = (self.legs[0].option.strike - self.legs[0].option.price_eff) * self.quantity
             self.analysis.max_loss = self.legs[0].option.price_eff * self.quantity
             self.analysis.sentiment = 'bearish'
@@ -81,7 +78,7 @@ class Put(Strategy):
         return True
 
     def calculate_breakeven(self) -> bool:
-        if self.legs[0].direction == 'long':
+        if self.legs[0].direction == s.DirectionType.Long:
             breakeven = self.legs[0].option.strike - self.analysis.total
         else:
             breakeven = self.legs[0].option.strike + self.analysis.total
@@ -101,7 +98,7 @@ if __name__ == '__main__':
 
     ticker = 'AAPL'
     strike = float(math.floor(store.get_last_price(ticker)))
-    put = Put(ticker, 'put', 'long', strike)
+    put = Put(ticker, s.ProductType.Put, s.DirectionType.Long, strike)
     put.analyze()
 
     print(put.legs[0])

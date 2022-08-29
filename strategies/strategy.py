@@ -5,12 +5,11 @@ import datetime as dt
 import pandas as pd
 
 from base import Threaded
-from . import STRATEGIES
 import strategies as s
+import pricing as p
 from strategies.leg import Leg
 from strategies.analysis import Analysis
 from options.chain import Chain
-import pricing as p
 from data import store
 from utils import math as m
 from utils import ui, logger
@@ -21,24 +20,24 @@ _logger = logger.get_logger()
 
 class Strategy(ABC, Threaded):
     def __init__(self,
-        ticker: str,
-        product: str,
-        direction: str,
-        strike: float,
-        *,
-        width1: int,
-        width2: int,
-        quantity: int,
-        expiry: dt.datetime,
-        volatility: tuple[float, float], # < 0.0 use latest implied volatility, = 0.0 use calculated, > 0.0 use specified
-        load_contracts: bool):
+                 ticker: str,
+                 product: s.ProductType,
+                 direction: s.DirectionType,
+                 strike: float,
+                 *,
+                 width1: int,
+                 width2: int,
+                 quantity: int,
+                 expiry: dt.datetime,
+                 volatility: tuple[float, float],  # < 0.0 use latest implied volatility, = 0.0 use calculated, > 0.0 use specified
+                 load_contracts: bool):
 
         if not store.is_ticker(ticker):
             raise ValueError('Invalid ticker')
-        if product not in s.PRODUCTS:
-            raise ValueError('Invalid product')
-        if direction not in s.DIRECTIONS:
-            raise ValueError('Invalid direction')
+        # if product not in s.PRODUCTS:
+        #     raise ValueError('Invalid product')
+        # if direction not in s.DIRECTIONS:
+        #     raise ValueError('Invalid direction')
         if strike < 0.0:
             raise ValueError('Invalid strike')
         if quantity < 1:
@@ -49,10 +48,10 @@ class Strategy(ABC, Threaded):
         if not load_contracts and volatility[0] < 0.0:
             volatility = (0.0, volatility[1])
 
-        self.name = ''
         self.ticker = ticker.upper()
-        self.product = product
-        self.direction = direction
+        self.type: s.StrategyType
+        self.product: s.ProductType = product
+        self.direction: s.DirectionType = direction
         self.strike = strike
         self.width1 = width1
         self.width2 = width2
@@ -61,7 +60,7 @@ class Strategy(ABC, Threaded):
         self.volatility = volatility
         self.load_contracts = load_contracts
 
-        self.pricing_method = p.PRICING_METHODS[0] # black-scholes
+        self.pricing_method = p.PRICING_METHODS[0]  # black-scholes
         self.chain: Chain = Chain(self.ticker)
         self.analysis = Analysis(ticker=self.ticker)
         self.legs: list[Leg] = []
@@ -77,10 +76,10 @@ class Strategy(ABC, Threaded):
             if self.expiry < tomorrow:
                 raise ValueError('Invalid option expiry')
 
-        self.analysis.credit_debit = 'debit' if direction == 'long' else 'credit'
+        self.analysis.credit_debit = 'debit' if self.direction == s.DirectionType.Long else 'credit'
 
     def __str__(self):
-        return f'{self.legs[0].direction} {self.name}'
+        return f'{self.legs[0].direction.name} {self.type.value}'.lower()
 
     def calculate(self) -> None:
         for leg in self.legs:
@@ -95,7 +94,7 @@ class Strategy(ABC, Threaded):
 
             self.legs[0].calculate()
 
-            self.analysis.credit_debit = 'debit' if self.direction == 'long' else 'credit'
+            self.analysis.credit_debit = 'debit' if self.direction == s.DirectionType else 'credit'
             self.analysis.total = self.legs[0].option.price_eff * self.quantity
 
             self.generate_profit_table()
@@ -116,7 +115,7 @@ class Strategy(ABC, Threaded):
         for leg in self.legs:
             leg.option.expiry = date
 
-    def add_leg(self, quantity: int, product: str, direction: str, strike: float, expiry: dt.datetime, volatility: tuple[float, float]) -> int:
+    def add_leg(self, quantity: int, product: s.ProductType, direction: s.DirectionType, strike: float, expiry: dt.datetime, volatility: tuple[float, float]) -> int:
         leg = Leg(self.ticker, quantity, product, direction, strike, expiry, volatility)
         self.legs += [leg]
 
@@ -183,7 +182,7 @@ class Strategy(ABC, Threaded):
     def calculate_pop(self) -> bool:
         # Works for one-legged strategies. Override for others
         pop = abs(self.legs[0].option.delta)
-        if self.legs[0].direction == 'short':
+        if self.legs[0].direction == s.DirectionType.Short:
             pop = 1.0 - pop
 
         self.analysis.pop = pop
@@ -202,11 +201,12 @@ class Strategy(ABC, Threaded):
     def validate(self) -> bool:
         # Works for one-legged strategies. Override for others
         if self.error:
-            pass # Return existing error
+            pass  # Return existing error
         elif len(self.legs) < 1:
             self.error = 'Incorrect number of legs'
 
         return not bool(self.error)
+
 
 if __name__ == '__main__':
     pass

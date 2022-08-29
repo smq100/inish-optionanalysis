@@ -11,24 +11,24 @@ from utils import ui, logger
 
 _logger = logger.get_logger()
 
+
 class IronButterfly(Strategy):
     def __init__(self,
-        ticker: str,
-        product: str,
-        direction: str,
-        strike: float,
-        *,
-        width1: int,
-        quantity: int = 1,
-        expiry: dt.datetime = dt.datetime.now(),
-        volatility: tuple[float, float] = (-1.0, 0.0),
-        load_contracts: bool = False):
+                 ticker: str,
+                 product: s.ProductType,
+                 direction: s.DirectionType,
+                 strike: float,
+                 *,
+                 width1: int,
+                 quantity: int = 1,
+                 expiry: dt.datetime = dt.datetime.now(),
+                 volatility: tuple[float, float] = (-1.0, 0.0),
+                 load_contracts: bool = False):
 
         if width1 < 1:
             raise ValueError('Invalid width1')
 
         # Initialize the base strategy
-        product = s.PRODUCTS[2]
         super().__init__(
             ticker,
             product,
@@ -41,7 +41,7 @@ class IronButterfly(Strategy):
             volatility=volatility,
             load_contracts=load_contracts)
 
-        self.name = s.STRATEGIES_BROAD[4]
+        self.type = s.StrategyType.IronButterfly
 
         # Default expiry to third Friday of next month
         expiry = m.third_friday()
@@ -50,16 +50,16 @@ class IronButterfly(Strategy):
         # Width1 is dollar amounts when not loading contracts
         # Width1 is an indexe into the chain when loading contracts
         # Strike price will be overriden when loading contracts
-        if direction == 'short':
-            self.add_leg(self.quantity, 'call', 'long', self.strike + self.width1, self.expiry, self.volatility)
-            self.add_leg(self.quantity, 'call', 'short', self.strike, self.expiry, self.volatility)
-            self.add_leg(self.quantity, 'put', 'short', self.strike, self.expiry, self.volatility)
-            self.add_leg(self.quantity, 'put', 'long', self.strike - self.width1, self.expiry, self.volatility)
+        if direction == s.DirectionType.Short:
+            self.add_leg(self.quantity, s.ProductType.Call, s.DirectionType.Long, self.strike + self.width1, self.expiry, self.volatility)
+            self.add_leg(self.quantity, s.ProductType.Call, s.DirectionType.Short, self.strike, self.expiry, self.volatility)
+            self.add_leg(self.quantity, s.ProductType.Put, s.DirectionType.Short, self.strike, self.expiry, self.volatility)
+            self.add_leg(self.quantity, s.ProductType.Put, s.DirectionType.Long, self.strike - self.width1, self.expiry, self.volatility)
         else:
-            self.add_leg(self.quantity, 'call', 'short', self.strike + self.width1, self.expiry, self.volatility)
-            self.add_leg(self.quantity, 'call', 'long', self.strike, self.expiry, self.volatility)
-            self.add_leg(self.quantity, 'put', 'long', self.strike, self.expiry, self.volatility)
-            self.add_leg(self.quantity, 'put', 'short', self.strike - self.width1, expiry, self.volatility)
+            self.add_leg(self.quantity, s.ProductType.Call, s.DirectionType.Short, self.strike + self.width1, self.expiry, self.volatility)
+            self.add_leg(self.quantity, s.ProductType.Call, s.DirectionType.Long, self.strike, self.expiry, self.volatility)
+            self.add_leg(self.quantity, s.ProductType.Put, s.DirectionType.Long, self.strike, self.expiry, self.volatility)
+            self.add_leg(self.quantity, s.ProductType.Put, s.DirectionType.Short, self.strike - self.width1, expiry, self.volatility)
 
         if load_contracts:
             items = self.fetch_contracts(self.expiry, strike=self.strike)
@@ -79,7 +79,7 @@ class IronButterfly(Strategy):
                 _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}. Using calculated values')
 
     def __str__(self):
-        return f'{self.analysis.credit_debit} {self.name}'
+        return f'{self.analysis.credit_debit} {self.type.value}'
 
     def fetch_contracts(self, expiry: dt.datetime, strike: float = -1.0) -> list[tuple[str, pd.DataFrame]]:
         expiry_tuple = self.chain.get_expiry()
@@ -99,7 +99,7 @@ class IronButterfly(Strategy):
         chain_index_p = -1
 
         # Calculate the index into the call option chain
-        options_c = self.chain.get_chain('call')
+        options_c = self.chain.get_chain(s.ProductType.Call)
         if options_c.empty:
             _logger.warning(f'{__name__}: Error fetching option chain for {self.ticker} calls')
         elif strike <= 0.0:
@@ -109,7 +109,7 @@ class IronButterfly(Strategy):
 
         # Calculate the index into the put option chain
         if chain_index_c >= 0:
-            options_p = self.chain.get_chain('put')
+            options_p = self.chain.get_chain(s.ProductType.Put)
             if options_p.empty:
                 _logger.warning(f'{__name__}: Error fetching option chain for {self.ticker} puts')
             elif strike <= 0.0:
@@ -123,9 +123,9 @@ class IronButterfly(Strategy):
         elif chain_index_p < 0:
             _logger.warning(f'{__name__}: No option index found for {self.ticker} puts')
         elif len(options_c) < (self.width1 + 1):
-            chain_index_c = -1 # Chain too small
+            chain_index_c = -1  # Chain too small
         elif (len(options_c) - chain_index_c) <= (self.width1 + 1):
-            chain_index_c = -1 # Index too close to end of chain
+            chain_index_c = -1  # Index too close to end of chain
         else:
             contract = options_c.iloc[chain_index_c + self.width1]['contractSymbol']
             items += [(contract, options_c)]
@@ -143,10 +143,10 @@ class IronButterfly(Strategy):
             _logger.warning(f'{__name__}: No option index found for {self.ticker} puts')
         elif len(options_p) < (self.width1 + 1):
             items = []
-            chain_index_p = -1 # Chain too small
+            chain_index_p = -1  # Chain too small
         elif (len(options_p) - chain_index_p) <= (self.width1 + 1):
             items = []
-            chain_index_p = -1 # Index too close to beginning of chain
+            chain_index_p = -1  # Index too close to beginning of chain
         else:
             contract = options_p.iloc[chain_index_p]['contractSymbol']
             items += [(contract, options_p)]
@@ -170,11 +170,6 @@ class IronButterfly(Strategy):
             self.legs[2].calculate()
             self.legs[3].calculate()
 
-            if self.direction == 'short':
-                self.analysis.credit_debit = 'credit'
-            else:
-                self.analysis.credit_debit = 'debit'
-
             total_c = abs(self.legs[0].option.price_eff - self.legs[1].option.price_eff) * self.quantity
             total_p = abs(self.legs[3].option.price_eff - self.legs[2].option.price_eff) * self.quantity
             self.analysis.total = total_c + total_p
@@ -194,7 +189,7 @@ class IronButterfly(Strategy):
         self.task_state = 'Done'
 
     def generate_profit_table(self) -> bool:
-        if self.direction == 'short':
+        if self.direction == s.DirectionType.Short:
             profit_c = self.legs[0].value_table - self.legs[1].value_table
             profit_p = self.legs[3].value_table - self.legs[2].value_table
         else:
@@ -204,7 +199,7 @@ class IronButterfly(Strategy):
         profit = profit_c + profit_p
         profit *= self.quantity
 
-        if self.direction == 'short':
+        if self.direction == s.DirectionType.Short:
             profit += self.analysis.max_gain
         else:
             profit -= self.analysis.max_loss
@@ -216,17 +211,17 @@ class IronButterfly(Strategy):
     def calculate_metrics(self) -> bool:
         max_gain = max_loss = 0.0
 
-        if self.direction == 'short':
+        if self.direction == s.DirectionType.Short:
             max_gain = self.analysis.total
             max_loss = (self.quantity * (self.legs[0].option.strike - self.legs[1].option.strike)) - max_gain
             if max_loss < 0.0:
-                max_loss = 0.0 # Credit is more than possible loss!
+                max_loss = 0.0  # Credit is more than possible loss!
             self.analysis.sentiment = 'low volatility'
         else:
             max_loss = self.analysis.total
             max_gain = (self.quantity * (self.legs[0].option.strike - self.legs[1].option.strike)) - max_loss
             if max_gain < 0.0:
-                max_gain = 0.0 # Debit is more than possible gain!
+                max_gain = 0.0  # Debit is more than possible gain!
             self.analysis.sentiment = 'high volatility'
 
         self.analysis.max_gain = max_gain
@@ -237,7 +232,7 @@ class IronButterfly(Strategy):
         return True
 
     def calculate_breakeven(self) -> bool:
-        breakeven  = [self.legs[1].option.strike + self.analysis.total]
+        breakeven = [self.legs[1].option.strike + self.analysis.total]
         breakeven += [self.legs[2].option.strike - self.analysis.total]
 
         self.analysis.breakeven = breakeven
@@ -258,13 +253,13 @@ class IronButterfly(Strategy):
 
     def validate(self) -> bool:
         if self.error:
-            pass # Return existing error
+            pass  # Return existing error
         elif len(self.legs) != 4:
             self.error = 'Insufficient number of legs'
         elif self.legs[0].option.strike <= self.legs[1].option.strike:
-            self.error = f'Bad option leg configuration ({self.legs[0].option.strike:.2f} <= {self.legs[1].option.strike:.2f})'
+            self.error = f'Incorrect option legs configuration (1) ({self.legs[0].option.strike:.2f} <= {self.legs[1].option.strike:.2f})'
         elif self.legs[2].option.strike <= self.legs[3].option.strike:
-            self.error = f'Bad option leg configuration ({self.legs[2].option.strike:.2f} <= {self.legs[3].option.strike:.2f})'
+            self.error = f'Incorrect option legs configuration (2) ({self.legs[2].option.strike:.2f} <= {self.legs[3].option.strike:.2f})'
 
         return not bool(self.error)
 
@@ -279,7 +274,7 @@ if __name__ == '__main__':
 
     ticker = 'MSFT'
     strike = float(math.ceil(store.get_last_price(ticker)))
-    ic = IronButterfly(ticker, 'hybrid', 'short', strike, width1=1)
+    ic = IronButterfly(ticker, s.ProductType.Hybrid, s.DirectionType.Short, strike, width1=1)
     ic.analyze()
 
     # print(ic.legs[0])

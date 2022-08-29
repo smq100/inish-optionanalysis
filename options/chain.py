@@ -2,7 +2,7 @@ import datetime as dt
 
 import pandas as pd
 
-from data import store as store
+import strategies as s
 from data import store as store
 from utils import logger
 
@@ -21,11 +21,11 @@ class Chain:
     def get_expiry(self) -> tuple[str]:
         return store.get_option_expiry(self.ticker)
 
-    def get_chain(self, product: str) -> pd.DataFrame:
+    def get_chain(self, product: s.ProductType) -> pd.DataFrame:
         if self.chain.empty:
             self.chain = store.get_option_chain(self.ticker, self.expire)
 
-        chain = self.chain[self.chain['type'] == product].copy()
+        chain = self.chain[self.chain['type'] == product.name.lower()].copy()
 
         return chain
 
