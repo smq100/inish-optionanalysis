@@ -66,10 +66,11 @@ class Option:
 
     def __str__(self):
         output = \
-            f'{self.ticker}, ' \
+            f'{self.ticker} ' \
+            f'{self.product.name}, ' \
             f'${self.strike:.2f}, ' \
-            f'{self.product.name} '\
-            f'{self.expiry:%Y-%m-%d} '\
+            f'{self.expiry:%Y-%m-%d} ' \
+            f'(${self.price_last:.2f})'
 
         return output
 

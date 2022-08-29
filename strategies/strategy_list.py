@@ -53,7 +53,8 @@ def analyze(strategies: list[strategy_type]) -> None:
         global strategy_results, strategy_msg, strategy_completed, strategy_errors
 
         if not strategy.error:
-            name = f'{strategy.direction} {strategy.type}'
+            name = f'{strategy.direction.name} {strategy.type.value}'
+            strategy_msg = ''
             strikes = [leg.option.strike for leg in strategy.legs]
             strategy.analysis.set_strategy(name, strikes, strategy.expiry, strategy.initial_spot)
 
@@ -69,40 +70,40 @@ def analyze(strategies: list[strategy_type]) -> None:
 
     strategy_total = len(strategies)
     if strategy_total > 0:
-        strategy_state = 'None'
+        strategy_state = 'Creating'
         item: Strategy
         items: list[Strategy] = []
 
         try:
             for strategy in strategies:
                 decorator = ' *' if strategy.load_contracts else ''
-                if strategy.strategy == s.StrategyType.Call.value:
-                    strategy_msg = f'{strategy.ticker}: ${strategy.strike:.2f} {strategy.direction} {strategy.product}{decorator}'
-                    item = Call(strategy.ticker, 'call', strategy.direction, strategy.strike, quantity=1,
+                if strategy.strategy == s.StrategyType.Call:
+                    strategy_msg = f'{strategy.ticker}: ${strategy.strike:.2f} {strategy.direction.name} {strategy.product.name}{decorator}'
+                    item = Call(strategy.ticker, s.ProductType.Call, strategy.direction, strategy.strike, quantity=1,
                                 expiry=strategy.expiry, volatility=strategy.volatility, load_contracts=strategy.load_contracts)
                     item.set_score_screen(strategy.score_screen)
                     items += [item]
-                elif strategy.strategy == s.StrategyType.Put.value:
-                    strategy_msg = f'{strategy.ticker}: ${strategy.strike:.2f} {strategy.direction} {strategy.product}{decorator}'
-                    item = Put(strategy.ticker, 'put', strategy.direction, strategy.strike, quantity=1,
+                elif strategy.strategy == s.StrategyType.Put:
+                    strategy_msg = f'{strategy.ticker}: ${strategy.strike:.2f} {strategy.direction.name} {strategy.product.name}{decorator}'
+                    item = Put(strategy.ticker, s.ProductType.Put, strategy.direction, strategy.strike, quantity=1,
                                expiry=strategy.expiry, volatility=strategy.volatility, load_contracts=strategy.load_contracts)
                     item.set_score_screen(strategy.score_screen)
                     items += [item]
-                elif strategy.strategy == s.StrategyType.Vertical.value:
-                    strategy_msg = f'{strategy.ticker}: ${strategy.strike:.2f} {strategy.direction} {strategy.strategy} {strategy.product}{decorator}'
+                elif strategy.strategy == s.StrategyType.Vertical:
+                    strategy_msg = f'{strategy.ticker}: ${strategy.strike:.2f} {strategy.direction.name} {strategy.strategy.value} {strategy.product.name}{decorator}'
                     item = Vertical(strategy.ticker, strategy.product, strategy.direction, strategy.strike, width=strategy.width1, quantity=1,
                                     expiry=strategy.expiry, volatility=strategy.volatility, load_contracts=strategy.load_contracts)
                     item.set_score_screen(strategy.score_screen)
                     items += [item]
-                elif strategy.strategy == s.StrategyType.IronCondor.value:
+                elif strategy.strategy == s.StrategyType.IronCondor:
                     strategy_msg = f'{strategy.ticker}: ${strategy.strike:.2f}{decorator}'
-                    item = IronCondor(strategy.ticker, 'hybrid', strategy.direction, strategy.strike, width1=strategy.width1, width2=strategy.width2, quantity=1,
+                    item = IronCondor(strategy.ticker, s.ProductType.Hybrid, strategy.direction, strategy.strike, width1=strategy.width1, width2=strategy.width2, quantity=1,
                                       expiry=strategy.expiry, volatility=strategy.volatility, load_contracts=strategy.load_contracts)
                     item.set_score_screen(strategy.score_screen)
                     items += [item]
-                elif strategy.strategy == s.StrategyType.IronButterfly.value:
+                elif strategy.strategy == s.StrategyType.IronButterfly:
                     strategy_msg = f'{strategy.ticker}: ${strategy.strike:.2f}{decorator}'
-                    item = IronButterfly(strategy.ticker, 'hybrid', strategy.direction, strategy.strike, width1=strategy.width1, quantity=1,
+                    item = IronButterfly(strategy.ticker, s.ProductType.Hybrid, strategy.direction, strategy.strike, width1=strategy.width1, quantity=1,
                                          expiry=strategy.expiry, volatility=strategy.volatility, load_contracts=strategy.load_contracts)
                     item.set_score_screen(strategy.score_screen)
                     items += [item]
@@ -111,7 +112,7 @@ def analyze(strategies: list[strategy_type]) -> None:
             items = []
         else:
             if len(items) > 0:
-                strategy_state = 'Next'
+                strategy_state = 'Analyzing'
                 with futures.ThreadPoolExecutor(max_workers=strategy_total) as executor:
                     strategy_futures = [executor.submit(process, item) for item in items if not item.error]
 

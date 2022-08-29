@@ -1,4 +1,3 @@
-from audioop import mul
 import time
 import math
 import threading
@@ -8,7 +7,6 @@ import webbrowser
 
 import argparse
 import matplotlib.pyplot as plt
-import pandas as pd
 from tabulate import tabulate
 
 import strategies as s
@@ -205,29 +203,29 @@ class Interface:
             modified = True
             selection = ui.menu(menu_items, 'Available Strategy', 0, len(menu_items), prompt='Select strategy, or 0 to cancel')
             if selection == 1:
-                strategy = 'call'
-                product = 'call'
+                strategy = s.StrategyType.Call
+                product = s.ProductType.Call
                 selection = ui.input_integer('(1) Long, or (2) Short', 1, 2)
-                direction = 'long' if selection == 1 else 'short'
+                direction = s.DirectionType.Long if selection == 1 else s.DirectionType.Short
             elif selection == 2:
-                strategy = 'put'
-                product = 'put'
+                strategy = s.StrategyType.Put
+                product = s.ProductType.Put
                 selection = ui.input_integer('(1) Long, or (2) Short', 1, 2)
-                direction = 'long' if selection == 1 else 'short'
+                direction = s.DirectionType.Long if selection == 1 else s.DirectionType.Short
             elif selection == 3:
-                strategy = 'vert'
-                p = ui.input_integer('(1) Call, or (2) Put: ', 1, 2)
-                product = 'call' if p == 1 else 'put'
+                strategy = s.StrategyType.Vertical
+                p = ui.input_integer('(1) Call, or (2) Put', 1, 2)
+                product = s.ProductType.Call if p == 1 else s.ProductType.Put
                 selection = ui.input_integer('(1) Debit, or (2) Credit', 1, 2)
-                direction = 'long' if selection == 1 else 'short'
+                direction = s.DirectionType.Long if selection == 1 else s.DirectionType.Short
             elif selection == 4:
-                strategy = 'ic'
-                product = 'hybrid'
-                direction = 'short'
+                strategy = s.StrategyType.IronCondor
+                product = s.ProductType.Hybrid
+                direction = s.DirectionType.Short
             elif selection == 5:
-                strategy = 'ib'
-                product = 'hybrid'
-                direction = 'short'
+                strategy = s.StrategyType.IronButterfly
+                product = s.ProductType.Hybrid
+                direction = s.DirectionType.Short
             else:
                 modified = False
 
@@ -348,12 +346,12 @@ class Interface:
     def refresh_screen(self) -> None:
         self.run_screen(False)
 
-    def run_strategies(self, strategy: str, product: str, direction: str) -> None:
-        if strategy not in s.STRATEGIES:
+    def run_strategies(self, strategy: s.StrategyType, product: s.ProductType, direction: s.DirectionType) -> None:
+        if strategy not in s.StrategyType:
             raise ValueError('Invalid strategy')
-        if direction not in s.DIRECTIONS:
+        if direction not in s.DirectionType:
             raise ValueError('Invalid direction')
-        if product not in s.PRODUCTS:
+        if product not in s.ProductType:
             raise ValueError('Invalid product')
 
         tickers = [str(result) for result in self.screener.valids[:LISTTOP_SCREEN]]
@@ -599,6 +597,7 @@ class Interface:
             ui.print_message('No significant correlations found')
 
     def show_progress_screen(self) -> None:
+        print()
         while not self.screener.task_state:
             pass
 
@@ -619,32 +618,40 @@ class Interface:
                 ui.progress_bar(completed, total, prefix=prefix, ticker=ticker, success=success, tasks=tasks)
 
     def show_progress_options(self) -> None:
+        print()
         while not sl.strategy_state:
             pass
 
-        prefix = 'Creating Strategies'
-        ui.progress_bar(0, 0, prefix=prefix, reset=True)
-        if sl.strategy_state == 'None':
-            while sl.strategy_state == 'None':
+
+        if sl.strategy_state == 'Creating':
+            prefix = 'Creating'
+            ui.progress_bar(0, 0, prefix=prefix, reset=True)
+
+            while sl.strategy_state == 'Creating':
                 time.sleep(ui.PROGRESS_SLEEP)
                 ui.progress_bar(0, 0, prefix=prefix, suffix=sl.strategy_msg)
 
-            if sl.strategy_state == 'Next':
-                prefix = 'Analyzing Strategies'
-                ui.erase_line()
-                ui.progress_bar(0, 0, prefix=prefix)
+                # Catch case of a task exception not allowing normal completion
+                tasks = len([True for future in sl.strategy_futures if future.running()])
+                if tasks == 0:
+                    break
 
-                while sl.strategy_state == 'Next':
-                    time.sleep(ui.PROGRESS_SLEEP)
+        if sl.strategy_state == 'Analyzing':
+            prefix = 'Analyzing'
+            ui.progress_bar(0, 0, prefix=prefix, reset=True)
 
-                    # Catch case of a task exception not allowing normal completion
-                    tasks = len([True for future in sl.strategy_futures if future.running()])
-                    if tasks == 0:
-                        break
+            while sl.strategy_state == 'Analyzing':
+                time.sleep(ui.PROGRESS_SLEEP)
+                ui.progress_bar(sl.strategy_completed, sl.strategy_total, prefix=prefix, suffix=sl.strategy_msg)
 
-                    ui.progress_bar(sl.strategy_completed, sl.strategy_total, prefix=prefix, suffix='', tasks=tasks)
+                # Catch case of a task exception not allowing normal completion
+                tasks = len([True for future in sl.strategy_futures if future.running()])
+                if tasks == 0:
+                    break
+
 
     def show_progress_support_resistance(self) -> None:
+        print()
         while not self.trend.task_state:
             pass
 
@@ -671,6 +678,7 @@ class Interface:
         print()
 
     def show_progress_correlate(self) -> None:
+        print()
         while not self.correlate.task_state:
             pass
 
@@ -708,6 +716,7 @@ class Interface:
             print()
 
     def show_progress_chart(self) -> None:
+        print()
         while not self.chart.task_state:
             pass
 

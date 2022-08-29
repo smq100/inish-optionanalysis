@@ -68,8 +68,7 @@ class Interface():
         else:
             strike = strike if strike > 0.0 else float(math.ceil(store.get_last_price(ticker)))
 
-        # Decode volatility
-        proceed1 = True
+        # Decode volatility and validate
         percent = False
         neg = False
         if '%' in volatility:
@@ -86,6 +85,7 @@ class Interface():
 
         volatility = float(volatility) if not neg else -float(volatility)
 
+        proceed1 = True
         try:
             if not percent:
                 volatility = (volatility, 0.0)
@@ -106,20 +106,24 @@ class Interface():
             except ValueError:
                 proceed2 = False
 
+        # Check if strategy valid
+        proceed3 = True
+        if strategy:
+            try:
+                s.StrategyType.from_str(strategy)
+            except ValueError:
+                proceed3 = False
+
         if not proceed1:
             ui.print_error('Invalid volatility specified')
         elif not proceed2:
             ui.print_error('Invalid expiry date specified')
+        elif not proceed3:
+            ui.print_error('Invalid strategy specified')
         elif not store.is_live_connection():
             ui.print_error('Internet connection required')
         elif not store.is_ticker(ticker):
             ui.print_error('Invalid ticker specified')
-        # elif strategy not in s.STRATEGIES:
-        #     ui.print_error('Invalid strategy specified')
-        # elif direction not in s.DIRECTIONS:
-        #     ui.print_error('Invalid direction specified')
-        # elif product not in s.PRODUCTS:
-        #     ui.print_error('Invalid product specified')
         elif width1 < 0:
             ui.print_error('Invalid width specified')
         elif width2 < 0:
@@ -171,9 +175,9 @@ class Interface():
                 '1': f'Change Symbol ({self.strategy.ticker})',
                 '2': f'Change Strategy ({self.strategy})',
                 '3': 'Select Option',
-                '4': 'View Option Details',
-                '5': 'View Value',
-                '6': 'Analyze Stategy',
+                '4': 'Analyze Stategy',
+                '5': 'View Option Details',
+                '6': 'View Value',
                 '7': 'View Analysis',
                 '8': 'Settings',
                 '0': 'Exit'
@@ -202,7 +206,7 @@ class Interface():
                 menu_items['3'] += f' ({expire}, ${self.strategy.legs[0].option.strike:.2f}{loaded})'
 
             if self.dirty_analyze:
-                menu_items['6'] += ' *'
+                menu_items['4'] += ' *'
 
             selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1, prompt='Select Operation, or 0 to exit')
 
@@ -213,11 +217,11 @@ class Interface():
             elif selection == 3:
                 self.select_chain()
             elif selection == 4:
-                self.show_options()
-            elif selection == 5:
-                self.show_value()
-            elif selection == 6:
                 self.analyze()
+            elif selection == 5:
+                self.show_options()
+            elif selection == 6:
+                self.show_value()
             elif selection == 7:
                 self.show_analysis()
             elif selection == 8:
@@ -243,10 +247,10 @@ class Interface():
 
         if not store.is_ticker(ticker):
             raise ValueError('Invalid ticker')
-        # if strategy not in s.STRATEGIES:
-        #     raise ValueError('Invalid strategy')
-        # if direction not in s.DIRECTIONS:
-        #     raise ValueError('Invalid direction')
+        if strategy not in s.StrategyType:
+            raise ValueError('Invalid strategy')
+        if direction not in s.DirectionType:
+            raise ValueError('Invalid direction')
         if strike < 0.0:
             raise ValueError('Invalid strike')
         if width1 < 0:
@@ -377,6 +381,7 @@ class Interface():
                     if style == 1:
                         ui.print_message(title, pre_creturn=2)
                         print(self.strategy.analysis)
+
                         if self.strategy.legs[0].option.contract:
                             ui.print_message('Option Contracts', pre_creturn=0)
                             for leg in self.strategy.legs:
@@ -721,6 +726,7 @@ class Interface():
             ui.print_error('Unknown method selected')
 
     def show_progress(self) -> None:
+        print()
         ui.progress_bar(0, 0, prefix='Analyzing', suffix=self.strategy.ticker, reset=True)
 
         while self.task.is_alive():

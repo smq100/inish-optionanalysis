@@ -18,10 +18,10 @@ class StrategyType(Enum):
             return StrategyType.Vertical
         elif 'condor' in label.lower():
             return StrategyType.IronCondor
-        elif 'ic' in label.lower():
-            return StrategyType.IronCondor
         elif 'butterfly' in label.lower():
             return StrategyType.IronButterfly
+        elif 'ic' in label.lower():
+            return StrategyType.IronCondor
         elif 'ib' in label.lower():
             return StrategyType.IronButterfly
         else:

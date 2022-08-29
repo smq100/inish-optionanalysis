@@ -49,20 +49,16 @@ class Vertical(Strategy):
         # Strike price will be overriden when loading contracts
         if product == s.ProductType.Call:
             if direction == s.DirectionType.Long:
-                print('1')
                 self.add_leg(self.quantity, self.product, s.DirectionType.Long, self.strike, self.expiry, self.volatility)
                 self.add_leg(self.quantity, self.product, s.DirectionType.Short, self.strike + self.width1, self.expiry, self.volatility)
             else:
-                print('2')
                 self.add_leg(self.quantity, self.product, s.DirectionType.Long, self.strike + self.width1, self.expiry, self.volatility)
                 self.add_leg(self.quantity, self.product, s.DirectionType.Short, self.strike, self.expiry, self.volatility)
         else:
             if direction == s.DirectionType.Long:
-                print('3')
                 self.add_leg(self.quantity, self.product, s.DirectionType.Long, self.strike + self.width1, self.expiry, self.volatility)
                 self.add_leg(self.quantity, self.product, s.DirectionType.Short, self.strike, self.expiry, self.volatility)
             else:
-                print('4')
                 self.add_leg(self.quantity, self.product, s.DirectionType.Long, self.strike, self.expiry, self.volatility)
                 self.add_leg(self.quantity, self.product, s.DirectionType.Short, self.strike + self.width1, self.expiry, self.volatility)
 
