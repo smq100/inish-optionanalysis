@@ -1,6 +1,5 @@
 import os
 import time
-import re
 
 from colorama import Fore, Style
 
@@ -102,14 +101,6 @@ def format_headers(columns: str, case: str = 'title'):
         header = [header.replace('_', '\n').title() for header in columns]
 
     return header
-
-
-def convert(camel_case: str) -> str:
-    name = re.sub(r'(?<!^)(?=[A-Z])', '_', camel_case).lower()
-    pattern = re.compile(r'(?<!^)(?=[A-Z])')
-    name = pattern.sub('_', name).lower()
-
-    return name
 
 
 def input_integer(message: str, min_: int, max_: int) -> int:

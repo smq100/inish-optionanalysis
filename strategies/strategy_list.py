@@ -53,7 +53,7 @@ def analyze(strategies: list[strategy_type]) -> None:
         global strategy_results, strategy_msg, strategy_completed, strategy_errors
 
         if not strategy.error:
-            name = f'{strategy.direction.name} {strategy.type.value}'
+            name = f'{strategy.direction.value} {strategy.type.value}'
             strategy_msg = ''
             strikes = [leg.option.strike for leg in strategy.legs]
             strategy.analysis.set_strategy(name, strikes, strategy.expiry, strategy.initial_spot)
@@ -78,19 +78,19 @@ def analyze(strategies: list[strategy_type]) -> None:
             for strategy in strategies:
                 decorator = ' *' if strategy.load_contracts else ''
                 if strategy.strategy == s.StrategyType.Call:
-                    strategy_msg = f'{strategy.ticker}: ${strategy.strike:.2f} {strategy.direction.name} {strategy.product.name}{decorator}'
+                    strategy_msg = f'{strategy.ticker}: ${strategy.strike:.2f} {strategy.direction.value} {strategy.product.value}{decorator}'
                     item = Call(strategy.ticker, s.ProductType.Call, strategy.direction, strategy.strike, quantity=1,
                                 expiry=strategy.expiry, volatility=strategy.volatility, load_contracts=strategy.load_contracts)
                     item.set_score_screen(strategy.score_screen)
                     items += [item]
                 elif strategy.strategy == s.StrategyType.Put:
-                    strategy_msg = f'{strategy.ticker}: ${strategy.strike:.2f} {strategy.direction.name} {strategy.product.name}{decorator}'
+                    strategy_msg = f'{strategy.ticker}: ${strategy.strike:.2f} {strategy.direction.value} {strategy.product.value}{decorator}'
                     item = Put(strategy.ticker, s.ProductType.Put, strategy.direction, strategy.strike, quantity=1,
                                expiry=strategy.expiry, volatility=strategy.volatility, load_contracts=strategy.load_contracts)
                     item.set_score_screen(strategy.score_screen)
                     items += [item]
                 elif strategy.strategy == s.StrategyType.Vertical:
-                    strategy_msg = f'{strategy.ticker}: ${strategy.strike:.2f} {strategy.direction.name} {strategy.strategy.value} {strategy.product.name}{decorator}'
+                    strategy_msg = f'{strategy.ticker}: ${strategy.strike:.2f} {strategy.direction.value} {strategy.strategy.value} {strategy.product.value}{decorator}'
                     item = Vertical(strategy.ticker, strategy.product, strategy.direction, strategy.strike, width=strategy.width1, quantity=1,
                                     expiry=strategy.expiry, volatility=strategy.volatility, load_contracts=strategy.load_contracts)
                     item.set_score_screen(strategy.score_screen)

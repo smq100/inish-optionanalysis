@@ -105,7 +105,7 @@ def calculate_strike_and_widths(strategy: s.StrategyType, product: s.ProductType
     # Calculate to closest value ITM using width as multiple
     strike = mround(strike, width1, floor=True)
     sentiment = calculate_sentiment(strategy, product, direction)
-    if sentiment == 'bearish':
+    if sentiment == s.SentimentType.Bearish:
         strike += width1
 
     if strategy == s.StrategyType.IronCondor:
@@ -116,7 +116,7 @@ def calculate_strike_and_widths(strategy: s.StrategyType, product: s.ProductType
 
 def compress_table(table: pd.DataFrame, rows: int, cols: int, auto: bool = True) -> pd.DataFrame:
     if not isinstance(table, pd.DataFrame):
-        raise ValueError('"table" must be a Pandas DataFrame')
+        raise ValueError('\'table\' must be a Pandas DataFrame')
 
     compressed = pd.DataFrame()
 

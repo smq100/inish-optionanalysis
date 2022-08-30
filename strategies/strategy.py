@@ -79,7 +79,7 @@ class Strategy(ABC, Threaded):
         self.analysis.credit_debit = s.OutlayType.Debit if self.direction == s.DirectionType.Long else s.OutlayType.Credit
 
     def __str__(self):
-        return f'{self.legs[0].direction.name} {self.type.value}'.lower()
+        return f'{self.legs[0].direction.value} {self.type.value}'.lower()
 
     def calculate(self) -> None:
         for leg in self.legs:

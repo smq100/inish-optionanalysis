@@ -271,19 +271,19 @@ class Interface():
         # try:
         if strategy == s.StrategyType.Call:
             self.strategy = Call(ticker, s.ProductType.Call, direction, strike, quantity=quantity,
-                expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
+                                 expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
         elif strategy == s.StrategyType.Put:
             self.strategy = Put(ticker, s.ProductType.Put, direction, strike, quantity=quantity,
-                expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
+                                expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
         elif strategy == s.StrategyType.Vertical:
             self.strategy = Vertical(ticker, product, direction, strike, width=width1, quantity=quantity,
-                expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
+                                     expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
         elif strategy == s.StrategyType.IronCondor:
             self.strategy = IronCondor(ticker, s.ProductType.Hybrid, direction, strike, width1=width1, width2=width2, quantity=quantity,
-                expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
+                                       expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
         elif strategy == s.StrategyType.IronButterfly:
             self.strategy = IronButterfly(ticker, s.ProductType.Hybrid, direction, strike, width1=width1, quantity=quantity,
-                expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
+                                          expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
         else:
             modified = False
             ui.print_error('Unknown argument')

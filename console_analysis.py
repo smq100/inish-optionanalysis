@@ -622,7 +622,6 @@ class Interface:
         while not sl.strategy_state:
             pass
 
-
         if sl.strategy_state == 'Creating':
             prefix = 'Creating'
             ui.progress_bar(0, 0, prefix=prefix, reset=True)
@@ -648,7 +647,6 @@ class Interface:
                 tasks = len([True for future in sl.strategy_futures if future.running()])
                 if tasks == 0:
                     break
-
 
     def show_progress_support_resistance(self) -> None:
         print()
@@ -762,7 +760,6 @@ class Interface:
                 ui.print_error(message)
         else:
             ui.print_message('Nothing deleted')
-
 
 
 def main():

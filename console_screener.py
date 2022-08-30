@@ -304,7 +304,8 @@ class Interface:
                 self.show_valids(ticker=ticker)
 
     def show_progress(self, prefix, suffix) -> None:
-        while not self.screener.task_state: pass
+        while not self.screener.task_state:
+            pass
 
         if self.screener.task_state == 'None':
             ui.progress_bar(self.screener.task_completed, self.screener.task_total, prefix=prefix, suffix=suffix, reset=True)
@@ -350,6 +351,7 @@ def main():
         Interface(table, screen, backtest=int(command['backtest']), exit=True)
     else:
         Interface(table, screen, backtest=int(command['backtest']))
+
 
 if __name__ == '__main__':
     main()

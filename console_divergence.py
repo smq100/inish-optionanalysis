@@ -259,11 +259,11 @@ class Interface:
                 ticker = self.divergence.task_ticker
                 ui.progress_bar(completed, total, ticker=ticker, success=-1)
         elif self.divergence.task_state == 'Done':
-            pass # Nothing processed. Cached results used
+            pass  # Nothing processed. Cached results used
         else:
             ui.print_message(f'{self.divergence.task_state}')
 
-    def _get_index(self, ticker:str):
+    def _get_index(self, ticker: str):
         index = -1
         if self.divergence:
             for i, item in enumerate(self.divergence.results):
@@ -327,7 +327,6 @@ class Interface:
                 if self.focus == ax.get_gid():
                     self.items[self.focus, 2].set_visible(False)
                     self.items[self.focus, 3].set_visible(False)
-
 
 
 def main():

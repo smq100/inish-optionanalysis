@@ -218,8 +218,8 @@ class Leg:
 
             output = f'{self.quantity} '\
                 f'{self.company.ticker} (${self.company.price:.2f}) '\
-                f'{self.direction.name.lower()} '\
-                f'{self.option.product.name.lower()} '\
+                f'{self.direction.value.lower()} '\
+                f'{self.option.product.value.lower()} '\
                 f'${self.option.strike:.2f} '\
                 f'({str(self.option.expiry)[:10]}) '\
                 f'${self.option.price_eff:.2f} '\
@@ -240,8 +240,8 @@ class Leg:
         else:
             output = f'{self.quantity} '\
                 f'{self.company.ticker} (${self.company.price:.2f}) '\
-                f'{self.direction.name.lower()} '\
-                f'{self.option.product.name.lower()} '\
+                f'{self.direction.value.lower()} '\
+                f'{self.option.product.value.lower()} '\
                 f'${self.option.strike:.2f} for '\
                 f'{str(self.option.expiry)[:10]}'
 

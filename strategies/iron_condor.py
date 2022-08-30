@@ -80,7 +80,7 @@ class IronCondor(Strategy):
                 _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}. Using calculated values')
 
     def __str__(self):
-        return f'{self.analysis.credit_debit.name} {self.type.value}'
+        return f'{self.analysis.credit_debit.value} {self.type.value}'
 
     def fetch_contracts(self, expiry: dt.datetime, strike: float = -1.0) -> list[tuple[str, pd.DataFrame]]:
         expiry_tuple = self.chain.get_expiry()

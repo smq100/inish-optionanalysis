@@ -1,3 +1,4 @@
+import re
 from enum import Enum, IntEnum
 
 
@@ -28,11 +29,12 @@ class StrategyType(Enum):
             raise ValueError('Invalid Strategy type')
 
 
-class ProductType(IntEnum):
-    Call = 0
-    Put = 1
-    Hybrid = 2
+class ProductType(Enum):
+    Call = 'call'
+    Put = 'put'
+    Hybrid = 'hybrid'
 
+    @staticmethod
     def from_str(label: str):
         if 'call' in label.lower():
             return ProductType.Call
@@ -44,10 +46,11 @@ class ProductType(IntEnum):
             raise ValueError('Invalid Product type')
 
 
-class DirectionType(IntEnum):
-    Long = 0
-    Short = 1
+class DirectionType(Enum):
+    Long = 'long'
+    Short = 'short'
 
+    @staticmethod
     def from_str(label: str):
         if 'long' in label.lower():
             return DirectionType.Long
@@ -57,13 +60,13 @@ class DirectionType(IntEnum):
             raise ValueError('Invalid Direction type')
 
 
-class OutlayType(IntEnum):
-    Debit = 0
-    Credit = 1
+class OutlayType(Enum):
+    Debit = 'debit'
+    Credit = 'credit'
 
 
-class SentimentType(IntEnum):
-    Bullish = 0
-    Bearish = 1
-    LowVolatility = 2
-    HighVolatility = 3
+class SentimentType(Enum):
+    Bullish = 'bullish'
+    Bearish = 'bearish'
+    LowVolatility = 'low volatility'
+    HighVolatility = 'high volatility'

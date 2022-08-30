@@ -77,7 +77,7 @@ class Vertical(Strategy):
                 _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}. Using calculated values')
 
     def __str__(self):
-        return f'{self.type.value} {self.product.name} {self.analysis.credit_debit.name} spread'.lower()
+        return f'{self.type.value} {self.product.value} {self.analysis.credit_debit.value} spread'.lower()
 
     def fetch_contracts(self, expiry: dt.datetime, strike: float = -1.0) -> list[tuple[str, pd.DataFrame]]:
         expiry_tuple = self.chain.get_expiry()
