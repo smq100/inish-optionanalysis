@@ -28,7 +28,7 @@ Nothing in this code, its analyses, or output constitutes financial advice.
 
 The content, analysis, and output of this code is not intended to be any form of personal recommendation to buy or sell any financial instrument or product or to adopt any investment strategy.
 
-This source code uses financial information provided by *Yahoo!* and *E\*Trade*. *Yahoo!* and *Yahoo! Finance* are registered trademarks of Yahoo, Inc.
+This source code uses financial information provided by *Yahoo!* and *E\*Trade*. *Yahoo!*, *Yahoo! Finance* and *E\*Trade* are registered trademarks of their respective companies.
 
 This project is not affiliated, endorsed, or vetted by Yahoo! or E\*Trade in any way. This open-source code uses Yahoo's publicly available APIs, and is intended for research and educational purposes only.
 

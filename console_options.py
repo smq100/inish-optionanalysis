@@ -1,4 +1,3 @@
-import sys
 import time
 import math
 import threading
@@ -56,9 +55,9 @@ class Interface():
 
         self.strategy: Strategy
         self.load_contracts = load_contracts
-
         self.dirty_analyze = True
         self.task: threading.Thread = None
+        self.loop = True
 
         # Set strike to closest ITM if strike < 0.0
         if direction == 'long':
@@ -165,69 +164,70 @@ class Interface():
                     analyze or exit):
 
                 if not exit:
+                    self.commands = [
+                        {'menu': 'Change Symbol', 'function': self.m_select_ticker, 'condition': 'True', 'value': 'self.strategy.ticker', 'run': ''},
+                        {'menu': 'Change Strategy', 'function': self.m_select_strategy, 'condition': 'True', 'value': 'self.strategy', 'run': ''},
+                        {'menu': 'Select Option', 'function': self.m_select_chain, 'condition': 'True', 'value': '', 'run': '_update'},
+                        {'menu': 'Analyze Strategy', 'function': self.m_analyze, 'condition': 'self.dirty_analyze', 'value': '"*"', 'run': ''},
+                        {'menu': 'View Option Details', 'function': self.m_show_options, 'condition': '', 'value': '', 'run': ''},
+                        {'menu': 'View Value', 'function': self.m_show_value, 'condition': '', 'value': '', 'run': ''},
+                        {'menu': 'View Analysis', 'function': self.m_show_analysis, 'condition': '', 'value': '', 'run': ''},
+                        # {'menu': 'Settings', 'function': self.m_select_settings, 'condition': '', 'value': '', 'run': ''},
+                    ]
+
                     self.main_menu()
             else:
                 ui.print_error('Problem loading strategy')
 
     def main_menu(self) -> None:
-        while True:
-            menu_items = {
-                '1': f'Change Symbol ({self.strategy.ticker})',
-                '2': f'Change Strategy ({self.strategy})',
-                '3': 'Select Option',
-                '4': 'Analyze Stategy',
-                '5': 'View Option Details',
-                '6': 'View Value',
-                '7': 'View Analysis',
-                '8': 'Settings',
-                '0': 'Exit'
-            }
+        # Create the menu
+        menu_items = {str(i+1): f'{self.commands[i]["menu"]}' for i in range(len(self.commands))}
+        menu_items['0'] = 'Quit'
 
-            loaded = '' if self.strategy.legs[0].option.price_last > 0 else '*'
-            expire = f'{self.strategy.legs[0].option.expiry:%Y-%m-%d}'
+        def _update(item: int) -> None:
+            if item > 0:
+                loaded = '' if self.strategy.legs[0].option.price_last > 0 else '*'
+                expire = f'{self.strategy.legs[0].option.expiry:%Y-%m-%d}'
 
-            if self.strategy.type == s.StrategyType.Vertical:
-                menu_items['3'] += f's ({expire}, '\
-                    f'L:${self.strategy.legs[0].option.strike:.2f}{loaded}, '\
-                    f'S:${self.strategy.legs[1].option.strike:.2f}{loaded})'
-            elif self.strategy.type == s.StrategyType.IronCondor:
-                menu_items['3'] += f's ({expire}, '\
-                    f'${self.strategy.legs[0].option.strike:.2f}{loaded}, '\
-                    f'${self.strategy.legs[1].option.strike:.2f}{loaded}, '\
-                    f'${self.strategy.legs[2].option.strike:.2f}{loaded}, '\
-                    f'${self.strategy.legs[3].option.strike:.2f}{loaded})'
-            elif self.strategy.type == s.StrategyType.IronButterfly:
-                menu_items['3'] += f's ({expire}, '\
-                    f'${self.strategy.legs[0].option.strike:.2f}{loaded}, '\
-                    f'${self.strategy.legs[1].option.strike:.2f}{loaded}, '\
-                    f'${self.strategy.legs[2].option.strike:.2f}{loaded}, '\
-                    f'${self.strategy.legs[3].option.strike:.2f}{loaded})'
-            else:  # Call or Put
-                menu_items['3'] += f' ({expire}, ${self.strategy.legs[0].option.strike:.2f}{loaded})'
+                if self.strategy.type == s.StrategyType.Vertical:
+                    menu_items[str(item)] += f's ({expire}, '\
+                        f'L:${self.strategy.legs[0].option.strike:.2f}{loaded}, '\
+                        f'S:${self.strategy.legs[1].option.strike:.2f}{loaded})'
+                elif self.strategy.type == s.StrategyType.IronCondor:
+                    menu_items[str(item)] += f's ({expire}, '\
+                        f'${self.strategy.legs[0].option.strike:.2f}{loaded}, '\
+                        f'${self.strategy.legs[1].option.strike:.2f}{loaded}, '\
+                        f'${self.strategy.legs[2].option.strike:.2f}{loaded}, '\
+                        f'${self.strategy.legs[3].option.strike:.2f}{loaded})'
+                elif self.strategy.type == s.StrategyType.IronButterfly:
+                    menu_items[str(item)] += f's ({expire}, '\
+                        f'${self.strategy.legs[0].option.strike:.2f}{loaded}, '\
+                        f'${self.strategy.legs[1].option.strike:.2f}{loaded}, '\
+                        f'${self.strategy.legs[2].option.strike:.2f}{loaded}, '\
+                        f'${self.strategy.legs[3].option.strike:.2f}{loaded})'
+                else:  # Call or Put
+                    menu_items[str(item)] += f' ({expire}, ${self.strategy.legs[0].option.strike:.2f}{loaded})'
 
-            if self.dirty_analyze:
-                menu_items['4'] += ' *'
+        # Update menu items with dynamic info
+        def update(menu: dict) -> None:
+            for i, item in enumerate(self.commands):
+                if item['condition'] and (item['value'] or item['run']):
+                    menu[str(i+1)] = f'{self.commands[i]["menu"]}'
+                    if eval(item['condition']):
+                        if item['run']:
+                            run = f'{item["run"]}({i+1})'
+                            eval(run, {}, {'_update': _update})
+                        else:
+                            menu[str(i+1)] += f' ({eval(item["value"])})'
 
-            selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1, prompt='Select Operation, or 0 to exit')
+        while self.loop:
+            update(menu_items)
 
-            if selection == 1:
-                self.select_ticker()
-            elif selection == 2:
-                self.select_strategy()
-            elif selection == 3:
-                self.select_chain()
-            elif selection == 4:
-                self.analyze()
-            elif selection == 5:
-                self.show_options()
-            elif selection == 6:
-                self.show_value()
-            elif selection == 7:
-                self.show_analysis()
-            elif selection == 8:
-                self.select_settings()
-            elif selection == 0:
-                break
+            selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1)
+            if selection > 0:
+                self.commands[selection-1]['function']()
+            else:
+                self.loop = False
 
     def load_strategy(self,
                       ticker: str,
@@ -295,11 +295,11 @@ class Interface():
             self.dirty_analyze = True
 
             if analyze:
-                modified = self.analyze()
+                modified = self.m_analyze()
 
         return modified
 
-    def analyze(self) -> bool:
+    def m_analyze(self) -> bool:
         valid = self.strategy.validate()
         if valid:
             self.task = threading.Thread(target=self.strategy.analyze)
@@ -310,8 +310,8 @@ class Interface():
 
             self.dirty_analyze = False
 
-            self.show_analysis(style=1)
-            self.show_analysis(style=2)
+            self.m_show_analysis(style=1)
+            self.m_show_analysis(style=2)
         else:
             ui.print_error(self.strategy.error)
 
@@ -320,7 +320,7 @@ class Interface():
     def reset(self) -> None:
         self.strategy.reset()
 
-    def show_value(self, style: int = 0) -> None:
+    def m_show_value(self, style: int = 0) -> None:
         if not self.dirty_analyze:
             if len(self.strategy.legs) > 1:
                 leg = ui.input_integer('Enter Leg', 1, len(self.strategy.legs)) - 1
@@ -359,7 +359,7 @@ class Interface():
         else:
             ui.print_error('Please first perform calculation')
 
-    def show_analysis(self, style: int = 0) -> None:
+    def m_show_analysis(self, style: int = 0) -> None:
         if not self.dirty_analyze:
             analysis = self.strategy.analysis.profit_table * 100.0
             if analysis is not None:
@@ -405,7 +405,7 @@ class Interface():
         else:
             ui.print_error('Please first perform analysis')
 
-    def show_options(self) -> None:
+    def m_show_options(self) -> None:
         if len(self.strategy.legs) > 0:
             if len(self.strategy.legs) > 1:
                 leg = ui.input_integer('Enter Leg (0=all)', 0, 2) - 1
@@ -442,7 +442,7 @@ class Interface():
         else:
             ui.print_error('Invalid leg')
 
-    def select_ticker(self) -> bool:
+    def m_select_ticker(self) -> bool:
         valid = False
         modified = False
 
@@ -472,7 +472,7 @@ class Interface():
 
         return modified
 
-    def select_strategy(self) -> bool:
+    def m_select_strategy(self) -> bool:
         menu_items = {
             '1': 'Call',
             '2': 'Put',
@@ -543,7 +543,7 @@ class Interface():
 
         return modified
 
-    def select_chain(self) -> list[str]:
+    def m_select_chain(self) -> list[str]:
         contracts = []
         proceed = True
 
@@ -685,7 +685,7 @@ class Interface():
 
         return contracts
 
-    def select_settings(self) -> None:
+    def m_select_settings(self) -> None:
         while True:
             menu_items = {
                 '1': f'Pricing Method ({self.strategy.legs[0].pricing_method.title()})',

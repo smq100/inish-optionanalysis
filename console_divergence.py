@@ -18,10 +18,9 @@ logger.get_logger(logging.WARNING, logfile='')
 
 
 class Interface:
-    def __init__(self, list: str = '', days: int = 100, disp_calc: bool = False, disp_plot: bool = False, disp_anly: bool = False, exit: bool = False):
+    def __init__(self, list: str = '', days: int = 100, disp_calc: bool = False, disp_plot: bool = False, disp_anly: bool = False):
         self.list = list.upper()
         self.days: int = days
-        self.exit: bool = exit
         self.disp_calc: bool = disp_calc
         self.disp_plot: bool = disp_plot
         self.disp_anly: bool = disp_anly
@@ -31,6 +30,7 @@ class Interface:
         self.divergence: Divergence | None = None
         self.task: threading.Thread
         self.use_cache: bool = False
+        self.loop = True
 
         self.commands = [
             {'menu': 'Select Tickers', 'function': self.m_select_tickers, 'condition': 'self.tickers', 'value': 'self.list'},
@@ -58,23 +58,21 @@ class Interface:
         menu_items['0'] = 'Quit'
 
         # Update menu items with dynamic info
-        def update(menu: dict):
+        def update(menu: dict) -> None:
             for i, item in enumerate(self.commands):
                 if item['condition']:
                     menu[str(i+1)] = f'{self.commands[i]["menu"]}'
                     if eval(item['condition']):
                         menu[str(i+1)] += f' ({eval(item["value"])})'
 
-        while True:
+        while self.loop:
             update(menu_items)
+
             selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1)
             if selection > 0:
                 self.commands[selection-1]['function']()
             else:
-                self.exit = True
-
-            if self.exit:
-                break
+                self.loop = False
 
     def m_select_tickers(self, list='') -> None:
         if not list:
@@ -333,7 +331,6 @@ def main():
     parser = argparse.ArgumentParser(description='Divergence Analysis')
     parser.add_argument('-t', '--tickers', metavar='tickers', help='Specify a ticker or list')
     parser.add_argument('-d', '--days', metavar='days', help='Days to run analysis', default=100)
-    parser.add_argument('-x', '--exit', help='Run divergence analysis then exit (valid only with -t)', action='store_true')
     parser.add_argument('-s', '--show_calc', help='Show calculation results', action='store_true')
     parser.add_argument('-S', '--show_plot', help='Show results plot', action='store_true')
 
