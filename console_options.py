@@ -229,76 +229,6 @@ class Interface():
             else:
                 self.loop = False
 
-    def load_strategy(self,
-                      ticker: str,
-                      strategy: s.StrategyType,
-                      product: s.ProductType,
-                      direction: s.DirectionType,
-                      strike: float,
-                      width1: int,
-                      width2: int,
-                      quantity: int,
-                      expiry: str,
-                      volatility: tuple[float, float],
-                      load_contracts: bool = False,
-                      analyze: bool = False) -> bool:
-
-        modified = True
-
-        if not store.is_ticker(ticker):
-            raise ValueError('Invalid ticker')
-        if strategy not in s.StrategyType:
-            raise ValueError('Invalid strategy')
-        if direction not in s.DirectionType:
-            raise ValueError('Invalid direction')
-        if strike < 0.0:
-            raise ValueError('Invalid strike')
-        if width1 < 0:
-            raise ValueError('Invalid width')
-        if width2 < 0:
-            raise ValueError('Invalid width')
-        if quantity < 1:
-            raise ValueError('Invalid quantity')
-        if strategy == 'vert' and width1 < 1:
-            raise ValueError(f'Invalid width specified: {width1}')
-        if strategy == 'ic' and (width1 < 1 or width2 < 1):
-            raise ValueError(f'Invalid width specified: {width1}, {width2}')
-        if strategy == 'ib' and width1 < 1:
-            raise ValueError(f'Invalid width specified: {width1}')
-
-        expiry_dt = dt.datetime.strptime(expiry, ui.DATE_FORMAT) if expiry else dt.datetime.now()
-
-        # try:
-        if strategy == s.StrategyType.Call:
-            self.strategy = Call(ticker, s.ProductType.Call, direction, strike, quantity=quantity,
-                                 expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
-        elif strategy == s.StrategyType.Put:
-            self.strategy = Put(ticker, s.ProductType.Put, direction, strike, quantity=quantity,
-                                expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
-        elif strategy == s.StrategyType.Vertical:
-            self.strategy = Vertical(ticker, product, direction, strike, width=width1, quantity=quantity,
-                                     expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
-        elif strategy == s.StrategyType.IronCondor:
-            self.strategy = IronCondor(ticker, s.ProductType.Hybrid, direction, strike, width1=width1, width2=width2, quantity=quantity,
-                                       expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
-        elif strategy == s.StrategyType.IronButterfly:
-            self.strategy = IronButterfly(ticker, s.ProductType.Hybrid, direction, strike, width1=width1, quantity=quantity,
-                                          expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
-        else:
-            modified = False
-            ui.print_error('Unknown argument')
-        # except Exception as e:
-        #     ui.print_error(f'{__name__}: 001: {e}')
-        #     modified = False
-
-        if modified:
-            self.dirty_analyze = True
-
-            if analyze:
-                modified = self.m_analyze()
-
-        return modified
-
     def m_analyze(self) -> bool:
         valid = self.strategy.validate()
         if valid:
@@ -316,9 +246,6 @@ class Interface():
             ui.print_error(self.strategy.error)
 
         return valid
-
-    def reset(self) -> None:
-        self.strategy.reset()
 
     def m_show_value(self, style: int = 0) -> None:
         if not self.dirty_analyze:
@@ -349,11 +276,11 @@ class Interface():
                         ui.print_message(greeks, pre_creturn=0, post_creturn=1)
                         print(tabulate(value, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
                     elif style == 2:
-                        self._show_chart(value, title, charttype='chart')
+                        self.show_chart(value, title, charttype='chart')
                     elif style == 3:
-                        self._show_chart(value, title, charttype='contour')
+                        self.show_chart(value, title, charttype='contour')
                     elif style == 4:
-                        self._show_chart(value, title, charttype='surface')
+                        self.show_chart(value, title, charttype='surface')
             else:
                 ui.print_error('No tables calculated')
         else:
@@ -395,11 +322,11 @@ class Interface():
                         print(tabulate(analysis, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
                         print()
                     elif style == 3:
-                        self._show_chart(analysis, title, charttype='chart')
+                        self.show_chart(analysis, title, charttype='chart')
                     elif style == 4:
-                        self._show_chart(analysis, title, charttype='contour')
+                        self.show_chart(analysis, title, charttype='contour')
                     elif style == 5:
-                        self._show_chart(analysis, title, charttype='surface')
+                        self.show_chart(analysis, title, charttype='surface')
             else:
                 ui.print_error('No tables calculated')
         else:
@@ -425,22 +352,6 @@ class Interface():
                 print(f'{self.strategy.legs[leg].option}')
         else:
             print('No option legs configured')
-
-    def show_legs(self, leg: int = -1, delimeter: bool = True) -> None:
-        if delimeter:
-            ui.print_message('Option Legs')
-
-        if len(self.strategy.legs) < 1:
-            print('No legs configured')
-        elif leg < 0:
-            for index in range(len(self.strategy.legs)):
-                # Recursive call to output each leg
-                self.show_legs(index, False)
-        elif leg < len(self.strategy.legs):
-            output = f'{leg+1}: {self.strategy.legs[leg]}'
-            print(output)
-        else:
-            ui.print_error('Invalid leg')
 
     def m_select_ticker(self) -> bool:
         valid = False
@@ -634,6 +545,109 @@ class Interface():
 
         return contracts
 
+    def m_select_settings(self) -> None:
+        while True:
+            menu_items = {
+                '1': f'Pricing Method ({self.strategy.legs[0].pricing_method.title()})',
+                '0': 'Done',
+            }
+
+            selection = ui.menu(menu_items, 'Settings', 0, len(menu_items)-1, prompt='Select setting')
+
+            if selection == 1:
+                self.select_method()
+            elif selection == 0:
+                break
+
+    def load_strategy(self,
+                      ticker: str,
+                      strategy: s.StrategyType,
+                      product: s.ProductType,
+                      direction: s.DirectionType,
+                      strike: float,
+                      width1: int,
+                      width2: int,
+                      quantity: int,
+                      expiry: str,
+                      volatility: tuple[float, float],
+                      load_contracts: bool = False,
+                      analyze: bool = False) -> bool:
+
+        modified = True
+
+        if not store.is_ticker(ticker):
+            raise ValueError('Invalid ticker')
+        if strategy not in s.StrategyType:
+            raise ValueError('Invalid strategy')
+        if direction not in s.DirectionType:
+            raise ValueError('Invalid direction')
+        if strike < 0.0:
+            raise ValueError('Invalid strike')
+        if width1 < 0:
+            raise ValueError('Invalid width')
+        if width2 < 0:
+            raise ValueError('Invalid width')
+        if quantity < 1:
+            raise ValueError('Invalid quantity')
+        if strategy == 'vert' and width1 < 1:
+            raise ValueError(f'Invalid width specified: {width1}')
+        if strategy == 'ic' and (width1 < 1 or width2 < 1):
+            raise ValueError(f'Invalid width specified: {width1}, {width2}')
+        if strategy == 'ib' and width1 < 1:
+            raise ValueError(f'Invalid width specified: {width1}')
+
+        expiry_dt = dt.datetime.strptime(expiry, ui.DATE_FORMAT) if expiry else dt.datetime.now()
+
+        # try:
+        if strategy == s.StrategyType.Call:
+            self.strategy = Call(ticker, s.ProductType.Call, direction, strike, quantity=quantity,
+                                 expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
+        elif strategy == s.StrategyType.Put:
+            self.strategy = Put(ticker, s.ProductType.Put, direction, strike, quantity=quantity,
+                                expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
+        elif strategy == s.StrategyType.Vertical:
+            self.strategy = Vertical(ticker, product, direction, strike, width=width1, quantity=quantity,
+                                     expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
+        elif strategy == s.StrategyType.IronCondor:
+            self.strategy = IronCondor(ticker, s.ProductType.Hybrid, direction, strike, width1=width1, width2=width2, quantity=quantity,
+                                       expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
+        elif strategy == s.StrategyType.IronButterfly:
+            self.strategy = IronButterfly(ticker, s.ProductType.Hybrid, direction, strike, width1=width1, quantity=quantity,
+                                          expiry=expiry_dt, volatility=volatility, load_contracts=load_contracts)
+        else:
+            modified = False
+            ui.print_error('Unknown argument')
+        # except Exception as e:
+        #     ui.print_error(f'{__name__}: 001: {e}')
+        #     modified = False
+
+        if modified:
+            self.dirty_analyze = True
+
+            if analyze:
+                modified = self.m_analyze()
+
+        return modified
+
+    def reset(self) -> None:
+        self.strategy.reset()
+
+    def show_legs(self, leg: int = -1, delimeter: bool = True) -> None:
+        if delimeter:
+            ui.print_message('Option Legs')
+
+        if len(self.strategy.legs) < 1:
+            print('No legs configured')
+        elif leg < 0:
+            for index in range(len(self.strategy.legs)):
+                # Recursive call to output each leg
+                self.show_legs(index, False)
+        elif leg < len(self.strategy.legs):
+            output = f'{leg+1}: {self.strategy.legs[leg]}'
+            print(output)
+        else:
+            ui.print_error('Invalid leg')
+
     def select_chain_expiry(self) -> dt.datetime:
         if d.ACTIVE_OPTIONDATASOURCE == 'etrade':
             if auth.Session is None:
@@ -685,20 +699,6 @@ class Interface():
 
         return contracts
 
-    def m_select_settings(self) -> None:
-        while True:
-            menu_items = {
-                '1': f'Pricing Method ({self.strategy.legs[0].pricing_method.title()})',
-                '0': 'Done',
-            }
-
-            selection = ui.menu(menu_items, 'Settings', 0, len(menu_items)-1, prompt='Select setting')
-
-            if selection == 1:
-                self.select_method()
-            elif selection == 0:
-                break
-
     def select_method(self) -> None:
         menu_items = {
             '1': 'Black-Scholes',
@@ -733,7 +733,7 @@ class Interface():
             time.sleep(ui.PROGRESS_SLEEP)
             ui.progress_bar(0, 0, prefix='Analyzing', suffix=self.strategy.ticker)
 
-    def _show_chart(self, table: str, title: str, charttype: str) -> None:
+    def show_chart(self, table: str, title: str, charttype: str) -> None:
         if not isinstance(table, pd.DataFrame):
             raise ValueError("'table' must be a Pandas DataFrame")
 
@@ -761,7 +761,7 @@ class Interface():
         # Y Axis
         ax.yaxis.set_major_formatter('${x:.2f}')
         height = table.index[0] - table.index[-1]
-        major, minor = self._calculate_major_minor_ticks(height)
+        major, minor = self.calculate_major_minor_ticks(height)
         if major > 0:
             ax.yaxis.set_major_locator(mticker.MultipleLocator(major))
         if minor > 0:
@@ -813,7 +813,7 @@ class Interface():
         plt.show()
 
     @staticmethod
-    def _calculate_major_minor_ticks(width: int) -> tuple[float, float]:
+    def calculate_major_minor_ticks(width: int) -> tuple[float, float]:
         if width <= 0.0:
             major = 0.0
             minor = 0.0

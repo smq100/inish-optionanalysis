@@ -60,7 +60,7 @@ class Interface:
         # Update menu items with dynamic info
         def update(menu: dict) -> None:
             for i, item in enumerate(self.commands):
-                if item['condition']:
+                if item['condition'] and item['value']:
                     menu[str(i+1)] = f'{self.commands[i]["menu"]}'
                     if eval(item['condition']):
                         menu[str(i+1)] += f' ({eval(item["value"])})'

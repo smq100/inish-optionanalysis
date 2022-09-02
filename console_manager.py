@@ -48,6 +48,24 @@ class Interface:
             if not store.is_live_connection():
                 ui.print_error('No Internet connection')
 
+            self.commands = [
+                {'menu': 'Database Information', 'function': self.m_show_database_information, 'params': '', 'condition': '', 'value': ''},
+                {'menu': 'Ticker Information', 'function': self.m_show_ticker_information, 'params': 'self.ticker', 'condition': 'True', 'value': 'd.ACTIVE_DB.lower()'},
+                {'menu': 'Ticker Information', 'function': self.m_show_ticker_information, 'params': 'self.ticker, live=True', 'condition': 'True', 'value': 'd.ACTIVE_HISTORYDATASOURCE.lower()'},
+                {'menu': 'Ticker Information (previous)', 'function': self.m_show_ticker_information, 'params': 'self.ticker, prompt=True', 'condition': 'True', 'value': ''},
+                {'menu': 'Update History', 'function': self.m_update_history, 'params': '', 'condition': '', 'value': ''},
+                {'menu': 'Update Company', 'function': self.m_update_company, 'params': '', 'condition': '', 'value': ''},
+                {'menu': 'List Update Errors', 'function': self.m_list_errors, 'params': '', 'condition': '', 'value': ''},
+                {'menu': 'Re-Check Inactive', 'function': self.m_recheck_inactive, 'params': '', 'condition': '', 'value': ''},
+                {'menu': 'List Inactive', 'function': self.m_list_inactive, 'params': '', 'condition': '', 'value': ''},
+                {'menu': 'Mark Active/Inactive', 'function': self.m_change_active, 'params': '', 'condition': '', 'value': ''},
+                {'menu': 'Check Integrity', 'function': self.m_check_integrity, 'params': '', 'condition': '', 'value': ''},
+                {'menu': 'Check Incomplete Pricing', 'function': self.m_check_incomplete_pricing, 'params': '', 'condition': '', 'value': ''},
+                {'menu': 'Populate Exchange', 'function': self.m_populate_exchange, 'params': '', 'condition': '', 'value': ''},
+                {'menu': 'Populate Index', 'function': self.m_populate_index, 'params': '', 'condition': '', 'value': ''},
+                {'menu': 'Reset Database', 'function': self.m_reset_database, 'params': '', 'condition': '', 'value': ''},
+            ]
+
             if exit:
                 pass
             elif ticker:
@@ -64,70 +82,36 @@ class Interface:
 
         if not loop:
             ui.print_error(f'Database {d.ACTIVE_DB} is not intialized')
-            self.reset_database()
+            self.m_reset_database()
         elif not self.stop and not self.quick:
-            self.show_database_information()
+            self.m_show_database_information()
 
-        menu_items = {
-            '1':  'Database Information',
-            '2':  f'Ticker Information ({d.ACTIVE_DB})',
-            '3':  f'Ticker Information ({d.ACTIVE_HISTORYDATASOURCE})',
-            '4':  'Ticker Information (previous)',
-            '5':  'Update History',
-            '6':  'Update Company',
-            '7':  'List Update Errors',
-            '8':  'Re-Check Inactive',
-            '9':  'List Inactive',
-            '10': 'Mark Active/Inactive',
-            '11': 'Check Integrity',
-            '12': 'Check Incomplete Pricing',
-            '13': 'Populate Exchange',
-            '14': 'Populate Index',
-            '15': 'Reset Database',
-            '0':  'Exit'
-        }
+        # Create the menu
+        menu_items = {str(i+1): f'{self.commands[i]["menu"]}' for i in range(len(self.commands))}
+        menu_items['0'] = 'Quit'
+
+        # Update menu items with dynamic info
+        def update(menu: dict) -> None:
+            for i, item in enumerate(self.commands):
+                if item['condition'] and item['value']:
+                    menu[str(i+1)] = f'{self.commands[i]["menu"]}'
+                    if eval(item['condition']):
+                        menu[str(i+1)] += f' ({eval(item["value"])})'
 
         while loop:
-            if not self.ticker:
-                selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1, prompt='Select operation, or 0 when done')
+            update(menu_items)
 
-            if selection == 1:
-                self.show_database_information()
-            elif selection == 2:
-                self.show_ticker_information(self.ticker)
-            elif selection == 3:
-                self.show_ticker_information(self.ticker, live=True)
-            elif selection == 4:
-                self.show_ticker_information(self.ticker, prompt=True)
-            elif selection == 5:
-                self.update_history(self.ticker)
-            elif selection == 6:
-                self.update_company()
-            elif selection == 7:
-                self.list_errors()
-            elif selection == 8:
-                self.recheck_inactive()
-            elif selection == 9:
-                self.list_inactive()
-            elif selection == 10:
-                self.change_active()
-            elif selection == 11:
-                self.check_integrity()
-            elif selection == 12:
-                self.check_incomplete_pricing()
-            elif selection == 13:
-                self.populate_exchange()
-            elif selection == 14:
-                self.populate_index()
-            elif selection == 15:
-                self.reset_database()
-            elif selection == 0:
-                self.stop = True
-
-            if self.stop:
+            selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1)
+            if selection > 0:
+                if self.commands[selection-1]['params']:
+                    func = f'self.{self.commands[selection-1]["function"].__name__}({self.commands[selection-1]["params"]})'
+                    eval(func)
+                else:
+                    self.commands[selection-1]['function']()
+            else:
                 loop = False
 
-    def show_database_information(self) -> None:
+    def m_show_database_information(self) -> None:
         info = self.manager.get_database_info()
 
         if info:
@@ -140,7 +124,7 @@ class Interface:
         else:
             ui.print_error(f'Database {d.ACTIVE_DB} is empty')
 
-    def show_ticker_information(self, ticker: str = '', prompt: bool = False, live: bool = False) -> None:
+    def m_show_ticker_information(self, ticker: str = '', prompt: bool = False, live: bool = False) -> None:
         if not ticker:
             ticker = ui.input_text('Enter ticker').upper()
 
@@ -216,7 +200,7 @@ class Interface:
             if found:
                 ui.print_tickers(found)
 
-    def populate_exchange(self) -> None:
+    def m_populate_exchange(self) -> None:
         table = ui.input_table(exchange=True)
         if table:
             self.task = threading.Thread(target=self.manager.populate_exchange, args=[table])
@@ -229,7 +213,7 @@ class Interface:
                 ui.print_message(f'{self.manager.task_success} {table} '
                                  f'Symbols populated in {self.manager.task_time/60.0:.1f} minutes with {len(self.manager.invalid_tickers)} invalid symbols')
 
-    def populate_index(self) -> None:
+    def m_populate_index(self) -> None:
         table = ui.input_table(index=True)
         if table:
             self.task = threading.Thread(target=self.manager.populate_index, args=[table])
@@ -243,7 +227,7 @@ class Interface:
             else:
                 ui.print_error(self.manager.task_state)
 
-    def update_history(self, ticker: str = '') -> None:
+    def m_update_history(self, ticker: str = '') -> None:
         if not ticker:
             table = ui.input_table(exchange=True, ticker=True, all=True)
         elif store.is_list(ticker):
@@ -258,7 +242,7 @@ class Interface:
         elif store.is_ticker(ticker):
             days = self.manager.update_history_ticker(ticker)
             ui.print_message(f'Added {days} days pricing for {ticker.upper()}')
-            self.show_ticker_information(ticker=ticker)
+            self.m_show_ticker_information(ticker=ticker)
         else:
             self.task = threading.Thread(target=self.manager.update_history_exchange, args=[table])
             self.task.start()
@@ -274,7 +258,7 @@ class Interface:
                         ui.print_message(f'{len(self.manager.invalid_tickers)} unsuccessful tickers')
                         ui.print_tickers(self.manager.invalid_tickers)
 
-    def update_company(self, ticker: str = '') -> None:
+    def m_update_company(self, ticker: str = '') -> None:
         table = ui.input_table(exchange=True, ticker=True, all=True)
 
         if not table:
@@ -282,7 +266,7 @@ class Interface:
         elif store.is_ticker(ticker):
             if self.manager.update_company_ticker(ticker):
                 ui.print_message('Success')
-                self.show_ticker_information(ticker)
+                self.m_show_ticker_information(ticker)
             else:
                 ui.print_error('Error')
         else:
@@ -323,7 +307,7 @@ class Interface:
             self.manager.delete_ticker(ticker)
             ui.print_message(f'Deleted ticker {ticker}')
 
-    def reset_database(self) -> None:
+    def m_reset_database(self) -> None:
         select = ui.input_yesno('Reset the database')
         if select == 1:
             self.manager.delete_database()
@@ -334,7 +318,7 @@ class Interface:
         else:
             ui.print_message('Database not reset')
 
-    def check_integrity(self) -> None:
+    def m_check_integrity(self) -> None:
         ui.print_message('Missing Tickers')
         missing_tickers = {e: self.manager.identify_missing_ticker(e) for e in self.exchanges}
         for e in self.exchanges:
@@ -367,7 +351,7 @@ class Interface:
             else:
                 loop = False
 
-    def check_incomplete_pricing(self) -> None:
+    def m_check_incomplete_pricing(self) -> None:
         table = ui.input_table(exchange=True, index=True, ticker=True)
         if table:
             self.task = threading.Thread(target=self.manager.identify_incomplete_pricing, args=[table])
@@ -392,7 +376,7 @@ class Interface:
             else:
                 ui.print_message('No results found')
 
-    def list_errors(self) -> None:
+    def m_list_errors(self) -> None:
         tickers = self.manager.get_latest_errors()
         if tickers:
             ui.print_message('Tickers with errors')
@@ -403,7 +387,7 @@ class Interface:
         else:
             ui.print_message('No ticker errors')
 
-    def recheck_inactive(self) -> None:
+    def m_recheck_inactive(self) -> None:
         ticker = ui.input_text('Enter ticker or \'every\' for all').upper()
         if ticker == 'EVERY':
             tickers = self.manager.identify_inactive_tickers('every')
@@ -425,7 +409,7 @@ class Interface:
         else:
             ui.print_message('No tickers to update')
 
-    def list_inactive(self) -> None:
+    def m_list_inactive(self) -> None:
         tickers = self.manager.identify_inactive_tickers('every')
         if tickers:
             ui.print_message(f'{len(tickers)} inactive tickers')
@@ -433,7 +417,7 @@ class Interface:
         else:
             ui.print_message('No inactive tickers')
 
-    def change_active(self) -> None:
+    def m_change_active(self) -> None:
         menu_items = {
             '1': 'Change Individual Ticker',
             '2': 'Mark Errors as Inactive',
