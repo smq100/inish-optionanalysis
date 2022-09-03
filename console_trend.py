@@ -14,7 +14,7 @@ logger.get_logger(logging.WARNING, logfile='')
 
 
 class Interface:
-    def __init__(self, tickers: list[str] = [], days: int = 1000, quick: bool = False, exit: bool = False):
+    def __init__(self, tickers: list[str] = [], days: int = 365, quick: bool = False, exit: bool = False):
         self.tickers = [t.upper() for t in tickers]
         self.days = days
         self.quick = quick
@@ -34,39 +34,36 @@ class Interface:
         elif self.exit:
             self.calculate_support_and_resistance()
         else:
+            self.commands = [
+                {'menu': 'Change Ticker', 'function': self.select_ticker, 'condition': 'self.tickers', 'value': '", ".join(self.tickers)'},
+                {'menu': 'Add Ticker', 'function': self.add_ticker, 'condition': '', 'value': ''},
+                {'menu': 'Days', 'function': self.select_days, 'condition': 'True', 'value': 'self.days'},
+                {'menu': 'Calculate Support & Resistance', 'function': self.calculate_support_and_resistance, 'condition': 'self.quick', 'value': '"quick"'},
+            ]
+
             self.main_menu()
 
     def main_menu(self) -> None:
-        while True:
-            menu_items = {
-                '1': 'Change Ticker',
-                '2': 'Add Ticker',
-                '3': f'Days ({self.days})',
-                '4': 'Calculate Support & Resistance',
-                '0': 'Exit'
-            }
+        # Create the menu
+        menu_items = {str(i+1): f'{self.commands[i]["menu"]}' for i in range(len(self.commands))}
+        menu_items['0'] = 'Quit'
 
-            if self.tickers:
-                menu_items['1'] = f'Change Ticker ({", ".join(self.tickers)})'
+        # Update menu items with dynamic info
+        def update(menu: dict) -> None:
+            for i, item in enumerate(self.commands):
+                if item['condition'] and item['value']:
+                    menu[str(i+1)] = f'{self.commands[i]["menu"]}'
+                    if eval(item['condition']):
+                        menu[str(i+1)] += f' ({eval(item["value"])})'
 
-            if self.quick:
-                menu_items['4'] += ' (quick)'
+        while not self.exit:
+            update(menu_items)
 
-            selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1, prompt='Select operation, or 0 when done')
-
-            if selection == 1:
-                self.select_ticker()
-            elif selection == 2:
-                self.add_ticker()
-            elif selection == 3:
-                self.select_days()
-            elif selection == 4:
-                self.calculate_support_and_resistance()
-            elif selection == 0:
+            selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1)
+            if selection > 0:
+                self.commands[selection-1]['function']()
+            else:
                 self.exit = True
-
-            if self.exit:
-                break
 
     def select_ticker(self) -> None:
         valid = False
@@ -148,7 +145,7 @@ class Interface:
 def main():
     parser = argparse.ArgumentParser(description='Technical Analysis')
     parser.add_argument('-t', '--tickers', metavar='ticker(s)', nargs='+', help='Run using tickers')
-    parser.add_argument('-d', '--days', metavar='days', help='Days to run analysis', default=1000)
+    parser.add_argument('-d', '--days', metavar='days', help='Days to run analysis', default=365)
     parser.add_argument('-q', '--quick', help='Run quick analysis', action='store_true')
     parser.add_argument('-x', '--exit', help='Run trend analysis then exit (only valid with -t)', action='store_true')
 

@@ -10,7 +10,7 @@ import data as d
 import screener.screener as screener
 from screener.screener import Screener, Result
 from data import store as store
-from utils import ui, logger
+from utils import ui, cache, logger
 
 
 logger.get_logger(logging.WARNING, logfile='')
@@ -22,12 +22,12 @@ SCREEN_SUFFIX = 'screen'
 class Interface:
     def __init__(self, table: str = '', screen: str = '', backtest: int = 0, exit: bool = False, live: bool = False):
         self.table = table.upper()
-        self.screen_base = screen
+        self.screen = screen
         self.exit = exit
         self.live = live if store.is_database_connected() else True
         self.auto = False
-        self.screen_path = ''
         self.valids: list[Result] = []
+        self.source = 'live' if live else d.ACTIVE_DB
         self.screener: Screener
         self.task: threading.Thread
 
@@ -54,73 +54,52 @@ class Interface:
                 abort = True
                 ui.print_error(f'Exchange, index or ticker not found: {self.table}')
 
-        if self.screen_base:
-            if os.path.exists(BASEPATH+screen+'.'+SCREEN_SUFFIX):
-                self.screen_path = BASEPATH + self.screen_base + '.' + SCREEN_SUFFIX
-            else:
-                ui.print_error(f'File "{self.screen_base}" not foundx')
+        if self.screen:
+            screens = screener.get_screen_names()
+            if not self.screen in screens:
+                ui.print_error(f'Screen \'{self.screen}\' not found')
                 abort = True
-                self.screen_base = ''
+                self.screen = ''
+
+        self.commands = [
+            {'menu': 'Select Data Source', 'function': self.m_select_source, 'condition': 'True', 'value': 'self.source'},
+            {'menu': 'Select List', 'function': self.m_select_list, 'condition': 'self.table', 'value': 'self.table'},
+            {'menu': 'Select Screener', 'function': self.m_select_screen, 'condition': 'self.screen', 'value': 'self.screen'},
+            {'menu': 'Run Screen', 'function': self.m_run_screen, 'condition': '', 'value': ''},
+            {'menu': 'Run Backtest', 'function': self.run_backtest, 'condition': '', 'value': ''},
+            {'menu': 'Show Ticker Screener Results', 'function': self.m_print_ticker_results, 'condition': '', 'value': ''},
+            {'menu': 'Show Valids', 'function': self.m_show_valids, 'condition': 'len(self.valids)>0', 'value': 'len(self.valids)'},
+        ]
 
         if abort:
             pass
-        elif self.table and self.screen_path and self.backtest > 0:
-            self.auto = True
-            self.main_menu(selection=5)
-        elif self.table and self.screen_path:
-            self.auto = True
+        elif self.table and self.screen:
             self.main_menu(selection=4)
         else:
             self.main_menu()
 
     def main_menu(self, selection: int = 0) -> None:
-        while True:
-            source = 'live' if self.live else d.ACTIVE_DB
-            menu_items = {
-                '1': f'Select Data Source ({source})',
-                '2': 'Select List',
-                '3': 'Select Screener',
-                '4': 'Run Screen',
-                '5': 'Run Backtest',
-                '6': 'Show Ticker Screener Results',
-                '7': 'Show Top',
-                '8': 'Show All',
-                '0': 'Exit'
-            }
+        # Create the menu
+        menu_items = {str(i+1): f'{self.commands[i]["menu"]}' for i in range(len(self.commands))}
+        menu_items['0'] = 'Quit'
 
-            if self.table:
-                menu_items['2'] += f' ({self.table})'
+        # Update menu items with dynamic info
+        def update(menu: dict) -> None:
+            for i, item in enumerate(self.commands):
+                if item['condition'] and item['value']:
+                    menu[str(i+1)] = f'{self.commands[i]["menu"]}'
+                    if eval(item['condition']):
+                        menu[str(i+1)] += f' ({eval(item["value"])})'
 
-            if self.screen_base:
-                menu_items['3'] += f' ({self.screen_base})'
-
-            if len(self.valids) > 0:
-                menu_items['8'] += f' ({len(self.valids)})'
+        while not self.exit:
+            update(menu_items)
 
             if selection == 0:
-                selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1, prompt='Select operation, or 0 when done')
+                selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1)
 
-            if selection == 1:
-                self.select_source()
-            if selection == 2:
-                self.select_list()
-            elif selection == 3:
-                self.select_screen()
-            elif selection == 4:
-                if self.run_screen():
-                    if len(self.valids) > 0:
-                        self.show_valids(top=20)
-            elif selection == 5:
-                if self.run_backtest(prompt=not self.auto):
-                    if len(self.valids) > 0:
-                        self.show_backtest(top=20)
-            elif selection == 6:
-                self.print_ticker_results()
-            elif selection == 7:
-                self.show_valids(top=20)
-            elif selection == 8:
-                self.show_valids()
-            elif selection == 0:
+            if selection > 0:
+                self.commands[selection-1]['function']()
+            else:
                 self.exit = True
 
             selection = 0
@@ -128,7 +107,7 @@ class Interface:
             if self.exit:
                 break
 
-    def select_source(self) -> None:
+    def m_select_source(self) -> None:
         menu_items = {
             '1': 'Database',
             '2': 'Live',
@@ -141,7 +120,7 @@ class Interface:
         elif selection == 2:
             self.live = True
 
-    def select_list(self) -> None:
+    def m_select_list(self) -> None:
         list = ui.input_text('Enter exchange, index, or ticker').upper()
         if store.is_exchange(list):
             self.table = list
@@ -153,38 +132,29 @@ class Interface:
             self.table = ''
             ui.print_error(f'List {list} is not valid')
 
-    def select_screen(self) -> None:
+    def m_select_screen(self) -> None:
         self.script = []
         self.valids = []
-        paths = []
-        with os.scandir(BASEPATH) as entries:
-            for entry in entries:
-                if entry.is_file():
-                    head, sep, tail = entry.name.partition('.')
-                    if tail != SCREEN_SUFFIX:
-                        pass
-                    elif head == screener.SCREEN_INIT_NAME:
-                        pass
-                    elif head == 'test':
-                        pass
-                    else:
-                        self.script += [entry.path]
-                        paths += [head]
-
-        if paths:
-            self.script.sort()
-            paths.sort()
-
-            menu_items = {f'{index}': f'{item.title()}' for index, item in enumerate(paths, start=1)}
+        screens = screener.get_screen_names()
+        if screens:
+            menu_items = {f'{index}': f'{item.title()}' for index, item in enumerate(screens, start=1)}
             menu_items['0'] = 'Cancel'
 
-            selection = ui.menu(menu_items, 'Available Screens', 0, len(menu_items)+1, prompt='Select Screen, or 0 to cancel')
+            selection = ui.menu(menu_items, 'Available Screens', 0, len(menu_items)-1, prompt='Select screen, or 0 to cancel')
             if selection > 0:
-                self.screen_base = paths[selection-1]
-                self.screen_path = BASEPATH + self.screen_base + '.' + SCREEN_SUFFIX
-                self.valids = []
+                if self.table:
+                    self.screen = screens[selection-1]
+                    self.screener = Screener(self.table, screen=self.screen)
+                    if self.screener.cache_available:
+                        self.run_screen()
+
         else:
             ui.print_message('No screener files found')
+
+    def m_run_screen(self):
+        self.run_screen()
+        if len(self.valids) > 0:
+            self.m_show_valids()
 
     def run_screen(self) -> bool:
         success = False
@@ -192,14 +162,14 @@ class Interface:
 
         if not self.table:
             ui.print_error('No exchange, index, or ticker specified')
-        elif not self.screen_path:
+        elif not self.screen:
             ui.print_error('No screen specified')
         else:
             if self.backtest > 0:
                 self.live = False
 
             try:
-                self.screener = Screener(self.table, screen=self.screen_path, backtest=self.backtest, live=self.live)
+                self.screener = Screener(self.table, screen=self.screen, backtest=self.backtest, live=self.live)
             except ValueError as e:
                 ui.print_error(f'{__name__}: {str(e)}')
             else:
@@ -216,11 +186,19 @@ class Interface:
                 if self.screener.task_state == 'Done':
                     self.valids = self.screener.valids
 
-                    ui.print_message(f'{len(self.valids)} symbols identified in {self.screener.task_time:.1f} seconds')
+                    if self.screener.cache_used:
+                        ui.print_message(f'{len(self.screener.valids)} symbols identified. Cached results from {self.screener.cache_date} used')
+                    else:
+                        ui.print_message(f'{len(self.screener.valids)} symbols identified in {self.screener.task_time:.1f} seconds', pre_creturn=1)
 
                     success = True
 
         return success
+
+    def m_run_backtest(self, prompt: bool = True, bullish: bool = True) -> bool:
+        if self.run_backtest(prompt=not self.auto):
+            if len(self.valids) > 0:
+                self.show_backtest()
 
     def run_backtest(self, prompt: bool = True, bullish: bool = True) -> bool:
         if prompt:
@@ -242,10 +220,10 @@ class Interface:
 
         return success
 
-    def show_valids(self, top: int = -1, ticker: str = '') -> None:
+    def m_show_valids(self, top: int = 20, ticker: str = '') -> None:
         if not self.table:
             ui.print_error('No table specified')
-        elif not self.screen_base:
+        elif not self.screen:
             ui.print_error('No screen specified')
         elif len(self.valids) == 0:
             ui.print_message('No results were located')
@@ -260,9 +238,9 @@ class Interface:
                 results = sorted(self.valids, reverse=True, key=lambda r: float(r))
 
             if ticker:
-                ui.print_message(f'Screener Results for {ticker} ({self.screen_base})')
+                ui.print_message(f'Screener Results for {ticker} ({self.screen})')
             else:
-                ui.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen_base})', post_creturn=1)
+                ui.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen})', post_creturn=1)
 
             if ticker:
                 for result in results:
@@ -278,7 +256,7 @@ class Interface:
     def show_backtest(self, top: int = -1):
         if not self.table:
             ui.print_error('No table specified')
-        elif not self.screen_base:
+        elif not self.screen:
             ui.print_error('No screen specified')
         elif len(self.valids) == 0:
             ui.print_message('No results were located')
@@ -293,15 +271,15 @@ class Interface:
             summary = summary.reindex(columns=order)
             headers = ui.format_headers(summary.columns)
 
-            ui.print_message(f'Backtest Results {top} of {self.screener.task_success} ({self.screen_base})')
+            ui.print_message(f'Backtest Results {top} of {self.screener.task_success} ({self.screen})')
             print(tabulate(summary.head(top), headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
 
-    def print_ticker_results(self):
+    def m_print_ticker_results(self):
         ticker = ui.input_text('Enter ticker')
         if ticker:
             ticker = ticker.upper()
             if store.is_ticker(ticker):
-                self.show_valids(ticker=ticker)
+                self.m_show_valids(ticker=ticker)
 
     def show_progress(self, prefix, suffix) -> None:
         while not self.screener.task_state:

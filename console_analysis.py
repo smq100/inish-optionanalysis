@@ -88,7 +88,7 @@ class Interface:
         _value = 'len(self.screener.valids) if len(self.screener.valids) < LISTTOP_SCREEN else LISTTOP_SCREEN'
         self.commands = [
             {'menu': 'Select Table or Index', 'function': self.m_select_table, 'condition': 'self.table', 'value': 'self.table'},
-            {'menu': 'Select Screen', 'function': self.m_select_screen, 'condition': 'self.screen', 'value': 'self.screen'},
+            {'menu': 'Select Screen', 'function': self.m_select_screen, 'condition': 'self.screen', 'value': 'self.screen.title()'},
             {'menu': 'Run Screen', 'function': self.m_run_screen, 'condition': '', 'value': ''},
             {'menu': 'Refresh Screen', 'function': self.m_refresh_screen, 'condition': '', 'value': ''},
             {'menu': 'Analyze Results', 'function': self.m_analyze_result_files, 'condition': '', 'value': ''},
@@ -107,7 +107,7 @@ class Interface:
         ]
 
         if abort:
-            pass  # We're done
+            pass
         elif self.table and self.screen:
             self.main_menu(selection=3)
         else:

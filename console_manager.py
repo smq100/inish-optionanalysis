@@ -166,7 +166,7 @@ class Interface:
                         print(f'Price Records:\t{company["precords"]}')
                         print(f'Active:\t\t{company["active"]}')
                 else:
-                    ui.print_error(f'{ticker} has no company information')
+                    ui.print_warning(f'{ticker} has no company information')
 
                 history = store.get_history(ticker, days=100, end=end, live=live)
                 if history is None or history.empty:

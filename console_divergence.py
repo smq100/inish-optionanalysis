@@ -34,11 +34,11 @@ class Interface:
 
         self.commands = [
             {'menu': 'Select Tickers', 'function': self.m_select_tickers, 'condition': 'self.tickers', 'value': 'self.list'},
-            {'menu': 'Days',           'function': self.m_select_days,    'condition': 'True', 'value': 'self.days'},
-            {'menu': 'Calculate',      'function': self.m_calculate_divergence, 'condition': 'not self.analysis.empty', 'value': 'len(self.analysis)'},
-            {'menu': 'Show Analysis',  'function': self.m_show_analysis,  'condition': '', 'value': ''},
-            {'menu': 'Show Results',   'function': self.m_show_results,   'condition': '', 'value': ''},
-            {'menu': 'Show Plot',      'function': self.m_show_plot,      'condition': '', 'value': ''}
+            {'menu': 'Days', 'function': self.m_select_days, 'condition': 'True', 'value': 'self.days'},
+            {'menu': 'Calculate', 'function': self.m_calculate_divergence, 'condition': 'not self.analysis.empty', 'value': 'len(self.analysis)'},
+            {'menu': 'Show Analysis', 'function': self.m_show_analysis, 'condition': '', 'value': ''},
+            {'menu': 'Show Results', 'function': self.m_show_results, 'condition': '', 'value': ''},
+            {'menu': 'Show Plot', 'function': self.m_show_plot, 'condition': '', 'value': ''}
         ]
 
         if list:

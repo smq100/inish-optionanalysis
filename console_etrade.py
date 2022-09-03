@@ -33,6 +33,17 @@ class Client:
         self.account_name = ''
         self.accounts: Accounts
 
+        self.commands = [
+            {'menu': 'Accounts', 'function': self.m_show_accounts, 'condition': 'self.account_name', 'value': 'self.account_name'},
+            {'menu': 'Balance', 'function': self.m_show_balance, 'condition': '', 'value': ''},
+            {'menu': 'Portfolio', 'function': self.m_show_portfolio, 'condition': '', 'value': ''},
+            {'menu': 'Alerts', 'function': self.m_show_alerts, 'condition': '', 'value': ''},
+            {'menu': 'Quotes', 'function': self.m_show_quotes, 'condition': '', 'value': ''},
+            {'menu': 'Options Expiry', 'function': self.m_show_options_expiry, 'condition': '', 'value': ''},
+            {'menu': 'Options Chain', 'function': self.m_show_options_chain, 'condition': '', 'value': ''},
+            {'menu': 'Lookup Symbol', 'function': self.m_show_symbol, 'condition': '', 'value': ''},
+        ]
+
         auth.authorize(auth_callback)
 
         if auth.Session is None:
@@ -42,53 +53,30 @@ class Client:
         else:
             self.main_menu()
 
+
     def main_menu(self, selection: int = 0) -> None:
+        # Create the menu
+        menu_items = {str(i+1): f'{self.commands[i]["menu"]}' for i in range(len(self.commands))}
+        menu_items['0'] = 'Quit'
+
+        # Update menu items with dynamic info
+        def update(menu: dict) -> None:
+            for i, item in enumerate(self.commands):
+                if item['condition'] and item['value']:
+                    menu[str(i+1)] = f'{self.commands[i]["menu"]}'
+                    if eval(item['condition']):
+                        menu[str(i+1)] += f' ({eval(item["value"])})'
+
         while True:
-            menu_items = {
-                '1': 'Accounts',
-                '2': 'Balance',
-                '3': 'Portfolio',
-                '4': 'Alerts',
-                '5': 'Quotes',
-                '6': 'Options Expiry',
-                '7': 'Options Chain',
-                '8': 'Lookup Symbol',
-                '0': 'Exit'
-            }
+            update(menu_items)
 
-            if self.account_name:
-                menu_items['1'] += f' ({self.account_name})'
-
-            if selection == 0:
-                selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1, prompt='Select operation, or 0 when done')
-
-            if selection == 1:
-                self.show_accounts()
-            elif selection == 2:
-                self.show_balance()
-            elif selection == 3:
-                self.show_portfolio()
-            elif selection == 4:
-                self.show_alerts()
-            elif selection == 5:
-                self.show_quotes()
-            elif selection == 6:
-                self.show_options_expiry()
-            elif selection == 7:
-                self.show_options_chain()
-            elif selection == 8:
-                self.show_symbol()
-            elif selection == 0:
-                self.exit = True
+            selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1)
+            if selection > 0:
+                self.commands[selection-1]['function']()
             else:
-                print('Unknown operation selected')
-
-            selection = 0
-
-            if self.exit:
                 break
 
-    def show_accounts(self) -> None:
+    def m_show_accounts(self) -> None:
         self.accounts = Accounts()
         acct_table = self.accounts.list()
 
@@ -104,7 +92,7 @@ class Client:
                 self.account_index = -1
                 self.account_name = ''
 
-    def show_balance(self) -> None:
+    def m_show_balance(self) -> None:
         if self.account_index >= 0:
             balance = self.accounts.balance(self.account_index)
 
@@ -117,14 +105,14 @@ class Client:
                 print(f'Cash Buying Power: ${balance.get("Computed", {}).get("cashBuyingPower"):,.2f}')
                 print(f'Option Level: {balance.get("optionLevel", "error")}\n')
 
-                if ui.input_yesno('Show JSON') == 'y':
+                if ui.input_yesno('Show JSON'):
                     print(self.accounts.raw)
             else:
                 ui.print_error(self.accounts.message)
         else:
             ui.print_error('Must first select an account')
 
-    def show_portfolio(self) -> None:
+    def m_show_portfolio(self) -> None:
         if self.account_index >= 0:
             portfolio = self.accounts.portfolio(self.account_index)
 
@@ -139,14 +127,14 @@ class Client:
                     print(f'Value={position.marketValue:,.02f}')
                     print()
 
-                if ui.input_text('Show JSON').lower() == 'y':
+                if ui.input_yesno('Show JSON'):
                     print(self.accounts.raw)
             else:
                 ui.print_error(self.accounts.message)
         else:
             ui.print_error('Must first select an account')
 
-    def show_alerts(self):
+    def m_show_alerts(self):
         alerts = Alerts()
         alert_data = alerts.alerts()
 
@@ -161,12 +149,12 @@ class Client:
                     alert += f', Status: {item.status}\n'
                 print(alert)
 
-            if ui.input_yesno('Show JSON') == 'y':
+            if ui.input_yesno('Show JSON'):
                 print(alerts.raw)
         else:
             ui.print_message(alerts.message)
 
-    def show_symbol(self) -> None:
+    def m_show_symbol(self) -> None:
         symbol = ui.input_text('Please enter symbol').upper()
         lookup = Lookup()
         lookup_data = lookup.lookup(symbol)
@@ -181,12 +169,12 @@ class Client:
 
                 print()
 
-            if ui.input_yesno('Show JSON') == 'y':
+            if ui.input_yesno('Show JSON'):
                 print(lookup.raw)
         else:
             ui.print_error(f'No information for {symbol} located')
 
-    def show_quotes(self) -> None:
+    def m_show_quotes(self) -> None:
         quotes = Quotes()
 
         if not self.quote:
@@ -216,13 +204,13 @@ class Client:
                         print(f'Volume: {all.get("totalVolume"):,}')
                     print()
 
-            if ui.input_yesno('Show JSON') == 'y':
+            if ui.input_yesno('Show JSON'):
                 print(quotes.raw)
 
         else:
             ui.print_error(quotes.message)
 
-    def show_options_expiry(self) -> None:
+    def m_show_options_expiry(self) -> None:
         ticker = ui.input_text('Please enter symbol').upper()
 
         options = Options()
@@ -242,10 +230,10 @@ class Client:
             print(tabulate(expiry_data, headers=expiry_data.columns, tablefmt=ui.TABULATE_FORMAT))
             print()
 
-            if ui.input_yesno('Show JSON') == 'y':
+            if ui.input_yesno('Show JSON'):
                 print(options.raw)
 
-    def show_options_chain(self) -> None:
+    def m_show_options_chain(self) -> None:
         symbol = ui.input_text('Please enter symbol').upper()
 
         date = m.third_friday()
@@ -281,7 +269,7 @@ class Client:
             print(tabulate(chain_puts, headers=chain_puts.columns, tablefmt=ui.TABULATE_FORMAT, floatfmt='.02f'))
             print()
 
-            if ui.input_yesno('Show JSON') == 'y':
+            if ui.input_yesno('Show JSON'):
                 print(options.raw)
 
 
