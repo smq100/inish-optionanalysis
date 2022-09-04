@@ -10,13 +10,10 @@ import data as d
 import screener.screener as screener
 from screener.screener import Screener, Result
 from data import store as store
-from utils import ui, cache, logger
+from utils import ui, logger
 
 
 logger.get_logger(logging.WARNING, logfile='')
-
-BASEPATH = os.getcwd()+'/screener/screens/'
-SCREEN_SUFFIX = 'screen'
 
 
 class Interface:
@@ -27,6 +24,7 @@ class Interface:
         self.live = live if store.is_database_connected() else True
         self.auto = False
         self.valids: list[Result] = []
+        self.commands: list[dict] = []
         self.source = 'live' if live else d.ACTIVE_DB
         self.screener: Screener
         self.task: threading.Thread
@@ -38,7 +36,7 @@ class Interface:
         else:
             self.backtest = 0
             abort = False
-            ui.print_error("'backtest' must be an integer. Using a value of 0")
+            ui.print_error('\'backtest\' must be an integer. Using a value of 0')
 
         if self.table:
             if self.table == 'EVERY':
@@ -61,6 +59,14 @@ class Interface:
                 abort = True
                 self.screen = ''
 
+        if abort:
+            pass
+        elif self.table and self.screen:
+            self.main_menu(selection=4)
+        else:
+            self.main_menu()
+
+    def main_menu(self, selection: int = 0) -> None:
         self.commands = [
             {'menu': 'Select Data Source', 'function': self.m_select_source, 'condition': 'True', 'value': 'self.source'},
             {'menu': 'Select List', 'function': self.m_select_list, 'condition': 'self.table', 'value': 'self.table'},
@@ -71,14 +77,6 @@ class Interface:
             {'menu': 'Show Valids', 'function': self.m_show_valids, 'condition': 'len(self.valids)>0', 'value': 'len(self.valids)'},
         ]
 
-        if abort:
-            pass
-        elif self.table and self.screen:
-            self.main_menu(selection=4)
-        else:
-            self.main_menu()
-
-    def main_menu(self, selection: int = 0) -> None:
         # Create the menu
         menu_items = {str(i+1): f'{self.commands[i]["menu"]}' for i in range(len(self.commands))}
         menu_items['0'] = 'Quit'

@@ -27,22 +27,12 @@ def auth_callback(url: str) -> str:
 
 class Client:
     def __init__(self, quote: str = '', exit: bool = False):
-        self.quote = quote
-        self.exit = exit
-        self.account_index = -1
-        self.account_name = ''
+        self.quote: str = quote
+        self.exit: bool = exit
+        self.commands: list[dict] = []
+        self.account_index: int = -1
+        self.account_name: str = ''
         self.accounts: Accounts
-
-        self.commands = [
-            {'menu': 'Accounts', 'function': self.m_show_accounts, 'condition': 'self.account_name', 'value': 'self.account_name'},
-            {'menu': 'Balance', 'function': self.m_show_balance, 'condition': '', 'value': ''},
-            {'menu': 'Portfolio', 'function': self.m_show_portfolio, 'condition': '', 'value': ''},
-            {'menu': 'Alerts', 'function': self.m_show_alerts, 'condition': '', 'value': ''},
-            {'menu': 'Quotes', 'function': self.m_show_quotes, 'condition': '', 'value': ''},
-            {'menu': 'Options Expiry', 'function': self.m_show_options_expiry, 'condition': '', 'value': ''},
-            {'menu': 'Options Chain', 'function': self.m_show_options_chain, 'condition': '', 'value': ''},
-            {'menu': 'Lookup Symbol', 'function': self.m_show_symbol, 'condition': '', 'value': ''},
-        ]
 
         auth.authorize(auth_callback)
 
@@ -55,6 +45,17 @@ class Client:
 
 
     def main_menu(self, selection: int = 0) -> None:
+        self.commands = [
+            {'menu': 'Accounts', 'function': self.m_show_accounts, 'condition': 'self.account_name', 'value': 'self.account_name'},
+            {'menu': 'Balance', 'function': self.m_show_balance, 'condition': '', 'value': ''},
+            {'menu': 'Portfolio', 'function': self.m_show_portfolio, 'condition': '', 'value': ''},
+            {'menu': 'Alerts', 'function': self.m_show_alerts, 'condition': '', 'value': ''},
+            {'menu': 'Quotes', 'function': self.m_show_quotes, 'condition': '', 'value': ''},
+            {'menu': 'Options Expiry', 'function': self.m_show_options_expiry, 'condition': '', 'value': ''},
+            {'menu': 'Options Chain', 'function': self.m_show_options_chain, 'condition': '', 'value': ''},
+            {'menu': 'Lookup Symbol', 'function': self.m_show_symbol, 'condition': '', 'value': ''},
+        ]
+
         # Create the menu
         menu_items = {str(i+1): f'{self.commands[i]["menu"]}' for i in range(len(self.commands))}
         menu_items['0'] = 'Quit'

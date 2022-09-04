@@ -19,6 +19,7 @@ class Interface:
         self.ticker = ''
         self.quick = quick
         self.stop = False
+        self.commands: list[dict] = []
 
         if store.is_database_connected():
             if ticker:
@@ -48,24 +49,6 @@ class Interface:
             if not store.is_live_connection():
                 ui.print_error('No Internet connection')
 
-            self.commands = [
-                {'menu': 'Database Information', 'function': self.m_show_database_information, 'params': '', 'condition': '', 'value': ''},
-                {'menu': 'Ticker Information', 'function': self.m_show_ticker_information, 'params': 'self.ticker', 'condition': 'True', 'value': 'd.ACTIVE_DB.lower()'},
-                {'menu': 'Ticker Information', 'function': self.m_show_ticker_information, 'params': 'self.ticker, live=True', 'condition': 'True', 'value': 'd.ACTIVE_HISTORYDATASOURCE.lower()'},
-                {'menu': 'Ticker Information (previous)', 'function': self.m_show_ticker_information, 'params': 'self.ticker, prompt=True', 'condition': 'True', 'value': ''},
-                {'menu': 'Update History', 'function': self.m_update_history, 'params': '', 'condition': '', 'value': ''},
-                {'menu': 'Update Company', 'function': self.m_update_company, 'params': '', 'condition': '', 'value': ''},
-                {'menu': 'List Update Errors', 'function': self.m_list_errors, 'params': '', 'condition': '', 'value': ''},
-                {'menu': 'Re-Check Inactive', 'function': self.m_recheck_inactive, 'params': '', 'condition': '', 'value': ''},
-                {'menu': 'List Inactive', 'function': self.m_list_inactive, 'params': '', 'condition': '', 'value': ''},
-                {'menu': 'Mark Active/Inactive', 'function': self.m_change_active, 'params': '', 'condition': '', 'value': ''},
-                {'menu': 'Check Integrity', 'function': self.m_check_integrity, 'params': '', 'condition': '', 'value': ''},
-                {'menu': 'Check Incomplete Pricing', 'function': self.m_check_incomplete_pricing, 'params': '', 'condition': '', 'value': ''},
-                {'menu': 'Populate Exchange', 'function': self.m_populate_exchange, 'params': '', 'condition': '', 'value': ''},
-                {'menu': 'Populate Index', 'function': self.m_populate_index, 'params': '', 'condition': '', 'value': ''},
-                {'menu': 'Reset Database', 'function': self.m_reset_database, 'params': '', 'condition': '', 'value': ''},
-            ]
-
             if exit:
                 pass
             elif ticker:
@@ -78,6 +61,24 @@ class Interface:
             ui.print_error('No databases available')
 
     def main_menu(self, selection: int = 0) -> None:
+        self.commands = [
+            {'menu': 'Database Information', 'function': self.m_show_database_information, 'params': '', 'condition': '', 'value': ''},
+            {'menu': 'Ticker Information', 'function': self.m_show_ticker_information, 'params': 'self.ticker', 'condition': 'True', 'value': 'd.ACTIVE_DB.lower()'},
+            {'menu': 'Ticker Information', 'function': self.m_show_ticker_information, 'params': 'self.ticker, live=True', 'condition': 'True', 'value': 'd.ACTIVE_HISTORYDATASOURCE.lower()'},
+            {'menu': 'Ticker Information (previous)', 'function': self.m_show_ticker_information, 'params': 'self.ticker, prompt=True', 'condition': 'True', 'value': ''},
+            {'menu': 'Update History', 'function': self.m_update_history, 'params': '', 'condition': '', 'value': ''},
+            {'menu': 'Update Company', 'function': self.m_update_company, 'params': '', 'condition': '', 'value': ''},
+            {'menu': 'List Update Errors', 'function': self.m_list_errors, 'params': '', 'condition': '', 'value': ''},
+            {'menu': 'Re-Check Inactive', 'function': self.m_recheck_inactive, 'params': '', 'condition': '', 'value': ''},
+            {'menu': 'List Inactive', 'function': self.m_list_inactive, 'params': '', 'condition': '', 'value': ''},
+            {'menu': 'Mark Active/Inactive', 'function': self.m_change_active, 'params': '', 'condition': '', 'value': ''},
+            {'menu': 'Check Integrity', 'function': self.m_check_integrity, 'params': '', 'condition': '', 'value': ''},
+            {'menu': 'Check Incomplete Pricing', 'function': self.m_check_incomplete_pricing, 'params': '', 'condition': '', 'value': ''},
+            {'menu': 'Populate Exchange', 'function': self.m_populate_exchange, 'params': '', 'condition': '', 'value': ''},
+            {'menu': 'Populate Index', 'function': self.m_populate_index, 'params': '', 'condition': '', 'value': ''},
+            {'menu': 'Reset Database', 'function': self.m_reset_database, 'params': '', 'condition': '', 'value': ''},
+        ]
+
         loop = bool(self.manager.get_database_info())
 
         if not loop:

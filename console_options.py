@@ -55,9 +55,9 @@ class Interface():
 
         self.strategy: Strategy
         self.load_contracts = load_contracts
+        self.commands: list[dict] = []
         self.dirty_analyze = True
         self.task: threading.Thread = None
-        self.loop = True
 
         # Set strike to closest ITM if strike < 0.0
         if direction == 'long':
@@ -164,22 +164,22 @@ class Interface():
                     analyze or exit):
 
                 if not exit:
-                    self.commands = [
-                        {'menu': 'Change Symbol', 'function': self.m_select_ticker, 'condition': 'True', 'value': 'self.strategy.ticker', 'run': ''},
-                        {'menu': 'Change Strategy', 'function': self.m_select_strategy, 'condition': 'True', 'value': 'self.strategy', 'run': ''},
-                        {'menu': 'Select Option', 'function': self.m_select_chain, 'condition': 'True', 'value': '', 'run': '_update'},
-                        {'menu': 'Analyze Strategy', 'function': self.m_analyze, 'condition': 'self.dirty_analyze', 'value': '"*"', 'run': ''},
-                        {'menu': 'View Option Details', 'function': self.m_show_options, 'condition': '', 'value': '', 'run': ''},
-                        {'menu': 'View Value', 'function': self.m_show_value, 'condition': '', 'value': '', 'run': ''},
-                        {'menu': 'View Analysis', 'function': self.m_show_analysis, 'condition': '', 'value': '', 'run': ''},
-                        # {'menu': 'Settings', 'function': self.m_select_settings, 'condition': '', 'value': '', 'run': ''},
-                    ]
-
                     self.main_menu()
             else:
                 ui.print_error('Problem loading strategy')
 
     def main_menu(self) -> None:
+        self.commands = [
+            {'menu': 'Change Symbol', 'function': self.m_select_ticker, 'condition': 'True', 'value': 'self.strategy.ticker', 'run': ''},
+            {'menu': 'Change Strategy', 'function': self.m_select_strategy, 'condition': 'True', 'value': 'self.strategy', 'run': ''},
+            {'menu': 'Select Option', 'function': self.m_select_chain, 'condition': 'True', 'value': '', 'run': '_update'},
+            {'menu': 'Analyze Strategy', 'function': self.m_analyze, 'condition': 'self.dirty_analyze', 'value': '"*"', 'run': ''},
+            {'menu': 'View Option Details', 'function': self.m_show_options, 'condition': '', 'value': '', 'run': ''},
+            {'menu': 'View Value', 'function': self.m_show_value, 'condition': '', 'value': '', 'run': ''},
+            {'menu': 'View Analysis', 'function': self.m_show_analysis, 'condition': '', 'value': '', 'run': ''},
+            # {'menu': 'Settings', 'function': self.m_select_settings, 'condition': '', 'value': '', 'run': ''},
+        ]
+
         # Create the menu
         menu_items = {str(i+1): f'{self.commands[i]["menu"]}' for i in range(len(self.commands))}
         menu_items['0'] = 'Quit'
@@ -220,14 +220,14 @@ class Interface():
                         else:
                             menu[str(i+1)] += f' ({eval(item["value"])})'
 
-        while self.loop:
+        while True:
             update(menu_items)
 
             selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1)
             if selection > 0:
                 self.commands[selection-1]['function']()
             else:
-                self.loop = False
+                break
 
     def m_analyze(self) -> bool:
         valid = self.strategy.validate()

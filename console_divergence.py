@@ -27,19 +27,11 @@ class Interface:
         self.tickers: list[str] = []
         self.results: list[pd.DataFrame] = []
         self.analysis: pd.DataFrame = pd.DataFrame()
+        self.commands: list[dict] = []
         self.divergence: Divergence | None = None
         self.task: threading.Thread
         self.use_cache: bool = False
         self.loop = True
-
-        self.commands = [
-            {'menu': 'Select Tickers', 'function': self.m_select_tickers, 'condition': 'self.tickers', 'value': 'self.list'},
-            {'menu': 'Days', 'function': self.m_select_days, 'condition': 'True', 'value': 'self.days'},
-            {'menu': 'Calculate', 'function': self.m_calculate_divergence, 'condition': 'not self.analysis.empty', 'value': 'len(self.analysis)'},
-            {'menu': 'Show Analysis', 'function': self.m_show_analysis, 'condition': '', 'value': ''},
-            {'menu': 'Show Results', 'function': self.m_show_results, 'condition': '', 'value': ''},
-            {'menu': 'Show Plot', 'function': self.m_show_plot, 'condition': '', 'value': ''}
-        ]
 
         if list:
             self.m_select_tickers(list)
@@ -53,6 +45,15 @@ class Interface:
             self.main_menu()
 
     def main_menu(self) -> None:
+        self.commands = [
+            {'menu': 'Select Tickers', 'function': self.m_select_tickers, 'condition': 'self.tickers', 'value': 'self.list'},
+            {'menu': 'Days', 'function': self.m_select_days, 'condition': 'True', 'value': 'self.days'},
+            {'menu': 'Calculate', 'function': self.m_calculate_divergence, 'condition': 'not self.analysis.empty', 'value': 'len(self.analysis)'},
+            {'menu': 'Show Analysis', 'function': self.m_show_analysis, 'condition': '', 'value': ''},
+            {'menu': 'Show Results', 'function': self.m_show_results, 'condition': '', 'value': ''},
+            {'menu': 'Show Plot', 'function': self.m_show_plot, 'condition': '', 'value': ''}
+        ]
+
         # Create the menu
         menu_items = {str(i+1): f'{self.commands[i]["menu"]}' for i in range(len(self.commands))}
         menu_items['0'] = 'Quit'
@@ -247,6 +248,7 @@ class Interface:
         while not self.divergence.task_state:
             pass
 
+        print()
         if self.divergence.task_state == 'None':
             ui.progress_bar(0, 0, suffix=self.divergence.task_message, reset=True)
 
@@ -256,6 +258,8 @@ class Interface:
                 completed = self.divergence.task_completed
                 ticker = self.divergence.task_ticker
                 ui.progress_bar(completed, total, ticker=ticker, success=-1)
+
+            print()
         elif self.divergence.task_state == 'Done':
             pass  # Nothing processed. Cached results used
         else:
@@ -336,7 +340,7 @@ def main():
 
     command = vars(parser.parse_args())
     if command['tickers']:
-        Interface(list=command['tickers'], days=int(command['days']), disp_calc=command['show_calc'], disp_plot=command['show_plot'], exit=command['exit'])
+        Interface(list=command['tickers'], days=int(command['days']), disp_calc=command['show_calc'], disp_plot=command['show_plot'])
     else:
         Interface()
 

@@ -43,6 +43,7 @@ class Interface:
     quick: bool
     exit: bool
     days: int
+    commands: list[dict] = []
     screener: Screener | None
     trend: SupportResistance | None
     correlate: Correlate | None
@@ -56,7 +57,7 @@ class Interface:
         self.load_contracts = load_contracts
         self.quick = quick
         self.exit = exit
-        self.days = 1000
+        self.days = 365
         self.backtest = 0
         self.screener = None
         self.correlate = None
@@ -84,8 +85,16 @@ class Interface:
                 abort = True
                 self.screen = ''
 
-        _condition = 'self.screener is not None and self.screener.valids'
-        _value = 'len(self.screener.valids) if len(self.screener.valids) < LISTTOP_SCREEN else LISTTOP_SCREEN'
+        if abort:
+            pass
+        elif self.table and self.screen:
+            self.main_menu(selection=3)
+        else:
+            self.main_menu()
+
+    def main_menu(self, selection: int = 0) -> None:
+        _c = 'self.screener is not None and self.screener.valids'
+        _v = 'len(self.screener.valids) if len(self.screener.valids) < LISTTOP_SCREEN else LISTTOP_SCREEN'
         self.commands = [
             {'menu': 'Select Table or Index', 'function': self.m_select_table, 'condition': 'self.table', 'value': 'self.table'},
             {'menu': 'Select Screen', 'function': self.m_select_screen, 'condition': 'self.screen', 'value': 'self.screen.title()'},
@@ -98,23 +107,15 @@ class Interface:
             {'menu': 'Run Correlation', 'function': self.m_run_correlate, 'condition': '', 'value': ''},
             {'menu': 'Show Chart', 'function': self.m_show_chart, 'condition': '', 'value': ''},
             {'menu': 'Show by Sector', 'function': self.m_filter_by_sector, 'condition': '', 'value': ''},
-            {'menu': 'Show Top Results', 'function': self.m_show_top, 'condition': _condition, 'value': _value},
-            {'menu': 'Show All Results', 'function': self.m_show_valids, 'condition': _condition, 'value': 'len(self.screener.valids)'},
+            {'menu': 'Show Top Results', 'function': self.m_show_top, 'condition': _c, 'value': _v},
+            {'menu': 'Show All Results', 'function': self.m_show_valids, 'condition': _c, 'value': 'len(self.screener.valids)'},
             {'menu': 'Show Ticker Screen Results', 'function': self.m_show_ticker_results, 'condition': '', 'value': ''},
             {'menu': 'Build Result Files', 'function': self.m_build_result_files, 'condition': '', 'value': ''},
             # {'menu': 'Roll Result Files', 'function': self.m_roll_result_files, 'condition': '', 'value': ''},
             # {'menu': 'Delete Result Files', 'function': self.m_delete_result_files, 'condition': '', 'value': ''},
         ]
 
-        if abort:
-            pass
-        elif self.table and self.screen:
-            self.main_menu(selection=3)
-        else:
-            self.main_menu()
-
-    def main_menu(self, selection: int = 0) -> None:
-        while True:
+        while not self.exit:
             # Create the menu
             menu_items = {str(i+1): f'{self.commands[i]["menu"]}' for i in range(len(self.commands))}
             menu_items['0'] = 'Quit'
@@ -138,9 +139,6 @@ class Interface:
                 self.exit = True
 
             selection = 0
-
-            if self.exit:
-                break
 
     def m_select_table(self) -> None:
         list = ui.input_alphanum('Enter exchange or index').upper()

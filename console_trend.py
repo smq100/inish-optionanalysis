@@ -18,6 +18,7 @@ class Interface:
         self.tickers = [t.upper() for t in tickers]
         self.days = days
         self.quick = quick
+        self.commands: list[dict] = []
         self.exit = exit
         self.trend: SupportResistance = None
         self.task: threading.Thread = None
@@ -34,16 +35,16 @@ class Interface:
         elif self.exit:
             self.calculate_support_and_resistance()
         else:
-            self.commands = [
-                {'menu': 'Change Ticker', 'function': self.select_ticker, 'condition': 'self.tickers', 'value': '", ".join(self.tickers)'},
-                {'menu': 'Add Ticker', 'function': self.add_ticker, 'condition': '', 'value': ''},
-                {'menu': 'Days', 'function': self.select_days, 'condition': 'True', 'value': 'self.days'},
-                {'menu': 'Calculate Support & Resistance', 'function': self.calculate_support_and_resistance, 'condition': 'self.quick', 'value': '"quick"'},
-            ]
-
             self.main_menu()
 
     def main_menu(self) -> None:
+        self.commands = [
+            {'menu': 'Change Ticker', 'function': self.select_ticker, 'condition': 'self.tickers', 'value': '", ".join(self.tickers)'},
+            {'menu': 'Add Ticker', 'function': self.add_ticker, 'condition': '', 'value': ''},
+            {'menu': 'Days', 'function': self.select_days, 'condition': 'True', 'value': 'self.days'},
+            {'menu': 'Calculate Support & Resistance', 'function': self.calculate_support_and_resistance, 'condition': 'self.quick', 'value': '"quick"'},
+        ]
+
         # Create the menu
         menu_items = {str(i+1): f'{self.commands[i]["menu"]}' for i in range(len(self.commands))}
         menu_items['0'] = 'Quit'
@@ -125,6 +126,7 @@ class Interface:
         while not self.trend.task_state:
             pass
 
+        print()
         if self.trend.task_state == 'None':
             ui.progress_bar(0, 0, suffix=self.trend.task_message, reset=True)
 
@@ -135,7 +137,7 @@ class Interface:
             if self.trend.task_state == 'Hold':
                 pass
             elif self.trend.task_state == 'Done':
-                ui.print_message(f'{self.trend.task_state}: {self.trend.task_total} lines extracted in {self.trend.task_time:.1f} seconds')
+                ui.print_message(f'{self.trend.task_state}: {self.trend.task_total} lines extracted in {self.trend.task_time:.1f} seconds', pre_creturn=2)
             else:
                 ui.print_error(f'{self.trend.task_state}: Error extracting lines')
         else:

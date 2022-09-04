@@ -285,7 +285,7 @@ def progress_bar(iteration, total: int, prefix: str = 'Working', suffix: str = '
         back = length - _position
         bar = ('-' * front) + fill + ('-' * back)
 
-        print(f'{prefix} |{bar}| {suffix}             ', end='\r')
+        print(f'{prefix:<13} |{bar}| {suffix}             ', end='\r')
 
 
 if __name__ == '__main__':
