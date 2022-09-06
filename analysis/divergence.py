@@ -53,7 +53,6 @@ class Divergence(Threaded):
 
         if use_cache and self.cache_available:
             self.cache_used = True
-
             _logger.info(f'{__name__}: Using cached results. Scaled={scaled}')
         else:
             self.scaled = scaled
@@ -111,16 +110,19 @@ class Divergence(Threaded):
         for ticker in tickers:
             ta = Technical(ticker, None, self.days)
             history = ta.history
-            scaler = MinMaxScaler(feature_range=(0, 1))
             result = pd.DataFrame()
 
-            # Calculate 0-1 scaled series of day-to-day price differences
+            # Use scaled & normalized values for comparison
+            scaler = MinMaxScaler(feature_range=(0, 1))
+
+            # Base data
             dates = history['date'][self.interval:].reset_index(drop=True)
             price = history['close'][self.interval:].reset_index(drop=True)
 
             if not history.empty and not price.empty:
                 self.task_ticker = ticker
 
+                # Calculate 0-1 scaled series of day-to-day rsi differences
                 price.name = 'price'
                 price_sma = trend.sma_indicator(price, window=self.window, fillna=True).reset_index(drop=True)
                 price_sma.name = 'price_sma'
@@ -149,7 +151,6 @@ class Divergence(Threaded):
                     divergence = technical_sma_scaled_diff - price_sma_scaled_diff
                 else:
                     divergence = technical_sma_diff - price_sma_diff
-
                 divergence.name = 'diff'
 
                 # Calculate differences in the slopes between prices and RSI's for opposite slopes only

@@ -304,7 +304,7 @@ def analyze_results(table: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     for file in files:
         parts = file.split('_')
         if len(parts) == 3:
-            subparts = parts[2].split('-') # Extract table and screen names
+            subparts = parts[2].split('-')  # Extract table and screen names
 
             if parts[1] != CACHE_TYPE:
                 pass  # Wrong cache type
@@ -319,7 +319,7 @@ def analyze_results(table: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     summary: pd.DataFrame = pd.DataFrame()
     multiples: pd.DataFrame = pd.DataFrame()
     if results:
-        results = sorted(results, reverse=True, key=lambda r: float(r)) # Sort results by score
+        results = sorted(results, reverse=True, key=lambda r: float(r))  # Sort results by score
         summary = summarize_results(results)
         summary.drop(['valid', 'price_last', 'backtest_success'], axis=1, inplace=True)
 

@@ -6,6 +6,7 @@ import datetime as dt
 import webbrowser
 
 import argparse
+import pandas as pd
 import matplotlib.pyplot as plt
 from tabulate import tabulate
 
@@ -61,6 +62,7 @@ class Interface:
         self.backtest = 0
         self.screener = None
         self.correlate = None
+        self.commands: list[dict] = []
 
         abort = False
 
@@ -88,31 +90,31 @@ class Interface:
         if abort:
             pass
         elif self.table and self.screen:
-            self.main_menu(selection=3)
+            self.main_menu(selection='c')
         else:
             self.main_menu()
 
-    def main_menu(self, selection: int = 0) -> None:
+    def main_menu(self, selection: str = '') -> None:
         _c = 'self.screener is not None and self.screener.valids'
         _v = 'len(self.screener.valids) if len(self.screener.valids) < LISTTOP_SCREEN else LISTTOP_SCREEN'
         self.commands = [
-            {'menu': 'Select Table or Index', 'function': self.m_select_table, 'condition': 'self.table', 'value': 'self.table'},
-            {'menu': 'Select Screen', 'function': self.m_select_screen, 'condition': 'self.screen', 'value': 'self.screen.title()'},
-            {'menu': 'Run Screen', 'function': self.m_run_screen, 'condition': '', 'value': ''},
-            {'menu': 'Refresh Screen', 'function': self.m_refresh_screen, 'condition': '', 'value': ''},
-            {'menu': 'Analyze Results', 'function': self.m_analyze_result_files, 'condition': '', 'value': ''},
-            {'menu': 'Run Backtest Screen', 'function': self.m_run_backtest, 'condition': 'self.backtest', 'value': 'self.backtest'},
-            {'menu': 'Run Option Strategy', 'function': self.m_select_option_strategy, 'condition': '', 'value': ''},
-            {'menu': 'Run Support & Resistance Analysis', 'function': self.m_select_support_resistance, 'condition': 'self.quick', 'value': '"quick"'},
-            {'menu': 'Run Correlation', 'function': self.m_run_correlate, 'condition': '', 'value': ''},
-            {'menu': 'Show Chart', 'function': self.m_show_chart, 'condition': '', 'value': ''},
-            {'menu': 'Show by Sector', 'function': self.m_filter_by_sector, 'condition': '', 'value': ''},
-            {'menu': 'Show Top Results', 'function': self.m_show_top, 'condition': _c, 'value': _v},
-            {'menu': 'Show All Results', 'function': self.m_show_valids, 'condition': _c, 'value': 'len(self.screener.valids)'},
-            {'menu': 'Show Ticker Screen Results', 'function': self.m_show_ticker_results, 'condition': '', 'value': ''},
-            {'menu': 'Build Result Files', 'function': self.m_build_result_files, 'condition': '', 'value': ''},
-            # {'menu': 'Roll Result Files', 'function': self.m_roll_result_files, 'condition': '', 'value': ''},
-            # {'menu': 'Delete Result Files', 'function': self.m_delete_result_files, 'condition': '', 'value': ''},
+            {'name': 'a', 'menu': 'Select Table or Index', 'function': self.m_select_table, 'condition': 'self.table', 'value': 'self.table'},
+            {'name': 'b', 'menu': 'Select Screen', 'function': self.m_select_screen, 'condition': 'self.screen', 'value': 'self.screen.title()'},
+            {'name': 'c', 'menu': 'Run Screen', 'function': self.m_run_screen, 'condition': '', 'value': ''},
+            # {'name': 'd', 'menu': 'Refresh Screen', 'function': self.m_refresh_screen, 'condition': '', 'value': ''},
+            {'name': 'e', 'menu': 'Analyze Results', 'function': self.m_analyze_result_files, 'condition': '', 'value': ''},
+            {'name': 'f', 'menu': 'Run Backtest Screen', 'function': self.m_run_backtest, 'condition': 'self.backtest', 'value': 'self.backtest'},
+            {'name': 'g', 'menu': 'Run Option Strategy', 'function': self.m_select_option_strategy, 'condition': '', 'value': ''},
+            {'name': 'h', 'menu': 'Run Support & Resistance Analysis', 'function': self.m_select_support_resistance, 'condition': 'self.quick', 'value': '"quick"'},
+            {'name': 'i', 'menu': 'Run Correlation', 'function': self.m_run_correlate, 'condition': '', 'value': ''},
+            # {'name': 'j', 'menu': 'Show Chart', 'function': self.m_show_chart, 'condition': '', 'value': ''},
+            {'name': 'k', 'menu': 'Show by Sector', 'function': self.m_filter_by_sector, 'condition': '', 'value': ''},
+            {'name': 'l', 'menu': 'Show Top Results', 'function': self.m_show_top, 'condition': _c, 'value': _v},
+            {'name': 'm', 'menu': 'Show All Results', 'function': self.m_show_valids, 'condition': _c, 'value': 'len(self.screener.valids)'},
+            {'name': 'n', 'menu': 'Show Ticker Screen Results', 'function': self.m_show_ticker_results, 'condition': '', 'value': ''},
+            {'name': 'o', 'menu': 'Build Result Files', 'function': self.m_build_result_files, 'condition': '', 'value': ''},
+            # {'name': 'p', 'menu': 'Roll Result Files', 'function': self.m_roll_result_files, 'condition': '', 'value': ''},
+            # {'name': 'q', 'menu': 'Delete Result Files', 'function': self.m_delete_result_files, 'condition': '', 'value': ''},
         ]
 
         while not self.exit:
@@ -130,15 +132,21 @@ class Interface:
 
             update(menu_items)
 
-            if selection == 0:
-                selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1)
+            if selection:
+                items = [i for i, d in enumerate(self.commands, start=1) if selection in d['name']]
+                if items:
+                    item = items[0]
+                else:
+                    raise ValueError('Invalid menu item')
+            else:
+                item = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1)
 
-            if selection > 0:
-                self.commands[selection-1]['function']()
+            if item > 0:
+                self.commands[item-1]['function']()
             else:
                 self.exit = True
 
-            selection = 0
+            selection = ''
 
     def m_select_table(self) -> None:
         list = ui.input_alphanum('Enter exchange or index').upper()
@@ -481,12 +489,18 @@ class Interface:
                 valids = [str(r) for r in self.screener.valids]
                 filtered = store.get_sector_tickers(valids, sectors[selection-1])
 
-                index = 1
-                ui.print_message(f'Results of {self.screen}/{self.table} for the {sectors[selection-1]} sector', post_creturn=1)
-                for result in self.screener.valids:
-                    if str(result) in filtered:
-                        print(f'{index:>3}: {str(result):<5} {float(result):.2f} - {result.company.information["name"]}')
-                        index += 1
+                results = [result for result in self.screener.valids if str(result) in filtered]
+                if results:
+                    ui.print_message(f'Results of {self.screen}/{self.table} for the {sectors[selection-1]} sector', post_creturn=1)
+                    tickers = [str(result) for result in results]
+                    scores = [float(result) for result in results]
+                    names = [result.company.information["name"] for result in results]
+                    data = {'ticker': tickers, 'score': scores, 'name': names}
+                    values = pd.DataFrame(data)
+                    headers = ui.format_headers(values.columns)
+                    print(tabulate(values, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
+                else:
+                    ui.print_message(f'No results found for the {sectors[selection-1]} sector')
         else:
 
             ui.print_message('No results were located')

@@ -31,14 +31,11 @@ class Interface:
         self.divergence: Divergence | None = None
         self.task: threading.Thread
         self.use_cache: bool = False
-        self.loop = True
 
         if list:
             self.m_select_tickers(list)
 
-        if exit and self.tickers:
-            self.m_calculate_divergence()
-        elif self.tickers:
+        if self.tickers:
             self.m_calculate_divergence()
             self.main_menu()
         else:
@@ -66,14 +63,15 @@ class Interface:
                     if eval(item['condition']):
                         menu[str(i+1)] += f' ({eval(item["value"])})'
 
-        while self.loop:
+        loop = True
+        while loop:
             update(menu_items)
 
             selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1)
             if selection > 0:
                 self.commands[selection-1]['function']()
             else:
-                self.loop = False
+                loop = False
 
     def m_select_tickers(self, list='') -> None:
         if not list:
@@ -206,10 +204,12 @@ class Interface:
 
                 # Grid and ticks
                 length = len(self.divergence.results[index])
+                if length > 20:
+                    axes[0].set_xticks(range(0, length+1, length//10))
+                    axes[1].set_xticks(range(0, length+1, length//10))
+
                 axes[0].grid(which='major', axis='both')
-                axes[0].set_xticks(range(0, length+1, length//10))
                 axes[1].grid(which='major', axis='both')
-                axes[1].set_xticks(range(0, length+1, length//10))
                 axes[1].set_ylim([-5, 105])
                 axes[2].grid(which='major', axis='both')
                 axes[2].tick_params(axis='x', labelrotation=45)
@@ -220,7 +220,7 @@ class Interface:
                 axes[0].plot(dates, self.divergence.results[index]['price_sma'], '-', color='orange', label=f'SMA{self.divergence.interval}', linewidth=1.5)
                 axes[1].plot(dates, self.divergence.results[index]['rsi'], '-', color='blue', label=self.divergence.type.upper(), linewidth=0.5)
                 axes[1].plot(dates, self.divergence.results[index]['rsi_sma'], '-', color='orange', label=f'SMA{self.divergence.interval}', linewidth=1.5)
-                axes[2].plot(dates[self.divergence.periods:], self.divergence.results[index]['diff'][self.divergence.periods:], '-', color='orange', label='diff', linewidth=1.0)
+                axes[2].plot(dates[self.divergence.periods:], self.divergence.results[index]['diff'][self.divergence.periods:], '--', color='orange', label='diff', linewidth=1.0)
                 axes[2].plot(dates[self.divergence.periods:], self.divergence.results[index]['div'][self.divergence.periods:], '-', color='green', label='div', linewidth=1.0)
                 axes[2].axhline(y=0.0, xmin=0, xmax=100, color='black', linewidth=1.5)
 
@@ -248,8 +248,8 @@ class Interface:
         while not self.divergence.task_state:
             pass
 
-        print()
         if self.divergence.task_state == 'None':
+            print()
             ui.progress_bar(0, 0, suffix=self.divergence.task_message, reset=True)
 
             while self.divergence.task_state == 'None':
