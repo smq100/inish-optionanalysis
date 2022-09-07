@@ -1,5 +1,3 @@
-'''American Pricing Class'''
-
 import datetime as dt
 from random import gauss
 
@@ -30,7 +28,7 @@ class MonteCarlo(Pricing):
     def __init__(self, ticker: str, expiry: dt.datetime, strike: float, dividend: float=0.0):
         super().__init__(ticker, expiry, strike, dividend=dividend)
 
-        self.name = pricing.PRICING_METHODS[1]
+        self.name = pricing.PricingType.MonteCarlo
 
     def calculate_price(self, spot_price=-1.0, time_to_maturity=-1.0):
         ''' Calculate present-value of of expected payoffs and their average becomes the price of the respective option.

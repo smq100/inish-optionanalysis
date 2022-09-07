@@ -34,10 +34,6 @@ class Strategy(ABC, Threaded):
 
         if not store.is_ticker(ticker):
             raise ValueError('Invalid ticker')
-        # if product not in s.PRODUCTS:
-        #     raise ValueError('Invalid product')
-        # if direction not in s.DIRECTIONS:
-        #     raise ValueError('Invalid direction')
         if strike < 0.0:
             raise ValueError('Invalid strike')
         if quantity < 1:
@@ -60,7 +56,7 @@ class Strategy(ABC, Threaded):
         self.volatility = volatility
         self.load_contracts = load_contracts
 
-        self.pricing_method = p.PRICING_METHODS[0]  # black-scholes
+        self.pricing_method = p.PricingType.BlackScholes
         self.chain: Chain = Chain(self.ticker)
         self.analysis = Analysis(ticker=self.ticker)
         self.legs: list[Leg] = []
@@ -121,13 +117,10 @@ class Strategy(ABC, Threaded):
 
         return len(self.legs)
 
-    def set_pricing_method(self, method: str):
-        if method in p.PRICING_METHODS:
-            self.pricing_method = method
-            for leg in self.legs:
-                leg.pricing_method = method
-        else:
-            raise ValueError('Invalid pricing method')
+    def set_pricing_method(self, method: p.PricingType):
+        self.pricing_method = method
+        for leg in self.legs:
+            leg.pricing_method = method
 
     def fetch_contracts(self, expiry: dt.datetime, strike: float = -1.0) -> list[tuple[str, pd.DataFrame]]:
         # Works for one-legged strategies. Override for others
@@ -169,15 +162,15 @@ class Strategy(ABC, Threaded):
 
     @abc.abstractmethod
     def generate_profit_table(self) -> bool:
-        return False
+        raise NotImplementedError
 
     @abc.abstractmethod
     def calculate_metrics(self) -> bool:
-        return False
+        raise NotImplementedError
 
     @abc.abstractmethod
     def calculate_breakeven(self) -> bool:
-        return False
+        raise NotImplementedError
 
     def calculate_pop(self) -> bool:
         # Works for one-legged strategies. Override for others

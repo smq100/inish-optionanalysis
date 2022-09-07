@@ -4,7 +4,7 @@ import math
 import pandas as pd
 import numpy as np
 
-import pricing
+import pricing as p
 import strategies as s
 from company.company import Company
 from options.option import Option
@@ -32,20 +32,13 @@ class Leg:
                  expiry: dt.datetime,
                  volatility: tuple[float, float]):
 
-        # if product not in s.PRODUCTS:
-        #     raise ValueError('Invalid product')
-        # if direction not in s.DIRECTIONS:
-        #     raise ValueError('Invalid direction')
-        # if quantity < 1:
-        #     raise ValueError('Invalid quantity')
-
-        self.option = Option(ticker, product, strike, expiry, volatility)
-        self.company = Company(ticker, days=1)
-        self.pricing_method = pricing.PRICING_METHODS[0]
-        self.quantity = quantity
+        self.quantity: int = quantity
+        self.option: Option = Option(ticker, product, strike, expiry, volatility)
+        self.company: Company = Company(ticker, days=1)
+        self.pricing_method: p.PricingType = p.PricingType.BlackScholes
         self.direction: s.DirectionType = direction
-        self.value_table = pd.DataFrame()
-        self.range = m.range_type(0.0, 0.0, 0.0)
+        self.value_table: pd.DataFrame = pd.DataFrame()
+        self.range: m.range_type = m.range_type(0.0, 0.0, 0.0)
 
     def __str__(self):
         return self.description()
@@ -55,14 +48,14 @@ class Leg:
 
         if self.validate():
             # Build the pricer
-            if self.pricing_method == pricing.PRICING_METHODS[0]:
+            if self.pricing_method == p.PricingType.BlackScholes:
                 self.pricer = BlackScholes(self.company.ticker, self.option.expiry, self.option.strike)
-            elif self.pricing_method == pricing.PRICING_METHODS[1]:
+            elif self.pricing_method == p.PricingType.MonteCarlo:
                 self.pricer = MonteCarlo(self.company.ticker, self.option.expiry, self.option.strike)
             else:
-                raise ValueError(f'Unknown pricing model {self.pricing_method.upper()}')
+                raise ValueError('Unknown pricing model')
 
-            _logger.info(f'{__name__}: Calculating price using {self.pricing_method}')
+            _logger.info(f'{__name__}: Calculating price using {self.pricing_method.name}')
 
             self.company.price = self.pricer.spot_price
             self.company.volatility = self.pricer.volatility
@@ -206,7 +199,7 @@ class Leg:
         if greeks:
             output = f'Delta={self.option.delta:.3f}, gamma={self.option.gamma:.3f}, theta={self.option.theta:.3f}, vega={self.option.vega:.3f}, rho={self.option.rho:.3f}'
         elif self.option.price_calc > 0.0:
-            d2 = 'bs' if self.pricing_method == pricing.PRICING_METHODS[0] else pricing.PRICING_METHODS[1]
+            d2 = 'bs' if self.pricing_method == p.PricingType.BlackScholes else p.PricingType.MonteCarlo
             if self.option.volatility_user > 0.0:
                 d3 = 'uv'
             elif self.option.volatility_user == 0.0:
@@ -258,9 +251,9 @@ class Leg:
         # Check for valid pricing method
         if not valid:
             pass
-        elif self.pricing_method == pricing.PRICING_METHODS[0]:
+        elif self.pricing_method == p.PricingType.BlackScholes:
             valid = True
-        elif self.pricing_method == pricing.PRICING_METHODS[1]:
+        elif self.pricing_method == p.PricingType.MonteCarlo:
             valid = True
 
         return valid

@@ -24,7 +24,7 @@ class BlackScholes(Pricing):
     def __init__(self, ticker: str, expiry: dt.datetime, strike: float, dividend: float=0.0):
         super().__init__(ticker, expiry, strike, dividend=dividend)
 
-        self.name = pricing.PRICING_METHODS[0]
+        self.name = pricing.PricingType.BlackScholes
 
     def calculate_price(self, spot_price: float = -1.0, time_to_maturity: float = -1.0, volatility: float = -1.0) -> tuple[float, float]:
         ''' Calculate Call and Put option prices based on the below equations from Black-Scholes.

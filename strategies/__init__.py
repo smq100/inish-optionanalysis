@@ -1,5 +1,4 @@
-import re
-from enum import Enum, IntEnum
+from enum import Enum
 
 
 class StrategyType(Enum):

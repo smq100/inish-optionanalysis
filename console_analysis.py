@@ -284,6 +284,99 @@ class Interface:
         else:
             ui.print_error('No exchange or index specified')
 
+    def m_filter_by_sector(self) -> None:
+        if not self.screener:
+            ui.print_error('No valid results')
+        elif self.screener.valids:
+            sectors = store.get_sectors()
+            sectors.sort()
+
+            menu_items = {f'{index}': f'{item}' for index, item in enumerate(sectors, start=1)}
+            menu_items['0'] = 'Done'
+
+            selection = ui.menu(menu_items, 'Market Sectors', 0, len(menu_items)-1, prompt='Select desired sector')
+            if selection > 0:
+                valids = [str(r) for r in self.screener.valids]
+                filtered = store.get_sector_tickers(valids, sectors[selection-1])
+
+                results = [result for result in self.screener.valids if str(result) in filtered]
+                if results:
+                    ui.print_message(f'Results of {self.screen}/{self.table} for the {sectors[selection-1]} sector', post_creturn=1)
+                    tickers = [str(result) for result in results]
+                    scores = [float(result) for result in results]
+                    names = [result.company.information["name"] for result in results]
+                    data = {'ticker': tickers, 'score': scores, 'name': names}
+                    values = pd.DataFrame(data)
+                    headers = ui.format_headers(values.columns)
+                    print(tabulate(values, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
+                else:
+                    ui.print_message(f'No results found for the {sectors[selection-1]} sector')
+        else:
+
+            ui.print_message('No results were located')
+
+    def m_show_top(self) -> None:
+        self.m_show_valids(top=LISTTOP_SCREEN)
+
+    def m_show_valids(self, top: int = -1) -> None:
+        if not self.table:
+            ui.print_error('No table specified')
+        elif not self.screen:
+            ui.print_error('No screen specified')
+        elif not self.screener:
+            ui.print_error('No valid results')
+        elif not self.screener.valids:
+            ui.print_message('No results were located')
+        else:
+            if top <= 0:
+                top = self.screener.task_success
+            elif top > self.screener.task_success:
+                top = self.screener.task_success
+
+            if self.backtest > 0:
+                drop = ['valid', 'screen']
+            else:
+                drop = ['valid', 'screen', 'price_last', 'backtest_success']
+            summary = screener.summarize_results(self.screener.valids).drop(drop, axis=1)
+            headers = ui.format_headers(summary.columns)
+
+            ui.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen.title()}/{self.table})', post_creturn=1)
+            print(tabulate(summary.head(top), headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
+
+        print()
+
+    def m_build_result_files(self) -> None:
+        screens = screener.get_screen_names()
+        screens.sort()
+
+        tables = store.get_exchanges()
+        tables.extend(store.get_indexes())
+        tables += ['EVERY']
+        tables.sort()
+
+        for screen in screens:
+            for table in tables:
+                self.screen = screen
+                self.table = table
+                self.run_screen(use_cache=False)
+
+    def m_roll_result_files(self) -> None:
+        success, message = cache.roll(screener.CACHE_TYPE)
+        if success:
+            ui.print_message(message)
+        else:
+            ui.print_error(message)
+
+    def m_delete_result_files(self) -> None:
+        if ui.input_yesno('Delete files'):
+            success, message = cache.delete(screener.CACHE_TYPE)
+            if success:
+                ui.print_message(message)
+            else:
+                ui.print_error(message)
+        else:
+            ui.print_message('Nothing deleted')
+
     def run_screen(self, use_cache: bool = True) -> bool:
         success = False
 
@@ -473,67 +566,6 @@ class Interface:
             self.show_progress_correlate()
 
             ui.print_message(f'Filtering completed in {self.correlate.task_time:.1f} seconds')
-
-    def m_filter_by_sector(self) -> None:
-        if not self.screener:
-            ui.print_error('No valid results')
-        elif self.screener.valids:
-            sectors = store.get_sectors()
-            sectors.sort()
-
-            menu_items = {f'{index}': f'{item}' for index, item in enumerate(sectors, start=1)}
-            menu_items['0'] = 'Done'
-
-            selection = ui.menu(menu_items, 'Market Sectors', 0, len(menu_items)-1, prompt='Select desired sector')
-            if selection > 0:
-                valids = [str(r) for r in self.screener.valids]
-                filtered = store.get_sector_tickers(valids, sectors[selection-1])
-
-                results = [result for result in self.screener.valids if str(result) in filtered]
-                if results:
-                    ui.print_message(f'Results of {self.screen}/{self.table} for the {sectors[selection-1]} sector', post_creturn=1)
-                    tickers = [str(result) for result in results]
-                    scores = [float(result) for result in results]
-                    names = [result.company.information["name"] for result in results]
-                    data = {'ticker': tickers, 'score': scores, 'name': names}
-                    values = pd.DataFrame(data)
-                    headers = ui.format_headers(values.columns)
-                    print(tabulate(values, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
-                else:
-                    ui.print_message(f'No results found for the {sectors[selection-1]} sector')
-        else:
-
-            ui.print_message('No results were located')
-
-    def m_show_top(self) -> None:
-        self.m_show_valids(top=LISTTOP_SCREEN)
-
-    def m_show_valids(self, top: int = -1) -> None:
-        if not self.table:
-            ui.print_error('No table specified')
-        elif not self.screen:
-            ui.print_error('No screen specified')
-        elif not self.screener:
-            ui.print_error('No valid results')
-        elif not self.screener.valids:
-            ui.print_message('No results were located')
-        else:
-            if top <= 0:
-                top = self.screener.task_success
-            elif top > self.screener.task_success:
-                top = self.screener.task_success
-
-            if self.backtest > 0:
-                drop = ['valid', 'screen']
-            else:
-                drop = ['valid', 'screen', 'price_last', 'backtest_success']
-            summary = screener.summarize_results(self.screener.valids).drop(drop, axis=1)
-            headers = ui.format_headers(summary.columns)
-
-            ui.print_message(f'Screener Results {top} of {self.screener.task_success} ({self.screen.title()}/{self.table})', post_creturn=1)
-            print(tabulate(summary.head(top), headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
-
-        print()
 
     def show_backtest(self, top: int = -1) -> None:
         if not self.table:
@@ -739,39 +771,6 @@ class Interface:
                 ui.progress_bar(0, 0, prefix=prefix, suffix=self.chart.task_ticker)
 
         print()
-
-    def m_build_result_files(self) -> None:
-        screens = screener.get_screen_names()
-        screens.sort()
-
-        tables = store.get_exchanges()
-        tables.extend(store.get_indexes())
-        tables += ['EVERY']
-        tables.sort()
-
-        for screen in screens:
-            for table in tables:
-                self.screen = screen
-                self.table = table
-                self.run_screen(use_cache=False)
-
-    def m_roll_result_files(self) -> None:
-        success, message = cache.roll(screener.CACHE_TYPE)
-        if success:
-            ui.print_message(message)
-        else:
-            ui.print_error(message)
-
-    def m_delete_result_files(self) -> None:
-        select = ui.input_text('Delete files? (y/n)').lower()
-        if select == 'y':
-            success, message = cache.delete(screener.CACHE_TYPE)
-            if success:
-                ui.print_message(message)
-            else:
-                ui.print_error(message)
-        else:
-            ui.print_message('Nothing deleted')
 
 
 def main():

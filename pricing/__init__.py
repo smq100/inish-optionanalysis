@@ -1,1 +1,6 @@
-PRICING_METHODS = ['black-scholes', 'monte-carlo']
+from enum import IntEnum
+
+
+class PricingType(IntEnum):
+    BlackScholes = 0
+    MonteCarlo = 1
