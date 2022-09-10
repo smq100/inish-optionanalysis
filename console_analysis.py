@@ -138,7 +138,7 @@ class Interface:
                 else:
                     raise ValueError('Invalid menu item')
             else:
-                item = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1)
+                item = ui.menu(menu_items, 'Available Operations', 0, len(menu_items))
 
             if item > 0:
                 self.commands[item-1]['function']()
@@ -165,7 +165,7 @@ class Interface:
         if screens:
             menu_items = {f'{index}': f'{item.title()}' for index, item in enumerate(screens, start=1)}
 
-            selection = ui.menu(menu_items, 'Available Screens', 0, len(menu_items)-1, prompt='Select screen, or 0 to cancel', cancel = 'Cancel')
+            selection = ui.menu(menu_items, 'Available Screens', 0, len(menu_items), prompt='Select screen, or 0 to cancel', cancel = 'Cancel')
             if selection > 0:
                 if self.table:
                     self.screen = screens[selection-1]
@@ -201,11 +201,10 @@ class Interface:
                 '3': 'Vertical',
                 '4': 'Iron Condor',
                 '5': 'Iron Butterfly',
-                '0': 'Cancel',
             }
 
             modified = True
-            selection = ui.menu(menu_items, 'Available Strategy', 0, len(menu_items), prompt='Select strategy, or 0 to cancel')
+            selection = ui.menu(menu_items, 'Available Strategy', 0, len(menu_items), prompt='Select strategy, or 0 to cancel', cancel='Cancel')
             if selection == 1:
                 strategy = s.StrategyType.Call
                 product = s.ProductType.Call
@@ -291,7 +290,7 @@ class Interface:
 
             menu_items = {f'{index}': f'{item}' for index, item in enumerate(sectors, start=1)}
 
-            selection = ui.menu(menu_items, 'Market Sectors', 0, len(menu_items)-1, prompt='Select desired sector', cancel = 'Done')
+            selection = ui.menu(menu_items, 'Market Sectors', 0, len(menu_items), prompt='Select desired sector', cancel = 'Done')
             if selection > 0:
                 valids = [str(r) for r in self.screener.valids]
                 filtered = store.get_sector_tickers(valids, sectors[selection-1])

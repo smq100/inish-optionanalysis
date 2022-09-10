@@ -101,7 +101,7 @@ class Interface:
         while loop:
             update(menu_items)
 
-            selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1)
+            selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items))
             if selection > 0:
                 if self.commands[selection-1]['params']:
                     func = f'self.{self.commands[selection-1]["function"].__name__}({self.commands[selection-1]["params"]})'
@@ -335,10 +335,9 @@ class Interface:
             menu_items = {
                 '1': 'List Missing Companies',
                 '2': 'List Incomplete Companies',
-                '0': 'Exit',
             }
 
-            select = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1, prompt='Select operation, or 0 when done')
+            select = ui.menu(menu_items, 'Available Operations', 0, len(menu_items), prompt='Select operation, or 0 when done')
             if select > 0:
                 table = ui.input_table(exchange=True)
                 if table:
@@ -423,11 +422,10 @@ class Interface:
             '1': 'Change Individual Ticker',
             '2': 'Mark Errors as Inactive',
             '3': 'Mark all as Active',
-            '0': 'Exit',
         }
 
         while True:
-            select = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1, prompt='Select operation, or 0 when done')
+            select = ui.menu(menu_items, 'Available Operations', 0, len(menu_items), prompt='Select operation, or 0 when done')
             if select == 1:
                 input = ui.input_list('Please enter symbols separated with commas').upper()
                 if input:

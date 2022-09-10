@@ -59,7 +59,7 @@ class Interface:
         while not self.exit:
             update(menu_items)
 
-            selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1)
+            selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items))
             if selection > 0:
                 self.commands[selection-1]['function']()
             else:

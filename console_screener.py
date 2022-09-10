@@ -92,7 +92,7 @@ class Interface:
             update(menu_items)
 
             if selection == 0:
-                selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1)
+                selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items))
 
             if selection > 0:
                 self.commands[selection-1]['function']()
@@ -108,10 +108,9 @@ class Interface:
         menu_items = {
             '1': 'Database',
             '2': 'Live',
-            '0': 'Cancel',
         }
 
-        selection = ui.menu(menu_items, 'Available Data Sources', 0, len(menu_items)-1, prompt='Select source, or 0 when done')
+        selection = ui.menu(menu_items, 'Available Data Sources', 0, len(menu_items), prompt='Select source, or 0 when done', cancel='Done')
         if selection == 1:
             self.live = False
         elif selection == 2:
@@ -136,7 +135,7 @@ class Interface:
         if screens:
             menu_items = {f'{index}': f'{item.title()}' for index, item in enumerate(screens, start=1)}
 
-            selection = ui.menu(menu_items, 'Available Screens', 0, len(menu_items)-1, prompt='Select screen, or 0 to cancel', cancel = 'Cancel')
+            selection = ui.menu(menu_items, 'Available Screens', 0, len(menu_items), prompt='Select screen, or 0 to cancel', cancel = 'Cancel')
             if selection > 0:
                 if self.table:
                     self.screen = screens[selection-1]

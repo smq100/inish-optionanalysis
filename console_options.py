@@ -222,7 +222,7 @@ class Interface():
         while True:
             update(menu_items)
 
-            selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1)
+            selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items))
             if selection > 0:
                 self.commands[selection-1]['function']()
             else:
@@ -388,12 +388,11 @@ class Interface():
             '2': 'Put',
             '3': 'Vertical',
             '4': 'Iron Condor',
-            '5': 'Iron Butterfly',
-            '0': 'Done/Cancel',
+            '5': 'Iron Butterfly'
         }
 
         modified = False
-        selection = ui.menu(menu_items, 'Available Strategies', 0, len(menu_items)-1, prompt='Select strategy, or 0 when done')
+        selection = ui.menu(menu_items, 'Available Strategies', 0, len(menu_items), prompt='Select strategy, or 0 when done', cancel='Done')
 
         if selection > 0:
             self.load_contracts = False
@@ -493,7 +492,6 @@ class Interface():
                     '2': f'Quantity ({self.strategy.quantity})',
                     '3': f'Width ({self.strategy.width1}, {self.strategy.width2})',
                     '4': f'Select Option',
-                    '0': 'Done'
                 }
 
                 loaded = '' if self.strategy.legs[0].option.price_last > 0.0 else '*'
@@ -504,7 +502,7 @@ class Interface():
                 else:
                     menu_items['4'] += f' (${self.strategy.legs[0].option.strike:.2f}{loaded})'
 
-                selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1, prompt='Select operation, or 0 when done')
+                selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items), prompt='Select operation, or 0 when done', cancel='Done')
 
                 if selection == 1:
                     expiry = self.select_chain_expiry()
@@ -548,10 +546,9 @@ class Interface():
         while True:
             menu_items = {
                 '1': f'Pricing Method ({self.strategy.legs[0].pricing_method.title()})',
-                '0': 'Done',
             }
 
-            selection = ui.menu(menu_items, 'Settings', 0, len(menu_items)-1, prompt='Select setting')
+            selection = ui.menu(menu_items, 'Settings', 0, len(menu_items), prompt='Select setting', cancel='Done')
 
             if selection == 1:
                 self.select_method()
@@ -701,12 +698,11 @@ class Interface():
         menu_items = {
             '1': 'Black-Scholes',
             '2': 'Monte Carlo',
-            '0': 'Cancel',
         }
 
         modified = True
         while True:
-            selection = ui.menu(menu_items, 'Available Methods', 0, len(menu_items)-1, prompt='Select method')
+            selection = ui.menu(menu_items, 'Available Methods', 0, len(menu_items), prompt='Select method', cancel='Done')
 
             if selection == 1:
                 self.strategy.set_pricing_method('black-scholes')

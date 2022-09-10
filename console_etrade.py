@@ -70,7 +70,7 @@ class Client:
         while True:
             update(menu_items)
 
-            selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items)-1)
+            selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items))
             if selection > 0:
                 self.commands[selection-1]['function']()
             else:
@@ -83,7 +83,7 @@ class Client:
         if self.accounts.message == 'success':
             menu_items = {str(acct.Index+1): f'{acct.accountDesc}: {acct.accountId}' for acct in acct_table.itertuples()}
 
-            selection = ui.menu(menu_items, 'Available Accounts', 0, len(menu_items)-1, prompt='Select account, or 0 when done', cancel = 'Cancel')
+            selection = ui.menu(menu_items, 'Available Accounts', 0, len(menu_items), prompt='Select account, or 0 when done', cancel = 'Cancel')
             if selection > 0:
                 self.account_index = selection - 1
                 self.account_name = menu_items[str(selection)]
