@@ -182,7 +182,6 @@ class Interface():
 
         # Create the menu
         menu_items = {str(i+1): f'{self.commands[i]["menu"]}' for i in range(len(self.commands))}
-        menu_items['0'] = 'Quit'
 
         def _update(item: int) -> None:
             if item > 0:
@@ -656,9 +655,8 @@ class Interface():
         dates = self.strategy.chain.get_expiry()
 
         menu_items = {f'{index}': f'{item}' for index, item in enumerate(dates, start=1)}
-        menu_items['0'] = 'Cancel'
 
-        select = ui.menu(menu_items, 'Expiration Dates', 0, len(menu_items)+1, prompt='Select expiration date, or 0 to cancel')
+        select = ui.menu(menu_items, 'Expiration Dates', 0, len(menu_items)+1, prompt='Select expiration date, or 0 to cancel', cancel = 'Cancel')
         if select > 0:
             expiry = dt.datetime.strptime(dates[select-1], ui.DATE_FORMAT)
         else:

@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from base import Threaded
-from company.company import Company
+from analysis.company import Company
 from data import store as store
 from .interpreter import Interpreter
 from utils import ui, cache, logger

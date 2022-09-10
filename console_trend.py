@@ -47,7 +47,6 @@ class Interface:
 
         # Create the menu
         menu_items = {str(i+1): f'{self.commands[i]["menu"]}' for i in range(len(self.commands))}
-        menu_items['0'] = 'Quit'
 
         # Update menu items with dynamic info
         def update(menu: dict) -> None:

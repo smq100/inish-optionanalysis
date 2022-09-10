@@ -11,6 +11,7 @@ class Threaded:
         self.task_state = ''
         self.task_message = ''
         self.task_results = []
+        self.task_counter = 0
         self.task_object: any = None
         self.task_time = 0
         self.task_futures = []
@@ -24,6 +25,7 @@ class Threaded:
             self.task_state = ''
             self.task_message = ''
             self.task_results = []
+            self.task_counter = 0
             self.task_object = None
             self.task_time = 0.0
             self.task_futures = []

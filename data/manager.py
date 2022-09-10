@@ -350,8 +350,8 @@ class Manager(Threaded):
     @Threaded.threaded
     def update_history_exchange(self, exchange: str, log: bool = True) -> None:
         tickers = store.get_tickers(exchange)
-        self.task_total = len(tickers)
         self.invalid_tickers = []
+        self.task_total = len(tickers)
         running = self._concurrency
 
         def update(tickers: list[str]) -> None:
@@ -372,6 +372,7 @@ class Manager(Threaded):
 
                 if days > 0:
                     self.task_success += 1
+                    self.task_counter += days
                 elif days < 0:
                     self.invalid_tickers += [ticker]
                     _write_tickers_log(self.invalid_tickers)

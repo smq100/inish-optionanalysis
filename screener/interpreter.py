@@ -1,6 +1,6 @@
 import pandas as pd
 
-from company.company import Company
+from analysis.company import Company
 from utils import logger
 
 _logger = logger.get_logger()

@@ -120,7 +120,6 @@ class Interface:
         while not self.exit:
             # Create the menu
             menu_items = {str(i+1): f'{self.commands[i]["menu"]}' for i in range(len(self.commands))}
-            menu_items['0'] = 'Quit'
 
             # Update menu items with dynamic info
             def update(menu: dict):
@@ -165,9 +164,8 @@ class Interface:
         screens = screener.get_screen_names()
         if screens:
             menu_items = {f'{index}': f'{item.title()}' for index, item in enumerate(screens, start=1)}
-            menu_items['0'] = 'Cancel'
 
-            selection = ui.menu(menu_items, 'Available Screens', 0, len(menu_items)-1, prompt='Select screen, or 0 to cancel')
+            selection = ui.menu(menu_items, 'Available Screens', 0, len(menu_items)-1, prompt='Select screen, or 0 to cancel', cancel = 'Cancel')
             if selection > 0:
                 if self.table:
                     self.screen = screens[selection-1]
@@ -292,9 +290,8 @@ class Interface:
             sectors.sort()
 
             menu_items = {f'{index}': f'{item}' for index, item in enumerate(sectors, start=1)}
-            menu_items['0'] = 'Done'
 
-            selection = ui.menu(menu_items, 'Market Sectors', 0, len(menu_items)-1, prompt='Select desired sector')
+            selection = ui.menu(menu_items, 'Market Sectors', 0, len(menu_items)-1, prompt='Select desired sector', cancel = 'Done')
             if selection > 0:
                 valids = [str(r) for r in self.screener.valids]
                 filtered = store.get_sector_tickers(valids, sectors[selection-1])

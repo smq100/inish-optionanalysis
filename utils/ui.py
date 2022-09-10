@@ -23,9 +23,12 @@ _forward = True
 _start = 0.0
 
 
-def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int, prompt: str = 'Select operation') -> int:
+def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int, prompt: str = 'Select operation', cancel: str = 'Quit') -> int:
     print(f'\n{header}')
     print('-' * 50)
+
+    if cancel:
+        menu_items['0'] = cancel
 
     for entry in menu_items.keys():
         if entry.isnumeric():
@@ -33,6 +36,7 @@ def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int, prompt: st
         else:
             print(f'\t{menu_items[entry]}')
 
+    print()
     return input_integer(f'{prompt}', minvalue, maxvalue)
 
 

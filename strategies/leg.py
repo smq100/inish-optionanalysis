@@ -6,7 +6,7 @@ import numpy as np
 
 import pricing as p
 import strategies as s
-from company.company import Company
+from analysis.company import Company
 from options.option import Option
 from pricing.pricing import Pricing
 from pricing.blackscholes import BlackScholes
@@ -218,7 +218,7 @@ class Leg:
                 f'${self.option.price_eff:.2f} '\
                 f'(c={self.option.price_calc:.2f} l={self.option.price_last:.2f}) {d3}/{d2} '\
                 f'cv={self.option.volatility_calc:.2f} iv={self.option.volatility_implied:.2f} uv={self.option.volatility_user:.2f} '\
-                f'∆={self.option.volatility_delta:.2f} ev={self.option.volatility_eff:.2f}'
+                f'∆v={self.option.volatility_delta:.2f} ev={self.option.volatility_eff:.2f}'
 
             if not self.option.contract:
                 output += ' * option not selected'

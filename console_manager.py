@@ -89,7 +89,6 @@ class Interface:
 
         # Create the menu
         menu_items = {str(i+1): f'{self.commands[i]["menu"]}' for i in range(len(self.commands))}
-        menu_items['0'] = 'Quit'
 
         # Update menu items with dynamic info
         def update(menu: dict) -> None:
@@ -252,7 +251,8 @@ class Interface:
             self.show_progress()
 
             if self.manager.task_state == 'Done':
-                ui.print_message(f'{self.manager.task_total} {table} Ticker pricing refreshed in {self.manager.task_time:.0f} seconds')
+                ui.print_message(f'{self.manager.task_total} tickers refreshed in {self.manager.task_time:.0f} seconds.')
+                ui.print_message(f'{self.manager.task_counter} pricing records added.')
 
                 if not self.stop and len(self.manager.invalid_tickers) > 0:
                     if ui.input_yesno('Show unsuccessful tickers?'):

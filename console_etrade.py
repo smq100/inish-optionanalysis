@@ -58,7 +58,6 @@ class Client:
 
         # Create the menu
         menu_items = {str(i+1): f'{self.commands[i]["menu"]}' for i in range(len(self.commands))}
-        menu_items['0'] = 'Quit'
 
         # Update menu items with dynamic info
         def update(menu: dict) -> None:
@@ -83,9 +82,8 @@ class Client:
 
         if self.accounts.message == 'success':
             menu_items = {str(acct.Index+1): f'{acct.accountDesc}: {acct.accountId}' for acct in acct_table.itertuples()}
-            menu_items['0'] = 'Cancel'
 
-            selection = ui.menu(menu_items, 'Available Accounts', 0, len(menu_items)-1, prompt='Select account, or 0 when done')
+            selection = ui.menu(menu_items, 'Available Accounts', 0, len(menu_items)-1, prompt='Select account, or 0 when done', cancel = 'Cancel')
             if selection > 0:
                 self.account_index = selection - 1
                 self.account_name = menu_items[str(selection)]
