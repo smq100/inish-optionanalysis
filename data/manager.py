@@ -316,7 +316,7 @@ class Manager(Threaded):
                         if delta > 0:
                             days = delta
                             history = history[-delta:]
-                            history.reset_index(inplace=True)
+                            history = history.reset_index()
 
                             with self.session.begin() as session:
                                 t = session.query(models.Security).filter(models.Security.ticker == ticker).one()
@@ -816,8 +816,7 @@ class Manager(Threaded):
                     if history is None:
                         _logger.error(f'{__name__}: \'None\' object for {ticker} (1)')
                     if not history.empty:
-                        history.reset_index(inplace=True)
-                        for price in history.itertuples():
+                        for price in history.reset_index().itertuples():
                             if price.date:
                                 p = models.Price()
                                 p.date = price.date

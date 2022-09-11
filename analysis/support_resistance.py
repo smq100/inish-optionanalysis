@@ -166,11 +166,11 @@ class SupportResistance(Threaded):
 
             # Create dataframe of lines then sort, round, and drop duplicates
             df = pd.DataFrame.from_records([vars(l) for l in lines])
-            df.dropna(inplace=True)
-            df.drop('_score', axis=1, inplace=True)
-            df.sort_values(by=['score'], ascending=False, inplace=True)
+            df = df.dropna()
+            df = df.drop('_score', axis=1)
+            df = df.sort_values(by=['score'], ascending=False)
             df = df.round(6)
-            df.drop_duplicates(subset=['slope', 'intercept'], inplace=True)
+            df = df.drop_duplicates(subset=['slope', 'intercept'])
             self.lines = df.reset_index(drop=True)
             _logger.info(f'{__name__}: {len(self.lines)} rows created ({len(lines)-len(self.lines)} duplicates deleted)')
 
@@ -343,9 +343,7 @@ class SupportResistance(Threaded):
             df = df[df['end_point'] >= self.price]
             df = df.sort_values(by=['end_point'], ascending=True)
 
-        df.reset_index(drop=True, inplace=True)
-
-        return df
+        return df.reset_index(drop=True)
 
     def _get_support(self, method_price: bool = True, best: int = 0) -> pd.DataFrame:
         if best <= 0:
@@ -360,9 +358,7 @@ class SupportResistance(Threaded):
             df = df[df['end_point'] < self.price]
             df = df.sort_values(by=['end_point'], ascending=False)
 
-        df.reset_index(drop=True, inplace=True)
-
-        return df
+        return df.reset_index(drop=True)
 
     def _calculate_stats(self, best: int = 0) -> None:
         if best <= 0:

@@ -152,8 +152,8 @@ def get_ratings(ticker: str) -> list[int]:
             ratings = company.recommendations
             if ratings is not None and not ratings.empty:
                 # Clean up and normalize text
-                ratings.reset_index()
-                ratings.sort_values('Date', ascending=True, inplace=True)
+                ratings = ratings.reset_index()
+                ratings = ratings.sort_values('Date', ascending=True)
                 ratings = ratings.tail(10)
                 ratings = ratings['To Grade'].replace(' ', '', regex=True)
                 ratings = ratings.replace('-', '', regex=True)
@@ -214,7 +214,7 @@ def _get_history_yfinance(ticker: str, days: int = -1) -> pd.DataFrame:
     if not _connected:
         raise ConnectionError('No internet connection')
 
-    history = pd.DataFrame()
+    history: pd.DataFrame = pd.DataFrame()
     company = _get_yfinance_live(ticker)
 
     if company is None:
@@ -241,12 +241,12 @@ def _get_history_yfinance(ticker: str, days: int = -1) -> pd.DataFrame:
                         time.sleep(_THROTTLE_ERROR)
                     else:
                         days = history.shape[0]
-                        history.reset_index(inplace=True)
+                        history = history.reset_index()
 
                         # Clean some things up and make colums consistent with Postgres column names
                         history.columns = history.columns.str.lower()
-                        history.drop(['dividends', 'stock splits'], axis=1, inplace=True)
-                        history.sort_values('date', ascending=True, inplace=True)
+                        history = history.drop(['dividends', 'stock splits'], axis=1)
+                        history = history.sort_values('date', ascending=True)
 
                         _logger.info(f'{__name__}: {ticker} Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
                         break
@@ -259,6 +259,9 @@ def _get_history_yfinance(ticker: str, days: int = -1) -> pd.DataFrame:
 
 
 def _get_history_quandl(ticker: str, days: int = -1) -> pd.DataFrame:
+    if not _connected:
+        raise ConnectionError('No internet connection')
+
     history: pd.DataFrame = pd.DataFrame()
 
     if days < 0:
@@ -282,12 +285,12 @@ def _get_history_quandl(ticker: str, days: int = -1) -> pd.DataFrame:
                     _logger.info(f'{__name__}: {d.ACTIVE_HISTORYDATASOURCE} history for {ticker} is empty ({retry+1})')
                     time.sleep(_THROTTLE_ERROR)
                 else:
-                    history.reset_index(inplace=True)
+                    history = history.reset_index()
 
                     # Clean some things up and make columns consistent with Postgres column names
                     history.columns = history.columns.str.lower()
-                    history.drop(['none'], axis=1, inplace=True)
-                    history.sort_values('date', ascending=True, inplace=True)
+                    history = history.drop(['none'], axis=1)
+                    history = history.sort_values('date', ascending=True)
 
                     _logger.info(f'{__name__}: Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
                     break
@@ -370,7 +373,7 @@ def _get_option_chain_etrade(ticker: str, expiry: dt.datetime) -> pd.DataFrame:
         'osiKey': 'contractSymbol',
         'strikePrice': 'strike'
     }
-    chain.rename(rename, axis=1, inplace=True)
+    chain = chain.rename(rename, axis=1)
 
     order = [
         'contractSymbol',

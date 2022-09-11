@@ -45,9 +45,9 @@ class Correlate(Threaded):
                 self.task_ticker = ticker
                 df = store.get_history(ticker, self.days)
                 if not df.empty:
-                    df.set_index('date', inplace=True)
-                    df.rename(columns={'close': ticker}, inplace=True)
-                    df.drop(['high', 'low', 'open', 'volume'], axis=1, inplace=True)
+                    df = df.set_index('date')
+                    df = df.rename(columns={'close': ticker})
+                    df = df.drop(['high', 'low', 'open', 'volume'], axis=1)
 
                     if combined_df.empty:
                         combined_df = df
@@ -117,7 +117,7 @@ class Correlate(Threaded):
         if not self.results.empty:
             if ticker in self.results.index:
                 series = self.results[ticker].sort_values(ascending=False)
-                series.drop(ticker, inplace=True) # Drop own entry (corr = 1.0)
+                series = series.drop(ticker) # Drop own entry (corr = 1.0)
             else:
                 _logger.warning(f'{__name__}: Invalid ticker {ticker}')
         else:

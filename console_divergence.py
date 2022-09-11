@@ -249,14 +249,15 @@ class Interface:
 
         if self.divergence.task_state == 'None':
             print()
-            ui.progress_bar(0, 0, suffix=self.divergence.task_message, reset=True)
+            prefix = 'Fetching Data'
+            ui.progress_bar(0, 0, prefix=prefix, suffix=self.divergence.task_message, reset=True)
 
             while self.divergence.task_state == 'None':
                 time.sleep(ui.PROGRESS_SLEEP)
                 total = self.divergence.task_total
                 completed = self.divergence.task_completed
                 ticker = self.divergence.task_ticker
-                ui.progress_bar(completed, total, ticker=ticker, success=-1)
+                ui.progress_bar(completed, total, prefix=prefix, ticker=ticker, success=-1)
 
             print()
         elif self.divergence.task_state == 'Done':

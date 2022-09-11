@@ -629,7 +629,7 @@ class Interface:
     def show_correlations(self) -> None:
         results = self.correlate.filtered
         if not results.empty:
-            results.reset_index(drop=True, inplace=True)
+            results = results.reset_index(drop=True)
             headers = ui.format_headers(results.columns)
             ui.print_message('Correlation Results', post_creturn=1)
             print(tabulate(results.head(LISTTOP_CORR), headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.4f'))

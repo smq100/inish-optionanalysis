@@ -180,7 +180,7 @@ class Interface:
                     ui.print_message(f'{ticker} Recent Price History')
                     history = history.tail(10)
                     if not history.empty:
-                        history.set_index('date', inplace=True)
+                        history = history.set_index('date')
                         print(history.round(2))
 
             else:

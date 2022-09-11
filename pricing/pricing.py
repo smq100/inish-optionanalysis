@@ -113,8 +113,8 @@ class Pricing(ABC):
         Using historical prices of the underlying asset, calculate volatility.
         '''
         self.calculate_underlying_asset_data()
-        self.underlying_asset_data.reset_index(inplace=True)
-        self.underlying_asset_data.set_index('date', inplace=True)
+        self.underlying_asset_data = self.underlying_asset_data.reset_index()
+        self.underlying_asset_data = self.underlying_asset_data.set_index('date')
         self.underlying_asset_data['log_returns'] = np.log(self.underlying_asset_data['close'] / self.underlying_asset_data['close'].shift(1))
 
         daily_std = np.std(self.underlying_asset_data['log_returns'])

@@ -313,7 +313,7 @@ def get_history(ticker: str, days: int = -1, end: int = 0, live: bool = False, i
                     elif history.empty:
                         _logger.info(f'{__name__}: Empty history found for {ticker}')
                     else:
-                        history.drop(['id', 'security_id'], axis=1, inplace=True)
+                        history = history.drop(['id', 'security_id'], axis=1)
                         if end > 0:
                             history = history[:-end]
 

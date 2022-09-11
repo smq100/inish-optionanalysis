@@ -321,7 +321,7 @@ def analyze_results(table: str) -> tuple[pd.DataFrame, pd.DataFrame]:
     if results:
         results = sorted(results, reverse=True, key=lambda r: float(r))  # Sort results by score
         summary = summarize_results(results)
-        summary.drop(['valid', 'price_last', 'backtest_success'], axis=1, inplace=True)
+        summary = summary.drop(['valid', 'price_last', 'backtest_success'], axis=1)
 
         # Results with successes across multiple screens
         multiples = group_duplicates(results)
