@@ -1,6 +1,7 @@
 import time
 import threading
 import logging
+import datetime as dt
 
 import argparse
 
@@ -8,6 +9,9 @@ import data as d
 from data import store as store
 from data import manager as manager
 from utils import ui, logger
+
+
+CSV_BASEPATH = './output'
 
 
 logger.get_logger(logging.ERROR)  # , logfile='output')
@@ -72,6 +76,7 @@ class Interface:
             {'menu': 'Re-Check Inactive', 'function': self.m_recheck_inactive, 'params': '', 'condition': '', 'value': ''},
             {'menu': 'List Inactive', 'function': self.m_list_inactive, 'params': '', 'condition': '', 'value': ''},
             {'menu': 'Mark Active/Inactive', 'function': self.m_change_active, 'params': '', 'condition': '', 'value': ''},
+            {'menu': 'Create CSV', 'function': self.m_create_csv, 'params': '', 'condition': '', 'value': ''},
             {'menu': 'Check Integrity', 'function': self.m_check_integrity, 'params': '', 'condition': '', 'value': ''},
             {'menu': 'Check Incomplete Pricing', 'function': self.m_check_incomplete_pricing, 'params': '', 'condition': '', 'value': ''},
             {'menu': 'Populate Exchange', 'function': self.m_populate_exchange, 'params': '', 'condition': '', 'value': ''},
@@ -442,6 +447,18 @@ class Interface:
                 self.manager.change_active(tickers, True)
             else:
                 break
+
+    def m_create_csv(self, days: int = 365) -> None:
+        self.ticker = ui.input_alphanum('Enter exchange or index')
+
+        if not store.is_ticker(self.ticker):
+            ui.print_error(f'Ticker {self.ticker} is not valid')
+
+        if self.ticker:
+            table = store.get_history(self.ticker, days)
+            date = dt.datetime.now().strftime(ui.DATE_FORMAT)
+            filename = f'{CSV_BASEPATH}/{date}_{self.ticker.lower()}.csv'
+            table.to_csv(filename, index=False, float_format='%.2f')
 
     def create_missing_tables(self) -> None:
         self.manager.create_exchanges()
