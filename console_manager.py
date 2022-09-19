@@ -448,17 +448,17 @@ class Interface:
             else:
                 break
 
-    def m_create_csv(self, days: int = 365) -> None:
+    def m_create_csv(self) -> None:
         self.ticker = ui.input_alphanum('Enter exchange or index')
-
-        if not store.is_ticker(self.ticker):
-            ui.print_error(f'Ticker {self.ticker} is not valid')
-
-        if self.ticker:
+        if store.is_ticker(self.ticker):
+            days = ui.input_integer('Enter number of days (0 for all)', 0, 9999)
+            if days == 0: days = -1
             table = store.get_history(self.ticker, days)
             date = dt.datetime.now().strftime(ui.DATE_FORMAT)
             filename = f'{CSV_BASEPATH}/{date}_{self.ticker.lower()}.csv'
-            table.to_csv(filename, index=False, float_format='%.2f')
+            table.to_csv(filename, index=False, float_format='%.4f')
+        else:
+            ui.print_error(f'Ticker {self.ticker} is not valid')
 
     def create_missing_tables(self) -> None:
         self.manager.create_exchanges()
