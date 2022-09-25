@@ -2,11 +2,11 @@
 yfinance: https://github.com/ranaroussi/yfinance
 '''
 
-import os
 import time
 import datetime as dt
 import configparser
 import socket
+from pathlib import Path
 
 import quandl as qd
 import yfinance as yf
@@ -29,7 +29,7 @@ _last_ticker: str = ''
 _elapsed = 0.0
 
 # Quandl credentials
-CREDENTIALS = os.path.join(os.path.dirname(__file__), 'quandl.ini')
+CREDENTIALS = Path(__file__).resolve().parent  / 'quandl.ini'
 config = configparser.ConfigParser()
 config.read(CREDENTIALS)
 qd.ApiConfig.api_key = config['DEFAULT']['APIKEY']

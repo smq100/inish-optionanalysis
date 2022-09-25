@@ -113,7 +113,6 @@ class Interface:
             {'name': 'm', 'menu': 'Show All Results', 'function': self.m_show_valids, 'condition': _c, 'value': 'len(self.screener.valids)'},
             {'name': 'n', 'menu': 'Show Ticker Screen Results', 'function': self.m_show_ticker_results, 'condition': '', 'value': ''},
             {'name': 'o', 'menu': 'Build Result Files', 'function': self.m_build_result_files, 'condition': '', 'value': ''},
-            # {'name': 'p', 'menu': 'Roll Result Files', 'function': self.m_roll_result_files, 'condition': '', 'value': ''},
             # {'name': 'q', 'menu': 'Delete Result Files', 'function': self.m_delete_result_files, 'condition': '', 'value': ''},
         ]
 
@@ -355,13 +354,6 @@ class Interface:
                 self.screen = screen
                 self.table = table
                 self.run_screen(use_cache=False)
-
-    def m_roll_result_files(self) -> None:
-        success, message = cache.roll(screener.CACHE_TYPE)
-        if success:
-            ui.print_message(message)
-        else:
-            ui.print_error(message)
 
     def m_delete_result_files(self) -> None:
         if ui.input_yesno('Delete files'):

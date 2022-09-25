@@ -1,5 +1,5 @@
-import os
 import configparser
+from pathlib import Path
 
 
 # Price data sources
@@ -15,7 +15,7 @@ VALID_DBS = ('live', 'Postgres', 'SQLite')
 ACTIVE_DB = VALID_DBS[1]
 
 if ACTIVE_DB == VALID_DBS[1]: # Postgres
-    CREDENTIALS = os.path.join(os.path.dirname(__file__), 'postgres.ini')
+    CREDENTIALS = Path(__file__).resolve().parent  / 'postgres.ini'
     config = configparser.ConfigParser()
     config.read(CREDENTIALS)
     dbuser = config['DEFAULT']['USER']

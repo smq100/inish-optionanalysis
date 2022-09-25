@@ -1,7 +1,7 @@
-import os
 import time
 import random
 import datetime as dt
+from pathlib import Path
 from concurrent import futures
 from urllib.error import HTTPError
 
@@ -405,8 +405,9 @@ class Manager(Threaded):
         if d.ACTIVE_DB == d.VALID_DBS[1]: # Postfres
             models.Base.metadata.drop_all(self.engine)
         elif d.ACTIVE_DB == d.VALID_DBS[2]: # SQLite
-            if os.path.exists(d.SQLITE_FILE_PATH):
-                os.remove(d.SQLITE_FILE_PATH)
+            path = Path(d.SQLITE_FILE_PATH)
+            if path.is_file():
+                path.unlink()
                 _logger.info(f'{__name__}: Deleted {d.SQLITE_FILE_PATH}')
             else:
                 _logger.error(f'{__name__}: File does not exist: {d.SQLITE_FILE_PATH}')
@@ -577,20 +578,17 @@ class Manager(Threaded):
     def get_latest_errors(self) -> list[str]:
         errors = []
         files = []
-        with os.scandir(LOG_DIR) as entries:
-            for entry in entries:
-                if entry.is_file():
-                    head, sep, tail = entry.name.partition('.')
-                    if tail != LOG_SUFFIX:
-                        pass
-                    elif head[:2] != '20':
-                        pass  # Not a log file. Does not start with year 20**
-                    else:
-                        files += [f'{LOG_DIR}/{entry.name}']
+
+        path = Path(LOG_DIR)
+        items = [item for item in path.glob(f'*.{LOG_SUFFIX}') if item.is_file()]
+        for item in items:
+            head, sep, tail = item.name.partition('.')
+            if head[:2] == '20':
+                files += [f'{LOG_DIR}/{item.name}']
+
         if files:
             files.sort()
-
-        errors = _read_tickers_log(files[-1])
+            errors = _read_tickers_log(files[-1])
 
         return errors
 
@@ -881,12 +879,14 @@ def _write_tickers_log(tickers: list[str], filename: str = '') -> str:
 
 def _read_tickers_log(filename: str) -> list[str]:
     tickers = ['error']
-    if os.path.exists(filename):
+    path = Path(filename)
+    if path.is_file():
         try:
-            with open(filename) as f:
+            with open(path) as f:
                 tickers = f.readlines()
 
             tickers = [s.replace('\n', '') for s in tickers]
+            tickers.sort()
         except:
             _logger.error(f'{__name__}: File format error')
     else:
@@ -901,3 +901,5 @@ if __name__ == '__main__':
     # _logger = ui.get_logger(DEBUG)
 
     manager = Manager()
+    errors = manager.get_latest_errors()
+    print(errors)

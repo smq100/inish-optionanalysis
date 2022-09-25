@@ -1,7 +1,7 @@
-import os
 import json
 import random
 import datetime as dt
+from pathlib import Path
 from concurrent import futures
 from dataclasses import dataclass
 
@@ -207,10 +207,8 @@ class Screener(Threaded):
             if self.task_state == 'None':
                 self.task_completed += 1
 
-                head_tail = os.path.split(self.screen)
-                head, sep, tail = head_tail[1].partition('.')
                 price = store.get_last_price(company.ticker)
-                self.results += [Result(company, head, successes, scores, descriptions, price)]
+                self.results += [Result(company, self.screen, successes, scores, descriptions, price)]
                 if (bool(self.results[-1])):
                     self.task_success += 1
             else:
@@ -221,9 +219,10 @@ class Screener(Threaded):
 
     def _load_screen(self) -> bool:
         self.scripts = []
-        if os.path.exists(self.script_path):
+        path = Path(self.script_path)
+        if path.is_file():
             try:
-                with open(self.script_path) as f:
+                with open(path) as f:
                     self.scripts = json.load(f)
             except:
                 self.scripts = []
@@ -263,11 +262,10 @@ class Screener(Threaded):
         return bool(self.companies)
 
     def _add_init_script(self) -> bool:
-        if not self.init_path:
-            pass
-        elif os.path.exists(self.init_path):
+        path = Path(self.init_path)
+        if path.is_file():
             try:
-                with open(self.init_path) as f:
+                with open(path) as f:
                     self.scripts += json.load(f)
             except:
                 self.scripts = []
@@ -373,18 +371,16 @@ def group_duplicates(results: list[Result]) -> pd.DataFrame:
 
 def get_screen_names() -> list[str]:
     files = []
-    with os.scandir(SCREEN_BASEPATH) as entries:
-        for entry in entries:
-            if entry.is_file():
-                head, sep, tail = entry.name.partition('.')
-                if tail != SCREEN_SUFFIX:
-                    pass
-                elif head == SCREEN_INIT_NAME:
-                    pass
-                elif head == 'test':
-                    pass
-                else:
-                    files += [head]
+    path = Path(SCREEN_BASEPATH)
+    items = [item for item in path.glob(f'*.{SCREEN_SUFFIX}') if item.is_file()]
+    for item in items:
+        head, sep, tail = item.name.partition('.')
+        if head == SCREEN_INIT_NAME:
+            pass
+        elif head == 'test':
+            pass
+        else:
+            files += [head]
 
     files.sort()
 

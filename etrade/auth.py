@@ -1,4 +1,4 @@
-import os.path
+from pathlib import Path
 import pickle
 import configparser
 from requests_oauthlib.oauth1_session import TokenRequestDenied
@@ -32,8 +32,9 @@ def authorize(callback: Callable[[str], str]) -> OAuth1Session:
         key = config['DEFAULT']['CONSUMER_KEY']
 
     # Get a new session, or use existing
-    if os.path.exists(picklefile):
-        with open(picklefile, 'rb') as session_file:
+    path = Path(picklefile)
+    if path.is_file():
+        with open(path, 'rb') as session_file:
             try:
                 Session = pickle.load(session_file)
                 _logger.info(f'{__name__}: Loaded existing session')

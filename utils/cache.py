@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 import pickle
 import datetime as dt
 
@@ -93,48 +93,6 @@ def load(name: str, type: str, today_only: str = True) -> tuple[object, str]:
 
     return object, date
 
-
-def roll(type: str) -> tuple[bool, str]:
-    if not type:
-        raise AssertionError('Must include \'type\'')
-
-    type = type.lower()
-    success = True
-    message = ''
-    rolled = 0
-
-    files = get_filenames('', type)
-    if files:
-        for result_old in files:
-            date = dt.datetime.now().strftime(ui.DATE_FORMAT)
-            head, _, _ = result_old.partition('.')
-            parts = head.split('_')
-            result_new = f'{date}_{parts[1]}_{parts[2]}'
-
-            if result_new > result_old:
-                file_old = f'{CACHE_BASEPATH}/{result_old}.{CACHE_SUFFIX}'
-                file_new = f'{CACHE_BASEPATH}/{result_new}.{CACHE_SUFFIX}'
-                try:
-                    os.replace(file_old, file_new)
-                except OSError as e:
-                    success = False
-                    message = f'File error for {e.filename}: {e.strerror}'
-                    break
-                else:
-                    rolled += 1
-
-        if success:
-            message = f'Rolled {rolled} file(s)'
-            _logger.info(f'{__name__}: {message}')
-        else:
-            _logger.error(f'{__name__}: {message}')
-    else:
-        success = False
-        message = 'No files'
-
-    return success, message
-
-
 def delete(type: str) -> tuple[bool, str]:
     if not type:
         raise AssertionError('Must include \'type\'')
@@ -159,7 +117,8 @@ def delete(type: str) -> tuple[bool, str]:
             deleted = 0
             for path in paths:
                 try:
-                    os.remove(path)
+                    file = Path(path)
+                    file.unlink()
                 except OSError as e:
                     success = False
                     message = f'File error for {e.filename}: {e.strerror}'
@@ -187,19 +146,18 @@ def get_filenames(name: str, type: str, type_only: bool = False) -> list[str]:
     type = type.lower()
 
     files = []
-    for item in os.scandir(CACHE_BASEPATH):
-        if item.is_file():
-            head, sep, tail = item.name.partition('.')
-            parts = head.split('_')
+    path = Path(CACHE_BASEPATH)
+    items = [item for item in path.glob(f'*.{CACHE_SUFFIX}') if item.is_file()]
+    for item in items:
+        head, sep, tail = item.name.partition('.')
+        parts = head.split('_')
 
-            if len(parts) != 3:
-                pass # Bad filename structure
-            elif tail != CACHE_SUFFIX:
-                pass # Wrong file type
-            elif name and name != parts[2]:
-                pass # Bad name
-            elif type == parts[1]:
-                files += [head]
+        if len(parts) != 3:
+            pass # Bad filename structure
+        elif name and name != parts[2]:
+            pass # Bad name
+        elif type == parts[1]:
+            files += [head]
 
     # Return most recent first
     files.sort(reverse=True)
@@ -230,5 +188,4 @@ if __name__ == '__main__':
         name = ''
         type = sys.argv[1]
 
-    ob = load(name, type, True)
-    print(ob)
+    names = delete('scr')
