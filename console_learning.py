@@ -1,19 +1,14 @@
-import os
 import logging
-
 
 import argparse
 import matplotlib.pyplot as plt
-
-# Supress TF complier flag warning
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 from learning.learning import Learning
 from data import store as store
 from utils import ui, logger
 
 
-logger.get_logger(logging.DEBUG, logfile='')
+logger.get_logger(logging.WARNING, logfile='')
 
 class Interface:
     def __init__(self, ticker: str, days: int = 1000, exit: bool = False):
@@ -79,6 +74,20 @@ class Interface:
 
     def run_model(self):
         self.learning.run()
+        self.plot()
+
+    def plot(self):
+        real_data = self.learning.history[-self.learning.test_size:].reset_index()
+        plots = [row for row in self.learning.prediction.itertuples(index=False)]
+
+        plt.figure(figsize=(18, 8))
+        for item in plots:
+            plt.plot(item, color= 'green')
+
+        plt.plot(real_data['close'], color='grey')
+        plt.title('Close')
+        plt.show()
+
 
 def main():
     parser = argparse.ArgumentParser(description='Learning model')

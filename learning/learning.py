@@ -1,6 +1,10 @@
+import os
+
+# Supress TF complier flag warning
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 from keras import Sequential
@@ -9,20 +13,40 @@ from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 
 from base import Threaded
 from data import store as store
-from utils import cache, logger
+from utils import logger
 
+
+PCT_TRAINING = 0.15
+PCT_VALIDATION = 0.15
+NEURONS = 50
+DROPOUT = 0.20
+EPOCHS = 10
+BATCH_SIZE = 8
+CACHE_FILE = './cache/model.h5'
 
 _logger = logger.get_logger()
 
 class Learning(Threaded):
-    def __init__(self, ticker: str, days: int = 1000):
+    def __init__(self, ticker: str, days: int):
+        if not store.is_ticker(ticker):
+            raise ValueError('Invalid ticker')
         if days < 30:
-            raise ValueError('Days must be larger than 30')
+            raise ValueError('Days must be more than 30')
 
         self.ticker = ticker.upper()
         self.days = days
         self.lookback = 60
         self.lookahead = 10
+        self.test_size: int
+        self.X_test: np.array
+        self.y_test: np.array
+        self.X_train: np.array
+        self.y_train: np.array
+        self.X_valid: np.array
+        self.y_valid: np.array
+        self.scaler: MinMaxScaler
+        self.regressor: Sequential
+        self.prediction: pd.DataFrame
 
         self.history = store.get_history(self.ticker, days=self.days)
 
@@ -34,10 +58,10 @@ class Learning(Threaded):
         input_data = self.scaler.fit_transform(input_data)
 
         # Build data
-        total_size = len(self.history)
+        history_size = len(self.history)
         X=[]
         y=[]
-        for i in range(0, total_size-self.lookback-self.lookahead):
+        for i in range(0, history_size-self.lookback-self.lookahead):
             lb=[]
             for j in range(0, self.lookback):
                 lb += [input_data[i+j, :]]
@@ -56,21 +80,20 @@ class Learning(Threaded):
         _logger.debug(f'{__name__}: {X.shape=}')
         _logger.debug(f'{__name__}: {y.shape=}')
 
-        # 15% of the data for testing
-        # 85% of the rest for training
-        # 15% of the rest for validation
-        self.test_size = int(total_size * 0.15)
+        # Create testing, training, and validation arrays
+        self.test_size = int(history_size * PCT_TRAINING)
 
         self.X_test = X[-self.test_size:, :]
         self.y_test = y[-self.test_size:, :]
         X_rest = X[:-self.test_size, :]
         y_rest = y[:-self.test_size, :]
-        self.X_train, self.X_valid, self.y_train, self.y_valid = train_test_split(X_rest, y_rest, test_size=0.15, random_state=101)
+
+        self.X_train, self.X_valid, self.y_train, self.y_valid = train_test_split(X_rest, y_rest, test_size=PCT_VALIDATION, random_state=101)
 
         # Reshape to be friendly to LSTM model
+        self.X_test = self.X_test.reshape(self.X_test.shape[0], self.lookback, 5)
         self.X_train = self.X_train.reshape(self.X_train.shape[0], self.lookback, 5)
         self.X_valid = self.X_valid.reshape(self.X_valid.shape[0], self.lookback, 5)
-        self.X_test = self.X_test.reshape(self.X_test.shape[0], self.lookback, 5)
 
         _logger.debug(f'{__name__}: {self.X_train.shape=}')
         _logger.debug(f'{__name__}: {self.X_valid.shape=}')
@@ -82,30 +105,29 @@ class Learning(Threaded):
         self._create_model()
         self._compile_and_fit()
         self._predict()
-        self._plot()
 
     def _create_model(self):
         # Create model
         self.regressor = Sequential()
 
         # Add 1st lstm layer: 50 neurons
-        self.regressor.add(LSTM(units = 50, return_sequences = True, input_shape = (self.X_train.shape[1], 5)))
-        self.regressor.add(Dropout(rate = 0.2))
+        self.regressor.add(LSTM(units=NEURONS, return_sequences=True, input_shape=(self.X_train.shape[1], 5)))
+        self.regressor.add(Dropout(rate = DROPOUT))
 
         # Add 2nd lstm layer
-        self.regressor.add(LSTM(units = 50, return_sequences = True))
-        self.regressor.add(Dropout(rate = 0.2))
+        self.regressor.add(LSTM(units=NEURONS, return_sequences=True))
+        self.regressor.add(Dropout(rate=DROPOUT))
 
         # Add 3rd lstm layer
-        self.regressor.add(LSTM(units = 50, return_sequences = True))
-        self.regressor.add(Dropout(rate = 0.2))
+        self.regressor.add(LSTM(units=NEURONS, return_sequences=True))
+        self.regressor.add(Dropout(rate=DROPOUT))
 
         # Add 4th lstm layer
-        self.regressor.add(LSTM(units = 50, return_sequences = False))
-        self.regressor.add(Dropout(rate = 0.2))
+        self.regressor.add(LSTM(units=NEURONS, return_sequences=False))
+        self.regressor.add(Dropout(rate=DROPOUT))
 
         # Add output layer
-        self.regressor.add(Dense(units = self.lookahead))
+        self.regressor.add(Dense(units=self.lookahead))
 
     def _compile_and_fit(self):
         self.regressor.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
@@ -119,12 +141,11 @@ class Learning(Threaded):
         callbacks = [
             EarlyStopping(patience=10, verbose=1),
             ReduceLROnPlateau(factor=0.1, patience=3, min_lr=0.00001, verbose=1),
-            ModelCheckpoint('model.h5', verbose=1, save_best_only=True, save_weights_only=True)
+            ModelCheckpoint(CACHE_FILE, verbose=1, save_best_only=True, save_weights_only=True)
         ]
 
         # Fit the model
-        self.regressor.fit(self.X_train, self.y_train, epochs=10, batch_size=8, validation_data=(self.X_valid, self.y_valid), callbacks=callbacks)
-
+        self.regressor.fit(self.X_train, self.y_train, epochs=EPOCHS, batch_size=BATCH_SIZE, validation_data=(self.X_valid, self.y_valid), callbacks=callbacks)
         results = self.regressor.evaluate(self.X_test, self.y_test, batch_size=8)
 
         _logger.debug(f'{__name__}: Test MSE: {results[0]}') # Mean Square Error
@@ -148,21 +169,9 @@ class Learning(Threaded):
         _logger.debug(f'{__name__}: {prediction.shape=}')
 
         # Create df shifting results to their X locations
-        self.prediction_df = pd.DataFrame(prediction)
-        for n in range(len(self.prediction_df)):
-            sr = self.prediction_df.iloc[n]
-            self.prediction_df.loc[n] = sr.shift(n)
+        self.prediction = pd.DataFrame(prediction)
+        for n in range(len(self.prediction)):
+            sr = self.prediction.iloc[n]
+            self.prediction.loc[n] = sr.shift(n)
 
-        _logger.debug(f'{__name__}:\n{self.prediction_df}')
-
-    def _plot(self):
-        real_data = self.history[-self.test_size:].reset_index()
-        plots = [row for row in self.prediction_df.itertuples(index=False)]
-
-        plt.figure(figsize=(18, 8))
-        for item in plots:
-            plt.plot(item, color= 'green')
-
-        plt.plot(real_data['close'], color='grey')
-        plt.title('Close')
-        plt.show()
+        _logger.debug(f'{__name__}:\n{self.prediction}')
