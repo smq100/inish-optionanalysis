@@ -19,6 +19,7 @@ wip
 *.txt
 *.log
 *.pickle
+*.h5
 *.session.*
 *.png
 *.bak
