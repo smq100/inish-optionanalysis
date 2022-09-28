@@ -59,14 +59,14 @@ class Learning(Threaded):
 
         # Build data
         history_size = len(self.history)
-        X=[]
-        y=[]
+        X = []
+        y = []
         for i in range(0, history_size-self.lookback-self.lookahead):
-            lb=[]
+            lb = []
             for j in range(0, self.lookback):
                 lb += [input_data[i+j, :]]
 
-            la=[]
+            la = []
             for j in range(0, self.lookahead):
                 la += [input_data[self.lookback+i+j, -1]]
 
@@ -154,7 +154,7 @@ class Learning(Threaded):
         _logger.debug(f'{__name__}: Test MAE: {results[1]}') # Mean Absolute Error
 
     def _predict(self):
-        prediction_scaled = self.regressor.predict(self.X_test)
+        prediction_scaled = self.regressor.predict(self.X_test, verbose=0)
 
         # Perform manual inverse transformation of price (last column)
         prediction_unscaled = prediction_scaled

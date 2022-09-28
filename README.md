@@ -13,6 +13,7 @@
 * Technical Analysis with sophisticated support & resistance analysis
 * Correlation analysis
 * RSI divergence screening
+* Support for LSTM machine learning model
 * Local pricing history database support and data manager
 * Basic (non-trading) E\*Trade API support (E\*Trade account required)
 * Console scripts (console_\*.py) provided to support basic operations and provide example implementations
