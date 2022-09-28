@@ -101,6 +101,7 @@ class Learning(Threaded):
         _logger.debug(f'{__name__}: {self.y_valid.shape=}')
         _logger.debug(f'{__name__}: {self.X_test.shape=}')
 
+    @Threaded.threaded
     def run(self):
         self._create_model()
         self._compile_and_fit()
@@ -145,7 +146,8 @@ class Learning(Threaded):
         ]
 
         # Fit the model
-        self.regressor.fit(self.X_train, self.y_train, epochs=EPOCHS, batch_size=BATCH_SIZE, validation_data=(self.X_valid, self.y_valid), callbacks=callbacks)
+        self.regressor.fit(self.X_train, self.y_train, epochs=EPOCHS, batch_size=BATCH_SIZE,
+            validation_data=(self.X_valid, self.y_valid), callbacks=callbacks, verbose=0)
         results = self.regressor.evaluate(self.X_test, self.y_test, batch_size=8)
 
         _logger.debug(f'{__name__}: Test MSE: {results[0]}') # Mean Square Error
