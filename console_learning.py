@@ -3,7 +3,7 @@ import logging
 import argparse
 import matplotlib.pyplot as plt
 
-from learning.learning import Learning
+from learning.lstm import LSTM_Multi
 from data import store as store
 from utils import ui, logger
 
@@ -19,7 +19,7 @@ class Interface:
         self.days = days
         self.exit = exit
 
-        self.learning = Learning(ticker=self.ticker, days=self.days)
+        self.learning = LSTM_Multi(ticker=self.ticker, days=self.days)
 
         self.main_menu()
 
@@ -59,7 +59,7 @@ class Interface:
                 valid = store.is_ticker(ticker)
                 if valid:
                     self.ticker = ticker
-                    self.learning = Learning(ticker=self.ticker, days=self.days)
+                    self.learning = LSTM_Multi(ticker=self.ticker, days=self.days)
                 else:
                     ui.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
             else:
@@ -70,7 +70,7 @@ class Interface:
         while self.days < 30:
             self.days = ui.input_integer('Enter number of days', 30, 9999)
 
-        self.learning = Learning(ticker=self.ticker, days=self.days)
+        self.learning = LSTM_Multi(ticker=self.ticker, days=self.days)
 
     def run_model(self):
         self.learning.run()

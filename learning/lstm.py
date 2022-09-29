@@ -1,15 +1,16 @@
 import os
 
-# Supress TF complier flag warning
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
+
+# Supress TF complier flag warning
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
 from keras import Sequential
 from keras.layers import Dense, LSTM, Dropout
-from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
+from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, Callback
 
 from base import Threaded
 from data import store as store
@@ -24,9 +25,27 @@ EPOCHS = 10
 BATCH_SIZE = 8
 CACHE_FILE = './cache/model.h5'
 
+
 _logger = logger.get_logger()
 
-class Learning(Threaded):
+
+class KerasCallback(Callback):
+    def __init__(self, outer):
+        self.outer: LSTM_Multi = outer
+        self.outer.task_total = EPOCHS
+
+    def on_epoch_begin(self, epoch, logs=None):
+        if logs:
+            _logger.debug(f'{__name__}: {logs}')
+
+    def on_epoch_end(self, epoch, logs=None):
+        self.outer.task_success += 1
+        self.outer.task_completed += 1
+        if logs:
+            _logger.debug(f'{__name__}: {logs}')
+
+
+class LSTM_Multi(Threaded):
     def __init__(self, ticker: str, days: int):
         if not store.is_ticker(ticker):
             raise ValueError('Invalid ticker')
@@ -38,6 +57,7 @@ class Learning(Threaded):
         self.lookback = 60
         self.lookahead = 10
         self.test_size: int
+        self.input_size: int
         self.X_test: np.array
         self.y_test: np.array
         self.X_train: np.array
@@ -47,11 +67,14 @@ class Learning(Threaded):
         self.scaler: MinMaxScaler
         self.regressor: Sequential
         self.prediction: pd.DataFrame
+        self.results: list[float]
 
         self.history = store.get_history(self.ticker, days=self.days)
 
         # Drop date column and move close column to the end as the target, then convert to numpy
-        input_data = self.history[['open', 'high', 'low', 'volume', 'close']].values
+        inputs = ['open', 'high', 'low', 'volume', 'close']
+        self.input_size = len(inputs)
+        input_data = self.history[inputs].values
 
         # Normalize to values bwtween 0-1
         self.scaler = MinMaxScaler(feature_range=(0,1))
@@ -91,9 +114,9 @@ class Learning(Threaded):
         self.X_train, self.X_valid, self.y_train, self.y_valid = train_test_split(X_rest, y_rest, test_size=PCT_VALIDATION, random_state=101)
 
         # Reshape to be friendly to LSTM model
-        self.X_test = self.X_test.reshape(self.X_test.shape[0], self.lookback, 5)
-        self.X_train = self.X_train.reshape(self.X_train.shape[0], self.lookback, 5)
-        self.X_valid = self.X_valid.reshape(self.X_valid.shape[0], self.lookback, 5)
+        self.X_test = self.X_test.reshape(self.X_test.shape[0], self.lookback, self.input_size)
+        self.X_train = self.X_train.reshape(self.X_train.shape[0], self.lookback, self.input_size)
+        self.X_valid = self.X_valid.reshape(self.X_valid.shape[0], self.lookback, self.input_size)
 
         _logger.debug(f'{__name__}: {self.X_train.shape=}')
         _logger.debug(f'{__name__}: {self.X_valid.shape=}')
@@ -112,7 +135,7 @@ class Learning(Threaded):
         self.regressor = Sequential()
 
         # Add 1st lstm layer: 50 neurons
-        self.regressor.add(LSTM(units=NEURONS, return_sequences=True, input_shape=(self.X_train.shape[1], 5)))
+        self.regressor.add(LSTM(units=NEURONS, return_sequences=True, input_shape=(self.X_train.shape[1], self.input_size)))
         self.regressor.add(Dropout(rate = DROPOUT))
 
         # Add 2nd lstm layer
@@ -139,19 +162,23 @@ class Learning(Threaded):
         # ReduceLROnPlateau: Use for reduce the learning rate. If in 3 steps the score
         #               didn't increase we will reduce the learning rate to improve the training
         # ModelCheckpoint: Use for save model only when the score increased
+        # KerasCallback: Local callback for tracking progress
+
         callbacks = [
             EarlyStopping(patience=10, verbose=1),
             ReduceLROnPlateau(factor=0.1, patience=3, min_lr=0.00001, verbose=1),
-            ModelCheckpoint(CACHE_FILE, verbose=1, save_best_only=True, save_weights_only=True)
+            ModelCheckpoint(CACHE_FILE, verbose=1, save_best_only=True, save_weights_only=True),
+            KerasCallback(self)
         ]
 
         # Fit the model
         self.regressor.fit(self.X_train, self.y_train, epochs=EPOCHS, batch_size=BATCH_SIZE,
             validation_data=(self.X_valid, self.y_valid), callbacks=callbacks, verbose=0)
-        results = self.regressor.evaluate(self.X_test, self.y_test, batch_size=8)
 
-        _logger.debug(f'{__name__}: Test MSE: {results[0]}') # Mean Square Error
-        _logger.debug(f'{__name__}: Test MAE: {results[1]}') # Mean Absolute Error
+        self.results = self.regressor.evaluate(self.X_test, self.y_test, batch_size=BATCH_SIZE)
+
+        _logger.debug(f'{__name__}: Test MSE: {self.results[0]}') # Mean Square Error
+        _logger.debug(f'{__name__}: Test MAE: {self.results[1]}') # Mean Absolute Error
 
     def _predict(self):
         prediction_scaled = self.regressor.predict(self.X_test, verbose=0)
