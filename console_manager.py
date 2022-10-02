@@ -24,6 +24,7 @@ class Interface:
         self.quick = quick
         self.stop = False
         self.commands: list[dict] = []
+        self.exit = False
 
         if store.is_database_connected():
             if ticker:
@@ -56,8 +57,10 @@ class Interface:
             if exit:
                 pass
             elif ticker:
+                self.exit = True
                 self.main_menu(selection=2)
             elif update:
+                self.exit = True
                 self.main_menu(selection=5)
             else:
                 self.main_menu()
@@ -106,7 +109,9 @@ class Interface:
         while loop:
             update(menu_items)
 
-            selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items))
+            if selection == 0:
+                selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items))
+
             if selection > 0:
                 if self.commands[selection-1]['params']:
                     func = f'self.{self.commands[selection-1]["function"].__name__}({self.commands[selection-1]["params"]})'
@@ -115,6 +120,12 @@ class Interface:
                     self.commands[selection-1]['function']()
             else:
                 loop = False
+
+            if self.exit:
+                loop = False
+
+            selection = 0
+
 
     def m_show_database_information(self) -> None:
         info = self.manager.get_database_info()
@@ -233,7 +244,9 @@ class Interface:
                 ui.print_error(self.manager.task_state)
 
     def m_update_history(self, ticker: str = '') -> None:
-        if not ticker:
+        if self.exit:
+            table = 'every'
+        elif not ticker:
             table = ui.input_table(exchange=True, ticker=True, all=True)
         elif store.is_list(ticker):
             table = ticker
@@ -449,7 +462,7 @@ class Interface:
                 break
 
     def m_create_csv(self) -> None:
-        self.ticker = ui.input_alphanum('Enter exchange or index')
+        self.ticker = ui.input_table(ticker=True).upper()
         if store.is_ticker(self.ticker):
             days = ui.input_integer('Enter number of days (0 for all)', 0, 9999)
             if days == 0: days = -1

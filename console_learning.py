@@ -3,12 +3,13 @@ import logging
 import argparse
 import matplotlib.pyplot as plt
 
-from learning.lstm import LSTM_Multi
+from learning.lstm_predict import LSTM_Predict
+from learning.lstm_test import LSTM_Test
 from data import store as store
 from utils import ui, logger
 
 
-logger.get_logger(logging.WARNING, logfile='')
+logger.get_logger(logging.DEBUG, logfile='')
 
 class Interface:
     def __init__(self, ticker: str, days: int = 1000, exit: bool = False):
@@ -19,15 +20,14 @@ class Interface:
         self.days = days
         self.exit = exit
 
-        self.learning = LSTM_Multi(ticker=self.ticker, days=self.days)
-
         self.main_menu()
 
     def main_menu(self) -> None:
         self.commands = [
             {'menu': 'Change Ticker', 'function': self.select_ticker, 'condition': 'self.ticker', 'value': 'self.ticker'},
             {'menu': 'Days', 'function': self.select_days, 'condition': 'True', 'value': 'self.days'},
-            {'menu': 'Run Model', 'function': self.run_model, 'condition': '', 'value': ''},
+            {'menu': 'Run Test', 'function': self.run_test, 'condition': '', 'value': ''},
+            {'menu': 'Run Prediction', 'function': self.run_prediction, 'condition': '', 'value': ''},
         ]
 
         # Create the menu
@@ -59,7 +59,7 @@ class Interface:
                 valid = store.is_ticker(ticker)
                 if valid:
                     self.ticker = ticker
-                    self.learning = LSTM_Multi(ticker=self.ticker, days=self.days)
+                    self.predict = LSTM_Predict(ticker=self.ticker, days=self.days)
                 else:
                     ui.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
             else:
@@ -70,15 +70,21 @@ class Interface:
         while self.days < 30:
             self.days = ui.input_integer('Enter number of days', 30, 9999)
 
-        self.learning = LSTM_Multi(ticker=self.ticker, days=self.days)
+        self.predict = LSTM_Predict(ticker=self.ticker, days=self.days)
 
-    def run_model(self):
-        self.learning.run()
-        self.plot()
+    def run_prediction(self):
+        self.predict = LSTM_Predict(ticker=self.ticker, days=self.days)
+        self.predict.run()
+        self.plot_prediction()
 
-    def plot(self):
-        real_data = self.learning.history[-self.learning.test_size:].reset_index()
-        plots = [row for row in self.learning.prediction.itertuples(index=False)]
+    def run_test(self):
+        self.test = LSTM_Test(ticker=self.ticker, days=self.days)
+        self.test.run()
+        self.plot_test()
+
+    def plot_prediction(self):
+        real_data = self.predict.history[-self.predict.test_size:].reset_index()
+        plots = [row for row in self.predict.prediction.itertuples(index=False)]
 
         plt.figure(figsize=(18, 8))
         for item in plots:
@@ -88,6 +94,14 @@ class Interface:
         plt.title('Close')
         plt.show()
 
+    def plot_test(self):
+        real_data = self.test.history[-self.test.test_size:].reset_index()
+
+        plt.figure(figsize=(18, 8))
+        plt.plot(self.test.prediction, color= 'blue')
+        plt.plot(real_data['close'], color='grey')
+        plt.title('Close Price')
+        plt.show()
 
 def main():
     parser = argparse.ArgumentParser(description='Learning model')
