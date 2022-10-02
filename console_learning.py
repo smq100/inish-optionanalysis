@@ -9,7 +9,7 @@ from data import store as store
 from utils import ui, logger
 
 
-logger.get_logger(logging.DEBUG, logfile='')
+logger.get_logger(logging.WARNING, logfile='')
 
 class Interface:
     def __init__(self, ticker: str, days: int = 1000, exit: bool = False):
