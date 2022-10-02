@@ -59,7 +59,6 @@ class Interface:
                 valid = store.is_ticker(ticker)
                 if valid:
                     self.ticker = ticker
-                    self.predict = LSTM_Predict(ticker=self.ticker, days=self.days)
                 else:
                     ui.print_error('Invalid ticker symbol. Try again or select "0" to cancel')
             else:
@@ -69,8 +68,6 @@ class Interface:
         self.days = 0
         while self.days < 30:
             self.days = ui.input_integer('Enter number of days', 30, 9999)
-
-        self.predict = LSTM_Predict(ticker=self.ticker, days=self.days)
 
     def run_prediction(self):
         self.predict = LSTM_Predict(ticker=self.ticker, days=self.days)

@@ -18,19 +18,20 @@ class LSTM_Predict(LSTM_Base):
 
     def _predict(self):
         prediction_scaled = self.regressor.predict(self.X_test, verbose=0)
+        _logger.debug(f'{__name__}: {prediction_scaled.shape=}')
 
         # Perform manual inverse transformation of price (last column)
         prediction_unscaled = prediction_scaled
         prediction_unscaled -= self.scaler.min_[-1]
         prediction_unscaled /= self.scaler.scale_[-1]
+        _logger.debug(f'{__name__}: {prediction_unscaled.shape=}')
 
         # Reshape to allow shifting along X
         padding = np.empty((prediction_unscaled.shape[0], self.X_test.shape[0]-1))
         padding[:] = np.nan
-        prediction = np.concatenate((prediction_unscaled, padding), axis=1)
-
-        _logger.debug(f'{__name__}: {prediction_unscaled.shape=}')
         _logger.debug(f'{__name__}: {padding.shape=}')
+
+        prediction = np.concatenate((prediction_unscaled, padding), axis=1)
         _logger.debug(f'{__name__}: {prediction.shape=}')
 
         # Create df shifting results to their X locations

@@ -16,15 +16,15 @@ class LSTM_Test(LSTM_Base):
 
     def _predict(self):
         prediction_scaled = self.regressor.predict(self.X_test, verbose=0)
+        _logger.debug(f'{__name__}: {prediction_scaled.shape=}')
 
         # Perform inverse transformation to rescale back to original range
         # Since we used 5 variables for transform, the inverse expects same dimensions
         # Therefore, let us copy our values 5 times and discard them after inverse transform
         copy = np.repeat(prediction_scaled, self.scaled_data.shape[1], axis=-1)
         prediction_unscaled = self.scaler.inverse_transform(copy)[:,0]
-        self.prediction = pd.DataFrame(prediction_unscaled)
-
-        _logger.debug(f'{__name__}: {prediction_scaled.shape=}')
         _logger.debug(f'{__name__}: {prediction_unscaled.shape=}')
+
+        self.prediction = pd.DataFrame(prediction_unscaled)
         _logger.debug(f'{__name__}: {self.prediction.shape=}')
         _logger.debug(f'{__name__}:\n{self.prediction}')

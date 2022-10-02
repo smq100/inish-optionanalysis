@@ -68,8 +68,6 @@ class LSTM_Base(Threaded):
         # Normalize to values bwtween 0-1
         self.scaler = MinMaxScaler(feature_range=(0,1))
         self.scaled_data = self.scaler.fit_transform(input_data)
-        _logger.debug(f'{__name__}: {self.scaled_data[0]=}')
-        _logger.debug(f'{__name__}: {self.scaled_data[-1]=}')
 
         # Build data
         X = []
@@ -87,8 +85,6 @@ class LSTM_Base(Threaded):
 
             X += [lb]
             y += [la]
-
-        _logger.debug(f'{__name__}: {X[0][0]=}')
 
         # Convert to numpy arrays
         X = np.array(X)
@@ -147,8 +143,6 @@ class LSTM_Base(Threaded):
         # Add output layer
         self.regressor.add(Dense(units=self.lookahead))
 
-        # _logger.debug(f'{__name__}:\n{self.regressor.summary()}')
-
     def _compile_and_fit(self):
         self.regressor.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
 
@@ -177,7 +171,8 @@ class LSTM_Base(Threaded):
         _logger.debug(f'{__name__}: Test MAE: {self.results[1]}') # Mean Absolute Error
 
     def _predict(self):
-        pass # Must override
+        prediction_scaled = self.regressor.predict(self.X_test, verbose=0)
+        _logger.debug(f'{__name__}: {prediction_scaled.shape=}')
 
 class KerasCallback(Callback):
     def __init__(self, outer: LSTM_Base):
