@@ -70,12 +70,16 @@ class Interface:
             self.days = ui.input_integer('Enter number of days', 30, 9999)
 
     def run_prediction(self):
-        self.predict = LSTM_Predict(ticker=self.ticker, days=self.days)
+        history = store.get_history(self.ticker, days=self.days)
+        inputs = ['open', 'high', 'low', 'volume', 'close']
+        self.predict = LSTM_Predict(self.ticker, history, inputs, self.days)
         self.predict.run()
         self.plot_prediction()
 
     def run_test(self):
-        self.test = LSTM_Test(ticker=self.ticker, days=self.days)
+        history = store.get_history(self.ticker, days=self.days)
+        inputs = ['open', 'high', 'low', 'volume', 'close']
+        self.test = LSTM_Test(self.ticker, history, inputs, self.days)
         self.test.run()
         self.plot_test()
 

@@ -1,19 +1,20 @@
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' # Supress TensorFlow complier flag warning
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Supress TensorFlow complier flag warning
 
-import numpy as np
-import pandas as pd
-from dataclasses import dataclass
-
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.model_selection import train_test_split
-from keras import Sequential
-from keras.layers import Dense, LSTM, Dropout
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, Callback
+from keras.layers import Dense, LSTM, Dropout
+from keras import Sequential
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+import pandas as pd
+import numpy as np
+from dataclasses import dataclass
+from abc import ABC
+import abc
 
-from base import Threaded
-from data import store as store
 from utils import logger
+from data import store as store
+from base import Threaded
 
 
 _logger = logger.get_logger()
@@ -26,18 +27,24 @@ class Parameters:
     NEURONS: int = 50
     DROPOUT: float = 0.20
     EPOCHS: int = 20
-    BATCH_SIZE: int = 8
+    BATCH_SIZE: int = 32
     CACHE_FILE: str = './cache/model.h5'
 
 
-class LSTM_Base(Threaded):
-    def __init__(self, ticker: str, days: int):
+class LSTM_Base(ABC, Threaded):
+    def __init__(self, ticker: str, history: pd.DataFrame, inputs: list[str], days: int):
         if not store.is_ticker(ticker):
             raise ValueError('Invalid ticker')
+        if history.empty:
+            raise ValueError('Empty history')
+        if not inputs:
+            raise ValueError('Empty imputs')
         if days < 30:
             raise ValueError('Days must be more than 30')
 
         self.ticker = ticker.upper()
+        self.history: pd.DataFrame = history
+        self.inputs: list[str] = inputs
         self.days = days
         self.lookback = 60
         self.lookahead = 1
@@ -57,16 +64,13 @@ class LSTM_Base(Threaded):
         self.parameters: Parameters = Parameters()
 
     def _initialize(self):
-        self.history = store.get_history(self.ticker, days=self.days)
         _logger.debug(f'{__name__}:\n{self.history}')
 
-        # Drop date column and move close column to the end as the target, then convert to numpy
-        inputs = ['open', 'high', 'low', 'volume', 'close']
-        self.input_size = len(inputs)
-        input_data = self.history[inputs].values
+        self.input_size = len(self.inputs)
+        input_data = self.history[self.inputs].values
 
         # Normalize to values bwtween 0-1
-        self.scaler = MinMaxScaler(feature_range=(0,1))
+        self.scaler = MinMaxScaler(feature_range=(0, 1))
         self.scaled_data = self.scaler.fit_transform(input_data)
 
         # Build data
@@ -126,7 +130,7 @@ class LSTM_Base(Threaded):
 
         # Add 1st lstm layer
         self.regressor.add(LSTM(units=self.parameters.NEURONS, return_sequences=True, input_shape=(self.X_train.shape[1], self.input_size)))
-        self.regressor.add(Dropout(rate = self.parameters.DROPOUT))
+        self.regressor.add(Dropout(rate=self.parameters.DROPOUT))
 
         # Add 2nd lstm layer
         self.regressor.add(LSTM(units=self.parameters.NEURONS, return_sequences=True))
@@ -163,16 +167,17 @@ class LSTM_Base(Threaded):
 
         # Fit the model
         self.regressor.fit(self.X_train, self.y_train, epochs=self.parameters.EPOCHS, batch_size=self.parameters.BATCH_SIZE,
-            validation_data=(self.X_valid, self.y_valid), callbacks=callbacks, verbose=0)
+                           validation_data=(self.X_valid, self.y_valid), callbacks=callbacks, verbose=0)
 
         self.results = self.regressor.evaluate(self.X_test, self.y_test, batch_size=self.parameters.BATCH_SIZE)
 
-        _logger.debug(f'{__name__}: Test MSE: {self.results[0]}') # Mean Square Error
-        _logger.debug(f'{__name__}: Test MAE: {self.results[1]}') # Mean Absolute Error
+        _logger.debug(f'{__name__}: Test MSE: {self.results[0]}')  # Mean Square Error
+        _logger.debug(f'{__name__}: Test MAE: {self.results[1]}')  # Mean Absolute Error
 
+    @abc.abstractmethod
     def _predict(self):
-        prediction_scaled = self.regressor.predict(self.X_test, verbose=0)
-        _logger.debug(f'{__name__}: {prediction_scaled.shape=}')
+        raise NotImplementedError
+
 
 class KerasCallback(Callback):
     def __init__(self, outer: LSTM_Base):

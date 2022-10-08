@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 from learning.lstm_base import LSTM_Base
+
 from utils import logger
 
 
@@ -9,9 +10,10 @@ _logger = logger.get_logger()
 
 
 class LSTM_Predict(LSTM_Base):
-    def __init__(self, ticker: str, days: int):
-        super().__init__(ticker, days)
+    def __init__(self, ticker: str, history: pd.DataFrame, inputs: list[str], days: int):
+        super().__init__(ticker, history, inputs, days)
 
+        # Look ahread for more than 1 day
         self.lookahead = 10
 
         self._initialize()
