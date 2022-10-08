@@ -295,9 +295,7 @@ class Manager(Threaded):
                     _logger.warning(f'{__name__}: No price history for {ticker}')
             else:
                 date_db = history.iloc[-1]['date']
-                if date_db is not None:
-                    _logger.info(f'{__name__}: Last {ticker} price in database: {date_db:%Y-%m-%d}')
-                else:
+                if date_db is None:
                     date_db = today - dt.date(2000, 1, 1)
                     _logger.warning(f'{__name__}: No price history for {ticker} in database')
 
@@ -310,9 +308,10 @@ class Manager(Threaded):
                         _logger.warning(f'{__name__}: Empty pricing dataframe for {ticker}')
                     else:
                         date_cloud = history.iloc[-1]['date'].to_pydatetime().date()
-                        _logger.info(f'{__name__}: Last {ticker} price in cloud: {date_cloud:%Y-%m-%d}')
-
                         delta = (date_cloud - date_db).days
+                        _logger.info(f'{__name__}: Last {ticker} price in database: {date_db:%Y-%m-%d}')
+                        _logger.info(f'{__name__}: Last {ticker} price in cloud: {date_cloud:%Y-%m-%d}')
+                        _logger.info(f'{__name__}: {date_cloud:%Y-%m-%d} - {date_db:%Y-%m-%d} = {delta} days')
                         if delta > 0:
                             days = delta
                             history = history[-delta:]
@@ -321,19 +320,20 @@ class Manager(Threaded):
                             with self.session.begin() as session:
                                 t = session.query(models.Security).filter(models.Security.ticker == ticker).one()
 
+                                # Add any newer price records
                                 for price in history.itertuples():
-                                    if price.date:
-                                        q = session.query(models.Price.date).filter(and_(models.Price.security_id == t.id, models.Price.date == price.date)).one_or_none()
+                                    date = price.date.to_pydatetime().date()
+                                    if date > date_db:
+                                        q = session.query(models.Price.date).filter(and_(models.Price.security_id == t.id, models.Price.date == date)).one_or_none()
                                         if q is None:
                                             p = models.Price()
-                                            p.date = price.date
+                                            p.date = date
                                             p.open = price.open
                                             p.high = price.high
                                             p.low = price.low
                                             p.close = price.close
                                             p.volume = price.volume
 
-                                            # Add the new price record
                                             t.pricing += [p]
 
                             _logger.info(f'{__name__}: Updated {days} days pricing for {ticker} to {date_cloud:%Y-%m-%d}')
@@ -896,10 +896,8 @@ def _read_tickers_log(filename: str) -> list[str]:
 
 
 if __name__ == '__main__':
-    # import time
-    # from logging import DEBUG
-    # _logger = ui.get_logger(DEBUG)
+    import logging
+    logger.get_logger(logging.DEBUG)
 
     manager = Manager()
-    errors = manager.get_latest_errors()
-    print(errors)
+    errors = manager.update_history_ticker('aapl')

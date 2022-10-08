@@ -257,10 +257,10 @@ class Interface:
 
         if not table:
             ui.print_message('Invalid table')
-        elif store.is_ticker(ticker):
-            days = self.manager.update_history_ticker(ticker)
-            ui.print_message(f'Added {days} days pricing for {ticker.upper()}')
-            self.m_show_ticker_information(ticker=ticker)
+        elif store.is_ticker(table):
+            days = self.manager.update_history_ticker(table)
+            ui.print_message(f'Added {days} days pricing for {table.upper()}')
+            self.m_show_ticker_information(ticker=table)
         else:
             self.task = threading.Thread(target=self.manager.update_history_exchange, args=[table])
             self.task.start()
