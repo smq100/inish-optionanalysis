@@ -3,9 +3,13 @@ import logging
 import argparse
 import matplotlib.pyplot as plt
 
+import pandas as pd
+from learning.lstm_base import LSTM_Base
 from learning.lstm_predict import LSTM_Predict
 from learning.lstm_test import LSTM_Test
+
 from data import store as store
+from analysis.technical import Technical
 from utils import ui, logger
 
 
@@ -19,6 +23,7 @@ class Interface:
         self.ticker = ticker.upper()
         self.days = days
         self.exit = exit
+        self.lstm: LSTM_Base
 
         self.main_menu()
 
@@ -26,8 +31,9 @@ class Interface:
         self.commands = [
             {'menu': 'Change Ticker', 'function': self.select_ticker, 'condition': 'self.ticker', 'value': 'self.ticker'},
             {'menu': 'Days', 'function': self.select_days, 'condition': 'True', 'value': 'self.days'},
-            {'menu': 'Run Test', 'function': self.run_test, 'condition': '', 'value': ''},
-            {'menu': 'Run Prediction', 'function': self.run_prediction, 'condition': '', 'value': ''},
+            {'menu': 'Run Test (history)', 'function': self.run_test_history, 'condition': '', 'value': ''},
+            {'menu': 'Run Test (averages)', 'function': self.run_test_averages, 'condition': '', 'value': ''},
+            {'menu': 'Run Prediction (history)', 'function': self.run_prediction_history, 'condition': '', 'value': ''},
         ]
 
         # Create the menu
@@ -69,23 +75,50 @@ class Interface:
         while self.days < 30:
             self.days = ui.input_integer('Enter number of days', 30, 9999)
 
-    def run_prediction(self):
+    def run_test_history(self):
         history = store.get_history(self.ticker, days=self.days)
         inputs = ['open', 'high', 'low', 'volume', 'close']
-        self.predict = LSTM_Predict(self.ticker, history, inputs, self.days)
-        self.predict.run()
+        self.lstm = LSTM_Test(self.ticker, history, inputs, self.days)
+        self.lstm.run()
+        self.plot_test(['close'], 'History')
+
+    def run_test_averages(self):
+        history = store.get_history(self.ticker, days=self.days)
+        ta = Technical(self.ticker, history, self.days)
+        sma15 = ta.calc_sma(15)
+        sma50 = ta.calc_sma(50)
+        history = pd.concat([history, sma15, sma50], axis=1)
+        inputs = ['sma_15', 'sma_50', 'close']
+        self.lstm = LSTM_Test(self.ticker, history, inputs, self.days)
+        self.lstm.run()
+        self.plot_test(inputs, 'Averages')
+
+    def run_prediction_history(self):
+        history = store.get_history(self.ticker, days=self.days)
+        inputs = ['open', 'high', 'low', 'volume', 'close']
+        self.lstm = LSTM_Predict(self.ticker, history, inputs, self.days)
+        self.lstm.run()
         self.plot_prediction()
 
-    def run_test(self):
-        history = store.get_history(self.ticker, days=self.days)
-        inputs = ['open', 'high', 'low', 'volume', 'close']
-        self.test = LSTM_Test(self.ticker, history, inputs, self.days)
-        self.test.run()
-        self.plot_test()
+    def plot_test(self, items:list[str], title: str = 'Plot'):
+        real_data = self.lstm.history[-self.lstm.test_size:].reset_index()
+        colors = 'bgrcmk'
+        color_index = 0
+
+        plt.figure(figsize=(18, 8))
+        plt.title(title)
+        plt.plot(self.lstm.prediction, label='prediction', color= 'black')
+
+        for item in items:
+            plt.plot(real_data[item], label=item, color=colors[color_index])
+            color_index += 1
+
+        plt.legend(loc='best')
+        plt.show()
 
     def plot_prediction(self):
-        real_data = self.predict.history[-self.predict.test_size:].reset_index()
-        plots = [row for row in self.predict.prediction.itertuples(index=False)]
+        real_data = self.lstm.history[-self.lstm.test_size:].reset_index()
+        plots = [row for row in self.lstm.prediction.itertuples(index=False)]
 
         plt.figure(figsize=(18, 8))
         for item in plots:
@@ -95,14 +128,6 @@ class Interface:
         plt.title('Close')
         plt.show()
 
-    def plot_test(self):
-        real_data = self.test.history[-self.test.test_size:].reset_index()
-
-        plt.figure(figsize=(18, 8))
-        plt.plot(self.test.prediction, color= 'blue')
-        plt.plot(real_data['close'], color='grey')
-        plt.title('Close Price')
-        plt.show()
 
 def main():
     parser = argparse.ArgumentParser(description='Learning model')

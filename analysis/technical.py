@@ -32,38 +32,38 @@ class Technical:
         return f'{len(self.history)} items for {self.ticker}'
 
     def calc_sma(self, interval: int) -> pd.Series:
-        df = pd.Series(dtype=float)
+        sr = pd.Series(dtype=float)
         if interval > 5 and interval < self.days:
-            df = trend.sma_indicator(self.history['close'], window=interval, fillna=True)
+            sr = trend.sma_indicator(self.history['close'], window=interval, fillna=True)
         else:
             _logger.warning(f'{__name__}: Invalid interval for SMA')
 
-        return df
+        return sr
 
     def calc_ema(self, interval: int) -> pd.Series:
-        df = pd.Series(dtype=float)
+        sr = pd.Series(dtype=float)
         if interval > 5 and interval < self.days:
-            df = trend.ema_indicator(self.history['close'], window=interval, fillna=True)
+            sr = trend.ema_indicator(self.history['close'], window=interval, fillna=True)
         else:
             _logger.warning(f'{__name__}: Invalid interval for EMA')
 
-        return df
+        return sr
 
     def calc_rsi(self, interval: int = 14) -> pd.Series:
-        df = pd.Series(dtype=float)
+        sr = pd.Series(dtype=float)
         if interval > 5 and interval < self.days:
-            df = momentum.rsi(self.history['close'], window=interval, fillna=True)
+            sr = momentum.rsi(self.history['close'], window=interval, fillna=True)
         else:
             _logger.warning(f'{__name__}: Invalid interval for RSI')
 
-        return df
+        return sr
 
     def calc_vwap(self) -> pd.Series:
-        df = pd.Series(dtype=float)
+        sr = pd.Series(dtype=float)
         vwap = volume.VolumeWeightedAveragePrice(self.history['high'], self.history['low'], self.history['close'], self.history['volume'], fillna=True)
-        df = vwap.volume_weighted_average_price()
+        sr = vwap.volume_weighted_average_price()
 
-        return df
+        return sr
 
     def calc_macd(self, slow: int = 26, fast: int = 12, signal: int = 9) -> pd.DataFrame:
         df = pd.DataFrame()
@@ -78,19 +78,19 @@ class Technical:
         return df
 
     def calc_bb(self, interval: int = 14, std: int = 2) -> pd.DataFrame:
-        df = pd.DataFrame()
+        sr = pd.DataFrame()
         if interval > 5 and interval < self.days:
             bb = volatility.BollingerBands(self.history['close'], window=interval, window_dev=std, fillna=True)
             high = bb.bollinger_hband()
             mid = bb.bollinger_mavg()
             low = bb.bollinger_lband()
 
-            df = pd.concat([high, mid, low], axis=1)
-            df.columns = ['High', 'Mid', 'Low']
+            sr = pd.concat([high, mid, low], axis=1)
+            sr.columns = ['High', 'Mid', 'Low']
         else:
             _logger.warning(f'{__name__}: Invalid interval for BB')
 
-        return df
+        return sr
 
 
 if __name__ == '__main__':
