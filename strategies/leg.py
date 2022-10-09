@@ -143,10 +143,10 @@ class Leg:
                 # Create list of dates to be used as the df columns
                 today = dt.datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
 
-                col_index += [str(today)]
+                col_index.append(str(today))
                 while today < self.option.expiry:
                     today += dt.timedelta(days=step)
-                    col_index += [str(today)]
+                    col_index.append(str(today))
 
                 if self.range.min <= 0.0 or self.range.max <= 0.0 or self.range.step <= 0.0:
                     self.range = m.calculate_min_max_step(self.option.strike)
@@ -166,14 +166,14 @@ class Leg:
                         price_call, price_put = self.recalculate(spot_price=spot, time_to_maturity=decimaldays_to_maturity)
 
                         if self.option.product == s.ProductType.Call:
-                            row += [price_call]
+                            row.append(price_call)
                         else:
-                            row += [price_put]
+                            row.append(price_put)
 
-                    table += [row]
+                    table.append(row)
 
                     # Create row index
-                    row_index += [spot]
+                    row_index.append(spot)
 
                 # Strip the time from the datetime string
                 for index, item in enumerate(col_index):

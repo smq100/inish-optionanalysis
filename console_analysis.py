@@ -346,7 +346,7 @@ class Interface:
 
         tables = store.get_exchanges()
         tables.extend(store.get_indexes())
-        tables += ['EVERY']
+        tables.append('EVERY')
         tables.sort()
 
         for screen in screens:
@@ -425,7 +425,7 @@ class Interface:
                             result.backtest_success = (result.price_current < result.price_last)
 
                         if result.price_current <= 0.0:
-                            self.screener.errors += [result]
+                            self.screener.errors.append(result)
                             self.screener.valids.remove(result)
 
         return success
@@ -452,9 +452,9 @@ class Interface:
                 strike, width1, width2 = m.calculate_strike_and_widths(strategy, product, direction, store.get_last_price(ticker))
 
             score_screen = self.screener.get_score(ticker)
-            strategies += [sl.strategy_type(ticker=ticker, strategy=strategy, product=product,
+            strategies.append(sl.strategy_type(ticker=ticker, strategy=strategy, product=product,
                                             direction=direction, strike=strike, width1=width1, width2=width2, expiry=dt.datetime.now(),
-                                            volatility=(-1.0, 0.0), score_screen=score_screen, load_contracts=self.load_contracts)]
+                                            volatility=(-1.0, 0.0), score_screen=score_screen, load_contracts=self.load_contracts))
 
         if len(strategies) > 0:
             sl.reset()

@@ -81,14 +81,14 @@ class LSTM_Base(ABC, Threaded):
         for i in range(0, history_size-self.lookback-self.lookahead):
             lb = []
             for j in range(0, self.lookback):
-                lb += [self.scaled_data[i+j, :]]
+                lb.append(self.scaled_data[i+j, :])
 
             la = []
             for j in range(0, self.lookahead):
-                la += [self.scaled_data[self.lookback+i+j, -1]]
+                la.append(self.scaled_data[self.lookback+i+j, -1])
 
-            X += [lb]
-            y += [la]
+            X.append(lb)
+            y.append(la)
 
         # Convert to numpy arrays
         X = np.array(X)

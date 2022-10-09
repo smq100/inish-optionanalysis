@@ -213,7 +213,7 @@ def get_sector_tickers(tickers: list[str], sector: str) -> list[str]:
             if symbol is not None:
                 company = session.query(models.Company.id).filter(and_(models.Company.security_id == symbol.id, models.Company.sector == sector)).one_or_none()
                 if company is not None:
-                    results += [ticker]
+                    results.append(ticker)
 
     return results
 
@@ -418,7 +418,7 @@ def get_sectors(refresh: bool = False) -> list[str]:
         tickers = get_tickers('every')
         for ticker in tickers:
             company = get_company(ticker)
-            sectors += [company['sector']]
+            sectors.append(company['sector'])
 
         if sectors:
             sectors = list(set(sectors))  # Extract unique values by converting to a set, then back to list

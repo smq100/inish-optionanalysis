@@ -128,9 +128,9 @@ class IronButterfly(Strategy):
             chain_index_c = -1  # Index too close to end of chain
         else:
             contract = options_c.iloc[chain_index_c + self.width1]['contractSymbol']
-            items += [(contract, options_c)]
+            items.append((contract, options_c))
             contract = options_c.iloc[chain_index_c]['contractSymbol']
-            items += [(contract, options_c)]
+            items.append((contract, options_c))
 
         # Add the leg 3 & 4 option contracts
         if not items:
@@ -149,9 +149,9 @@ class IronButterfly(Strategy):
             chain_index_p = -1  # Index too close to beginning of chain
         else:
             contract = options_p.iloc[chain_index_p]['contractSymbol']
-            items += [(contract, options_p)]
+            items.append((contract, options_p))
             contract = options_p.iloc[chain_index_p - self.width1]['contractSymbol']
-            items += [(contract, options_p)]
+            items.append((contract, options_p))
 
         return items
 
@@ -233,7 +233,7 @@ class IronButterfly(Strategy):
 
     def calculate_breakeven(self) -> bool:
         breakeven = [self.legs[1].option.strike + self.analysis.total]
-        breakeven += [self.legs[2].option.strike - self.analysis.total]
+        breakeven.append(self.legs[2].option.strike - self.analysis.total)
 
         self.analysis.breakeven = breakeven
 

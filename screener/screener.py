@@ -188,9 +188,9 @@ class Screener(Threaded):
             for filter in self.scripts:
                 try:
                     interpreter = Interpreter(company, filter)
-                    successes += [interpreter.run()]
-                    scores += [interpreter.score]
-                    descriptions += [interpreter.description]
+                    successes.append(interpreter.run())
+                    scores.append(interpreter.score)
+                    descriptions.append(interpreter.description)
                 except SyntaxError as e:
                     self.task_state = str(e)
                     _logger.error(f'{__name__}: SyntaxError: {self.task_state}')
@@ -208,7 +208,7 @@ class Screener(Threaded):
                 self.task_completed += 1
 
                 price = store.get_last_price(company.ticker)
-                self.results += [Result(company, self.screen, successes, scores, descriptions, price)]
+                self.results.append(Result(company, self.screen, successes, scores, descriptions, price))
                 if (bool(self.results[-1])):
                     self.task_success += 1
             else:
@@ -287,8 +287,8 @@ def analyze_results(table: str) -> tuple[pd.DataFrame, pd.DataFrame]:
             date = parts[0]
             parts = parts[2].split('-')
             if parts[0] == table:
-                results += [file]
-                dates += [date]
+                results.append(file)
+                dates.append(date)
 
         # Only return results if all dates are equal (and exist)
         if len(set(dates)) != 1:
@@ -380,7 +380,7 @@ def get_screen_names() -> list[str]:
         elif head == 'test':
             pass
         else:
-            files += [head]
+            files.append(head)
 
     files.sort()
 

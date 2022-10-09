@@ -98,7 +98,7 @@ class Correlate(Threaded):
                     if s[2] < CORRELATION_CUTOFF:
                         pass
                     elif t not in all:
-                        all += [t]
+                        all.append(t)
                         new = pd.Series({'ticker1':t[0], 'ticker2':t[1], 'correlation':s[2]}).to_frame().T
                         all_df = pd.concat([all_df, new])
 

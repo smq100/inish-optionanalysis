@@ -112,7 +112,7 @@ class Vertical(Strategy):
             _logger.warning(f'{__name__}: Insufficient options for {self.ticker} leg 1')
         else:
             contract = options.iloc[chain_index]['contractSymbol']
-            items += [(contract, options)]
+            items.append((contract, options))
 
         # Calculate the index to the short option
         if not items:
@@ -138,7 +138,7 @@ class Vertical(Strategy):
             _logger.warning(f'{__name__}: Insufficient options for {self.ticker} leg 2')
         else:
             contract = options.iloc[chain_index]['contractSymbol']
-            items += [(contract, options)]
+            items.append((contract, options))
 
         return items
 

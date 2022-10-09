@@ -193,7 +193,7 @@ class Divergence(Threaded):
                 result.index.name = f'{ticker.upper()}'
 
                 if not result.empty:
-                    self.results += [result]
+                    self.results.append(result)
 
             self.task_completed += 1
 

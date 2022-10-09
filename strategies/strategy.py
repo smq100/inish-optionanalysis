@@ -113,7 +113,7 @@ class Strategy(ABC, Threaded):
 
     def add_leg(self, quantity: int, product: s.ProductType, direction: s.DirectionType, strike: float, expiry: dt.datetime, volatility: tuple[float, float]) -> int:
         leg = Leg(self.ticker, quantity, product, direction, strike, expiry, volatility)
-        self.legs += [leg]
+        self.legs.append(leg)
 
         return len(self.legs)
 

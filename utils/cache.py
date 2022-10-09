@@ -111,7 +111,7 @@ def delete(type: str) -> tuple[bool, str]:
             file_date = f'{parts[0]}'
             if file_date != date:
                 file = f'{CACHE_BASEPATH}/{path}.{CACHE_SUFFIX}'
-                paths += [file]
+                paths.append(file)
 
         if paths:
             deleted = 0
@@ -157,7 +157,7 @@ def get_filenames(name: str, type: str, type_only: bool = False) -> list[str]:
         elif name and name != parts[2]:
             pass # Bad name
         elif type == parts[1]:
-            files += [head]
+            files.append(head)
 
     # Return most recent first
     files.sort(reverse=True)

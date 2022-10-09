@@ -87,7 +87,7 @@ class Interface:
             if ticker != '0':
                 valid = store.is_ticker(ticker)
                 if valid:
-                    self.tickers += [ticker]
+                    self.tickers.append(ticker)
                 else:
                     ui.print_error('Invalid ticker. Try again or enter 0 to cancel')
             else:

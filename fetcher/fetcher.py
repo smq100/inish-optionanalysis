@@ -237,7 +237,11 @@ def _get_history_yfinance(ticker: str, days: int = -1) -> pd.DataFrame:
                         _logger.warning(f'{__name__}: {d.ACTIVE_HISTORYDATASOURCE} history for {ticker} is None ({retry+1})')
                         time.sleep(_THROTTLE_ERROR)
                     elif history.empty:
-                        _logger.info(f'{__name__}: {d.ACTIVE_HISTORYDATASOURCE} history for {ticker} is empty ({retry+1})')
+                        _logger.warning(f'{__name__}: {d.ACTIVE_HISTORYDATASOURCE} history for {ticker} is empty ({retry+1})')
+                        time.sleep(_THROTTLE_ERROR)
+                    elif history.shape[1] == 0:
+                        history = pd.DataFrame()
+                        _logger.warning(f'{__name__}: {d.ACTIVE_HISTORYDATASOURCE} history for {ticker} has no columns ({retry+1})')
                         time.sleep(_THROTTLE_ERROR)
                     else:
                         days = history.shape[0]
@@ -251,7 +255,7 @@ def _get_history_yfinance(ticker: str, days: int = -1) -> pd.DataFrame:
                         _logger.info(f'{__name__}: {ticker} Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
                         break
                 except Exception as e:
-                    _logger.error(f'{__name__}: Exception: {e}: Retry {retry} to fetch history of {ticker} from {d.ACTIVE_HISTORYDATASOURCE}')
+                    _logger.error(f'{__name__}: Exception: {e}: During attempt {retry+1} to fetch history of {ticker} from {d.ACTIVE_HISTORYDATASOURCE}')
                     history = pd.DataFrame()
                     time.sleep(_THROTTLE_ERROR)
 

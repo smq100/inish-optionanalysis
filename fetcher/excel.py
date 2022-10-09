@@ -39,7 +39,7 @@ class Excel(Sheet):
         if self.opened and column > 0:
             col = self.sheet[COLUMNS[column]]
             for cell in col:
-                self.col += [cell.value]
+                self.col.append(cell.value)
 
         return self.col
 

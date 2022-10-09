@@ -122,16 +122,16 @@ class Manager(Threaded):
                         elif history is not None:
                             process = True
                         else:
-                            self.invalid_tickers += [ticker]
+                            self.invalid_tickers.append(ticker)
                             _logger.warning(f'{__name__}: History information for {ticker} not available. Not added to database')
                     else:
-                        self.invalid_tickers += [ticker]
+                        self.invalid_tickers.append(ticker)
                         _logger.warning(f'{__name__}: Company information for {ticker} not available. Not added to database')
 
                     if process:
                         try:
                             self.task_ticker = ticker
-                            exc.securities += [models.Security(ticker)]
+                            exc.securities.append(models.Security(ticker))
                             session.commit()
 
                             _logger.info(f'{__name__}: Added {ticker} to exchange {exchange}')
@@ -139,13 +139,13 @@ class Manager(Threaded):
                             self._add_live_history_to_ticker(ticker, history=history)
                             self._add_live_company_to_ticker(ticker, company=company)
                         except (ValueError, KeyError, IndexError) as e:
-                            self.invalid_tickers += [ticker]
+                            self.invalid_tickers.append(ticker)
                             _logger.warning(f'{__name__}: Company info invalid for {ticker}: {str(e)}')
                         except HTTPError as e:
                             self.retry += 1
                             _logger.warning(f'{__name__}: HTTP Error for {ticker}. Retry: {self.retry}: {str(e)}')
                             if self.retry > retries:
-                                self.invalid_tickers += [ticker]
+                                self.invalid_tickers.append(ticker)
                                 exit = True
                                 _logger.error(f'{__name__}: HTTP Error for {ticker}. Too many retries: {str(e)}')
                             else:
@@ -154,14 +154,14 @@ class Manager(Threaded):
                             self.retry += 1
                             _logger.warning(f'{__name__}: Runtime Error for {ticker}. Retrying... {self.retry}: {str(e)}')
                             if self.retry > retries:
-                                self.invalid_tickers += [ticker]
+                                self.invalid_tickers.append(ticker)
                                 exit = True
                                 _logger.error(f'{__name__}: Runtime Error for {ticker}. Too many retries: {str(e)}')
                         except Exception as e:
                             self.retry += 1
                             _logger.warning(f'{__name__}: Error for {ticker}. Retrying... {self.retry}: {str(e)}')
                             if self.retry > retries:
-                                self.invalid_tickers += [ticker]
+                                self.invalid_tickers.append(ticker)
                                 exit = True
                                 _logger.error(f'{__name__}: Error for {ticker}. Too many retries: {str(e)}')
                         else:
@@ -199,7 +199,7 @@ class Manager(Threaded):
             for ticker in tickers:
                 t = session.query(models.Security.ticker).filter(models.Security.ticker == ticker).one_or_none()
                 if t is not None:
-                    valid += [t.ticker]
+                    valid.append(t.ticker)
 
             if len(valid) > 0:
                 self._add_securities_to_index(valid, index)
@@ -374,7 +374,7 @@ class Manager(Threaded):
                     self.task_success += 1
                     self.task_counter += days
                 elif days < 0:
-                    self.invalid_tickers += [ticker]
+                    self.invalid_tickers.append(ticker)
                     _write_tickers_log(self.invalid_tickers)
                     _logger.warning(f'{__name__}: No data for {ticker}')
 
@@ -498,7 +498,7 @@ class Manager(Threaded):
                 tables = models.Base.metadata.tables
                 for table in tables:
                     count = session.query(tables[table]).count()
-                    info += [{'table': table, 'count': count}]
+                    info.append({'table': table, 'count': count})
         else:
             _logger.warning('{__name__}: No tables in database')
 
@@ -515,7 +515,7 @@ class Manager(Threaded):
                 for e in exchanges:
                     s = session.query(models.Security).filter(models.Security.exchange_id == e.id)
                     if s is not None:
-                        info += [{'exchange': e.abbreviation, 'count': s.count()}]
+                        info.append({'exchange': e.abbreviation, 'count': s.count()})
 
         return info
 
@@ -531,7 +531,7 @@ class Manager(Threaded):
                     for i in indexes:
                         s = session.query(models.Security).filter(or_(models.Security.index1_id == i.id,
                                                                       models.Security.index2_id == i.id, models.Security.index3_id == i.id))
-                        info += [{'index': i.abbreviation, 'count': s.count()}]
+                        info.append({'index': i.abbreviation, 'count': s.count()})
                 else:
                     i = session.query(models.Index).filter(models.Index.abbreviation == index).first()
                     s = session.query(models.Security).filter(or_(models.Security.index1_id == i.id,
@@ -584,7 +584,7 @@ class Manager(Threaded):
         for item in items:
             head, sep, tail = item.name.partition('.')
             if head[:2] == '20':
-                files += [f'{LOG_DIR}/{item.name}']
+                files.append(f'{LOG_DIR}/{item.name}')
 
         if files:
             files.sort()
@@ -608,11 +608,11 @@ class Manager(Threaded):
                         _logger.error(f'{__name__}: Unknown exception occurred for {ticker} (2): {e}')
                     else:
                         if days > 0:
-                            self.task_results += [ticker]
+                            self.task_results.append(ticker)
                             self.task_success += 1
                             _logger.info(f'{__name__}: Ticker {ticker} updated')
                         elif days < 0:
-                            self.invalid_tickers += [ticker]
+                            self.invalid_tickers.append(ticker)
                             _logger.info(f'{__name__}: Ticker {ticker} not updated')
 
                 self.task_completed += 1
@@ -655,7 +655,7 @@ class Manager(Threaded):
                 for sec in tickers:
                     t = session.query(models.Security.ticker).filter(and_(models.Security.ticker == sec, models.Security.exchange_id == e.id)).one_or_none()
                     if t is None:
-                        missing += [sec]
+                        missing.append(sec)
 
             _logger.info(f'{__name__}: {len(missing)} missing tickers in {exchange}')
         else:
@@ -675,13 +675,13 @@ class Manager(Threaded):
                     for sec in tickers:
                         t = session.query(models.Security.ticker).filter(and_(models.Security.ticker == sec, models.Security.active == False)).one_or_none()
                         if t is not None:
-                            inactive += [sec]
+                            inactive.append(sec)
                 else:
                     e = session.query(models.Exchange.id).filter(models.Exchange.abbreviation == exchange).one()
                     for sec in tickers:
                         t = session.query(models.Security.ticker).filter(and_(models.Security.ticker == sec, models.Security.active == False, models.Security.exchange_id == e.id)).one_or_none()
                         if t is not None:
-                            inactive += [sec]
+                            inactive.append(sec)
 
             _logger.info(f'{__name__}: {len(inactive)} inactive tickers in {exchange}')
         else:
@@ -708,7 +708,7 @@ class Manager(Threaded):
                     date = f'{last:%Y-%m-%d}'
                     if last < past.date():
                         if date in self.task_object:
-                            self.task_object[date] += [ticker]
+                            self.task_object[date].append(ticker)
                         else:
                             self.task_object[date] = [ticker]
                         self.task_success += 1
@@ -758,9 +758,9 @@ class Manager(Threaded):
                     if t is not None:
                         c = session.query(models.Company.name).filter(models.Company.security_id == t.id).one_or_none()
                         if c is None:
-                            incomplete += [ticker]
+                            incomplete.append(ticker)
                         elif c.name == '':
-                            incomplete += [ticker]
+                            incomplete.append(ticker)
 
         _logger.info(f'{__name__}: {len(incomplete)} incomplete companies in {table}')
 

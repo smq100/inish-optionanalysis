@@ -129,9 +129,9 @@ class IronCondor(Strategy):
             chain_index_c = -1  # Index too close to end of chain
         else:
             contract = options_c.iloc[chain_index_c + self.width1 + self.width2]['contractSymbol']
-            items += [(contract, options_c)]
+            items.append((contract, options_c))
             contract = options_c.iloc[chain_index_c + self.width1]['contractSymbol']
-            items += [(contract, options_c)]
+            items.append((contract, options_c))
 
         # Add the leg 3 & 4 option contracts
         if not items:
@@ -150,9 +150,9 @@ class IronCondor(Strategy):
             chain_index_p = -1  # Index too close to beginning of chain
         else:
             contract = options_p.iloc[chain_index_p - self.width1]['contractSymbol']
-            items += [(contract, options_p)]
+            items.append((contract, options_p))
             contract = options_p.iloc[chain_index_p - self.width1 - self.width2]['contractSymbol']
-            items += [(contract, options_p)]
+            items.append((contract, options_p))
 
         return items
 
@@ -234,7 +234,7 @@ class IronCondor(Strategy):
 
     def calculate_breakeven(self) -> bool:
         breakeven = [self.legs[1].option.strike + self.analysis.total]
-        breakeven += [self.legs[2].option.strike - self.analysis.total]
+        breakeven.append(self.legs[2].option.strike - self.analysis.total)
 
         self.analysis.breakeven = breakeven
 

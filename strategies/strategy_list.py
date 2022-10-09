@@ -63,7 +63,7 @@ def analyze(strategies: list[strategy_type]) -> None:
             strategy = pd.concat([strategy.analysis.strategy, strategy.analysis.analysis], axis=1)
             strategy_results = pd.concat([strategy_results, strategy], axis=0)
         else:
-            strategy_errors += [strategy.error]
+            strategy_errors.append(strategy.error)
             _logger.warning(f'{__name__}: Error analyzing strategy: {strategy.error}')
 
         strategy_completed += 1
@@ -82,31 +82,31 @@ def analyze(strategies: list[strategy_type]) -> None:
                     item = Call(strategy.ticker, s.ProductType.Call, strategy.direction, strategy.strike, quantity=1,
                                 expiry=strategy.expiry, volatility=strategy.volatility, load_contracts=strategy.load_contracts)
                     item.set_score_screen(strategy.score_screen)
-                    items += [item]
+                    items.append(item)
                 elif strategy.strategy == s.StrategyType.Put:
                     strategy_msg = f'{strategy.ticker}: ${strategy.strike:.2f} {strategy.direction.value} {strategy.product.value}{decorator}'
                     item = Put(strategy.ticker, s.ProductType.Put, strategy.direction, strategy.strike, quantity=1,
                                expiry=strategy.expiry, volatility=strategy.volatility, load_contracts=strategy.load_contracts)
                     item.set_score_screen(strategy.score_screen)
-                    items += [item]
+                    items.append(item)
                 elif strategy.strategy == s.StrategyType.Vertical:
                     strategy_msg = f'{strategy.ticker}: ${strategy.strike:.2f} {strategy.direction.value} {strategy.strategy.value} {strategy.product.value}{decorator}'
                     item = Vertical(strategy.ticker, strategy.product, strategy.direction, strategy.strike, width=strategy.width1, quantity=1,
                                     expiry=strategy.expiry, volatility=strategy.volatility, load_contracts=strategy.load_contracts)
                     item.set_score_screen(strategy.score_screen)
-                    items += [item]
+                    items.append(item)
                 elif strategy.strategy == s.StrategyType.IronCondor:
                     strategy_msg = f'{strategy.ticker}: ${strategy.strike:.2f}{decorator}'
                     item = IronCondor(strategy.ticker, s.ProductType.Hybrid, strategy.direction, strategy.strike, width1=strategy.width1, width2=strategy.width2, quantity=1,
                                       expiry=strategy.expiry, volatility=strategy.volatility, load_contracts=strategy.load_contracts)
                     item.set_score_screen(strategy.score_screen)
-                    items += [item]
+                    items.append(item)
                 elif strategy.strategy == s.StrategyType.IronButterfly:
                     strategy_msg = f'{strategy.ticker}: ${strategy.strike:.2f}{decorator}'
                     item = IronButterfly(strategy.ticker, s.ProductType.Hybrid, strategy.direction, strategy.strike, width1=strategy.width1, quantity=1,
                                          expiry=strategy.expiry, volatility=strategy.volatility, load_contracts=strategy.load_contracts)
                     item.set_score_screen(strategy.score_screen)
-                    items += [item]
+                    items.append(item)
         except Exception as e:
             strategy_state = f'{__name__}: {items[-1].ticker}: {str(sys.exc_info()[1])}'
             items = []
