@@ -4,7 +4,7 @@ import argparse
 import matplotlib.pyplot as plt
 
 import pandas as pd
-from learning.lstm_base import LSTM_Base
+from learning.lstm_base import LSTM_Base, Parameters
 from learning.lstm_predict import LSTM_Predict
 from learning.lstm_test import LSTM_Test
 
@@ -15,6 +15,7 @@ from utils import ui, logger
 
 logger.get_logger(logging.WARNING, logfile='')
 
+
 class Interface:
     def __init__(self, ticker: str, days: int = 1000, exit: bool = False):
         if not store.is_ticker(ticker):
@@ -23,17 +24,20 @@ class Interface:
         self.ticker = ticker.upper()
         self.days = days
         self.exit = exit
+        self.parameters: Parameters = Parameters()
         self.lstm: LSTM_Base
+        self.parameter_string: str
 
         self.main_menu()
 
     def main_menu(self) -> None:
         self.commands = [
             {'menu': 'Change Ticker', 'function': self.select_ticker, 'condition': 'self.ticker', 'value': 'self.ticker'},
-            {'menu': 'Days', 'function': self.select_days, 'condition': 'True', 'value': 'self.days'},
-            {'menu': 'Run Test (history)', 'function': self.run_test_history, 'condition': '', 'value': ''},
+            {'menu': 'Run Test (price)', 'function': self.run_test_history, 'condition': '', 'value': ''},
             {'menu': 'Run Test (averages)', 'function': self.run_test_averages, 'condition': '', 'value': ''},
             {'menu': 'Run Prediction (history)', 'function': self.run_prediction_history, 'condition': '', 'value': ''},
+            {'menu': 'Days', 'function': self.select_days, 'condition': 'True', 'value': 'self.days'},
+            {'menu': 'Parameters', 'function': self.change_parameters, 'condition': 'True', 'value': 'self.parameter_string'},
         ]
 
         # Create the menu
@@ -41,6 +45,8 @@ class Interface:
 
         # Update menu items with dynamic info
         def update(menu: dict) -> None:
+            self.parameter_string = f'epochs={self.parameters.EPOCHS}, batch={self.parameters.BATCH_SIZE}'
+
             for i, item in enumerate(self.commands):
                 if item['condition'] and item['value']:
                     menu[str(i+1)] = f'{self.commands[i]["menu"]}'
@@ -75,33 +81,37 @@ class Interface:
         while self.days < 30:
             self.days = ui.input_integer('Enter number of days', 30, 9999)
 
+    def change_parameters(self):
+        print(self.parameters)
+
     def run_test_history(self):
         history = store.get_history(self.ticker, days=self.days)
         inputs = ['open', 'high', 'low', 'volume', 'close']
-        self.lstm = LSTM_Test(self.ticker, history, inputs, self.days)
+        self.lstm = LSTM_Test(self.ticker, history, inputs, self.days, self.parameters)
         self.lstm.run()
-        self.plot_test(['close'], 'History')
+        self.plot_test([], 'History')
 
     def run_test_averages(self):
         history = store.get_history(self.ticker, days=self.days)
         ta = Technical(self.ticker, history, self.days)
         sma15 = ta.calc_sma(15)
         sma50 = ta.calc_sma(50)
-        history = pd.concat([history, sma15, sma50], axis=1)
-        inputs = ['sma_15', 'sma_50', 'close']
-        self.lstm = LSTM_Test(self.ticker, history, inputs, self.days)
+        sma200 = ta.calc_sma(200)
+        history = pd.concat([history, sma15, sma50, sma200], axis=1)
+        inputs = ['sma_15', 'sma_50', 'sma_200']
+        self.lstm = LSTM_Test(self.ticker, history, inputs, self.days, self.parameters)
         self.lstm.run()
         self.plot_test(inputs, 'Averages')
 
     def run_prediction_history(self):
         history = store.get_history(self.ticker, days=self.days)
         inputs = ['open', 'high', 'low', 'volume', 'close']
-        self.lstm = LSTM_Predict(self.ticker, history, inputs, self.days)
+        self.lstm = LSTM_Predict(self.ticker, history, inputs, self.days, self.parameters)
         self.lstm.run()
         self.plot_prediction()
 
     def plot_test(self, items:list[str], title: str = 'Plot'):
-        real_data = self.lstm.history[-self.lstm.test_size:].reset_index()
+        history = self.lstm.history[-self.lstm.test_size:].reset_index()
         colors = 'bgrcmk'
         color_index = 0
 
@@ -109,23 +119,25 @@ class Interface:
         plt.title(title)
         plt.plot(self.lstm.prediction, label='prediction', color= 'black')
 
+        plt.plot(history['close'], linestyle='--', label='close', color='grey')
         for item in items:
-            plt.plot(real_data[item], label=item, color=colors[color_index])
+            plt.plot(history[item], label=item, color=colors[color_index])
             color_index += 1
 
         plt.legend(loc='best')
         plt.show()
 
-    def plot_prediction(self):
-        real_data = self.lstm.history[-self.lstm.test_size:].reset_index()
+    def plot_prediction(self, title: str = 'Close'):
+        history = self.lstm.history[-self.lstm.test_size:].reset_index()
         plots = [row for row in self.lstm.prediction.itertuples(index=False)]
 
         plt.figure(figsize=(18, 8))
+
+        plt.plot(history['close'], linestyle='--', label='close', color='grey')
         for item in plots:
             plt.plot(item, color= 'green')
 
-        plt.plot(real_data['close'], color='grey')
-        plt.title('Close')
+        plt.title(title)
         plt.show()
 
 

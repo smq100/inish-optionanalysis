@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from learning.lstm_base import LSTM_Base
+from learning.lstm_base import LSTM_Base, Parameters
 
 from utils import logger
 
@@ -10,8 +10,11 @@ _logger = logger.get_logger()
 
 
 class LSTM_Test(LSTM_Base):
-    def __init__(self, ticker: str, history: pd.DataFrame, inputs: list[str], days: int):
-        super().__init__(ticker, history, inputs, days)
+    def __init__(self, ticker: str, history: pd.DataFrame, inputs: list[str], days: int, parameters: Parameters = Parameters | None):
+        if parameters is None:
+            parameters = Parameters()
+
+        super().__init__(ticker, history, inputs, days, parameters)
         self._initialize()
 
     def _predict(self):

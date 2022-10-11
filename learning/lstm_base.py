@@ -8,7 +8,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 import pandas as pd
 import numpy as np
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from abc import ABC
 import abc
 
@@ -19,20 +19,25 @@ from base import Threaded
 
 _logger = logger.get_logger()
 
+CACHE_FILE: str = './cache/model.h5'
+
 
 @dataclass
 class Parameters:
+    EPOCHS: int = 20
+    BATCH_SIZE: int = 32
     PCT_TRAINING: float = 0.15
     PCT_VALIDATION: float = 0.15
     NEURONS: int = 50
     DROPOUT: float = 0.20
-    EPOCHS: int = 20
-    BATCH_SIZE: int = 32
-    CACHE_FILE: str = './cache/model.h5'
+
+    def __str__(self):
+        f = asdict(self)
+        return f'{f}'
 
 
 class LSTM_Base(ABC, Threaded):
-    def __init__(self, ticker: str, history: pd.DataFrame, inputs: list[str], days: int):
+    def __init__(self, ticker: str, history: pd.DataFrame, inputs: list[str], days: int, parameters: Parameters):
         if not store.is_ticker(ticker):
             raise ValueError('Invalid ticker')
         if history.empty:
@@ -46,6 +51,7 @@ class LSTM_Base(ABC, Threaded):
         self.history: pd.DataFrame = history
         self.inputs: list[str] = inputs
         self.days = days
+        self.parameters: Parameters = Parameters()
         self.lookback = 60
         self.lookahead = 1
         self.test_size: int
@@ -61,7 +67,6 @@ class LSTM_Base(ABC, Threaded):
         self.regressor: Sequential
         self.prediction: pd.DataFrame
         self.results: list[float]
-        self.parameters: Parameters = Parameters()
 
     def _initialize(self):
         _logger.debug(f'{__name__}:\n{self.history}')
@@ -161,7 +166,7 @@ class LSTM_Base(ABC, Threaded):
         callbacks = [
             EarlyStopping(patience=10, verbose=1),
             ReduceLROnPlateau(factor=0.1, patience=3, min_lr=0.00001, verbose=1),
-            ModelCheckpoint(self.parameters.CACHE_FILE, verbose=1, save_best_only=True, save_weights_only=True),
+            ModelCheckpoint(CACHE_FILE, verbose=1, save_best_only=True, save_weights_only=True),
             KerasCallback(self)
         ]
 
