@@ -47,13 +47,13 @@ class LSTM_Base(ABC, Threaded):
         if days < 30:
             raise ValueError('Days must be more than 30')
 
-        self.ticker = ticker.upper()
+        self.ticker: str = ticker.upper()
         self.history: pd.DataFrame = history
         self.inputs: list[str] = inputs
-        self.days = days
-        self.parameters: Parameters = Parameters()
-        self.lookback = 60
-        self.lookahead = 1
+        self.days: int = days
+        self.parameters: Parameters = parameters
+        self.lookback: int = 60
+        self.lookahead: int = 1
         self.test_size: int
         self.input_size: int
         self.X_test: np.array

@@ -1,5 +1,6 @@
 import os
 import time
+from dataclasses import dataclass, asdict
 
 from colorama import Fore, Style
 
@@ -38,6 +39,16 @@ def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int, prompt: st
 
     print()
     return input_integer(f'{prompt}', minvalue, maxvalue)
+
+
+def menu_from_dataclass(items: dataclass, header: str, prompt: str = 'Select Parameter', cancel: str = 'Quit') -> str:
+    f = asdict(items)
+    keys = f.keys()
+    values = [f[key] for key in keys]
+    pairs = list(zip(keys, values))
+    menu_items = {f'{i+1}': f'{key.title()} ({value})' for i, (key, value) in enumerate(pairs)}
+    item = menu(menu_items, header, 0, len(keys), prompt=prompt)
+    return pairs[item-1][0] if item > 0 else ''
 
 
 def delimeter(message, pre_creturn: int, post_creturn: int) -> str:

@@ -1,4 +1,5 @@
 import logging
+from dataclasses import asdict
 
 import argparse
 import matplotlib.pyplot as plt
@@ -21,9 +22,9 @@ class Interface:
         if not store.is_ticker(ticker):
             raise ValueError('Invalid ticker')
 
-        self.ticker = ticker.upper()
-        self.days = days
-        self.exit = exit
+        self.ticker: str = ticker.upper()
+        self.days: int = days
+        self.exit: bool = exit
         self.parameters: Parameters = Parameters()
         self.lstm: LSTM_Base
         self.parameter_string: str
@@ -37,7 +38,7 @@ class Interface:
             {'menu': 'Run Test (averages)', 'function': self.run_test_averages, 'condition': '', 'value': ''},
             {'menu': 'Run Prediction (history)', 'function': self.run_prediction_history, 'condition': '', 'value': ''},
             {'menu': 'Days', 'function': self.select_days, 'condition': 'True', 'value': 'self.days'},
-            {'menu': 'Parameters', 'function': self.change_parameters, 'condition': 'True', 'value': 'self.parameter_string'},
+            {'menu': 'Parameters', 'function': self.change_parameters, 'condition': '', 'value': ''},
         ]
 
         # Create the menu
@@ -82,7 +83,11 @@ class Interface:
             self.days = ui.input_integer('Enter number of days', 30, 9999)
 
     def change_parameters(self):
-        print(self.parameters)
+        item = ui.menu_from_dataclass(self.parameters, 'Parameters')
+        if item:
+            f = asdict(self.parameters)
+            value = ui.input_integer(f'Enter new value for {item.title()}', 0, 100)
+            f[item] = value
 
     def run_test_history(self):
         history = store.get_history(self.ticker, days=self.days)
@@ -112,14 +117,14 @@ class Interface:
 
     def plot_test(self, items:list[str], title: str = 'Plot'):
         history = self.lstm.history[-self.lstm.test_size:].reset_index()
-        colors = 'bgrcmk'
-        color_index = 0
 
         plt.figure(figsize=(18, 8))
         plt.title(title)
         plt.plot(self.lstm.prediction, label='prediction', color= 'black')
-
         plt.plot(history['close'], linestyle='--', label='close', color='grey')
+
+        color_index = 0
+        colors = 'bgrcmk'
         for item in items:
             plt.plot(history[item], label=item, color=colors[color_index])
             color_index += 1

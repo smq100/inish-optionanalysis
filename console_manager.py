@@ -14,7 +14,7 @@ from utils import ui, logger
 CSV_BASEPATH = './output'
 
 
-logger.get_logger(logging.ERROR)  # , logfile='output')
+logger.get_logger(logging.WARNING, logfile='output')
 
 
 class Interface:
