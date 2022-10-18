@@ -24,6 +24,16 @@ _forward = True
 _start = 0.0
 
 
+class MenuValue:
+    def __init__(self, value, minimum, maximum):
+        self.value: int | float = value
+        self.minimum: int | float = minimum
+        self.maximum: int | float = maximum
+
+    def __str__(self):
+        return str(self.value)
+
+
 def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int, prompt: str = 'Select operation', cancel: str = 'Quit') -> int:
     print(f'\n{header}')
     print('-' * 50)
@@ -31,6 +41,7 @@ def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int, prompt: st
     if cancel:
         menu_items['0'] = cancel
 
+    entry: str
     for entry in menu_items.keys():
         if entry.isnumeric():
             print(f'{entry:>2})\t{menu_items[entry]}')
@@ -41,14 +52,15 @@ def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int, prompt: st
     return input_integer(f'{prompt}', minvalue, maxvalue)
 
 
-def menu_from_dataclass(items: dataclass, header: str, prompt: str = 'Select Parameter', cancel: str = 'Quit') -> str:
+def menu_from_dataclass(items: dataclass, header: str, prompt: str = 'Select Parameter', cancel: str = 'Quit') -> tuple[str, str, MenuValue]:
     f = asdict(items)
-    keys = f.keys()
+    keys: list[str] = f.keys()
+    names = [key.replace('_', ' ').title() for key in keys]
     values = [f[key] for key in keys]
-    pairs = list(zip(keys, values))
-    menu_items = {f'{i+1}': f'{key.title()} ({value})' for i, (key, value) in enumerate(pairs)}
-    item = menu(menu_items, header, 0, len(keys), prompt=prompt)
-    return pairs[item-1][0] if item > 0 else ''
+    pairs:list[tuple[str, str, MenuValue]] = list(zip(keys, names, values))
+    menu_items = {f'{i+1}': f'{name} ({value.value})' for i, (key, name, value) in enumerate(pairs)}
+    item = menu(menu_items, header, 0, len(names), prompt=prompt)
+    return pairs[item-1] if item > 0 else ('', '', MenuValue('', '', 0))
 
 
 def delimeter(message, pre_creturn: int, post_creturn: int) -> str:
@@ -146,15 +158,15 @@ def input_float(message: str, min_: float, max_: float) -> float:
         if m.isnumeric(text):
             val = int(text)
             if float(val) < min_:
-                print_error(f'Invalid value. Enter an integer between {min_:.2f} and {max_:.2f}')
+                print_error(f'Invalid value. Enter a value between {min_:.2f} and {max_:.2f}')
                 val = min_ - 1.0
             elif float(val) > max_:
-                print_error(f'Invalid value. Enter an integer between {min_:.2f} and {max_:.2f}')
+                print_error(f'Invalid value. Enter a value between {min_:.2f} and {max_:.2f}')
                 val = min_ - 1.0
             else:
                 val = float(val)
         else:
-            print_error(f'Invalid value. Enter an integer between {min_:.2f} and {max_:.2f}')
+            print_error(f'Invalid value. Enter a value between {min_:.2f} and {max_:.2f}')
             val = min_ - 1.0
 
     return val

@@ -12,6 +12,7 @@ from learning.lstm_test import LSTM_Test
 from data import store as store
 from analysis.technical import Technical
 from utils import ui, logger
+from utils.ui import MenuValue
 
 
 logger.get_logger(logging.WARNING, logfile='')
@@ -27,7 +28,6 @@ class Interface:
         self.exit: bool = exit
         self.parameters: Parameters = Parameters()
         self.lstm: LSTM_Base
-        self.parameter_string: str
 
         self.main_menu()
 
@@ -46,8 +46,6 @@ class Interface:
 
         # Update menu items with dynamic info
         def update(menu: dict) -> None:
-            self.parameter_string = f'epochs={self.parameters.EPOCHS}, batch={self.parameters.BATCH_SIZE}'
-
             for i, item in enumerate(self.commands):
                 if item['condition'] and item['value']:
                     menu[str(i+1)] = f'{self.commands[i]["menu"]}'
@@ -83,11 +81,17 @@ class Interface:
             self.days = ui.input_integer('Enter number of days', 30, 9999)
 
     def change_parameters(self):
-        item = ui.menu_from_dataclass(self.parameters, 'Parameters')
-        if item:
-            f = asdict(self.parameters)
-            value = ui.input_integer(f'Enter new value for {item.title()}', 0, 100)
-            f[item] = value
+        item = ui.menu_from_dataclass(self.parameters, 'Available Parameters')
+        if item[0]:
+            if type(item[2].value) == int:
+                value = ui.input_integer(f"Enter new value for '{item[1]}'", item[2].minimum, item[2].maximum)
+            elif type(item[2].value) == float:
+                value = ui.input_float(f"Enter new value for '{item[1]}'", item[2].minimum, item[2].maximum)
+            else:
+                raise ValueError('Unknown type')
+
+            v:MenuValue = getattr(self.parameters, item[0])
+            v.value = value
 
     def run_test_history(self):
         history = store.get_history(self.ticker, days=self.days)

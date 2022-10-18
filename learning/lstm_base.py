@@ -1,4 +1,8 @@
 import os
+from dataclasses import dataclass
+from abc import ABC
+import abc
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Supress TensorFlow complier flag warning
 
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, Callback
@@ -6,15 +10,13 @@ from keras.layers import Dense, LSTM, Dropout
 from keras import Sequential
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
-import pandas as pd
 import numpy as np
-from dataclasses import dataclass, asdict
-from abc import ABC
-import abc
+import pandas as pd
 
-from utils import logger
 from data import store as store
 from base import Threaded
+from utils.ui import MenuValue
+from utils import logger
 
 
 _logger = logger.get_logger()
@@ -24,16 +26,12 @@ CACHE_FILE: str = './cache/model.h5'
 
 @dataclass
 class Parameters:
-    EPOCHS: int = 20
-    BATCH_SIZE: int = 32
-    PCT_TRAINING: float = 0.15
-    PCT_VALIDATION: float = 0.15
-    NEURONS: int = 50
-    DROPOUT: float = 0.20
-
-    def __str__(self):
-        f = asdict(self)
-        return f'{f}'
+    EPOCHS: MenuValue = MenuValue(20, 5, 100)
+    BATCH_SIZE: MenuValue = MenuValue(32, 5, 100)
+    PCT_TRAINING: MenuValue = MenuValue(0.15, 0.10, 0.50)
+    PCT_VALIDATION: MenuValue = MenuValue(0.15, 0.10, 0.50)
+    NEURONS: MenuValue = MenuValue(50, 10, 100)
+    DROPOUT: MenuValue = MenuValue(0.20, 0.01, 0.50)
 
 
 class LSTM_Base(ABC, Threaded):
@@ -43,7 +41,7 @@ class LSTM_Base(ABC, Threaded):
         if history.empty:
             raise ValueError('Empty history')
         if not inputs:
-            raise ValueError('Empty imputs')
+            raise ValueError('Empty inputs')
         if days < 30:
             raise ValueError('Days must be more than 30')
 
@@ -103,14 +101,14 @@ class LSTM_Base(ABC, Threaded):
         _logger.debug(f'{__name__}: {y.shape=}')
 
         # Create testing, training, and validation arrays
-        self.test_size = int(history_size * self.parameters.PCT_TRAINING)
+        self.test_size = int(history_size * self.parameters.PCT_TRAINING.value)
 
         self.X_test = X[-self.test_size:]
         self.y_test = y[-self.test_size:]
         X_rest = X[:-self.test_size]
         y_rest = y[:-self.test_size]
 
-        self.X_train, self.X_valid, self.y_train, self.y_valid = train_test_split(X_rest, y_rest, test_size=self.parameters.PCT_VALIDATION, random_state=101)
+        self.X_train, self.X_valid, self.y_train, self.y_valid = train_test_split(X_rest, y_rest, test_size=self.parameters.PCT_VALIDATION.value, random_state=101)
 
         # Reshape to be friendly to LSTM model
         self.X_train = self.X_train.reshape(self.X_train.shape[0], self.lookback, self.input_size)
@@ -134,20 +132,20 @@ class LSTM_Base(ABC, Threaded):
         self.regressor = Sequential()
 
         # Add 1st lstm layer
-        self.regressor.add(LSTM(units=self.parameters.NEURONS, return_sequences=True, input_shape=(self.X_train.shape[1], self.input_size)))
-        self.regressor.add(Dropout(rate=self.parameters.DROPOUT))
+        self.regressor.add(LSTM(units=self.parameters.NEURONS.value, return_sequences=True, input_shape=(self.X_train.shape[1], self.input_size)))
+        self.regressor.add(Dropout(rate=self.parameters.DROPOUT.value))
 
         # Add 2nd lstm layer
-        self.regressor.add(LSTM(units=self.parameters.NEURONS, return_sequences=True))
-        self.regressor.add(Dropout(rate=self.parameters.DROPOUT))
+        self.regressor.add(LSTM(units=self.parameters.NEURONS.value, return_sequences=True))
+        self.regressor.add(Dropout(rate=self.parameters.DROPOUT.value))
 
         # Add 3rd lstm layer
-        self.regressor.add(LSTM(units=self.parameters.NEURONS, return_sequences=True))
-        self.regressor.add(Dropout(rate=self.parameters.DROPOUT))
+        self.regressor.add(LSTM(units=self.parameters.NEURONS.value, return_sequences=True))
+        self.regressor.add(Dropout(rate=self.parameters.DROPOUT.value))
 
         # Add 4th lstm layer
-        self.regressor.add(LSTM(units=self.parameters.NEURONS, return_sequences=False))
-        self.regressor.add(Dropout(rate=self.parameters.DROPOUT))
+        self.regressor.add(LSTM(units=self.parameters.NEURONS.value, return_sequences=False))
+        self.regressor.add(Dropout(rate=self.parameters.DROPOUT.value))
 
         # Add output layer
         self.regressor.add(Dense(units=self.lookahead))
@@ -171,10 +169,10 @@ class LSTM_Base(ABC, Threaded):
         ]
 
         # Fit the model
-        self.regressor.fit(self.X_train, self.y_train, epochs=self.parameters.EPOCHS, batch_size=self.parameters.BATCH_SIZE,
+        self.regressor.fit(self.X_train, self.y_train, epochs=self.parameters.EPOCHS.value, batch_size=self.parameters.BATCH_SIZE.value,
                            validation_data=(self.X_valid, self.y_valid), callbacks=callbacks, verbose=0)
 
-        self.results = self.regressor.evaluate(self.X_test, self.y_test, batch_size=self.parameters.BATCH_SIZE)
+        self.results = self.regressor.evaluate(self.X_test, self.y_test, batch_size=self.parameters.BATCH_SIZE.value)
 
         _logger.debug(f'{__name__}: Test MSE: {self.results[0]}')  # Mean Square Error
         _logger.debug(f'{__name__}: Test MAE: {self.results[1]}')  # Mean Absolute Error
