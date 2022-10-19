@@ -12,7 +12,7 @@ from learning.lstm_test import LSTM_Test
 from data import store as store
 from analysis.technical import Technical
 from utils import ui, logger
-from utils.ui import MenuValue
+from utils.math import RangeValue
 
 
 logger.get_logger(logging.WARNING, logfile='')
@@ -90,7 +90,7 @@ class Interface:
             else:
                 raise ValueError('Unknown type')
 
-            v:MenuValue = getattr(self.parameters, item[0])
+            v:RangeValue = getattr(self.parameters, item[0])
             v.value = value
 
     def run_test_history(self):
@@ -158,7 +158,7 @@ def main():
 
     command = vars(parser.parse_args())
     if command['ticker']:
-        Interface(tickers=command['ticker'], days=int(command['days']), exit=command['exit'])
+        Interface(ticker=command['ticker'], days=int(command['days']), exit=command['exit'])
     else:
         Interface(ticker='AAPL', days=int(command['days']))
 

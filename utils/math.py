@@ -15,6 +15,16 @@ VALUETABLE_COLS = 9
 range_type = collections.namedtuple('range_type', ['min', 'max', 'step'])
 
 
+class RangeValue:
+    def __init__(self, value, minimum, maximum):
+        self.value: int | float = value
+        self.minimum: int | float = minimum
+        self.maximum: int | float = maximum
+
+    def __str__(self):
+        return str(self.value)
+
+
 def mround(n: float, precision: float, floor: bool = False) -> float:
     if floor:
         val = float((n // precision) * precision)

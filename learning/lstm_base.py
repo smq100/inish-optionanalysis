@@ -15,7 +15,7 @@ import pandas as pd
 
 from data import store as store
 from base import Threaded
-from utils.ui import MenuValue
+from utils.math import RangeValue
 from utils import logger
 
 
@@ -26,12 +26,12 @@ CACHE_FILE: str = './cache/model.h5'
 
 @dataclass
 class Parameters:
-    EPOCHS: MenuValue = MenuValue(20, 5, 100)
-    BATCH_SIZE: MenuValue = MenuValue(32, 5, 100)
-    PCT_TRAINING: MenuValue = MenuValue(0.15, 0.10, 0.50)
-    PCT_VALIDATION: MenuValue = MenuValue(0.15, 0.10, 0.50)
-    NEURONS: MenuValue = MenuValue(50, 10, 100)
-    DROPOUT: MenuValue = MenuValue(0.20, 0.01, 0.50)
+    EPOCHS: RangeValue = RangeValue(20, 5, 100)
+    BATCH_SIZE: RangeValue = RangeValue(32, 5, 100)
+    PCT_TRAINING: RangeValue = RangeValue(0.15, 0.10, 0.50)
+    PCT_VALIDATION: RangeValue = RangeValue(0.15, 0.10, 0.50)
+    NEURONS: RangeValue = RangeValue(50, 10, 100)
+    DROPOUT: RangeValue = RangeValue(0.20, 0.01, 0.50)
 
 
 class LSTM_Base(ABC, Threaded):
