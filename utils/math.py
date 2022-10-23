@@ -1,3 +1,4 @@
+import os
 import math
 import datetime as dt
 import collections
@@ -6,23 +7,14 @@ import pandas as pd
 
 import strategies as s
 from strategies.analysis import calculate_sentiment
-from utils import ui
 
+
+TERMINAL_SIZE = os.get_terminal_size()
 
 VALUETABLE_ROWS = 50
 VALUETABLE_COLS = 9
 
 range_type = collections.namedtuple('range_type', ['min', 'max', 'step'])
-
-
-class RangeValue:
-    def __init__(self, value, minimum, maximum):
-        self.value: int | float = value
-        self.minimum: int | float = minimum
-        self.maximum: int | float = maximum
-
-    def __str__(self):
-        return str(self.value)
 
 
 def mround(n: float, precision: float, floor: bool = False) -> float:
@@ -131,7 +123,7 @@ def compress_table(table: pd.DataFrame, rows: int, cols: int, auto: bool = True)
     compressed = pd.DataFrame()
 
     if auto:
-        cols = ui.TERMINAL_SIZE.columns - 10  # Subtract approx price column width
+        cols = TERMINAL_SIZE.columns - 10  # Subtract approx price column width
         cols = cols // 15  # Floor-divide by approx col size
 
     # Thin out cols

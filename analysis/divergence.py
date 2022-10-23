@@ -21,7 +21,6 @@ CACHE_TYPE = 'div'
 class Divergence(Threaded):
     def __init__(self, tickers: list[str], name: str, window: int = 15, days: int = 100):
         self.tickers: list[str] = tickers
-        self.cache_name: str = name
         self.window: int = window
         self.days: int = days
         self.results: list[pd.DataFrame] = []
@@ -31,9 +30,10 @@ class Divergence(Threaded):
         self.periods: int = days // 50
         self.streak: int = 5
         self.concurrency: int = 10
+        self.scaled: bool = True
+        self.cache_name: str = name
         self.cache_available: bool = False
         self.cache_used: bool = False
-        self.scaled: bool = True
         self.cache_date: str = dt.datetime.now().strftime(ui.DATE_FORMAT)
         self.cache_today_only: bool = cache.CACHE_TODAY_ONLY
 
@@ -69,7 +69,7 @@ class Divergence(Threaded):
                 tickers = [i.tolist() for i in tickers]
 
                 with futures.ThreadPoolExecutor(max_workers=self.concurrency) as executor:
-                    self.task_futures = [executor.submit(self._run, list) for list in tickers]
+                    self.task_futures = [executor.submit(self._run, ticker_list) for ticker_list in tickers]
 
                     for future in futures.as_completed(self.task_futures):
                         _logger.info(f'{__name__}: Thread completed: {future.result()}')

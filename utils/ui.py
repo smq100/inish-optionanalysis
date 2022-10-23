@@ -4,7 +4,6 @@ from dataclasses import dataclass, asdict
 
 from colorama import Fore, Style
 
-from utils.math import RangeValue
 from utils import math as m
 from data import store as store
 
@@ -12,7 +11,7 @@ from data import store as store
 DATE_FORMAT = '%Y-%m-%d'
 DATE_FORMAT2 = '%m-%d-%Y'
 TABULATE_FORMAT = 'simple'
-CHART_STYLE = 'seaborn-bright'
+CHART_STYLE = 'seaborn-v0_8-bright'
 CHART_SIZE = (17, 10)
 PROGRESS_SLEEP = 0.20
 
@@ -23,6 +22,16 @@ _completed = 0
 _position = 0
 _forward = True
 _start = 0.0
+
+
+class RangeValue:
+    def __init__(self, value, minimum, maximum):
+        self.value: int | float = value
+        self.minimum: int | float = minimum
+        self.maximum: int | float = maximum
+
+    def __str__(self):
+        return str(self.value)
 
 
 def menu(menu_items: dict, header: str, minvalue: int, maxvalue: int, prompt: str = 'Select operation', cancel: str = 'Quit') -> int:

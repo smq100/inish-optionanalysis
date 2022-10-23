@@ -12,7 +12,7 @@ from learning.lstm_test import LSTM_Test
 from data import store as store
 from analysis.technical import Technical
 from utils import ui, logger
-from utils.math import RangeValue
+from utils.ui import RangeValue
 
 
 logger.get_logger(logging.WARNING, logfile='')

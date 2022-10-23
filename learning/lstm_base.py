@@ -15,7 +15,7 @@ import pandas as pd
 
 from data import store as store
 from base import Threaded
-from utils.math import RangeValue
+from utils.ui import RangeValue
 from utils import logger
 
 
