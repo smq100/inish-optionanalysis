@@ -51,6 +51,8 @@ class Divergence(Threaded):
         if not self.tickers:
             assert ValueError('No valid tickers specified')
 
+        _logger.info(f'{__name__}: Calculating {len(self.tickers)} ticker(s)')
+
         if use_cache and self.cache_available:
             self.cache_used = True
             _logger.info(f'{__name__}: Using cached results. Scaled={scaled}')
@@ -89,6 +91,8 @@ class Divergence(Threaded):
         if not self.results:
             assert ValueError('No valid results specified')
 
+        _logger.info(f'{__name__}: Analyzing {len(self.results)} result(s)')
+
         self.streak = streak
         self.analysis = pd.DataFrame()
         for result in self.results:
@@ -105,8 +109,6 @@ class Divergence(Threaded):
             self.analysis = self.analysis.sort_values(by=['streak'], ascending=False)
 
     def _run(self, tickers: list[str]) -> None:
-        _logger.info(f'{__name__}: Running {len(tickers)} ticker(s). Scaled={self.scaled}')
-
         for ticker in tickers:
             ta = Technical(ticker, None, self.days)
             history = ta.history
@@ -209,10 +211,9 @@ if __name__ == '__main__':
     ticker = sys.argv[1].upper() if len(sys.argv) > 1 else 'IBM'
 
     div = Divergence([ticker])
-    # div.calculate(scaled=False)
     div.calculate()
 
     headers = ui.format_headers(div.results[0].columns, case='lower')
     print(tabulate(div.results[0], headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.3f'))
 
-    # div.analyze()
+    div.analyze()

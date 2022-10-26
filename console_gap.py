@@ -125,14 +125,14 @@ class Interface:
                 if self.disp_plot:
                     self.m_show_plot()
 
-            self.calculate_analysis()
+            self.analyze()
 
             if self.disp_anly:
                 self.m_show_analysis()
         else:
             ui.print_error('Enter a ticker before calculating')
 
-    def calculate_analysis(self) -> None:
+    def analyze(self) -> None:
         self.analysis = pd.DataFrame()
         if len(self.gap.results) > 0:
             self.gap.analyze()

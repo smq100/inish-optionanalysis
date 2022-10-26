@@ -3,6 +3,7 @@ import threading
 import logging
 import datetime as dt
 
+from tabulate import tabulate
 import argparse
 
 import data as d
@@ -14,7 +15,7 @@ from utils import ui, logger
 CSV_BASEPATH = './output'
 
 
-logger.get_logger(logging.WARNING, logfile='output')
+logger.get_logger(logging.INFO, logfile='output')
 
 
 class Interface:
@@ -197,7 +198,8 @@ class Interface:
                     history = history.tail(10)
                     if not history.empty:
                         history = history.set_index('date')
-                        print(history.round(2))
+                        headers = ui.format_headers(history.columns, case='title')
+                        print(tabulate(history, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
 
             else:
                 ui.print_error(f'{ticker} not found')
