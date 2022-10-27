@@ -15,12 +15,12 @@ CACHE_TYPE = 'gap'
 
 
 class Gap(Threaded):
-    def __init__(self, tickers: list[str], name: str, days: int = 300, threshold: float = 0.0):
+    def __init__(self, tickers: list[str], name: str, days: int = 300, threshold: float = 0.00):
         self.tickers: list[str] = tickers
         self.days: int = days
         self.threshold: float = threshold
         self.results: list[pd.DataFrame]
-        self.analysis: pd.DataFrame()
+        self.analysis: pd.DataFrame = pd.DataFrame()
         self.concurrency: int = 10
         self.cache_name: str = name
         self.cache_available: bool = False
@@ -46,6 +46,7 @@ class Gap(Threaded):
             self.task_total = len(self.tickers)
             self.task_state = 'None'
             self.results = []
+            self.analysis = pd.DataFrame()
 
             # Break up the tickers and run concurrently if a large list, otherwise just run the single list
             if len(self.tickers) > 100:
@@ -73,6 +74,7 @@ class Gap(Threaded):
         self.task_state = 'Done'
 
     def analyze(self) -> None:
+        self.analysis = pd.DataFrame()
         if not self.results:
             assert ValueError('No valid results specified')
 
@@ -88,8 +90,8 @@ class Gap(Threaded):
             history['gap'] = 0.0
 
             # Find relavent gaps
-            up = history[history['up'] > (history['close'] * self.threshold)]
-            dn = history[history['dn'] > (history['close'] * self.threshold)]
+            up = history[history['up'] > (history['close'] * self.threshold)].copy()
+            dn = history[history['dn'] > (history['close'] * self.threshold)].copy()
 
             # Find unfilled gap-ups
             for result in up.itertuples():
@@ -107,9 +109,12 @@ class Gap(Threaded):
                 if prev_low > max_high:
                     dn.loc[result.Index, 'gap'] = prev_low - max_high
 
-            # Combine the results
+            # Clean and combine the results
+            up.loc[:, 'dn'] = 0.0
+            dn.loc[:, 'up'] = 0.0
             results = pd.concat([up, dn]).sort_index().reset_index(drop=True)
             if not results.empty:
+                results.index.name = ticker.upper()
                 self.results.append(results)
 
             self.task_completed += 1

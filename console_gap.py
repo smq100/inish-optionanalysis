@@ -1,32 +1,30 @@
-import time
-import threading
-import logging
-
 import argparse
+import logging
+import threading
+import time
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from tabulate import tabulate
 
 from analysis.gap import Gap
 from data import store as store
-from utils import ui, logger
-
+from utils import logger, ui
 
 logger.get_logger(logging.WARNING, logfile='')
 
+DAYS_DEFAULT = 300
 
 class Interface:
-    def __init__(self, list: str = '', days: int = 100, disp_calc: bool = False, disp_plot: bool = False, disp_anly: bool = False):
+    def __init__(self, list: str = '', days: int = DAYS_DEFAULT, disp_results: bool = False, disp_plot: bool = False, disp_anly: bool = False):
         self.list = list.upper()
         self.days: int = days
-        self.disp_calc: bool = disp_calc
+        self.disp_results: bool = disp_results
         self.disp_plot: bool = disp_plot
         self.disp_anly: bool = disp_anly
         self.tickers: list[str] = []
-        self.results: list[pd.DataFrame] = []
-        self.analysis: pd.DataFrame = pd.DataFrame()
+        self.threshold: float = 0.01
         self.commands: list[dict] = []
         self.gap: Gap | None = None
         self.task: threading.Thread
@@ -45,7 +43,7 @@ class Interface:
         self.commands = [
             {'menu': 'Select Tickers', 'function': self.m_select_tickers, 'condition': 'self.tickers', 'value': 'self.list'},
             {'menu': 'Days', 'function': self.m_select_days, 'condition': 'True', 'value': 'self.days'},
-            {'menu': 'Calculate', 'function': self.m_calculate_gap, 'condition': 'not self.analysis.empty', 'value': 'len(self.analysis)'},
+            {'menu': 'Calculate', 'function': self.m_calculate_gap, 'condition': '', 'value': ''},
             {'menu': 'Show Analysis', 'function': self.m_show_analysis, 'condition': '', 'value': ''},
             {'menu': 'Show Results', 'function': self.m_show_results, 'condition': '', 'value': ''},
             {'menu': 'Show Plot', 'function': self.m_show_plot, 'condition': '', 'value': ''}
@@ -100,10 +98,8 @@ class Interface:
             self.days = ui.input_integer('Enter number of days', 30, 9999)
 
     def m_calculate_gap(self) -> None:
-        self.results = []
-
         if self.tickers:
-            self.gap = Gap(self.tickers, self.list, days=self.days)
+            self.gap = Gap(self.tickers, name=self.list, days=self.days, threshold=self.threshold)
             if len(self.tickers) > 1:
                 self.task = threading.Thread(target=self.gap.calculate, kwargs={'use_cache': self.use_cache})
                 self.task.start()
@@ -119,7 +115,7 @@ class Interface:
             else:
                 self.gap.calculate(use_cache=self.use_cache)
 
-                if self.disp_calc:
+                if self.disp_results:
                     self.m_show_results()
 
                 if self.disp_plot:
@@ -136,10 +132,9 @@ class Interface:
         self.analysis = pd.DataFrame()
         if len(self.gap.results) > 0:
             self.gap.analyze()
-            self.analysis = self.gap.analysis
 
     def m_show_results(self) -> None:
-        if self.gap:
+        if self.gap.results:
             if len(self.tickers) > 1:
                 ticker = ui.input_text('Enter ticker')
             else:
@@ -149,9 +144,11 @@ class Interface:
             if index < 0:
                 ui.print_error('Ticker not found in results')
             else:
-                pass
+                print()
+                headers = ui.format_headers(self.gap.results[index].columns, case='lower')
+                print(tabulate(self.gap.results[index], headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
         else:
-            ui.print_error(f'Must first run calculation', post_creturn=1)
+            ui.print_error(f'No results to show', post_creturn=1)
 
     def m_show_analysis(self) -> None:
         if self.gap:
@@ -192,10 +189,11 @@ class Interface:
 
     def _get_index(self, ticker: str):
         index = -1
-        if self.gap:
+        if self.gap.results:
             for i, item in enumerate(self.gap.results):
                 if ticker.upper() == item.index.name:
                     index = i
+                    break
 
         return index
 
@@ -203,13 +201,13 @@ class Interface:
 def main():
     parser = argparse.ArgumentParser(description='Gap Analysis')
     parser.add_argument('-t', '--tickers', metavar='tickers', help='Specify a ticker or list')
-    parser.add_argument('-d', '--days', metavar='days', help='Days to run analysis', default=100)
-    parser.add_argument('-s', '--show_calc', help='Show calculation results', action='store_true')
+    parser.add_argument('-d', '--days', metavar='days', help='Days to run analysis', default=DAYS_DEFAULT)
+    parser.add_argument('-s', '--show_results', help='Show calculation results', action='store_true')
     parser.add_argument('-S', '--show_plot', help='Show results plot', action='store_true')
 
     command = vars(parser.parse_args())
     if command['tickers']:
-        Interface(list=command['tickers'], days=int(command['days']), disp_calc=command['show_calc'], disp_plot=command['show_plot'])
+        Interface(list=command['tickers'], days=int(command['days']), disp_results=command['show_results'], disp_plot=command['show_plot'])
     else:
         Interface()
 
