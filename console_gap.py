@@ -2,6 +2,7 @@ import argparse
 import logging
 import threading
 import time
+from turtle import color
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,6 +10,7 @@ import pandas as pd
 from tabulate import tabulate
 
 from analysis.gap import Gap
+from analysis.chart import Chart
 from data import store as store
 from utils import logger, ui
 
@@ -17,21 +19,22 @@ logger.get_logger(logging.WARNING, logfile='')
 DAYS_DEFAULT = 300
 
 class Interface:
-    def __init__(self, list: str = '', days: int = DAYS_DEFAULT, disp_results: bool = False, disp_plot: bool = False, disp_anly: bool = False):
-        self.list = list.upper()
+    def __init__(self, table: str = '', days: int = DAYS_DEFAULT, disp_results: bool = False, disp_plot: bool = False, disp_anly: bool = False, exit: bool = False):
+        self.table = table.upper()
         self.days: int = days
         self.disp_results: bool = disp_results
         self.disp_plot: bool = disp_plot
         self.disp_anly: bool = disp_anly
-        self.tickers: list[str] = []
+        self.exit: bool = exit
+        self.tickers: table[str] = []
         self.threshold: float = 0.01
-        self.commands: list[dict] = []
+        self.commands: table[dict] = []
         self.gap: Gap | None = None
         self.task: threading.Thread
         self.use_cache: bool = False
 
-        if list:
-            self.m_select_tickers(list)
+        if table:
+            self.m_select_tickers(table)
 
         if self.tickers:
             self.m_calculate_gap()
@@ -41,7 +44,7 @@ class Interface:
 
     def main_menu(self) -> None:
         self.commands = [
-            {'menu': 'Select Tickers', 'function': self.m_select_tickers, 'condition': 'self.tickers', 'value': 'self.list'},
+            {'menu': 'Select Tickers', 'function': self.m_select_tickers, 'condition': 'self.tickers', 'value': 'self.table'},
             {'menu': 'Days', 'function': self.m_select_days, 'condition': 'True', 'value': 'self.days'},
             {'menu': 'Calculate', 'function': self.m_calculate_gap, 'condition': '', 'value': ''},
             {'menu': 'Show Analysis', 'function': self.m_show_analysis, 'condition': '', 'value': ''},
@@ -60,36 +63,35 @@ class Interface:
                     if eval(item['condition']):
                         menu[str(i+1)] += f' ({eval(item["value"])})'
 
-        loop = True
-        while loop:
+        while not self.exit:
             update(menu_items)
 
             selection = ui.menu(menu_items, 'Available Operations', 0, len(menu_items))
             if selection > 0:
                 self.commands[selection-1]['function']()
             else:
-                loop = False
+                self.exit = True
 
     def m_select_tickers(self, list='') -> None:
         if not list:
             list = ui.input_text('Enter exchange, index, ticker, or \'every\'')
 
-        self.list = list.upper()
+        self.table = list.upper()
 
-        if self.list == 'EVERY':
+        if self.table == 'EVERY':
             self.tickers = store.get_tickers('every')
-            self.list = list.lower()
+            self.table = list.lower()
         elif store.is_exchange(list):
-            self.tickers = store.get_exchange_tickers(self.list)
+            self.tickers = store.get_exchange_tickers(self.table)
             self.use_cache = True
         elif store.is_index(list):
-            self.tickers = store.get_index_tickers(self.list)
+            self.tickers = store.get_index_tickers(self.table)
             self.use_cache = True
         elif store.is_ticker(list):
-            self.tickers = [self.list]
+            self.tickers = [self.table]
         else:
             self.tickers = []
-            self.list = ''
+            self.table = ''
             ui.print_error(f'List \'{list}\' is not valid')
 
     def m_select_days(self):
@@ -99,7 +101,7 @@ class Interface:
 
     def m_calculate_gap(self) -> None:
         if self.tickers:
-            self.gap = Gap(self.tickers, name=self.list, days=self.days, threshold=self.threshold)
+            self.gap = Gap(self.tickers, name=self.table, days=self.days, threshold=self.threshold)
             if len(self.tickers) > 1:
                 self.task = threading.Thread(target=self.gap.calculate, kwargs={'use_cache': self.use_cache})
                 self.task.start()
@@ -132,6 +134,25 @@ class Interface:
         self.analysis = pd.DataFrame()
         if len(self.gap.results) > 0:
             self.gap.analyze()
+            chart = Chart(self.tickers[0], days=self.days)
+            figure, ax = chart.plot_ohlc()
+            length = len(self.gap.history)
+
+            starts = []
+            ends = []
+            fills = []
+            dates = []
+            for result in self.gap.results[0].itertuples():
+                if result.start > 0.0:
+                    starts.append(result.start)
+                    ends.append(result.start+result.gap)
+                    dates.append(result.date)
+                    ax.axhspan(starts[-1], ends[-1], xmin=0, xmax=length, facecolor='g', alpha=0.25)
+                    ax.axvline(result.index, color='g', ls='--', alpha=0.25)
+
+            if starts:
+                plt.figure(figure)
+                plt.show()
 
     def m_show_results(self) -> None:
         if self.gap.results:
@@ -204,10 +225,11 @@ def main():
     parser.add_argument('-d', '--days', metavar='days', help='Days to run analysis', default=DAYS_DEFAULT)
     parser.add_argument('-s', '--show_results', help='Show calculation results', action='store_true')
     parser.add_argument('-S', '--show_plot', help='Show results plot', action='store_true')
+    parser.add_argument('-x', '--exit', help='Run quit (only valid with -t) then exit', action='store_true')
 
     command = vars(parser.parse_args())
     if command['tickers']:
-        Interface(list=command['tickers'], days=int(command['days']), disp_results=command['show_results'], disp_plot=command['show_plot'])
+        Interface(table=command['tickers'], days=int(command['days']), disp_results=command['show_results'], disp_plot=command['show_plot'], exit=command['exit'])
     else:
         Interface()
 

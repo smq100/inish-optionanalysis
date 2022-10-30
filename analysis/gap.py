@@ -19,6 +19,7 @@ class Gap(Threaded):
         self.tickers: list[str] = tickers
         self.days: int = days
         self.threshold: float = threshold
+        self.history: list[pd.DataFrame]
         self.results: list[pd.DataFrame]
         self.analysis: pd.DataFrame = pd.DataFrame()
         self.concurrency: int = 10
@@ -45,6 +46,7 @@ class Gap(Threaded):
         else:
             self.task_total = len(self.tickers)
             self.task_state = 'None'
+            self.history = []
             self.results = []
             self.analysis = pd.DataFrame()
 
@@ -83,37 +85,51 @@ class Gap(Threaded):
     def _run(self, tickers: list[str]) -> None:
         for ticker in tickers:
             self.task_ticker = ticker
-            history = store.get_history(ticker, days=self.days)
-            history = history.drop(['volume', 'open'], axis=1)
-            history['up'] = history['low'] - history['high'].shift(1)
-            history['dn'] = history['low'].shift(1) - history['high']
-            history['gap'] = 0.0
+            self.history = store.get_history(ticker, days=self.days)
+            self.history = self.history.drop(['volume', 'open'], axis=1)
+            self.history['up'] = self.history['low'] - self.history['high'].shift(1)
+            self.history['dn'] = self.history['low'].shift(1) - self.history['high']
 
             # Find relavent gaps
-            up = history[history['up'] > (history['close'] * self.threshold)].copy()
-            dn = history[history['dn'] > (history['close'] * self.threshold)].copy()
+            up = self.history[self.history['up'] > (self.history['close'] * self.threshold)].copy()
+            up['index'] = 0
+            up['start'] = 0.0
+            up['gap'] = 0.0
+            up['fill'] = 0.0
+            dn = self.history[self.history['dn'] > (self.history['close'] * self.threshold)].copy()
+            dn['index'] = 0
+            dn['start'] = 0.0
+            dn['gap'] = 0.0
+            dn['fill'] = 0.0
 
             # Find unfilled gap-ups
             for result in up.itertuples():
-                df = history.loc[history['date'] > result.date]
+                df = self.history.loc[self.history['date'] >= result.date]
+                high = self.history.iloc[result.Index-1]['high']
+                low = self.history.iloc[result.Index]['low']
                 min_low = df['low'].min()
-                prev_high = history.iloc[result.Index-1]['high']
-                if min_low > prev_high:
-                    up.loc[result.Index, 'gap'] = min_low - prev_high
+                if min_low > high:
+                    up.loc[result.Index, 'index'] = result.Index
+                    up.loc[result.Index, 'start'] = high
+                    up.loc[result.Index, 'gap'] = low - high
+                    up.loc[result.Index, 'fill'] = min_low - high
 
             # Find unfilled gap-downs
             for result in dn.itertuples():
-                df = history.loc[history['date'] > result.date]
+                df = self.history.loc[self.history['date'] >= result.date]
+                low = self.history.iloc[result.Index-1]['low']
+                high = self.history.iloc[result.Index]['high']
                 max_high = df['high'].max()
-                prev_low = history.iloc[result.Index-1]['low']
-                if prev_low > max_high:
-                    dn.loc[result.Index, 'gap'] = prev_low - max_high
+                if low > max_high:
+                    dn.loc[result.Index, 'index'] = result.Index
+                    dn.loc[result.Index, 'start'] = low
+                    dn.loc[result.Index, 'gap'] = high - low
+                    dn.loc[result.Index, 'fill'] = low - max_high
 
             # Clean and combine the results
-            up.loc[:, 'dn'] = 0.0
-            dn.loc[:, 'up'] = 0.0
             results = pd.concat([up, dn]).sort_index().reset_index(drop=True)
             if not results.empty:
+                results = results.drop(['high', 'low', 'close', 'up', 'dn'], axis=1)
                 results.index.name = ticker.upper()
                 self.results.append(results)
 

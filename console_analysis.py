@@ -605,7 +605,7 @@ class Interface:
             # Show thread progress. Blocking while thread is active
             self.show_progress_chart()
 
-            figure = self.chart.plot_ohlc()
+            figure, _ = self.chart.plot_ohlc()
             plt.figure(figure)
             plt.show()
         else:

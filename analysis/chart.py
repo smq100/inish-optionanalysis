@@ -1,3 +1,4 @@
+from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 import pandas as pd
 
@@ -44,11 +45,11 @@ class Chart(Threaded):
         self.history = store.get_history(self.ticker, days=self.days, live=self.live)
         self.company = store.get_company(self.ticker)
 
-        self.ax.set_title(f'{self.company["name"]} Daily')
+        self.ax.set_title(f'{self.company["name"]} (daily)')
 
         self.task_state = 'Done'
 
-    def plot_ohlc(self) -> plt.Figure:
+    def plot_ohlc(self) -> tuple[plt.Figure, plt.Axes]:
         if self.history.empty:
             _logger.info(f'{__name__}: Need history for {self.ticker}. Fetching...')
             self.fetch_history()
@@ -89,7 +90,7 @@ class Chart(Threaded):
         self.ax.bar(dn.index, dn.close - dn.open, width1, bottom=dn.open,  color=color_dn)
         self.ax.bar(dn.index, dn.low - dn.close,  width2, bottom=dn.close, color=color_dn)
 
-        return self.figure
+        return (self.figure, self.ax)
 
     def plot_history(self, close: bool = False) -> plt.Figure:
         if self.history.empty:
