@@ -81,6 +81,7 @@ class Interface:
         if self.table == 'EVERY':
             self.tickers = store.get_tickers('every')
             self.table = list.lower()
+            self.use_cache = True
         elif store.is_exchange(list):
             self.tickers = store.get_exchange_tickers(self.table)
             self.use_cache = True
@@ -160,7 +161,7 @@ class Interface:
         else:
             ui.print_error(f'Must first run calculation', post_creturn=1)
 
-    def m_show_plot(self, cursor: bool = True) -> None:
+    def m_show_plot(self, cursor: bool = False) -> None:
         if len(self.gap.results) > 0:
             if len(self.tickers) > 1:
                 ticker = ui.input_text('Enter ticker')
@@ -176,10 +177,10 @@ class Interface:
                 figure, ax = chart.plot_ohlc()
                 length = len(chart.history)
 
-                c = [result.index for result in self.gap.results[index].itertuples() if result.start > 0.0]
-                cmap = plt.cm.get_cmap('Set2', len(c))
+                c = [result.index for result in self.gap.results[index].itertuples() if result.unfilled > 0.0]
+                cmap = plt.cm.get_cmap('tab20', len(c))
 
-                c = 0
+                i = 0
                 starts = []
                 ends = []
                 filled = []
@@ -187,12 +188,16 @@ class Interface:
                     if result.unfilled > 0.0:
                         starts.append(result.start)
                         ends.append(result.start+result.gap)
-                        filled.append((result.start + result.gap) + (abs(result.gap) - result.unfilled))
 
-                        ax.axhspan(starts[-1], ends[-1], xmin=0, xmax=length, facecolor=cmap(c), alpha=0.25) # Full gap
-                        ax.axhspan(ends[-1], filled[-1], xmin=0, xmax=length, facecolor=cmap(c), alpha=0.25) # Filled
-                        ax.axvline(result.index, ls='--', lw=1.5, color=cmap(c), alpha=0.5) # Index of gap
-                        c += 1
+                        if result.gap > 0.0:
+                            filled.append(result.start + result.unfilled)
+                        else:
+                            filled.append(result.start - result.unfilled)
+
+                        ax.axhspan(starts[-1], ends[-1], xmin=0, xmax=length, facecolor=cmap(i), alpha=0.25) # Full gap
+                        ax.axhspan(ends[-1], filled[-1], xmin=0, xmax=length, facecolor=cmap(i), alpha=0.25) # Filled portion
+                        ax.axvline(result.index, ls='--', lw=1.5, color=cmap(i), alpha=0.5) # Index of gap
+                        i += 1
 
                 if cursor:
                     cursor = Cursor(ax, vertOn=False, color='b', linewidth=0.8)
