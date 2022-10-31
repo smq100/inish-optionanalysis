@@ -81,7 +81,7 @@ class Divergence(Threaded):
                 use_cache = False
                 self._run(self.tickers)
 
-            if use_cache:
+            if use_cache and self.results:
                 cache.dump(self.results, self.cache_name, CACHE_TYPE)
                 _logger.info(f'{__name__}: Results from {self.cache_name} saved to cache')
 

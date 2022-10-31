@@ -5,7 +5,7 @@ import time
 from turtle import color
 
 import matplotlib.pyplot as plt
-import numpy as np
+from matplotlib.widgets import Cursor
 import pandas as pd
 from tabulate import tabulate
 
@@ -47,8 +47,8 @@ class Interface:
             {'menu': 'Select Tickers', 'function': self.m_select_tickers, 'condition': 'self.tickers', 'value': 'self.table'},
             {'menu': 'Days', 'function': self.m_select_days, 'condition': 'True', 'value': 'self.days'},
             {'menu': 'Calculate', 'function': self.m_calculate_gap, 'condition': '', 'value': ''},
-            {'menu': 'Show Analysis', 'function': self.m_show_analysis, 'condition': '', 'value': ''},
             {'menu': 'Show Results', 'function': self.m_show_results, 'condition': '', 'value': ''},
+            {'menu': 'Show Analysis', 'function': self.m_show_analysis, 'condition': '', 'value': ''},
             {'menu': 'Show Plot', 'function': self.m_show_plot, 'condition': '', 'value': ''}
         ]
 
@@ -117,42 +117,22 @@ class Interface:
             else:
                 self.gap.calculate(use_cache=self.use_cache)
 
-                if self.disp_results:
-                    self.m_show_results()
-
-                if self.disp_plot:
-                    self.m_show_plot()
-
             self.analyze()
+
+            if self.disp_results:
+                self.m_show_results()
 
             if self.disp_anly:
                 self.m_show_analysis()
+
+            if self.disp_plot:
+                self.m_show_plot()
         else:
             ui.print_error('Enter a ticker before calculating')
 
     def analyze(self) -> None:
-        self.analysis = pd.DataFrame()
         if len(self.gap.results) > 0:
             self.gap.analyze()
-            chart = Chart(self.tickers[0], days=self.days)
-            figure, ax = chart.plot_ohlc()
-            length = len(self.gap.history)
-
-            starts = []
-            ends = []
-            fills = []
-            dates = []
-            for result in self.gap.results[0].itertuples():
-                if result.start > 0.0:
-                    starts.append(result.start)
-                    ends.append(result.start+result.gap)
-                    dates.append(result.date)
-                    ax.axhspan(starts[-1], ends[-1], xmin=0, xmax=length, facecolor='g', alpha=0.25)
-                    ax.axvline(result.index, color='g', ls='--', alpha=0.25)
-
-            if starts:
-                plt.figure(figure)
-                plt.show()
 
     def m_show_results(self) -> None:
         if self.gap.results:
@@ -173,18 +153,57 @@ class Interface:
 
     def m_show_analysis(self) -> None:
         if self.gap:
-            if len(self.analysis) > 0:
+            if len(self.gap.analysis) > 0:
                 pass
             else:
-                ui.print_message(f'No gaps found', post_creturn=1)
+                ui.print_message(f'No analysis found', post_creturn=1)
         else:
             ui.print_error(f'Must first run calculation', post_creturn=1)
 
-    def m_show_plot(self, show: bool = True, cursor: bool = True) -> None:
-        if len(self.tickers) > 0:
-            pass
+    def m_show_plot(self, cursor: bool = True) -> None:
+        if len(self.gap.results) > 0:
+            if len(self.tickers) > 1:
+                ticker = ui.input_text('Enter ticker')
+                index = self._get_index(ticker)
+            else:
+                ticker = self.tickers[0]
+                index = 0
+
+            if index < 0:
+                ui.print_error('Ticker not found in results')
+            else:
+                chart = Chart(ticker, days=self.days)
+                figure, ax = chart.plot_ohlc()
+                length = len(chart.history)
+
+                c = [result.index for result in self.gap.results[index].itertuples() if result.start > 0.0]
+                cmap = plt.cm.get_cmap('Set2', len(c))
+
+                c = 0
+                starts = []
+                ends = []
+                filled = []
+                for result in self.gap.results[index].itertuples():
+                    if result.unfilled > 0.0:
+                        starts.append(result.start)
+                        ends.append(result.start+result.gap)
+                        filled.append((result.start + result.gap) + (abs(result.gap) - result.unfilled))
+
+                        ax.axhspan(starts[-1], ends[-1], xmin=0, xmax=length, facecolor=cmap(c), alpha=0.25) # Full gap
+                        ax.axhspan(ends[-1], filled[-1], xmin=0, xmax=length, facecolor=cmap(c), alpha=0.25) # Filled
+                        ax.axvline(result.index, ls='--', lw=1.5, color=cmap(c), alpha=0.5) # Index of gap
+                        c += 1
+
+                if cursor:
+                    cursor = Cursor(ax, vertOn=False, color='b', linewidth=0.8)
+
+                if not starts:
+                    ui.print_message('No unfilled gaps to plot')
+                else:
+                    plt.figure(figure)
+                    plt.show()
         else:
-            ui.print_error(f'No ticker(s) specified', post_creturn=1)
+            ui.print_error(f'No gaps', post_creturn=1)
 
     def show_progress(self) -> None:
         while not self.gap.task_state:
