@@ -27,11 +27,11 @@ class Interface:
         self.disp_anly: bool = disp_anly
         self.exit: bool = exit
         self.tickers: table[str] = []
-        self.threshold: float = 0.01
         self.commands: table[dict] = []
         self.gap: Gap | None = None
         self.task: threading.Thread
-        self.use_cache: bool = False
+        self.use_cache: bool = True
+        self.dirty: bool = True
 
         if table:
             self.m_select_tickers(table)
@@ -46,9 +46,9 @@ class Interface:
         self.commands = [
             {'menu': 'Select Tickers', 'function': self.m_select_tickers, 'condition': 'self.tickers', 'value': 'self.table'},
             {'menu': 'Days', 'function': self.m_select_days, 'condition': 'True', 'value': 'self.days'},
-            {'menu': 'Calculate', 'function': self.m_calculate_gap, 'condition': '', 'value': ''},
-            {'menu': 'Show Results', 'function': self.m_show_results, 'condition': '', 'value': ''},
-            {'menu': 'Show Analysis', 'function': self.m_show_analysis, 'condition': '', 'value': ''},
+            {'menu': 'Calculate & Analyze', 'function': self.m_calculate_gap, 'condition': '', 'value': ''},
+            {'menu': 'Show Results', 'function': self.m_show_results, 'condition': 'self.dirty', 'value': '"*"'},
+            {'menu': 'Show Analysis', 'function': self.m_show_analysis, 'condition': 'self.dirty', 'value': '"*"'},
             {'menu': 'Show Plot', 'function': self.m_show_plot, 'condition': '', 'value': ''}
         ]
 
@@ -81,13 +81,10 @@ class Interface:
         if self.table == 'EVERY':
             self.tickers = store.get_tickers('every')
             self.table = list.lower()
-            self.use_cache = True
         elif store.is_exchange(list):
             self.tickers = store.get_exchange_tickers(self.table)
-            self.use_cache = True
         elif store.is_index(list):
             self.tickers = store.get_index_tickers(self.table)
-            self.use_cache = True
         elif store.is_ticker(list):
             self.tickers = [self.table]
         else:
@@ -102,7 +99,7 @@ class Interface:
 
     def m_calculate_gap(self) -> None:
         if self.tickers:
-            self.gap = Gap(self.tickers, name=self.table, days=self.days, threshold=self.threshold)
+            self.gap = Gap(self.tickers, name=self.table, days=self.days)
             if len(self.tickers) > 1:
                 self.task = threading.Thread(target=self.gap.calculate, kwargs={'use_cache': self.use_cache})
                 self.task.start()
@@ -134,6 +131,7 @@ class Interface:
     def analyze(self) -> None:
         if len(self.gap.results) > 0:
             self.gap.analyze()
+            self.dirty = False
 
     def m_show_results(self) -> None:
         if self.gap.results:
@@ -155,7 +153,8 @@ class Interface:
     def m_show_analysis(self) -> None:
         if self.gap:
             if len(self.gap.analysis) > 0:
-                pass
+                headers = ui.format_headers(self.gap.analysis.columns, case='lower')
+                print(tabulate(self.gap.analysis, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
             else:
                 ui.print_message(f'No analysis found', post_creturn=1)
         else:

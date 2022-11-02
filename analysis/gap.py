@@ -12,10 +12,11 @@ from utils import cache, logger, ui
 _logger = logger.get_logger()
 
 CACHE_TYPE = 'gap'
-
+THRESHOLD = 0.01
+MINPRICE = 1.0
 
 class Gap(Threaded):
-    def __init__(self, tickers: list[str], name: str, days: int = 300, threshold: float = 0.00):
+    def __init__(self, tickers: list[str], name: str, days: int = 300, threshold: float = THRESHOLD):
         self.tickers: list[str] = tickers
         self.days: int = days
         self.threshold: float = threshold
@@ -81,7 +82,18 @@ class Gap(Threaded):
 
     def analyze(self) -> None:
         self.analysis = pd.DataFrame()
-        if not self.results:
+        analysis = []
+        if self.results:
+            for result in self.results:
+                if result.iloc[-1]['unfilled'] > 0.0:
+                    analysis.append({
+                        'ticker': result.index.name,
+                        'start': result.iloc[-1]['start'],
+                        'gap': result.iloc[-1]['gap'],
+                        'unfilled': result.iloc[-1]['unfilled']})
+
+            self.analysis = pd.DataFrame(analysis)
+        else:
             assert ValueError('No valid results specified')
 
         _logger.info(f'{__name__}: Analyzing {len(self.results)} result(s)')
@@ -96,6 +108,7 @@ class Gap(Threaded):
 
             # Find relevant up gaps
             up = history[history['up'] > (history['close'] * self.threshold)].copy()
+            up = up[up['close'] > MINPRICE]
             for result in up.itertuples():
                 df = history.loc[history['date'] >= result.date]
                 high = history.iloc[result.Index-1]['high']
@@ -111,6 +124,7 @@ class Gap(Threaded):
 
             # Find relevant down gaps
             dn = history[history['dn'] > (history['close'] * self.threshold)].copy()
+            dn = dn[dn['close'] > MINPRICE]
             for result in dn.itertuples():
                 df = history.loc[history['date'] >= result.date]
                 low = history.iloc[result.Index-1]['low']
