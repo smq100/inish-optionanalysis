@@ -19,12 +19,10 @@ logger.get_logger(logging.WARNING, logfile='')
 DAYS_DEFAULT = 300
 
 class Interface:
-    def __init__(self, table: str = '', days: int = DAYS_DEFAULT, disp_results: bool = False, disp_plot: bool = False, disp_anly: bool = False, exit: bool = False):
+    def __init__(self, table: str = '', days: int = DAYS_DEFAULT, disp_plot: bool = False, exit: bool = False):
         self.table = table.upper()
         self.days: int = days
-        self.disp_results: bool = disp_results
         self.disp_plot: bool = disp_plot
-        self.disp_anly: bool = disp_anly
         self.exit: bool = exit
         self.tickers: table[str] = []
         self.commands: table[dict] = []
@@ -37,7 +35,7 @@ class Interface:
             self.m_select_tickers(table)
 
         if self.tickers:
-            self.m_calculate_gap()
+            self.m_calculate()
             self.main_menu()
         else:
             self.main_menu()
@@ -46,9 +44,9 @@ class Interface:
         self.commands = [
             {'menu': 'Select Tickers', 'function': self.m_select_tickers, 'condition': 'self.tickers', 'value': 'self.table'},
             {'menu': 'Days', 'function': self.m_select_days, 'condition': 'True', 'value': 'self.days'},
-            {'menu': 'Calculate & Analyze', 'function': self.m_calculate_gap, 'condition': '', 'value': ''},
-            {'menu': 'Show Results', 'function': self.m_show_results, 'condition': 'self.dirty', 'value': '"*"'},
-            {'menu': 'Show Analysis', 'function': self.m_show_analysis, 'condition': 'self.dirty', 'value': '"*"'},
+            {'menu': 'Calculate & Analyze', 'function': self.m_calculate, 'condition': '', 'value': ''},
+            {'menu': 'Show Results', 'function': self.m_show_results, 'condition': 'not self.dirty', 'value': 'str(len(self.gap.results))'},
+            {'menu': 'Show Analysis', 'function': self.m_show_analysis, 'condition': 'not self.dirty', 'value': 'str(len(self.gap.analysis))'},
             {'menu': 'Show Plot', 'function': self.m_show_plot, 'condition': '', 'value': ''}
         ]
 
@@ -92,12 +90,15 @@ class Interface:
             self.table = ''
             ui.print_error(f'List \'{list}\' is not valid')
 
+        if self.tickers:
+            self.m_calculate()
+
     def m_select_days(self):
         self.days = 0
         while self.days < 30:
             self.days = ui.input_integer('Enter number of days', 30, 9999)
 
-    def m_calculate_gap(self) -> None:
+    def m_calculate(self) -> None:
         if self.tickers:
             self.gap = Gap(self.tickers, name=self.table, days=self.days)
             if len(self.tickers) > 1:
@@ -116,12 +117,10 @@ class Interface:
                 self.gap.calculate(use_cache=self.use_cache)
 
             self.analyze()
+            self.m_show_analysis()
 
-            if self.disp_results:
+            if len(self.tickers) == 1:
                 self.m_show_results()
-
-            if self.disp_anly:
-                self.m_show_analysis()
 
             if self.disp_plot:
                 self.m_show_plot()
@@ -144,8 +143,8 @@ class Interface:
             if index < 0:
                 ui.print_error('Ticker not found in results')
             else:
-                print()
-                headers = ui.format_headers(self.gap.results[index].columns, case='lower')
+                ui.print_message(f'Results for {ticker}', pre_creturn=1, post_creturn=1)
+                headers = ui.format_headers(self.gap.results[index].columns, case='title')
                 print(tabulate(self.gap.results[index], headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
         else:
             ui.print_error(f'No results to show', post_creturn=1)
@@ -153,8 +152,9 @@ class Interface:
     def m_show_analysis(self) -> None:
         if self.gap:
             if len(self.gap.analysis) > 0:
-                headers = ui.format_headers(self.gap.analysis.columns, case='lower')
-                print(tabulate(self.gap.analysis, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
+                ui.print_message('Analysis', pre_creturn=1, post_creturn=1)
+                headers = ui.format_headers(self.gap.analysis.columns, case='title')
+                print(tabulate(self.gap.analysis[:20], headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
             else:
                 ui.print_message(f'No analysis found', post_creturn=1)
         else:
@@ -246,13 +246,12 @@ def main():
     parser = argparse.ArgumentParser(description='Gap Analysis')
     parser.add_argument('-t', '--tickers', metavar='tickers', help='Specify a ticker or list')
     parser.add_argument('-d', '--days', metavar='days', help='Days to run analysis', default=DAYS_DEFAULT)
-    parser.add_argument('-s', '--show_results', help='Show calculation results', action='store_true')
-    parser.add_argument('-S', '--show_plot', help='Show results plot', action='store_true')
+    parser.add_argument('-s', '--show_plot', help='Show results plot', action='store_true')
     parser.add_argument('-x', '--exit', help='Run quit (only valid with -t) then exit', action='store_true')
 
     command = vars(parser.parse_args())
     if command['tickers']:
-        Interface(table=command['tickers'], days=int(command['days']), disp_results=command['show_results'], disp_plot=command['show_plot'], exit=command['exit'])
+        Interface(table=command['tickers'], days=int(command['days']), disp_plot=command['show_plot'], exit=command['exit'])
     else:
         Interface()
 
