@@ -154,12 +154,12 @@ class Client:
             ui.print_message(alerts.message)
 
     def m_show_symbol(self) -> None:
-        symbol = ui.input_text('Please enter symbol').upper()
+        ticker = ui.input_text('Please enter ticker').upper()
         lookup = Lookup()
-        lookup_data = lookup.lookup(symbol)
+        lookup_data = lookup.lookup(ticker)
 
         if not lookup_data.empty:
-            ui.print_message(f'Security information for {symbol}', pre_creturn=1, post_creturn=1)
+            ui.print_message(f'Security information for {ticker}', pre_creturn=1, post_creturn=1)
             for item in lookup_data.itertuples():
                 if item:
                     print(f'Symbol: {item.symbol}')
@@ -171,7 +171,7 @@ class Client:
             if ui.input_yesno('Show JSON'):
                 print(lookup.raw)
         else:
-            ui.print_error(f'No information for {symbol} located')
+            ui.print_error(f'No information for {ticker} located')
 
     def m_show_quotes(self) -> None:
         quotes = Quotes()
@@ -210,7 +210,7 @@ class Client:
             ui.print_error(quotes.message)
 
     def m_show_options_expiry(self) -> None:
-        ticker = ui.input_text('Please enter symbol').upper()
+        ticker = ui.input_text('Please enter ticker').upper()
 
         options = Options()
         expiry_data = options.expiry(ticker)
@@ -233,11 +233,11 @@ class Client:
                 print(options.raw)
 
     def m_show_options_chain(self) -> None:
-        symbol = ui.input_text('Please enter symbol').upper()
+        ticker = ui.input_text('Please enter ticker').upper()
 
         date = m.third_friday()
         options = Options()
-        chain = options.chain(symbol, date.month, date.year)
+        chain = options.chain(ticker, date.month, date.year)
 
         if 'error' in options.message.lower():
             message = options.message.replace('Error ', '')

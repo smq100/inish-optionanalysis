@@ -103,7 +103,6 @@ class Screener(Threaded):
         self.cache_available = cache.exists(self.cache_name, CACHE_TYPE, today_only=self.cache_today_only)
         if self.cache_available:
             self.results, self.cache_date = cache.load(self.cache_name, CACHE_TYPE, today_only=self.cache_today_only)
-            _logger.info(f'{__name__}: Cached results from {self.cache_date} available')
 
     def __repr__(self):
         return f'<Screener ({self.table} - {self.screen})>'
@@ -167,7 +166,6 @@ class Screener(Threaded):
 
             if save_results:
                 cache.dump(self.results, self.cache_name, CACHE_TYPE)
-                _logger.info(f'{__name__}: Results from {self.cache_name} saved to cache')
 
     def get_score(self, ticker: str) -> float:
         ticker = ticker.upper()

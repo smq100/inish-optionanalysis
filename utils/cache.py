@@ -49,6 +49,7 @@ def dump(object: object, name: str, type: str) -> str:
         try:
             with open(filename, 'wb') as f:
                 pickle.dump(object, f, protocol=pickle.HIGHEST_PROTOCOL)
+                _logger.info(f'{__name__}: Results for {name}/{type} saved to cache')
         except Exception as e:
             filename = ''
             _logger.error(f'{__name__}: Exception for pickle dump: {str(e)}')
@@ -88,6 +89,7 @@ def load(name: str, type: str, today_only: str = True) -> tuple[object, str]:
         try:
             with open(filename, 'rb') as f:
                 object = pickle.load(f)
+                _logger.info(f'{__name__}: Cached results for {name}/{type} available')
         except Exception as e:
             _logger.error(f'{__name__}: Exception for pickle load: {str(e)}')
 

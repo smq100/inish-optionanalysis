@@ -17,11 +17,14 @@ from utils import logger, ui
 logger.get_logger(logging.WARNING, logfile='')
 
 DAYS_DEFAULT = 300
+THRESHOLD_DEFAULT = 0.01
 
 class Interface:
     def __init__(self, table: str = '', days: int = DAYS_DEFAULT, disp_plot: bool = False, exit: bool = False):
         self.table = table.upper()
         self.days: int = days
+        self.threshold: float = THRESHOLD_DEFAULT
+        self.type: str = 'a'
         self.disp_plot: bool = disp_plot
         self.exit: bool = exit
         self.tickers: table[str] = []
@@ -39,7 +42,7 @@ class Interface:
     def main_menu(self) -> None:
         self.commands = [
             {'menu': 'Select Tickers', 'function': self.m_select_tickers, 'condition': 'self.tickers', 'value': 'self.table'},
-            {'menu': 'Parameters', 'function': self.m_select_parameters, 'condition': 'True', 'value': 'self.days'},
+            {'menu': 'Parameters', 'function': self.m_select_parameters, 'condition': 'True', 'value': 'f"{self.days}/{self.threshold}/{self.type}"'},
             {'menu': 'Calculate & Analyze', 'function': self.m_calculate, 'condition': '', 'value': ''},
             {'menu': 'Show Results', 'function': self.m_show_results, 'condition': 'not self.dirty', 'value': 'str(len(self.gap.results))'},
             {'menu': 'Show Analysis', 'function': self.m_show_analysis, 'condition': 'not self.dirty', 'value': 'str(len(self.gap.analysis))'},
@@ -68,35 +71,31 @@ class Interface:
 
     def m_select_tickers(self, list='') -> None:
         if not list:
-            list = ui.input_text('Enter exchange, index, ticker, or \'every\'')
+            list = ui.input_table(True, True, True, True)
 
         self.table = list.upper()
+        self.tickers = store.get_tickers(list)
 
-        if self.table == 'EVERY':
-            self.tickers = store.get_tickers('every')
-            self.table = list.lower()
-        elif store.is_exchange(list):
-            self.tickers = store.get_exchange_tickers(self.table)
-        elif store.is_index(list):
-            self.tickers = store.get_index_tickers(self.table)
-        elif store.is_ticker(list):
-            self.tickers = [self.table]
+        if self.tickers:
+            self.m_calculate()
         else:
-            self.tickers = []
             self.table = ''
             ui.print_error(f'List \'{list}\' is not valid')
+
+    def m_select_parameters(self):
+        self.days = ui.input_integer(f'Enter number of days ({self.days})', 30, 9999, self.days)
+        self.threshold = ui.input_float(f'Enter threshold ({self.threshold})', 0.0, 0.1, self.threshold)
+        value = ui.input_text("Enter type ('a', 'u', or 'd') or 'x' to cancel", valids = ['a', 'u', 'd', 'x'], default=self.type)
+        if value != 'x':
+            self.type = value
 
         if self.tickers:
             self.m_calculate()
 
-    def m_select_parameters(self):
-        self.days = ui.input_integer('Enter number of days', 30, 9999)
-        self.use_cache = False
-
     def m_calculate(self) -> None:
         if self.tickers:
             self.dirty = True
-            self.gap = Gap(self.tickers, name=self.table, days=self.days)
+            self.gap = Gap(self.tickers, name=self.table, days=self.days, threshold=self.threshold)
             if len(self.tickers) > 1:
                 self.task = threading.Thread(target=self.gap.calculate, kwargs={'use_cache': self.use_cache})
                 self.task.start()
@@ -127,7 +126,7 @@ class Interface:
 
     def analyze(self) -> None:
         if len(self.gap.results) > 0:
-            self.gap.analyze()
+            self.gap.analyze(type=self.type)
             self.dirty = False
 
     def m_show_results(self) -> None:

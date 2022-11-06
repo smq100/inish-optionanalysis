@@ -105,30 +105,6 @@ def is_list(list: str) -> bool:
     return exist
 
 
-def get_tickers(list: str, sector: str = '', inactive: bool = False) -> list[str]:
-    tickers = []
-
-    if list.lower() == 'every':
-        with _session() as session:
-            if inactive:
-                symbols = session.query(models.Security.ticker).order_by(models.Security.ticker).all()
-            else:
-                symbols = session.query(models.Security.ticker).filter(models.Security.active).order_by(models.Security.ticker).all()
-
-        tickers = [x[0] for x in symbols]
-
-        if sector:
-            tickers = get_sector_tickers(tickers, sector)
-    elif list.lower() == 'bogus':
-        tickers = [f'BOGUS{value:03d}' for value in range(1, 100)]
-    elif is_exchange(list):
-        tickers = get_exchange_tickers(list, sector=sector, inactive=inactive)
-    elif is_index(list):
-        tickers = get_index_tickers(list, sector=sector, inactive=inactive)
-
-    return tickers
-
-
 def get_exchanges() -> list[str]:
     results = []
 
@@ -150,6 +126,38 @@ def get_indexes() -> list[str]:
         results.remove('CUSTOM')
 
     return results
+
+
+def get_tickers(list: str, sector: str = '', inactive: bool = False) -> list[str]:
+    tickers = []
+
+    if list.lower() == 'every':
+        tickers = get_all_tickers()
+        if sector:
+            tickers = get_sector_tickers(tickers, sector)
+    elif list.lower() == 'bogus':
+        tickers = [f'BOGUS{value:03d}' for value in range(1, 100)]
+    elif is_exchange(list):
+        tickers = get_exchange_tickers(list, sector=sector, inactive=inactive)
+    elif is_index(list):
+        tickers = get_index_tickers(list, sector=sector, inactive=inactive)
+    elif is_ticker(list):
+        tickers = list
+
+    return tickers
+
+
+def get_all_tickers(inactive: bool = False) -> list[str]:
+    tickers = []
+    with _session() as session:
+        if inactive:
+            symbols = session.query(models.Security.ticker).order_by(models.Security.ticker).all()
+        else:
+            symbols = session.query(models.Security.ticker).filter(models.Security.active).order_by(models.Security.ticker).all()
+
+    tickers = [x[0] for x in symbols]
+
+    return tickers
 
 
 def get_exchange_tickers(exchange: str, sector: str = '', inactive: bool = False) -> list[str]:

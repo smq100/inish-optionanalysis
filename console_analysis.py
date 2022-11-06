@@ -594,8 +594,8 @@ class Interface:
                 print(tabulate(errors, headers=headers, tablefmt=ui.TABULATE_FORMAT, floatfmt='.2f'))
 
     def m_show_chart(self) -> None:
-        ticker = ui.input_text("Enter ticker").upper()
-        if store.is_ticker(ticker):
+        ticker = ui.input_table(ticker=True).upper()
+        if ticker:
             self.chart = Chart(ticker, days=180)
 
             # Start the working thread
@@ -612,7 +612,7 @@ class Interface:
             ui.print_error('Not a valid ticker')
 
     def m_show_ticker_results(self) -> None:
-        ticker = ui.input_text('Enter ticker').upper()
+        ticker = ui.input_table(ticker=True).upper()
         if ticker:
             ui.print_message('Ticker Screen Results')
             for result in self.screener.results:

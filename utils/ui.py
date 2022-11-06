@@ -130,10 +130,11 @@ def format_headers(columns: str, case: str = 'title'):
     return header
 
 
-def input_integer(message: str, min_: int, max_: int) -> int:
+def input_integer(message: str, min_: int, max_: int, default: int | None = None) -> int:
     val = min_ - 1
     while val < min_:
         text = input(f'{message}: ')
+
         if m.isnumeric(text):
             val = int(text)
             if val < min_:
@@ -144,6 +145,8 @@ def input_integer(message: str, min_: int, max_: int) -> int:
                 val = min_ - 1
             else:
                 val = val
+        elif default is not None:
+            val = default
         else:
             print_error(f'Invalid value. Enter an integer between {min_} and {max_}')
             val = min_ - 1
@@ -151,7 +154,7 @@ def input_integer(message: str, min_: int, max_: int) -> int:
     return val
 
 
-def input_float(message: str, min_: float, max_: float) -> float:
+def input_float(message: str, min_: float, max_: float, default: float | None = None) -> float:
     val = min_ - 1.0
     while val < min_:
         text = input(f'{message}: ')
@@ -165,6 +168,8 @@ def input_float(message: str, min_: float, max_: float) -> float:
                 val = min_ - 1.0
             else:
                 val = float(val)
+        elif default is not None:
+            val = default
         else:
             print_error(f'Invalid value. Enter a value between {min_:.2f} and {max_:.2f}')
             val = min_ - 1.0
@@ -185,11 +190,18 @@ def input_float_range(message: str, middle: float, percent: float) -> float:
     return input_float(message, min_, max_)
 
 
-def input_text(message: str) -> str:
-    val = input(f'{message}: ')
-    if not all(char.isalpha() for char in val):
-        val = ''
-        print_error('Symbol value must be all letters')
+def input_text(message: str, valids: list[str] = [], default: str | None = None) -> str:
+    val = ''
+    while not val:
+        val = input(f'{message}: ')
+        if not all(char.isalpha() for char in val):
+            val = ''
+            print_error('Value must be all letters')
+        elif not val and default is not None:
+            val = default
+        elif valids and val not in valids:
+            val = ''
+            print_error('Value not valid')
 
     return val
 

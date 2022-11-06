@@ -38,7 +38,6 @@ class Correlate(Threaded):
 
         if self.cache_available:
             combined_df, self.cache_date = cache.load(self.name, CACHE_TYPE, today_only=self.cache_today_only)
-            _logger.info(f'{__name__}: Cached results from {self.cache_date} available')
         else:
             self.task_state = 'Fetching'
             for ticker in self.tickers:
@@ -58,7 +57,6 @@ class Correlate(Threaded):
 
             if not combined_df.empty:
                 cache.dump(combined_df, self.name, CACHE_TYPE)
-                _logger.info(f'{__name__}: Results from {self.name} saved to cache')
 
         if not combined_df.empty:
             self.task_state = 'Correlating'

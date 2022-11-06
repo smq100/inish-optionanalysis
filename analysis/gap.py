@@ -1,6 +1,6 @@
+from concurrent import futures
 import datetime as dt
 import random
-from concurrent import futures
 
 import numpy as np
 import pandas as pd
@@ -38,9 +38,7 @@ class Gap(Threaded):
         self.cache_available = cache.exists(name, CACHE_TYPE, today_only=self.cache_today_only)
         if self.cache_available:
             self.results, self.cache_date = cache.load(name, CACHE_TYPE, today_only=self.cache_today_only)
-            if self.results[0].attrs['days'] == days:
-                _logger.info(f'{__name__}: Cached results from {self.cache_date} available ({days} days)')
-            else:
+            if self.results[0].attrs['days'] != days:
                 self.results = []
                 self.cache_available = False
                 _logger.info(f'{__name__}: Cached results not used. Different days value')
@@ -83,11 +81,10 @@ class Gap(Threaded):
 
             if self.results:
                 cache.dump(self.results, self.cache_name, CACHE_TYPE)
-                _logger.info(f'{__name__}: Results from {self.cache_name} saved to cache ({self.days} days)')
 
         self.task_state = 'Done'
 
-    def analyze(self, min_volume: float = MINVOLUME, min_price: float = MINPRICE) -> None:
+    def analyze(self, type: str = 'a', min_volume: float = MINVOLUME, min_price: float = MINPRICE) -> None:
         self.analysis = pd.DataFrame()
 
         analysis = []
@@ -98,7 +95,7 @@ class Gap(Threaded):
                 pass # Ignore low volume tickers
             elif result.iloc[0]['close'] < min_price:
                 pass # Ignore low price tickers
-            else:
+            elif type == 'a':
                 size = abs(result.iloc[-1]['gap']) / result.iloc[-1]['start']
                 analysis.append({
                     'ticker': result.index.name,
@@ -106,6 +103,24 @@ class Gap(Threaded):
                     'gap': result.iloc[-1]['gap'],
                     'unfilled': result.iloc[-1]['unfilled'],
                     'relative': size})
+            elif type == 'u':
+                if result.iloc[-1]['gap'] > 0.0:
+                    size = abs(result.iloc[-1]['gap']) / result.iloc[-1]['start']
+                    analysis.append({
+                        'ticker': result.index.name,
+                        'start': result.iloc[-1]['start'],
+                        'gap': result.iloc[-1]['gap'],
+                        'unfilled': result.iloc[-1]['unfilled'],
+                        'relative': size})
+            elif type == 'd':
+                if result.iloc[-1]['gap'] < 0.0:
+                    size = abs(result.iloc[-1]['gap']) / result.iloc[-1]['start']
+                    analysis.append({
+                        'ticker': result.index.name,
+                        'start': result.iloc[-1]['start'],
+                        'gap': result.iloc[-1]['gap'],
+                        'unfilled': result.iloc[-1]['unfilled'],
+                        'relative': size})
 
         if analysis:
             df = pd.DataFrame(analysis)
@@ -158,7 +173,7 @@ class Gap(Threaded):
                 results = results.drop(['open', 'high', 'low'], axis=1)
                 results = results.drop(['up', 'dn'], axis=1)
                 results.index.name = ticker.upper()
-                results.attrs = {'days': self.days, 'threshold': self.threshold, 'table': self.cache_name}
+                results.attrs = {'days': self.days, 'threshold': self.threshold}
                 self.results.append(results)
 
             self.task_completed += 1

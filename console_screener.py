@@ -116,12 +116,8 @@ class Interface:
             self.live = True
 
     def m_select_list(self) -> None:
-        list = ui.input_text('Enter exchange, index, or ticker').upper()
-        if store.is_exchange(list):
-            self.table = list
-        elif store.is_list(list):
-            self.table = list
-        elif store.is_ticker(list):
+        list = ui.input_ticker(True, True, True, True).upper()
+        if list:
             self.table = list
         else:
             self.table = ''

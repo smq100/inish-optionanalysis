@@ -44,7 +44,6 @@ class Divergence(Threaded):
         self.cache_available = cache.exists(name, CACHE_TYPE, today_only=self.cache_today_only)
         if self.cache_available:
             self.results, self.cache_date = cache.load(name, CACHE_TYPE, today_only=self.cache_today_only)
-            _logger.info(f'{__name__}: Cached results from {self.cache_date} available')
 
     @Threaded.threaded
     def calculate(self, use_cache: bool = True, scaled: bool = True) -> None:
@@ -83,7 +82,6 @@ class Divergence(Threaded):
 
             if use_cache and self.results:
                 cache.dump(self.results, self.cache_name, CACHE_TYPE)
-                _logger.info(f'{__name__}: Results from {self.cache_name} saved to cache')
 
         self.task_state = 'Done'
 
