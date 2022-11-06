@@ -38,7 +38,12 @@ class Gap(Threaded):
         self.cache_available = cache.exists(name, CACHE_TYPE, today_only=self.cache_today_only)
         if self.cache_available:
             self.results, self.cache_date = cache.load(name, CACHE_TYPE, today_only=self.cache_today_only)
-            _logger.info(f'{__name__}: Cached results from {self.cache_date} available')
+            if self.results[0].attrs['days'] == days:
+                _logger.info(f'{__name__}: Cached results from {self.cache_date} available ({days} days)')
+            else:
+                self.results = []
+                self.cache_available = False
+                _logger.info(f'{__name__}: Cached results not used. Different days value')
 
     @Threaded.threaded
     def calculate(self, use_cache: bool = True) -> None:
@@ -76,18 +81,24 @@ class Gap(Threaded):
                 use_cache = False
                 self._run(self.tickers)
 
-            if use_cache and self.results:
+            if self.results:
                 cache.dump(self.results, self.cache_name, CACHE_TYPE)
-                _logger.info(f'{__name__}: Results from {self.cache_name} saved to cache')
+                _logger.info(f'{__name__}: Results from {self.cache_name} saved to cache ({self.days} days)')
 
         self.task_state = 'Done'
 
-    def analyze(self) -> None:
+    def analyze(self, min_volume: float = MINVOLUME, min_price: float = MINPRICE) -> None:
         self.analysis = pd.DataFrame()
 
         analysis = []
         for result in self.results:
-            if result.iloc[-1]['unfilled'] > 0.0:
+            if result.iloc[-1]['unfilled'] <= 0.0:
+                pass # No unfilled gaps
+            elif result.iloc[-10:]['volume'].mean() < min_volume:
+                pass # Ignore low volume tickers
+            elif result.iloc[0]['close'] < min_price:
+                pass # Ignore low price tickers
+            else:
                 size = abs(result.iloc[-1]['gap']) / result.iloc[-1]['start']
                 analysis.append({
                     'ticker': result.index.name,
@@ -108,54 +119,47 @@ class Gap(Threaded):
             self.task_ticker = ticker
             history = store.get_history(ticker, days=self.days)
 
-            if history.iloc[-10:]['volume'].mean() < MINVOLUME:
-                pass # Ignore low volume tickers
-            elif history.iloc[0]['close'] < MINPRICE:
-                pass # Ignore low price tickers
-            else:
-                history = history.drop(['volume', 'open'], axis=1)
-                history['up'] = history['low'] - history['high'].shift(1)
-                history['dn'] = history['low'].shift(1) - history['high']
+            history['up'] = history['low'] - history['high'].shift(1)
+            history['dn'] = history['low'].shift(1) - history['high']
 
-                # Find relevant gap ups
-                up = history[history['up'] > (history['close'] * self.threshold)].copy()
-                up = up[up['close'] > MINPRICE]
-                for result in up.itertuples():
-                    df = history.loc[history['date'] >= result.date]
-                    high = history.iloc[result.Index-1]['high']
-                    low = history.iloc[result.Index]['low']
-                    min_low = df['low'].min()
-                    up.loc[result.Index, 'index'] = result.Index
-                    up.loc[result.Index, 'start'] = high
-                    up.loc[result.Index, 'gap'] = low - high
-                    if min_low > high:
-                        up.loc[result.Index, 'unfilled'] = min_low - high
-                    else:
-                        up.loc[result.Index, 'unfilled'] = 0.0
+            # Find relevant gap-ups
+            up = history[history['up'] > (history['close'] * self.threshold)].copy()
+            for result in up.itertuples():
+                df = history.loc[history['date'] >= result.date]
+                high = history.iloc[result.Index-1]['high']
+                low = history.iloc[result.Index]['low']
+                min_low = df['low'].min()
+                up.loc[result.Index, 'index'] = result.Index
+                up.loc[result.Index, 'start'] = high
+                up.loc[result.Index, 'gap'] = low - high
+                if min_low > high:
+                    up.loc[result.Index, 'unfilled'] = min_low - high
+                else:
+                    up.loc[result.Index, 'unfilled'] = 0.0
 
-                # Find relevant gap downs
-                dn = history[history['dn'] > (history['close'] * self.threshold)].copy()
-                dn = dn[dn['close'] > MINPRICE]
-                for result in dn.itertuples():
-                    df = history.loc[history['date'] >= result.date]
-                    low = history.iloc[result.Index-1]['low']
-                    high = history.iloc[result.Index]['high']
-                    max_high = df['high'].max()
-                    dn.loc[result.Index, 'index'] = result.Index
-                    dn.loc[result.Index, 'start'] = low
-                    dn.loc[result.Index, 'gap'] = high - low
-                    if low > max_high:
-                        dn.loc[result.Index, 'unfilled'] = low - max_high
-                    else:
-                        dn.loc[result.Index, 'unfilled'] = 0.0
+            # Find relevant gap-downs
+            dn = history[history['dn'] > (history['close'] * self.threshold)].copy()
+            for result in dn.itertuples():
+                df = history.loc[history['date'] >= result.date]
+                low = history.iloc[result.Index-1]['low']
+                high = history.iloc[result.Index]['high']
+                max_high = df['high'].max()
+                dn.loc[result.Index, 'index'] = result.Index
+                dn.loc[result.Index, 'start'] = low
+                dn.loc[result.Index, 'gap'] = high - low
+                if low > max_high:
+                    dn.loc[result.Index, 'unfilled'] = low - max_high
+                else:
+                    dn.loc[result.Index, 'unfilled'] = 0.0
 
-                # Clean and combine the results
-                results = pd.concat([up, dn]).sort_index().reset_index(drop=True)
-                if not results.empty:
-                    results = results.drop(['high', 'low', 'close'], axis=1)
-                    results = results.drop(['up', 'dn'], axis=1)
-                    results.index.name = ticker.upper()
-                    self.results.append(results)
+            # Combine the results and do some house keeping
+            results = pd.concat([up, dn]).sort_index().reset_index(drop=True)
+            if not results.empty:
+                results = results.drop(['open', 'high', 'low'], axis=1)
+                results = results.drop(['up', 'dn'], axis=1)
+                results.index.name = ticker.upper()
+                results.attrs = {'days': self.days, 'threshold': self.threshold, 'table': self.cache_name}
+                self.results.append(results)
 
             self.task_completed += 1
 

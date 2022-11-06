@@ -34,16 +34,12 @@ class Interface:
         if table:
             self.m_select_tickers(table)
 
-        if self.tickers:
-            self.m_calculate()
-            self.main_menu()
-        else:
-            self.main_menu()
+        self.main_menu()
 
     def main_menu(self) -> None:
         self.commands = [
             {'menu': 'Select Tickers', 'function': self.m_select_tickers, 'condition': 'self.tickers', 'value': 'self.table'},
-            {'menu': 'Days', 'function': self.m_select_days, 'condition': 'True', 'value': 'self.days'},
+            {'menu': 'Parameters', 'function': self.m_select_parameters, 'condition': 'True', 'value': 'self.days'},
             {'menu': 'Calculate & Analyze', 'function': self.m_calculate, 'condition': '', 'value': ''},
             {'menu': 'Show Results', 'function': self.m_show_results, 'condition': 'not self.dirty', 'value': 'str(len(self.gap.results))'},
             {'menu': 'Show Analysis', 'function': self.m_show_analysis, 'condition': 'not self.dirty', 'value': 'str(len(self.gap.analysis))'},
@@ -93,13 +89,13 @@ class Interface:
         if self.tickers:
             self.m_calculate()
 
-    def m_select_days(self):
-        self.days = 0
-        while self.days < 30:
-            self.days = ui.input_integer('Enter number of days', 30, 9999)
+    def m_select_parameters(self):
+        self.days = ui.input_integer('Enter number of days', 30, 9999)
+        self.use_cache = False
 
     def m_calculate(self) -> None:
         if self.tickers:
+            self.dirty = True
             self.gap = Gap(self.tickers, name=self.table, days=self.days)
             if len(self.tickers) > 1:
                 self.task = threading.Thread(target=self.gap.calculate, kwargs={'use_cache': self.use_cache})
@@ -115,6 +111,8 @@ class Interface:
                         ui.print_message(f'{len(self.gap.results)} symbols identified in {self.gap.task_time:.1f} seconds', pre_creturn=1)
             else:
                 self.gap.calculate(use_cache=self.use_cache)
+
+            self.use_cache = True
 
             self.analyze()
             self.m_show_analysis()
