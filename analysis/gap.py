@@ -1,6 +1,6 @@
-from concurrent import futures
 import datetime as dt
 import random
+from concurrent import futures
 
 import numpy as np
 import pandas as pd
@@ -12,10 +12,12 @@ from utils import cache, logger, ui
 _logger = logger.get_logger()
 
 CACHE_TYPE = 'gap'
-THRESHOLD = 0.01
 
+THRESHOLD = 0.01
 MINPRICE = 1.0
 MINVOLUME = 500e3
+MINCONCURRENECY = 100
+
 
 class Gap(Threaded):
     def __init__(self, tickers: list[str], name: str, days: int = 300, threshold: float = THRESHOLD):
@@ -61,7 +63,7 @@ class Gap(Threaded):
             self.analysis = pd.DataFrame()
 
             # Break up the tickers and run concurrently if a large list, otherwise just run the single list
-            if len(self.tickers) > 100:
+            if len(self.tickers) > MINCONCURRENECY:
                 _logger.info(f'{__name__}: Running with thread pool')
 
                 random.shuffle(self.tickers)
@@ -73,14 +75,14 @@ class Gap(Threaded):
 
                     for future in futures.as_completed(self.task_futures):
                         _logger.info(f'{__name__}: Thread completed: {future.result()}')
+
+                if self.results:
+                    cache.dump(self.results, self.cache_name, CACHE_TYPE)
             else:
                 _logger.info(f'{__name__}: Running without thread pool')
 
                 use_cache = False
                 self._run(self.tickers)
-
-            if self.results:
-                cache.dump(self.results, self.cache_name, CACHE_TYPE)
 
         self.task_state = 'Done'
 
@@ -90,11 +92,11 @@ class Gap(Threaded):
         analysis = []
         for result in self.results:
             if result.iloc[-1]['unfilled'] <= 0.0:
-                pass # No unfilled gaps
+                pass  # No unfilled gaps
             elif result.iloc[-10:]['volume'].mean() < min_volume:
-                pass # Ignore low volume tickers
+                pass  # Ignore low volume tickers
             elif result.iloc[0]['close'] < min_price:
-                pass # Ignore low price tickers
+                pass  # Ignore low price tickers
             elif type == 'a':
                 size = abs(result.iloc[-1]['gap']) / result.iloc[-1]['start']
                 analysis.append({
@@ -167,7 +169,7 @@ class Gap(Threaded):
                 else:
                     dn.loc[result.Index, 'unfilled'] = 0.0
 
-            # Combine the results and do some house keeping
+            # Combine the results and do some housekeeping
             results = pd.concat([up, dn]).sort_index().reset_index(drop=True)
             if not results.empty:
                 results = results.drop(['open', 'high', 'low'], axis=1)
@@ -178,18 +180,16 @@ class Gap(Threaded):
 
             self.task_completed += 1
 
+
 if __name__ == '__main__':
     import logging
     import sys
 
     from tabulate import tabulate
 
-    from utils import logger
-
-    # logger.get_logger(logging.INFO)
+    logger.get_logger(logging.INFO)
 
     ticker = sys.argv[1].upper() if len(sys.argv) > 1 else 'NFLX'
-
     gap = Gap([ticker], 'test', threshold=0.01)
     gap.calculate(use_cache=False)
 

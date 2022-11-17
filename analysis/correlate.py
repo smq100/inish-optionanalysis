@@ -4,7 +4,7 @@ import pandas as pd
 
 from base import Threaded
 from data import store as store
-from utils import ui, logger, cache
+from utils import cache, logger, ui
 
 _logger = logger.get_logger()
 
@@ -128,8 +128,8 @@ class Correlate(Threaded):
 
 
 if __name__ == '__main__':
-    import time
     import logging
+    import time
     logger.get_logger(logging.INFO)
 
     symbols = store.get_tickers('nyse')

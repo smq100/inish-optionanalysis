@@ -1,17 +1,16 @@
-import random
 import datetime as dt
+import random
 from concurrent import futures
 
-import pandas as pd
 import numpy as np
-from ta import trend
+import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
+from ta import trend
 
 from analysis.technical import Technical
 from base import Threaded
 from data import store as store
-from utils import ui, cache, logger
-
+from utils import cache, logger, ui
 
 _logger = logger.get_logger()
 
@@ -74,14 +73,14 @@ class Divergence(Threaded):
 
                     for future in futures.as_completed(self.task_futures):
                         _logger.info(f'{__name__}: Thread completed: {future.result()}')
+
+                if self.results:
+                    cache.dump(self.results, self.cache_name, CACHE_TYPE)
             else:
                 _logger.info(f'{__name__}: Running without thread pool. Scaled={scaled}')
 
                 use_cache = False
                 self._run(self.tickers)
-
-            if use_cache and self.results:
-                cache.dump(self.results, self.cache_name, CACHE_TYPE)
 
         self.task_state = 'Done'
 
@@ -199,11 +198,12 @@ class Divergence(Threaded):
 
 
 if __name__ == '__main__':
-    import sys
-    from tabulate import tabulate
-    from utils import logger
-
     import logging
+    import sys
+
+    from tabulate import tabulate
+
+    from utils import logger
     logger.get_logger(logging.INFO)
 
     ticker = sys.argv[1].upper() if len(sys.argv) > 1 else 'IBM'

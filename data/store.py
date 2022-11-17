@@ -142,7 +142,7 @@ def get_tickers(list: str, sector: str = '', inactive: bool = False) -> list[str
     elif is_index(list):
         tickers = get_index_tickers(list, sector=sector, inactive=inactive)
     elif is_ticker(list):
-        tickers = list
+        tickers = [list]
 
     return tickers
 

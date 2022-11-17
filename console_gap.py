@@ -2,15 +2,13 @@ import argparse
 import logging
 import threading
 import time
-from turtle import color
 
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Cursor
-import pandas as pd
 from tabulate import tabulate
 
-from analysis.gap import Gap
 from analysis.chart import Chart
+from analysis.gap import Gap
 from data import store as store
 from utils import logger, ui
 
@@ -27,8 +25,8 @@ class Interface:
         self.type: str = 'a'
         self.disp_plot: bool = disp_plot
         self.exit: bool = exit
-        self.tickers: table[str] = []
-        self.commands: table[dict] = []
+        self.tickers: list[str] = []
+        self.commands: list[dict] = []
         self.gap: Gap | None = None
         self.task: threading.Thread
         self.use_cache: bool = True

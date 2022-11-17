@@ -13,7 +13,7 @@ CACHE_SUFFIX = 'pickle'
 CACHE_TODAY_ONLY = False
 
 
-def exists(name: str, type: str, today_only: str = True) -> bool:
+def exists(name: str, type: str, today_only: bool = True) -> bool:
     if not name:
         raise AssertionError('Must include \'name\'')
     if not type:
@@ -57,7 +57,7 @@ def dump(object: object, name: str, type: str) -> str:
     return filename
 
 
-def load(name: str, type: str, today_only: str = True) -> tuple[object, str]:
+def load(name: str, type: str, today_only: bool = True) -> tuple[object, str]:
     if not name:
         raise AssertionError('Must include \'name\'')
     if not type:
