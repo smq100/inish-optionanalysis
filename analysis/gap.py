@@ -175,7 +175,7 @@ class Gap(Threaded):
                 results = results.drop(['open', 'high', 'low'], axis=1)
                 results = results.drop(['up', 'dn'], axis=1)
                 results.index.name = ticker.upper()
-                results.attrs = {'days': self.days, 'threshold': self.threshold}
+                results.attrs = {'days': self.days, 'threshold': self.threshold, 'last': history.iloc[-1]['date']}
                 self.results.append(results)
 
             self.task_completed += 1

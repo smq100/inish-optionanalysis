@@ -1,8 +1,10 @@
+import datetime as dt
 import argparse
 import logging
 import threading
 import time
 
+import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Cursor
 from tabulate import tabulate
@@ -178,6 +180,13 @@ class Interface:
                 starts = []
                 ends = []
                 filled = []
+
+                start = self.gap.results[-1].attrs['last']
+                end = dt.datetime.now().date()
+                offset = np.busday_count(str(start), str(end), weekmask=[1,1,1,1,1,0,0])
+                print((str(start), str(end)))
+                print(offset)
+
                 for result in self.gap.results[index].itertuples():
                     if result.unfilled > 0.0:
                         starts.append(result.start)
@@ -190,7 +199,7 @@ class Interface:
 
                         ax.axhspan(starts[-1], ends[-1], xmin=0, xmax=length, facecolor=cmap(i), alpha=0.25) # Full gap
                         ax.axhspan(ends[-1], filled[-1], xmin=0, xmax=length, facecolor=cmap(i), alpha=0.25) # Filled portion
-                        ax.axvline(result.index, ls='--', lw=1.5, color=cmap(i), alpha=0.5) # Index of gap
+                        ax.axvline(result.index-offset, ls='--', lw=1.5, color=cmap(i), alpha=0.5) # Index of gap
                         i += 1
 
                 if cursor:

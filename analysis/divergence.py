@@ -16,7 +16,6 @@ _logger = logger.get_logger()
 
 CACHE_TYPE = 'div'
 
-
 class Divergence(Threaded):
     def __init__(self, tickers: list[str], name: str, window: int = 15, days: int = 100):
         self.tickers: list[str] = tickers
