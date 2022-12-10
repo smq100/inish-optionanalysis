@@ -225,7 +225,7 @@ class Client:
             ui.print_error(message)
         else:
             ui.print_message('Options Chain', post_creturn=1)
-            expiry_data['date'] = pd.to_datetime(expiry_data['date']).dt.strftime(ui.DATE_FORMAT)
+            expiry_data['date'] = pd.to_datetime(expiry_data['date']).dt.strftime(ui.DATE_FORMAT_YMD)
             print(tabulate(expiry_data, headers=expiry_data.columns, tablefmt=ui.TABULATE_FORMAT))
             print()
 

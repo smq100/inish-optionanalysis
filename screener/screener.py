@@ -91,7 +91,7 @@ class Screener(Threaded):
         self.summary: pd.DataFrame = pd.DataFrame()
         self.concurrency: int = 10
         self.cache_available = False
-        self.cache_date: str = dt.datetime.now().strftime(ui.DATE_FORMAT)
+        self.cache_date: str = dt.datetime.now().strftime(ui.DATE_FORMAT_YMD)
         self.cache_today_only: bool = cache.CACHE_TODAY_ONLY
 
         if not self._load_screen():

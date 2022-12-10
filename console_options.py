@@ -101,7 +101,7 @@ class Interface():
         proceed2 = True
         if expiry:
             try:
-                dt.datetime.strptime(expiry, ui.DATE_FORMAT)
+                dt.datetime.strptime(expiry, ui.DATE_FORMAT_YMD)
             except ValueError:
                 proceed2 = False
 
@@ -488,7 +488,7 @@ class Interface():
                     self.strategy.chain.expire = m.third_friday()
 
                 menu_items = {
-                    '1': f'Select Expiry Date ({self.strategy.chain.expire.strftime((ui.DATE_FORMAT))})',
+                    '1': f'Select Expiry Date ({self.strategy.chain.expire.strftime((ui.DATE_FORMAT_YMD))})',
                     '2': f'Quantity ({self.strategy.quantity})',
                     '3': f'Width ({self.strategy.width1}, {self.strategy.width2})',
                     '4': f'Select Option',
@@ -592,7 +592,7 @@ class Interface():
         if strategy == 'ib' and width1 < 1:
             raise ValueError(f'Invalid width specified: {width1}')
 
-        expiry_dt = dt.datetime.strptime(expiry, ui.DATE_FORMAT) if expiry else dt.datetime.now()
+        expiry_dt = dt.datetime.strptime(expiry, ui.DATE_FORMAT_YMD) if expiry else dt.datetime.now()
 
         # try:
         if strategy == s.StrategyType.Call:
@@ -655,7 +655,7 @@ class Interface():
 
         select = ui.menu(menu_items, 'Expiration Dates', 0, len(menu_items)+1, prompt='Select expiration date, or 0 to cancel', cancel = 'Cancel')
         if select > 0:
-            expiry = dt.datetime.strptime(dates[select-1], ui.DATE_FORMAT)
+            expiry = dt.datetime.strptime(dates[select-1], ui.DATE_FORMAT_YMD)
         else:
             expiry = dt.datetime(2000, 1, 1)
 

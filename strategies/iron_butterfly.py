@@ -89,7 +89,7 @@ class IronButterfly(Strategy):
             raise ValueError('No option expiry dates')
 
         # Get the closest date to expiry
-        expiry_list = [dt.datetime.strptime(item, ui.DATE_FORMAT) for item in expiry_tuple]
+        expiry_list = [dt.datetime.strptime(item, ui.DATE_FORMAT_YMD) for item in expiry_tuple]
         self.expiry = min(expiry_list, key=lambda d: abs(d - expiry))
         self.chain.expire = self.expiry
 

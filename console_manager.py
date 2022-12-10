@@ -469,7 +469,7 @@ class Interface:
             days = ui.input_integer('Enter number of days (0 for all)', 0, 9999)
             if days == 0: days = -1
             table = store.get_history(self.ticker, days)
-            date = dt.datetime.now().strftime(ui.DATE_FORMAT)
+            date = dt.datetime.now().strftime(ui.DATE_FORMAT_YMD)
             filename = f'{CSV_BASEPATH}/{date}_{self.ticker.lower()}.csv'
             table.to_csv(filename, index=False, float_format='%.4f')
         else:

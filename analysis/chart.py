@@ -73,7 +73,7 @@ class Chart(Threaded):
         ticks = self.history.index[::interval]
         self.ax.set_xticks(ticks)
         self.ax.tick_params(axis='x', labelrotation=45)
-        labels = [self.history.iloc[i]['date'].strftime(ui.DATE_FORMAT2) for i in range(0, length, interval)]
+        labels = [self.history.iloc[i]['date'].strftime(ui.DATE_FORMAT_MDY) for i in range(0, length, interval)]
         self.ax.set_xticklabels(labels)
 
         # Find up and down days
@@ -105,7 +105,7 @@ class Chart(Threaded):
             self.ax.yaxis.set_major_formatter('{x:.0f}')
 
         length = len(self.history)
-        dates = [self.history.iloc[index]['date'].strftime(ui.DATE_FORMAT2) for index in range(length)]
+        dates = [self.history.iloc[index]['date'].strftime(ui.DATE_FORMAT_MDY) for index in range(length)]
 
         # Grid and ticks
         self.ax.set_xticks(range(0, length+1, int(length/12)))

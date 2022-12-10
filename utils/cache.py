@@ -24,7 +24,7 @@ def exists(name: str, type: str, today_only: bool = True) -> bool:
     filenames = []
     names = get_filenames(name, type)
     if names and today_only:
-        date = dt.datetime.now().strftime(ui.DATE_FORMAT)
+        date = dt.datetime.now().strftime(ui.DATE_FORMAT_YMD)
         for item in names:
             parts = item.split('_')
             if parts[0] == date:
@@ -68,7 +68,7 @@ def load(name: str, type: str, today_only: bool = True) -> tuple[object, str]:
 
     object = None
     filename = ''
-    date = dt.datetime.now().strftime(ui.DATE_FORMAT)
+    date = dt.datetime.now().strftime(ui.DATE_FORMAT_YMD)
 
     names = get_filenames(name, type)
     if not names:
@@ -106,7 +106,7 @@ def delete(type: str) -> tuple[bool, str]:
     files = get_filenames('', type)
     if files:
         paths = []
-        date = dt.datetime.now().strftime(ui.DATE_FORMAT)
+        date = dt.datetime.now().strftime(ui.DATE_FORMAT_YMD)
         for path in files:
             head, sep, tail = path.partition('.')
             parts = head.split('_')
@@ -174,7 +174,7 @@ def build_filename(name: str, type: str) -> str:
 
     name = name.lower()
     type = type.lower()
-    date_time = dt.datetime.now().strftime(ui.DATE_FORMAT)
+    date_time = dt.datetime.now().strftime(ui.DATE_FORMAT_YMD)
     filename = f'{CACHE_BASEPATH}/{date_time}_{type}_{name}.{CACHE_SUFFIX}'
 
     return filename

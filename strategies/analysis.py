@@ -88,7 +88,7 @@ class Analysis:
             'strategy': name,
             'spot': f'{spot:.02f}',
             'strikes': np.array2string(np.array(strikes), precision=2, floatmode='fixed'),
-            'expiry': expiry.strftime(ui.DATE_FORMAT),
+            'expiry': expiry.strftime(ui.DATE_FORMAT_YMD),
         }
 
         self.strategy = pd.DataFrame(data, index=[self.ticker])

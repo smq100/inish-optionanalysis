@@ -242,7 +242,7 @@ class SupportResistance(Threaded):
         for line in lines:
             for point in line.points:
                 date = self.history['date'].iloc[point['index']]
-                point['date'] = [date.strftime(ui.DATE_FORMAT)]
+                point['date'] = [date.strftime(ui.DATE_FORMAT_YMD)]
 
         # Calculate end point extension (y = mx + b)
         for line in lines:
@@ -440,7 +440,7 @@ class SupportResistance(Threaded):
         ax1.tick_params(axis='x', labelrotation=45)
 
         # Highs & Lows
-        dates = [self.history.iloc[i]['date'].strftime(ui.DATE_FORMAT) for i in range(length)]
+        dates = [self.history.iloc[i]['date'].strftime(ui.DATE_FORMAT_YMD) for i in range(length)]
         ax1.plot(dates, self.history['high'], '-g', linewidth=0.5)
         ax1.plot(dates, self.history['low'], '-r', linewidth=0.5)
         ax1.fill_between(dates, self.history['high'], self.history['low'], facecolor='gray', alpha=0.4)
@@ -453,7 +453,7 @@ class SupportResistance(Threaded):
                 for point in line.points:
                     index = point['index']
                     date = self.history.iloc[index]['date']
-                    dates.append(date.strftime(ui.DATE_FORMAT))
+                    dates.append(date.strftime(ui.DATE_FORMAT_YMD))
                     values.append(self.history.iloc[index]['high'])
             ax1.plot(dates, values, '.r')
 
@@ -464,7 +464,7 @@ class SupportResistance(Threaded):
                 for point in line.points:
                     index = point['index']
                     date = self.history.iloc[index]['date']
-                    dates.append(date.strftime(ui.DATE_FORMAT))
+                    dates.append(date.strftime(ui.DATE_FORMAT_YMD))
                     values.append(self.history.iloc[index]['low'])
             ax1.plot(dates, values, '.g')
 
@@ -475,11 +475,11 @@ class SupportResistance(Threaded):
             for line in resistance.itertuples():
                 index = line.points[0]['index']
                 date = self.history.iloc[index]['date']
-                dates = [date.strftime(ui.DATE_FORMAT)]
+                dates = [date.strftime(ui.DATE_FORMAT_YMD)]
                 values = [self.history.iloc[index]['high']]
                 index = line.points[-1]['index']
                 date = self.history.iloc[index]['date']
-                dates.append(date.strftime(ui.DATE_FORMAT))
+                dates.append(date.strftime(ui.DATE_FORMAT_YMD))
                 values.append(self.history.iloc[index]['high'])
 
                 ax1.plot(dates, values, '-r', linewidth=line_width)
@@ -490,11 +490,11 @@ class SupportResistance(Threaded):
             for line in support.itertuples():
                 index = line.points[0]['index']
                 date = self.history.iloc[index]['date']
-                dates = [date.strftime(ui.DATE_FORMAT)]
+                dates = [date.strftime(ui.DATE_FORMAT_YMD)]
                 values = [self.history.iloc[index]['low']]
                 index = line.points[-1]['index']
                 date = self.history.iloc[index]['date']
-                dates.append(date.strftime(ui.DATE_FORMAT))
+                dates.append(date.strftime(ui.DATE_FORMAT_YMD))
                 values.append(self.history.iloc[index]['low'])
 
                 ax1.plot(dates, values, '-g', linewidth=line_width)
@@ -506,11 +506,11 @@ class SupportResistance(Threaded):
                 for line in resistance.itertuples():
                     index = line.points[-1]['index']
                     date = self.history.iloc[index]['date']
-                    dates = [date.strftime(ui.DATE_FORMAT)]
+                    dates = [date.strftime(ui.DATE_FORMAT_YMD)]
                     values = [self.history.iloc[index]['high']]
                     index = self.points-1
                     date = self.history.iloc[index]['date']
-                    dates.append(date.strftime(ui.DATE_FORMAT))
+                    dates.append(date.strftime(ui.DATE_FORMAT_YMD))
                     values.append(line.end_point)
 
                     ax1.plot(dates, values, ':r', linewidth=line_width)
@@ -521,11 +521,11 @@ class SupportResistance(Threaded):
                 for line in support.itertuples():
                     index = line.points[-1]['index']
                     date = self.history.iloc[index]['date']
-                    dates = [date.strftime(ui.DATE_FORMAT)]
+                    dates = [date.strftime(ui.DATE_FORMAT_YMD)]
                     values = [self.history.iloc[index]['low']]
                     index = self.points-1
                     date = self.history.iloc[index]['date']
-                    dates.append(date.strftime(ui.DATE_FORMAT))
+                    dates.append(date.strftime(ui.DATE_FORMAT_YMD))
                     values.append(line.end_point)
 
                     ax1.plot(dates, values, ':g', linewidth=line_width)
@@ -538,7 +538,7 @@ class SupportResistance(Threaded):
                     ep = m.mround(line.end_point, _rounding)
                     if ep not in values:
                         date = self.history['date'].iloc[-1]
-                        dates.append(date.strftime(ui.DATE_FORMAT))
+                        dates.append(date.strftime(ui.DATE_FORMAT_YMD))
                         values.append(ep)
                         text.append({'text': f'{line.end_point:.2f}:{index+1}', 'value': line.end_point, 'color': 'red'})
                 ax1.plot(dates, values, '.r')
@@ -550,7 +550,7 @@ class SupportResistance(Threaded):
                     ep = m.mround(line.end_point, _rounding)
                     if ep not in values:
                         date = self.history['date'].iloc[-1]
-                        dates.append(date.strftime(ui.DATE_FORMAT))
+                        dates.append(date.strftime(ui.DATE_FORMAT_YMD))
                         values.append(ep)
                         text.append({'text': f'{line.end_point:.2f}:{index+1}', 'value': line.end_point, 'color': 'green'})
                 ax1.plot(dates, values, '.g')
@@ -589,10 +589,10 @@ class SupportResistance(Threaded):
         if trendlines or trend:
             index = 0
             date = self.history.iloc[index]['date']
-            dates = [date.strftime(ui.DATE_FORMAT)]
+            dates = [date.strftime(ui.DATE_FORMAT_YMD)]
             index = self.points-1
             date = self.history.iloc[index]['date']
-            dates.append(date.strftime(ui.DATE_FORMAT))
+            dates.append(date.strftime(ui.DATE_FORMAT_YMD))
 
         # Sup & Res trendlines
         if trendlines:

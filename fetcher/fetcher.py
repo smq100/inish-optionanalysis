@@ -336,9 +336,9 @@ def _get_option_chain_yfinance(ticker: str, expiry: dt.datetime) -> pd.DataFrame
     for retry in range(_RETRIES):
         company = _get_yfinance_live(ticker)
         if company is not None:
-            chain_c = company.option_chain(expiry.strftime(ui.DATE_FORMAT)).calls
+            chain_c = company.option_chain(expiry.strftime(ui.DATE_FORMAT_YMD)).calls
             chain_c['type'] = 'call'
-            chain_p = company.option_chain(expiry.strftime(ui.DATE_FORMAT)).puts
+            chain_p = company.option_chain(expiry.strftime(ui.DATE_FORMAT_YMD)).puts
             chain_p['type'] = 'put'
             chain = pd.concat([chain_c, chain_p], axis=0)
 

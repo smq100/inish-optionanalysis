@@ -26,7 +26,7 @@ class Correlate(Threaded):
         self.filtered: pd.DataFrame = pd.DataFrame()
         self.days: int = days
         self.cache_available = False
-        self.cache_date: str = dt.datetime.now().strftime(ui.DATE_FORMAT)
+        self.cache_date: str = dt.datetime.now().strftime(ui.DATE_FORMAT_YMD)
         self.cache_today_only = cache.CACHE_TODAY_ONLY
         self.cache_available = cache.exists(self.name, CACHE_TYPE, today_only=self.cache_today_only)
 

@@ -5,6 +5,7 @@ import threading
 import time
 
 import numpy as np
+from pandas.tseries.holiday import USFederalHolidayCalendar
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Cursor
 from tabulate import tabulate
@@ -183,9 +184,9 @@ class Interface:
 
                 start = self.gap.results[-1].attrs['last']
                 end = dt.datetime.now().date()
-                offset = np.busday_count(str(start), str(end), weekmask=[1,1,1,1,1,0,0])
-                print((str(start), str(end)))
-                print(offset)
+                calendar = USFederalHolidayCalendar()
+                holidays = calendar.holidays(start, end).date.tolist()
+                offset = np.busday_count(str(start), str(end), weekmask=[1,1,1,1,1,0,0], holidays=holidays)
 
                 for result in self.gap.results[index].itertuples():
                     if result.unfilled > 0.0:

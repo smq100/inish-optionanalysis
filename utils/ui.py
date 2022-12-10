@@ -8,20 +8,13 @@ from utils import math as m
 from data import store as store
 
 
-DATE_FORMAT = '%Y-%m-%d'
-DATE_FORMAT2 = '%m-%d-%Y'
+TERMINAL_SIZE = os.get_terminal_size()
+DATE_FORMAT_YMD = '%Y-%m-%d'
+DATE_FORMAT_MDY = '%m-%d-%Y'
 TABULATE_FORMAT = 'simple'
 CHART_STYLE = 'seaborn-v0_8-bright'
 CHART_SIZE = (17, 10)
 PROGRESS_SLEEP = 0.20
-
-TERMINAL_SIZE = os.get_terminal_size()
-
-# Globals for progress bar
-_completed = 0
-_position = 0
-_forward = True
-_start = 0.0
 
 
 class RangeValue:
@@ -131,97 +124,84 @@ def format_headers(columns: str, case: str = 'title'):
 
 
 def input_integer(message: str, min_: int, max_: int, default: int | None = None) -> int:
-    val = min_ - 1
-    while val < min_:
+    value = min_ - 1
+    while value < min_:
         text = input(f'{message}: ')
 
         if m.isnumeric(text):
-            val = int(text)
-            if val < min_:
+            value = int(text)
+            if value < min_:
                 print_error(f'Invalid value. Enter an integer between {min_} and {max_}')
-                val = min_ - 1
-            elif val > max_:
+                value = min_ - 1
+            elif value > max_:
                 print_error(f'Invalid value. Enter an integer between {min_} and {max_}')
-                val = min_ - 1
+                value = min_ - 1
             else:
-                val = val
+                value = value
         elif default is not None:
-            val = default
+            value = default
         else:
             print_error(f'Invalid value. Enter an integer between {min_} and {max_}')
-            val = min_ - 1
+            value = min_ - 1
 
-    return val
+    return value
 
 
 def input_float(message: str, min_: float, max_: float, default: float | None = None) -> float:
-    val = min_ - 1.0
-    while val < min_:
+    value = min_ - 1.0
+    while value < min_:
         text = input(f'{message}: ')
         if m.isnumeric(text):
-            val = int(text)
-            if float(val) < min_:
+            value = int(text)
+            if float(value) < min_:
                 print_error(f'Invalid value. Enter a value between {min_:.2f} and {max_:.2f}')
-                val = min_ - 1.0
-            elif float(val) > max_:
+                value = min_ - 1.0
+            elif float(value) > max_:
                 print_error(f'Invalid value. Enter a value between {min_:.2f} and {max_:.2f}')
-                val = min_ - 1.0
+                value = min_ - 1.0
             else:
-                val = float(val)
+                value = float(value)
         elif default is not None:
-            val = default
+            value = default
         else:
             print_error(f'Invalid value. Enter a value between {min_:.2f} and {max_:.2f}')
-            val = min_ - 1.0
+            value = min_ - 1.0
 
-    return val
-
-
-def input_float_range(message: str, middle: float, percent: float) -> float:
-    if percent < 1.0:
-        percent = 1.0
-    elif percent > 100.0:
-        percent = 100.0
-
-    percent /= 100.0
-    min_ = middle * (1.0 - percent)
-    max_ = middle * (1.0 + percent)
-
-    return input_float(message, min_, max_)
+    return value
 
 
 def input_text(message: str, valids: list[str] = [], default: str | None = None) -> str:
-    val = ''
-    while not val:
-        val = input(f'{message}: ')
-        if not all(char.isalpha() for char in val):
-            val = ''
+    value = ''
+    while not value:
+        value = input(f'{message}: ')
+        if not all(char.isalpha() for char in value):
+            value = ''
             print_error('Value must be all letters')
-        elif not val and default is not None:
-            val = default
-        elif valids and val not in valids:
-            val = ''
+        elif not value and default is not None:
+            value = default
+        elif valids and value not in valids:
+            value = ''
             print_error('Value not valid')
 
-    return val
+    return value
 
 
 def input_list(message: str, separator: str = ',') -> str:
-    val = input(f'{message}: ').replace(' ', '')
-    if not all(char.isalpha() or char == separator for char in val):
-        val = ''
+    value = input(f'{message}: ').replace(' ', '')
+    if not all(char.isalpha() or char == separator for char in value):
+        value = ''
         print_error('Symbol value must be all letters')
 
-    return val
+    return value
 
 
 def input_alphanum(message: str) -> str:
-    val = input(f'{message}: ')
-    if not all(char.isalnum() for char in val):
-        val = ''
+    value = input(f'{message}: ')
+    if not all(char.isalnum() for char in value):
+        value = ''
         print_error('Symbol value must be all letters')
 
-    return val
+    return value
 
 
 def input_yesno(message: str) -> bool:
@@ -267,6 +247,26 @@ def input_table(exchange: bool = False, index: bool = False, ticker: bool = Fals
             print_error('Table not found. Enter a valid table, or return to exit')
 
     return table
+
+
+def input_float_range(message: str, middle: float, percent: float) -> float:
+    if percent < 1.0:
+        percent = 1.0
+    elif percent > 100.0:
+        percent = 100.0
+
+    percent /= 100.0
+    min_ = middle * (1.0 - percent)
+    max_ = middle * (1.0 + percent)
+
+    return input_float(message, min_, max_)
+
+
+# Globals for progress bar
+_completed = 0
+_position = 0
+_forward = True
+_start = 0.0
 
 
 def progress_bar(iteration, total: int, prefix: str = 'Working', suffix: str = '', ticker: str = '',
@@ -325,7 +325,3 @@ def progress_bar(iteration, total: int, prefix: str = 'Working', suffix: str = '
         bar = ('-' * front) + fill + ('-' * back)
 
         print(f'{prefix:<13} |{bar}| {suffix}             ', end='\r')
-
-
-if __name__ == '__main__':
-    print(input_table(exchange=False, index=False, ticker=False))

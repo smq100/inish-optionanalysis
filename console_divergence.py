@@ -214,7 +214,7 @@ class Interface:
                 axes[2].tick_params(axis='x', labelrotation=45)
 
                 # Plot
-                dates = [self.divergence.results[index].iloc[i]['date'].strftime(ui.DATE_FORMAT2) for i in range(length)]
+                dates = [self.divergence.results[index].iloc[i]['date'].strftime(ui.DATE_FORMAT_MDY) for i in range(length)]
                 axes[0].plot(dates, self.divergence.results[index]['price'], '-', color='blue', label='Price', linewidth=0.5)
                 axes[0].plot(dates, self.divergence.results[index]['price_sma'], '-', color='orange', label=f'SMA{self.divergence.interval}', linewidth=1.5)
                 axes[1].plot(dates, self.divergence.results[index]['rsi'], '-', color='blue', label=self.divergence.type.upper(), linewidth=0.5)

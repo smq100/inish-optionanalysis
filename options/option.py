@@ -106,7 +106,7 @@ class Option:
 
         self.ticker = parsed.ticker
         self.product = s.ProductType.Call if parsed.product == 'call' else s.ProductType.Put
-        self.expiry = dt.datetime.strptime(parsed.expiry, ui.DATE_FORMAT)
+        self.expiry = dt.datetime.strptime(parsed.expiry, ui.DATE_FORMAT_YMD)
         self.strike = parsed.strike
 
         try:

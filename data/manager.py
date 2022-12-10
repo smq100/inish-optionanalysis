@@ -867,7 +867,7 @@ class Manager(Threaded):
 
 def _write_tickers_log(tickers: list[str], filename: str = '') -> str:
     if tickers:
-        date_time = dt.datetime.now().strftime(ui.DATE_FORMAT)
+        date_time = dt.datetime.now().strftime(ui.DATE_FORMAT_YMD)
         filename = f'{LOG_DIR}/{date_time}.{LOG_SUFFIX}'
 
         with open(filename, 'w') as f:

@@ -32,7 +32,7 @@ class Divergence(Threaded):
         self.cache_name: str = name
         self.cache_available: bool = False
         self.cache_used: bool = False
-        self.cache_date: str = dt.datetime.now().strftime(ui.DATE_FORMAT)
+        self.cache_date: str = dt.datetime.now().strftime(ui.DATE_FORMAT_YMD)
         self.cache_today_only: bool = cache.CACHE_TODAY_ONLY
 
         for ticker in tickers:
