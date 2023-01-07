@@ -169,11 +169,11 @@ def get_exchange_tickers(exchange: str, sector: str = '', inactive: bool = False
                 exc = session.query(models.Exchange.id).filter(models.Exchange.abbreviation == exchange.upper()).one()
                 if exc is not None:
                     if inactive:
-                        symbols = session.query(models.Security.ticker).filter(models.Security.exchange_id == exc.id).all()
+                        tickers = session.query(models.Security.ticker).filter(models.Security.exchange_id == exc.id).all()
                     else:
-                        symbols = session.query(models.Security.ticker).filter(and_(models.Security.exchange_id == exc.id, models.Security.active)).all()
+                        tickers = session.query(models.Security.ticker).filter(and_(models.Security.exchange_id == exc.id, models.Security.active == True)).all()
 
-                    results = [symbol.ticker for symbol in symbols]
+                    results = [symbol.ticker for symbol in tickers]
 
                     if sector:
                         results = get_sector_tickers(results, sector)
@@ -185,20 +185,40 @@ def get_exchange_tickers(exchange: str, sector: str = '', inactive: bool = False
     return results
 
 
+def get_inactive_tickers(exchange: str) -> list[str]:
+    exchange = exchange.upper()
+
+    inactive = []
+    with _session() as session:
+        if exchange == 'EVERY':
+            tickers = session.query(models.Security.ticker).filter(models.Security.active == False).all()
+        else:
+            e = session.query(models.Exchange.id).filter(models.Exchange.abbreviation == exchange).one()
+            tickers = session.query(models.Security.ticker).filter(and_(models.Security.exchange_id == e.id, models.Security.active == False)).all()
+
+    if tickers:
+        inactive = [symbol.ticker for symbol in tickers]
+
+    _logger.info(f'{__name__}: {len(inactive)} inactive tickers in {exchange}')
+
+    return inactive
+
+
 def get_index_tickers(index: str, sector: str = '', inactive: bool = False) -> list[str]:
     results = []
 
     if _session is not None:
         if is_index(index):
             with _session() as session:
-                ind = session.query(models.Index.id).filter(models.Index.abbreviation == index.upper()).first()
-                if ind is not None:
+                idx = session.query(models.Index.id).filter(models.Index.abbreviation == index.upper()).first()
+                if idx is not None:
                     if inactive:
                         symbols = session.query(models.Security.ticker).filter(
-                            or_(models.Security.index1_id == ind.id, models.Security.index2_id == ind.id, models.Security.index3_id == ind.id)).all()
+                            or_(models.Security.index1_id == idx.id, models.Security.index2_id == idx.id, models.Security.index3_id == idx.id)).all()
                     else:
                         symbols = session.query(models.Security.ticker).filter(
-                            and_(models.Security.active, or_(models.Security.index1_id == ind.id, models.Security.index2_id == ind.id, models.Security.index3_id == ind.id))).all()
+                            and_(models.Security.active,
+                            or_(models.Security.index1_id == idx.id, models.Security.index2_id == idx.id, models.Security.index3_id == idx.id))).all()
 
                     results = [symbol.ticker for symbol in symbols]
 
@@ -519,11 +539,9 @@ def get_treasury_rate(ticker: str = 'DTB3') -> float:
 
 
 if __name__ == '__main__':
-    import sys
+    # import sys
     # from logging import DEBUG
     # _logger = logger.get_logger(DEBUG)
 
-    t = get_sectors()
-    # t = get_tickers(sys.argv[1], 'Technology')
-
-    print(t)
+    t = get_exchange_tickers('NASDAQ', inactive = False)
+    print(len(t))

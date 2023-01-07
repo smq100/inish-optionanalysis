@@ -664,30 +664,7 @@ class Manager(Threaded):
         return missing
 
     def identify_inactive_tickers(self, exchange: str) -> list[str]:
-        exchange = exchange.upper()
-        inactive = []
-
-        tickers = store.get_tickers(exchange, inactive=True)
-
-        if len(tickers) > 0:
-            with self.session() as session:
-                if exchange == 'EVERY':
-                    for sec in tickers:
-                        t = session.query(models.Security.ticker).filter(and_(models.Security.ticker == sec, models.Security.active == False)).one_or_none()
-                        if t is not None:
-                            inactive.append(sec)
-                else:
-                    e = session.query(models.Exchange.id).filter(models.Exchange.abbreviation == exchange).one()
-                    for sec in tickers:
-                        t = session.query(models.Security.ticker).filter(and_(models.Security.ticker == sec, models.Security.active == False, models.Security.exchange_id == e.id)).one_or_none()
-                        if t is not None:
-                            inactive.append(sec)
-
-            _logger.info(f'{__name__}: {len(inactive)} inactive tickers in {exchange}')
-        else:
-            _logger.warning(f'{__name__}: {exchange} not valid')
-
-        return inactive
+        return store.get_inactive_tickers(exchange)
 
     @Threaded.threaded
     def identify_incomplete_pricing(self, table: str) -> None:
@@ -896,8 +873,9 @@ def _read_tickers_log(filename: str) -> list[str]:
 
 
 if __name__ == '__main__':
-    import logging
-    logger.get_logger(logging.DEBUG)
+    # import logging
+    # logger.get_logger(logging.DEBUG)
 
     manager = Manager()
-    errors = manager.update_history_ticker('aapl')
+    l = manager.identify_inactive_tickers('EVERY')
+    print(len(l))
