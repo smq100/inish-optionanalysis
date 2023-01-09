@@ -185,25 +185,6 @@ def get_exchange_tickers(exchange: str, sector: str = '', inactive: bool = False
     return results
 
 
-def get_inactive_tickers(exchange: str) -> list[str]:
-    exchange = exchange.upper()
-
-    inactive = []
-    with _session() as session:
-        if exchange == 'EVERY':
-            tickers = session.query(models.Security.ticker).filter(models.Security.active == False).all()
-        else:
-            e = session.query(models.Exchange.id).filter(models.Exchange.abbreviation == exchange).one()
-            tickers = session.query(models.Security.ticker).filter(and_(models.Security.exchange_id == e.id, models.Security.active == False)).all()
-
-    if tickers:
-        inactive = [symbol.ticker for symbol in tickers]
-
-    _logger.info(f'{__name__}: {len(inactive)} inactive tickers in {exchange}')
-
-    return inactive
-
-
 def get_index_tickers(index: str, sector: str = '', inactive: bool = False) -> list[str]:
     results = []
 

@@ -57,10 +57,9 @@ def menu_from_dataclass(items: dataclass, header: str, prompt: str = 'Select Par
 
 
 def delimeter(message, pre_creturn: int, post_creturn: int) -> str:
+    output = ''
     if pre_creturn > 0:
         output = '\n' * pre_creturn
-    else:
-        output = ''
 
     if len(message) > 0:
         output += f'***** {message} *****'

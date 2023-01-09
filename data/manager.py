@@ -664,10 +664,25 @@ class Manager(Threaded):
         return missing
 
     def identify_inactive_tickers(self, exchange: str) -> list[str]:
-        return store.get_inactive_tickers(exchange)
+        exchange = exchange.upper()
+
+        inactive = []
+        with self.session() as session:
+            if exchange == 'EVERY':
+                tickers = session.query(models.Security.ticker).filter(models.Security.active == False).all()
+            else:
+                e = session.query(models.Exchange.id).filter(models.Exchange.abbreviation == exchange).one()
+                tickers = session.query(models.Security.ticker).filter(and_(models.Security.exchange_id == e.id, models.Security.active == False)).all()
+
+        if tickers:
+            inactive = [symbol.ticker for symbol in tickers]
+
+        _logger.info(f'{__name__}: {len(inactive)} inactive tickers in {exchange}')
+
+        return inactive
 
     @Threaded.threaded
-    def identify_incomplete_pricing(self, table: str) -> None:
+    def identify_incomplete_pricing(self, table: str , days: int = 7) -> None:
         tickers = store.get_tickers(table.upper())
         running = self._concurrency
         self.task_total = len(tickers)
@@ -681,7 +696,7 @@ class Manager(Threaded):
                     _logger.error(f'{__name__}: \'None\' object for {ticker} (4)')
                 elif not history.empty:
                     last = history.iloc[-1].date
-                    past = dt.datetime.today() - dt.timedelta(days=7)
+                    past = dt.datetime.today() - dt.timedelta(days=days)
                     date = f'{last:%Y-%m-%d}'
                     if last < past.date():
                         if date in self.task_object:

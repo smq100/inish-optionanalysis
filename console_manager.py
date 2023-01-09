@@ -76,13 +76,11 @@ class Interface:
             {'menu': 'Ticker Information (previous)', 'function': self.m_show_ticker_information, 'params': 'self.ticker, prompt=True', 'condition': 'True', 'value': ''},
             {'menu': 'Update History', 'function': self.m_update_history, 'params': '', 'condition': '', 'value': ''},
             {'menu': 'Update Company', 'function': self.m_update_company, 'params': '', 'condition': '', 'value': ''},
-            {'menu': 'List Update Errors', 'function': self.m_list_errors, 'params': '', 'condition': '', 'value': ''},
-            {'menu': 'Re-Check Inactive', 'function': self.m_recheck_inactive, 'params': '', 'condition': '', 'value': ''},
-            {'menu': 'List Inactive', 'function': self.m_list_inactive, 'params': '', 'condition': '', 'value': ''},
-            {'menu': 'Mark Active/Inactive', 'function': self.m_change_active, 'params': '', 'condition': '', 'value': ''},
-            {'menu': 'Create CSV', 'function': self.m_create_csv, 'params': '', 'condition': '', 'value': ''},
             {'menu': 'Check Integrity', 'function': self.m_check_integrity, 'params': '', 'condition': '', 'value': ''},
-            {'menu': 'Check Incomplete Pricing', 'function': self.m_check_incomplete_pricing, 'params': '', 'condition': '', 'value': ''},
+            {'menu': 'Re-Check Inactive', 'function': self.m_recheck_inactive, 'params': '', 'condition': '', 'value': ''},
+            {'menu': 'Mark Active/Inactive', 'function': self.m_change_active, 'params': '', 'condition': '', 'value': ''},
+            {'menu': 'List Update Errors', 'function': self.m_list_errors, 'params': '', 'condition': '', 'value': ''},
+            {'menu': 'Create CSV', 'function': self.m_create_csv, 'params': '', 'condition': '', 'value': ''},
             {'menu': 'Populate Exchange', 'function': self.m_populate_exchange, 'params': '', 'condition': '', 'value': ''},
             {'menu': 'Populate Index', 'function': self.m_populate_index, 'params': '', 'condition': '', 'value': ''},
             {'menu': 'Reset Database', 'function': self.m_reset_database, 'params': '', 'condition': '', 'value': ''},
@@ -97,7 +95,7 @@ class Interface:
             self.m_show_database_information()
 
         # Create the menu
-        menu_items = {str(i+1): f'{self.commands[i]["menu"]}' for i in range(len(self.commands))}
+        menu_items = {str(i+1): f'{cmd["menu"]}' for i, cmd in enumerate(self.commands)}
 
         # Update menu items with dynamic info
         def update(menu: dict) -> None:
@@ -340,6 +338,9 @@ class Interface:
             ui.print_message('Database not reset')
 
     def m_check_integrity(self) -> None:
+        inactive_tickers = self.manager.identify_inactive_tickers('every')
+        ui.print_message(f'{len(inactive_tickers)} Inactive Tickers')
+
         ui.print_message('Missing Tickers')
         missing_tickers = {e: self.manager.identify_missing_ticker(e) for e in self.exchanges}
         for e in self.exchanges:
@@ -353,27 +354,35 @@ class Interface:
         loop = True
         while loop:
             menu_items = {
-                '1': 'List Missing Companies',
-                '2': 'List Incomplete Companies',
+                '1': 'List Inactive Tickers',
+                '2': 'List Missing Companies',
+                '3': 'List Incomplete Companies',
+                '4': 'List Incomplete Pricing',
             }
 
             select = ui.menu(menu_items, 'Available Operations', 0, len(menu_items), prompt='Select operation, or 0 when done')
-            if select > 0:
+            if select == 1:
+                ui.print_tickers(inactive_tickers)
+            elif select > 1:
                 table = ui.input_table(exchange=True)
                 if table:
-                    if select == 1:
+                    if select == 2:
                         ui.print_tickers(missing_tickers[table])
-                    elif select == 2:
+                    elif select == 3:
                         ui.print_tickers(incomplete_companies[table])
+                    elif select == 4:
+                        self.m_check_incomplete_pricing(table)
                 else:
                     loop = False
                     ui.print_message('Cancelled')
             else:
                 loop = False
 
-    def m_check_incomplete_pricing(self) -> None:
-        table = ui.input_table(exchange=True, index=True, ticker=True)
-        if table:
+    def m_check_incomplete_pricing(self, table: str = '') -> None:
+        if not table:
+            table = ui.input_table(exchange=True, index=True, ticker=True)
+
+        if len(table) > 1:
             self.task = threading.Thread(target=self.manager.identify_incomplete_pricing, args=[table])
             self.task.start()
 
@@ -381,20 +390,22 @@ class Interface:
             self.show_progress()
 
             if self.manager.task_state == 'Done':
-                ui.print_message(f'{self.manager.task_total} {table} Ticker pricing checked in {self.manager.task_time:.0f} seconds')
+                ui.print_message(f'{self.manager.task_total} {table} Ticker pricing checked in {self.manager.task_time:.0f} seconds', pre_creturn=2)
+        else:
+            self.manager.identify_incomplete_pricing(table)
 
-            if len(self.manager.task_results) > 0:
-                total = []
-                ui.print_message('Results')
-                for item in self.manager.task_results:
-                    total += item[1]
-                    print(f'{item[0]}:')
-                    ui.print_tickers(item[1])
+        if len(self.manager.task_results) > 0:
+            total = []
+            ui.print_message('Incomplete pricing')
+            for item in self.manager.task_results:
+                total += item[1]
+                print(f'\n{item[0]}:')
+                ui.print_tickers(item[1])
 
-                if ui.input_yesno('Mark tickers as inactive?'):
-                    self.manager.change_active(total, False)
-            else:
-                ui.print_message('No results found')
+            if ui.input_yesno('Mark tickers as inactive?'):
+                self.manager.change_active(total, False)
+        else:
+            ui.print_message('No incomplete pricing found')
 
     def m_list_errors(self) -> None:
         tickers = self.manager.get_latest_errors()
@@ -428,14 +439,6 @@ class Interface:
                     ui.print_tickers(self.manager.task_results)
         else:
             ui.print_message('No tickers to update')
-
-    def m_list_inactive(self) -> None:
-        tickers = self.manager.identify_inactive_tickers('every')
-        if tickers:
-            ui.print_message(f'{len(tickers)} inactive tickers')
-            ui.print_tickers(tickers)
-        else:
-            ui.print_message('No inactive tickers')
 
     def m_change_active(self) -> None:
         menu_items = {

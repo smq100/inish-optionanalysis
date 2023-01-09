@@ -57,7 +57,7 @@ class Client:
         ]
 
         # Create the menu
-        menu_items = {str(i+1): f'{self.commands[i]["menu"]}' for i in range(len(self.commands))}
+        menu_items = {str(i+1): f'{cmd["menu"]}' for i, cmd in enumerate(self.commands)}
 
         # Update menu items with dynamic info
         def update(menu: dict) -> None:

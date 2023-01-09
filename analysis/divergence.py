@@ -101,7 +101,7 @@ class Divergence(Threaded):
                 self.analysis = pd.concat([self.analysis, df], ignore_index=True)
 
         if len(self.analysis) > 0:
-            self.analysis = self.analysis.reset_index()
+            self.analysis = self.analysis.reset_index(drop=True)
             self.analysis = self.analysis.sort_values(by=['streak'], ascending=False)
 
     def _run(self, tickers: list[str]) -> None:
