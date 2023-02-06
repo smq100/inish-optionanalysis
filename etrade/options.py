@@ -39,7 +39,7 @@ class Options:
             else:
                 self.message = 'E*TRADE API service error'
         else:
-            _logger.debug(f'{__name__}: Response Body: {response.text}')
+            _logger.debug(f'Response Body: {response.text}')
             self.message = f'Error: E*TRADE API service error: {response.text}'
 
         expiry_table = pd.DataFrame()
@@ -81,7 +81,7 @@ class Options:
             else:
                 self.message = 'E*TRADE API service error'
         else:
-            _logger.debug(f'{__name__}: Response Body: {response.text}')
+            _logger.debug(f'Response Body: {response.text}')
             self.message = f'Error: E*TRADE API service error: {response.text}'
 
         calls_table = pd.DataFrame()

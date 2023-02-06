@@ -121,19 +121,19 @@ class Screener(Threaded):
             self.task_success = len(self.valids)
             self.task_state = 'Done'
             self.cache_used = True
-            _logger.info(f'{__name__}: Using cached results')
+            _logger.info('Using cached results')
         elif self.task_total == 0:
             self.results = []
             self.valids = []
             self.task_completed = self.task_total
             self.task_state = 'No symbols'
-            _logger.warning(f'{__name__}: {self.task_state}')
+            _logger.warning(f'{self.task_state}')
         elif len(self.scripts) == 0:
             self.results = []
             self.valids = []
             self.task_completed = self.task_total
             self.task_state = 'Illegal script'
-            _logger.warning(f'{__name__}: {self.task_state}')
+            _logger.warning(f'{self.task_state}')
         else:
             self.results = []
             self.valids = []
@@ -142,9 +142,9 @@ class Screener(Threaded):
             self.concurrency = 10 if len(self.companies) > 10 else 1
 
             if self.task_total > 1:
-                _logger.info(f'{__name__}: Screening {self.task_total} symbols from {self.table} table (days={self.days}, end={self.backtest})')
+                _logger.info(f'Screening {self.task_total} symbols from {self.table} table (days={self.days}, end={self.backtest})')
             else:
-                _logger.info(f'{__name__}: Screening {self.table} (days={self.days}, end={self.backtest})')
+                _logger.info(f'Screening {self.table} (days={self.days}, end={self.backtest})')
 
             # Randomize and split up the lists
             random.shuffle(self.companies)
@@ -155,7 +155,7 @@ class Screener(Threaded):
                 self.task_futures = [executor.submit(self._run, list) for list in companies]
 
                 for future in futures.as_completed(self.task_futures):
-                    _logger.info(f'{__name__}: Thread completed: {future.result()}')
+                    _logger.info(f'Thread completed: {future.result()}')
 
             # Extract the successful screens, sort based on score, then summarize
             self.valids = [result for result in self.results if result]
@@ -191,15 +191,15 @@ class Screener(Threaded):
                     descriptions.append(interpreter.description)
                 except SyntaxError as e:
                     self.task_state = str(e)
-                    _logger.error(f'{__name__}: SyntaxError: {self.task_state}')
+                    _logger.error(f'SyntaxError: {self.task_state}')
                     break
                 except RuntimeError as e:
                     self.task_state = str(e)
-                    _logger.error(f'{__name__}: RuntimeError: {self.task_state}')
+                    _logger.error(f'RuntimeError: {self.task_state}')
                     break
                 except Exception as e:
                     self.task_state = str(e)
-                    _logger.error(f'{__name__}: Exception: {self.task_state} for {company}')
+                    _logger.error(f'Exception: {self.task_state} for {company}')
                     break
 
             if self.task_state == 'None':
@@ -224,11 +224,11 @@ class Screener(Threaded):
                     self.scripts = json.load(f)
             except:
                 self.scripts = []
-                _logger.error(f'{__name__}: File format error')
+                _logger.error('File format error')
             else:
                 self._add_init_script()
         else:
-            _logger.error(f'{__name__}: File "{self.screen}" not found')
+            _logger.error(f'File "{self.screen}" not found')
 
         return bool(self.scripts)
 
@@ -248,14 +248,14 @@ class Screener(Threaded):
             try:
                 self.companies = [Company(ticker, self.days, backtest=self.backtest, live=self.live) for ticker in tickers]
             except ValueError as e:
-                _logger.warning(f'{__name__}: Invalid ticker: {e}')
+                _logger.warning(f'Invalid ticker: {e}')
 
             if len(self.companies) > 1:
-                _logger.info(f'{__name__}: Opened {len(self.companies)} symbols from {self.table} table')
+                _logger.info(f'Opened {len(self.companies)} symbols from {self.table} table')
             else:
-                _logger.info(f'{__name__}: Opened symbol {self.table}')
+                _logger.info(f'Opened symbol {self.table}')
         else:
-            _logger.warning(f'{__name__}: No symbols available')
+            _logger.warning('No symbols available')
 
         return bool(self.companies)
 
@@ -267,9 +267,9 @@ class Screener(Threaded):
                     self.scripts += json.load(f)
             except:
                 self.scripts = []
-                _logger.error(f'{__name__}: File format error')
+                _logger.error('File format error')
         else:
-            _logger.error(f'{__name__}: File \'init\' not found')
+            _logger.error('File \'init\' not found')
 
         return bool(self.scripts)
 
@@ -325,7 +325,7 @@ def analyze_results(table: str) -> tuple[pd.DataFrame, pd.DataFrame]:
             order = ['ticker', 'company', 'sector', 'price_current']
             multiples = multiples.reindex(columns=order)
     else:
-        _logger.info(f'{__name__}: No results for {table} found')
+        _logger.info(f'No results for {table} found')
 
     return summary, multiples
 

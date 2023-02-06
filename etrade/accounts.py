@@ -34,7 +34,7 @@ class Accounts:
             else:
                 self.message = 'E*TRADE API service error'
         else:
-            _logger.debug(f'{__name__}: Response Body: {response.text}')
+            _logger.debug(f'Response Body: {response.text}')
             self.message = f'Error: E*TRADE API service error: {response.text}'
 
         self.accounts = []
@@ -57,7 +57,7 @@ class Accounts:
             acct_data = json.loads(response.text)
             self.raw = json.dumps(acct_data, indent=2, sort_keys=True)
         else:
-            _logger.debug(f'{__name__}: Response Body: {response.text}')
+            _logger.debug(f'Response Body: {response.text}')
             self.message = f'Error: E*TRADE API service error: {response.text}'
 
         balance_table = {}
@@ -77,7 +77,7 @@ class Accounts:
             portfolio_data = json.loads(response.text)
             self.raw = json.dumps(portfolio_data, indent=2, sort_keys=True)
         else:
-            _logger.debug(f'{__name__}: Response Body: {response.text}')
+            _logger.debug(f'Response Body: {response.text}')
             self.message = f'Error: E*TRADE API service error: {response.text}'
 
         portfolio_table = pd.DataFrame()

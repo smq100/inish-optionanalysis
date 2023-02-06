@@ -289,14 +289,14 @@ def get_history(ticker: str, days: int = -1, end: int = 0, live: bool = False, i
         history = fetcher.get_history_live(ticker, days)
         if history is None:
             history = pd.DataFrame()
-            _logger.error(f'{__name__}: \'None\' object for {ticker} (1)')
+            _logger.error(f'\'None\' object for {ticker} (1)')
         elif history.empty:
-            _logger.info(f'{__name__}: Unable to fetch live price history for {ticker} from {d.ACTIVE_HISTORYDATASOURCE}')
+            _logger.info(f'Unable to fetch live price history for {ticker} from {d.ACTIVE_HISTORYDATASOURCE}')
         else:
-            _logger.debug(f'{__name__}: Fetched {len(history)} days of live price history for {ticker}')
+            _logger.debug(f'Fetched {len(history)} days of live price history for {ticker}')
 
         if end > 0:
-            _logger.info(f'{__name__}: \'end\' value ignored for live queries')
+            _logger.info('\'end\' value ignored for live queries')
     else:
         with _session() as session:
             if inactive:
@@ -312,23 +312,23 @@ def get_history(ticker: str, days: int = -1, end: int = 0, live: bool = False, i
                     start = dt.datetime.today() - dt.timedelta(days=days) - dt.timedelta(days=end)
                     q = session.query(models.Price).filter(and_(models.Price.security_id == symbols.id, models.Price.date >= start)).order_by(models.Price.date)
                 else:
-                    _logger.warning(f'{__name__}: Must specify history days > 1')
+                    _logger.warning('Must specify history days > 1')
 
                 if q is not None:
                     history = pd.read_sql(q.statement, _engine)
                     if history is None:
                         history = pd.DataFrame()
-                        _logger.error(f'{__name__}: \'None\' object for {ticker} (2)')
+                        _logger.error(f'\'None\' object for {ticker} (2)')
                     elif history.empty:
-                        _logger.info(f'{__name__}: Empty history found for {ticker}')
+                        _logger.info(f'Empty history found for {ticker}')
                     else:
                         history = history.drop(['id', 'security_id'], axis=1)
                         if end > 0:
                             history = history[:-end]
 
-                        _logger.debug(f'{__name__}: Fetched {len(history)} days of price history for {ticker} from {d.ACTIVE_DB} ({end} days prior)')
+                        _logger.debug(f'Fetched {len(history)} days of price history for {ticker} from {d.ACTIVE_DB} ({end} days prior)')
             else:
-                _logger.info(f'{__name__}: No history found for {ticker}')
+                _logger.info(f'No history found for {ticker}')
 
     return history
 
@@ -362,7 +362,7 @@ def get_company(ticker: str, live: bool = False, extra: bool = False) -> dict:
 
             except Exception as e:
                 results = {}
-                _logger.error(f'{__name__}: Exception for ticker {ticker}: {str(e)}')
+                _logger.error(f'Exception for ticker {ticker}: {str(e)}')
     else:
         with _session() as session:
             symbol = session.query(models.Security).filter(models.Security.ticker == ticker).one_or_none()
@@ -405,9 +405,9 @@ def get_company(ticker: str, live: bool = False, extra: bool = False) -> dict:
                     if extra:
                         results['precords'] = session.query(models.Price.security_id).filter(models.Price.security_id == symbol.id).count()
                 else:
-                    _logger.warning(f'{__name__}: No company information for {ticker}')
+                    _logger.warning(f'No company information for {ticker}')
             else:
-                _logger.warning(f'{__name__}: No ticker located for {ticker}')
+                _logger.warning(f'No ticker located for {ticker}')
 
     return results
 
@@ -472,7 +472,7 @@ def get_exchange_tickers_master(exchange: str, type: str = 'google') -> list[str
                 symbols = table.get_column(1)
                 _master_exchanges[exchange] = set(symbols)
             else:
-                _logger.warning(f'{__name__}: Unable to open exchange spreadsheet {exchange}')
+                _logger.warning(f'Unable to open exchange spreadsheet {exchange}')
     else:
         raise ValueError(f'Invalid exchange name: {exchange}')
 
@@ -499,7 +499,7 @@ def get_index_tickers_master(index: str, type: str = 'google') -> list[str]:
                 symbols = list(set(table.get_column(1)))
                 _master_indexes[index] = symbols
             else:
-                _logger.warning(f'{__name__}: Unable to open index spreadsheet {index}')
+                _logger.warning(f'Unable to open index spreadsheet {index}')
     else:
         raise ValueError(f'Invalid index name: {index}')
 

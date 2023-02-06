@@ -100,7 +100,7 @@ class Strategy(ABC, Threaded):
             self.calculate_score()
             self.analysis.summarize()
         else:
-            _logger.warning(f'{__name__}: Unable to analyze strategy for {self.ticker}: {self.error}')
+            _logger.warning(f'Unable to analyze strategy for {self.ticker}: {self.error}')
 
         self.task_state = 'Done'
 
@@ -143,7 +143,7 @@ class Strategy(ABC, Threaded):
 
         # Calculate the index into the option chain
         if chain.empty:
-            _logger.warning(f'{__name__}: Error fetching option chain for {self.ticker}')
+            _logger.warning(f'Error fetching option chain for {self.ticker}')
         elif strike <= 0.0:
             chain_index = self.chain.get_index_itm()
         else:
@@ -151,9 +151,9 @@ class Strategy(ABC, Threaded):
 
         # Add the option contract
         if chain_index < 0:
-            _logger.warning(f'{__name__}: Error fetching default contract for {self.ticker}')
+            _logger.warning(f'Error fetching default contract for {self.ticker}')
         elif chain_index >= len(chain):
-            _logger.warning(f'{__name__}: Insufficient options for {self.ticker}')
+            _logger.warning(f'Insufficient options for {self.ticker}')
         else:
             contract = chain.iloc[chain_index]['contractSymbol']
 

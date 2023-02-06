@@ -614,7 +614,7 @@ class Interface():
             modified = False
             ui.print_error('Unknown argument')
         # except Exception as e:
-        #     ui.print_error(f'{__name__}: 001: {e}')
+        #     ui.print_error(f'001: {e}')
         #     modified = False
 
         if modified:

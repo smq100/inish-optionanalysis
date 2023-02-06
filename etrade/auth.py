@@ -37,7 +37,7 @@ def authorize(callback: Callable[[str], str]) -> OAuth1Session:
         with open(path, 'rb') as session_file:
             try:
                 Session = pickle.load(session_file)
-                _logger.info(f'{__name__}: Loaded existing session')
+                _logger.info('Loaded existing session')
             except Exception as e:
                 Session = None
             else:
@@ -94,7 +94,7 @@ def _authorize(callback: Callable[[str], str]) -> OAuth1Session:
         with open(picklefile, 'wb') as session_file:
             pickle.dump(session, session_file, protocol=pickle.HIGHEST_PROTOCOL)
 
-        _logger.info(f'{__name__}: Created new session')
+        _logger.info('Created new session')
 
     except TokenRequestDenied:
         session = None

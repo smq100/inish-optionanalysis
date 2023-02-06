@@ -111,12 +111,12 @@ class Company:
         self.history = store.get_history(self.ticker, self.days, end=self.backtest, live=self.live)
         if self.history.empty:
             self.active = False
-            _logger.info(f'{__name__}: Empty history for {self.ticker}')
+            _logger.info(f'Empty history for {self.ticker}')
         else:
             self.ta = Technical(self.ticker, self.history, self.days, end=self.backtest, live=self.live)
             success = True
 
-            _logger.info(f'{__name__}: Fetched {len(self.history)} items from {self.ticker}. '
+            _logger.info(f'Fetched {len(self.history)} items from {self.ticker}. '
                          f'{self.days} days from {self.history.iloc[0]["date"]} to {self.history.iloc[-1]["date"]} (end={self.backtest})')
 
         return success

@@ -376,7 +376,7 @@ class Interface:
             try:
                 self.screener = Screener(self.table, screen=self.screen, backtest=self.backtest)
             except ValueError as e:
-                ui.print_error(f'{__name__}: {str(e)}')
+                ui.print_error(f'{str(e)}')
             else:
                 cache = False if self.backtest > 0 else use_cache
                 save = (self.backtest == 0)

@@ -33,7 +33,7 @@ class Lookup:
             else:
                 self.message = 'E*TRADE API service error'
         else:
-            _logger.debug(f'{__name__}: Response Body: {response}')
+            _logger.debug(f'Response Body: {response}')
             self.message = f'E*TRADE API service error: {response}'
 
         lookup_table = pd.DataFrame()

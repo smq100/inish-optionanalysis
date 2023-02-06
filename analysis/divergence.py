@@ -37,7 +37,7 @@ class Divergence(Threaded):
 
         for ticker in tickers:
             if not store.is_ticker(ticker):
-                raise ValueError(f'{__name__}: Not a valid ticker: {ticker}')
+                raise ValueError(f'Not a valid ticker: {ticker}')
 
         self.cache_available = cache.exists(name, CACHE_TYPE, today_only=self.cache_today_only)
         if self.cache_available:
@@ -48,11 +48,11 @@ class Divergence(Threaded):
         if not self.tickers:
             assert ValueError('No valid tickers specified')
 
-        _logger.info(f'{__name__}: Calculating {len(self.tickers)} ticker(s)')
+        _logger.info(f'Calculating {len(self.tickers)} ticker(s)')
 
         if use_cache and self.cache_available:
             self.cache_used = True
-            _logger.info(f'{__name__}: Using cached results. Scaled={scaled}')
+            _logger.info(f'Using cached results. Scaled={scaled}')
         else:
             self.scaled = scaled
             self.task_total = len(self.tickers)
@@ -62,7 +62,7 @@ class Divergence(Threaded):
             # Break up the tickers and run concurrently if a large list, otherwise just run the single list
             random.shuffle(self.tickers)
             if len(self.tickers) > 100:
-                _logger.info(f'{__name__}: Running with thread pool. Scaled={scaled}')
+                _logger.info(f'Running with thread pool. Scaled={scaled}')
 
                 tickers: list[np.ndarray] = np.array_split(self.tickers, self.concurrency)
                 tickers = [i.tolist() for i in tickers]
@@ -71,12 +71,12 @@ class Divergence(Threaded):
                     self.task_futures = [executor.submit(self._run, ticker_list) for ticker_list in tickers]
 
                     for future in futures.as_completed(self.task_futures):
-                        _logger.info(f'{__name__}: Thread completed: {future.result()}')
+                        _logger.info(f'Thread completed: {future.result()}')
 
                 if self.results:
                     cache.dump(self.results, self.cache_name, CACHE_TYPE)
             else:
-                _logger.info(f'{__name__}: Running without thread pool. Scaled={scaled}')
+                _logger.info(f'Running without thread pool. Scaled={scaled}')
 
                 use_cache = False
                 self._run(self.tickers)
@@ -87,7 +87,7 @@ class Divergence(Threaded):
         if not self.results:
             assert ValueError('No valid results specified')
 
-        _logger.info(f'{__name__}: Analyzing {len(self.results)} result(s)')
+        _logger.info(f'Analyzing {len(self.results)} result(s)')
 
         self.streak = streak
         self.analysis = pd.DataFrame()

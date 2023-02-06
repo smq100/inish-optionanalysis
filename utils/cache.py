@@ -49,10 +49,10 @@ def dump(object: object, name: str, type: str) -> str:
         try:
             with open(filename, 'wb') as f:
                 pickle.dump(object, f, protocol=pickle.HIGHEST_PROTOCOL)
-                _logger.info(f'{__name__}: Results for {name}/{type} saved to cache')
+                _logger.info(f'Results for {name}/{type} saved to cache')
         except Exception as e:
             filename = ''
-            _logger.error(f'{__name__}: Exception for pickle dump: {str(e)}')
+            _logger.error(f'Exception for pickle dump: {str(e)}')
 
     return filename
 
@@ -89,9 +89,9 @@ def load(name: str, type: str, today_only: bool = True) -> tuple[object, str]:
         try:
             with open(filename, 'rb') as f:
                 object = pickle.load(f)
-                _logger.info(f'{__name__}: Cached results for {name}/{type} available')
+                _logger.info(f'Cached results for {name}/{type} available')
         except Exception as e:
-            _logger.error(f'{__name__}: Exception for pickle load: {str(e)}')
+            _logger.error(f'Exception for pickle load: {str(e)}')
 
     return object, date
 
@@ -136,9 +136,9 @@ def delete(type: str) -> tuple[bool, str]:
         message = 'No files to delete'
 
     if success:
-        _logger.info(f'{__name__}: {message}')
+        _logger.info(f'{message}')
     else:
-        _logger.error(f'{__name__}: {message}')
+        _logger.error(f'{message}')
 
     return success, message
 
@@ -148,7 +148,7 @@ def get_filenames(name: str, type: str, type_only: bool = False) -> list[str]:
     type = type.lower()
 
     files = []
-    path = Path(CACHE_BASEPATH)
+    path = Path(CACHE_BASEPATH)Í
     items = [item for item in path.glob(f'*.{CACHE_SUFFIX}') if item.is_file()]
     for item in items:
         head, sep, tail = item.name.partition('.')

@@ -44,9 +44,9 @@ class Put(Strategy):
             if items:
                 if not self.legs[0].option.load_contract(items[0][0], items[0][1]):
                     self.error = f'Unable to load put contract for {self.legs[0].company.ticker}'
-                    _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}: {self.error}')
+                    _logger.warning(f'Error fetching contracts for {self.ticker}: {self.error}')
             else:
-                _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}. Using calculated values')
+                _logger.warning(f'Error fetching contracts for {self.ticker}. Using calculated values')
 
     def generate_profit_table(self) -> bool:
         profit = pd.DataFrame()

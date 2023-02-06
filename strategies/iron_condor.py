@@ -75,9 +75,9 @@ class IronCondor(Strategy):
                     self.error = f'Unable to load leg 3 contract for {self.legs[3].company.ticker}'
 
                 if self.error:
-                    _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}: {self.error}')
+                    _logger.warning(f'Error fetching contracts for {self.ticker}: {self.error}')
             else:
-                _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}. Using calculated values')
+                _logger.warning(f'Error fetching contracts for {self.ticker}. Using calculated values')
 
     def __str__(self):
         return f'{self.analysis.credit_debit.value} {self.type.value}'
@@ -102,7 +102,7 @@ class IronCondor(Strategy):
         # Calculate the index into the call option chain
         options_c = self.chain.get_chain(s.ProductType.Call)
         if options_c.empty:
-            _logger.warning(f'{__name__}: Error fetching option chain for {self.ticker} calls')
+            _logger.warning(f'Error fetching option chain for {self.ticker} calls')
         elif strike <= 0.0:
             chain_index_c = self.chain.get_index_itm()
         else:
@@ -112,7 +112,7 @@ class IronCondor(Strategy):
         if chain_index_c >= 0:
             options_p = self.chain.get_chain(s.ProductType.Put)
             if options_p.empty:
-                _logger.warning(f'{__name__}: Error fetching option chain for {self.ticker} puts')
+                _logger.warning(f'Error fetching option chain for {self.ticker} puts')
             elif strike <= 0.0:
                 chain_index_p = self.chain.get_index_itm()
             else:
@@ -120,9 +120,9 @@ class IronCondor(Strategy):
 
         # Add the leg 1 & 2 option contracts
         if chain_index_c < 0:
-            _logger.warning(f'{__name__}: No option index found for {self.ticker} calls, legs 1 & 2')
+            _logger.warning(f'No option index found for {self.ticker} calls, legs 1 & 2')
         elif chain_index_p < 0:
-            _logger.warning(f'{__name__}: No option index found for {self.ticker} puts, legs 1 & 2')
+            _logger.warning(f'No option index found for {self.ticker} puts, legs 1 & 2')
         elif len(options_c) < (self.width1 + self.width2 + 1):
             chain_index_c = -1  # Chain too small
         elif (len(options_c) - chain_index_c) <= (self.width1 + self.width2 + 1):
@@ -138,10 +138,10 @@ class IronCondor(Strategy):
             pass
         elif chain_index_c < 0:
             items = []
-            _logger.warning(f'{__name__}: No option index found for {self.ticker} calls, legs 3 & 4')
+            _logger.warning(f'No option index found for {self.ticker} calls, legs 3 & 4')
         elif chain_index_p < 0:
             items = []
-            _logger.warning(f'{__name__}: No option index found for {self.ticker} puts, legs 3 & 4')
+            _logger.warning(f'No option index found for {self.ticker} puts, legs 3 & 4')
         elif len(options_p) < (self.width1 + self.width2 + 1):
             items = []
             chain_index_p = -1  # Chain too small
@@ -182,10 +182,10 @@ class IronCondor(Strategy):
             self.calculate_score()
             self.analysis.summarize()
 
-            _logger.info(f'{__name__}: {self.ticker}: g={self.analysis.max_gain:.2f}, l={self.analysis.max_loss:.2f} \
+            _logger.info(f'{self.ticker}: g={self.analysis.max_gain:.2f}, l={self.analysis.max_loss:.2f} \
                 b1={self.analysis.breakeven[0] :.2f} b2={self.analysis.breakeven[1] :.2f}')
         else:
-            _logger.warning(f'{__name__}: Unable to analyze strategy for {self.ticker}: {self.error}')
+            _logger.warning(f'Unable to analyze strategy for {self.ticker}: {self.error}')
 
         self.task_state = 'Done'
 

@@ -36,7 +36,7 @@ class Technical:
         if interval > 5 and interval < self.days:
             sr = trend.sma_indicator(self.history['close'], window=interval, fillna=True)
         else:
-            _logger.warning(f'{__name__}: Invalid interval for SMA')
+            _logger.warning(f'Invalid interval for SMA')
 
         return sr
 
@@ -45,7 +45,7 @@ class Technical:
         if interval > 5 and interval < self.days:
             sr = trend.ema_indicator(self.history['close'], window=interval, fillna=True)
         else:
-            _logger.warning(f'{__name__}: Invalid interval for EMA')
+            _logger.warning('Invalid interval for EMA')
 
         return sr
 
@@ -54,7 +54,7 @@ class Technical:
         if interval > 5 and interval < self.days:
             sr = momentum.rsi(self.history['close'], window=interval, fillna=True)
         else:
-            _logger.warning(f'{__name__}: Invalid interval for RSI')
+            _logger.warning('Invalid interval for RSI')
 
         return sr
 
@@ -88,7 +88,7 @@ class Technical:
             sr = pd.concat([high, mid, low], axis=1)
             sr.columns = ['High', 'Mid', 'Low']
         else:
-            _logger.warning(f'{__name__}: Invalid interval for BB')
+            _logger.warning('Invalid interval for BB')
 
         return sr
 

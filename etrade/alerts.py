@@ -37,10 +37,10 @@ class Alerts:
             else:
                 self.message = 'E*TRADE API service error'
         elif response is not None and response.status_code == 204:
-            _logger.debug(f'{__name__}: Response Body: {response}')
+            _logger.debug(f'Response Body: {response}')
             self.message = 'No alerts'
         else:
-            _logger.debug(f'{__name__}: Response Body: {response}')
+            _logger.debug(f'Response Body: {response}')
             self.message = f'E*TRADE API service error: {response}'
 
         alert_table = pd.DataFrame()

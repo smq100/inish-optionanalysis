@@ -35,7 +35,7 @@ class Gap(Threaded):
 
         for ticker in tickers:
             if not store.is_ticker(ticker):
-                raise ValueError(f'{__name__}: Not a valid ticker: {ticker}')
+                raise ValueError(f'Not a valid ticker: {ticker}')
 
         self.cache_available = cache.exists(name, CACHE_TYPE, today_only=self.cache_today_only)
         if self.cache_available:
@@ -43,18 +43,18 @@ class Gap(Threaded):
             if self.results[0].attrs['days'] != days:
                 self.results = []
                 self.cache_available = False
-                _logger.info(f'{__name__}: Cached results not used. Different days value')
+                _logger.info('Cached results not used. Different days value')
 
     @Threaded.threaded
     def calculate(self, use_cache: bool = True) -> None:
         if not self.tickers:
             assert ValueError('No valid tickers specified')
 
-        _logger.info(f'{__name__}: Calculating {len(self.tickers)} ticker(s)')
+        _logger.info(f'Calculating {len(self.tickers)} ticker(s)')
 
         if use_cache and self.cache_available:
             self.cache_used = True
-            _logger.info(f'{__name__}: Using cached results.')
+            _logger.info('Using cached results.')
         else:
             self.cache_used = False
             self.task_total = len(self.tickers)
@@ -64,7 +64,7 @@ class Gap(Threaded):
 
             # Break up the tickers and run concurrently if a large list, otherwise just run the single list
             if len(self.tickers) > MINCONCURRENECY:
-                _logger.info(f'{__name__}: Running with thread pool')
+                _logger.info('Running with thread pool')
 
                 random.shuffle(self.tickers)
                 tickers: list[np.ndarray] = np.array_split(self.tickers, self.concurrency)
@@ -74,12 +74,12 @@ class Gap(Threaded):
                     self.task_futures = [executor.submit(self._run, ticker_list) for ticker_list in tickers]
 
                     for future in futures.as_completed(self.task_futures):
-                        _logger.info(f'{__name__}: Thread completed: {future.result()}')
+                        _logger.info(f'Thread completed: {future.result()}')
 
                 if self.results:
                     cache.dump(self.results, self.cache_name, CACHE_TYPE)
             else:
-                _logger.info(f'{__name__}: Running without thread pool')
+                _logger.info('Running without thread pool')
 
                 use_cache = False
                 self._run(self.tickers)
@@ -129,7 +129,7 @@ class Gap(Threaded):
             df = df.sort_values(['relative'], ascending=False)
             self.analysis = df.reset_index(drop=True)
 
-        _logger.info(f'{__name__}: Analyzing {len(self.results)} result(s)')
+        _logger.info(f'Analyzing {len(self.results)} result(s)')
 
     def _run(self, tickers: list[str]) -> None:
         for ticker in tickers:

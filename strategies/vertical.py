@@ -71,10 +71,10 @@ class Vertical(Strategy):
                     self.error = f'Unable to load leg 1 {product} contract for {self.legs[1].company.ticker}'
 
                 if self.error:
-                    _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}: {self.error}')
+                    _logger.warning(f'Error fetching contracts for {self.ticker}: {self.error}')
             else:
                 # Not a fatal error
-                _logger.warning(f'{__name__}: Error fetching contracts for {self.ticker}. Using calculated values')
+                _logger.warning(f'Error fetching contracts for {self.ticker}. Using calculated values')
 
     def __str__(self):
         return f'{self.type.value} {self.product.value} {self.analysis.credit_debit.value} spread'.lower()
@@ -99,7 +99,7 @@ class Vertical(Strategy):
 
         # Calculate the index into the option chain
         if options.empty:
-            _logger.warning(f'{__name__}: Error fetching option chain for {self.ticker}')
+            _logger.warning(f'Error fetching option chain for {self.ticker}')
         elif strike <= 0.0:
             chain_index = self.chain.get_index_itm()
         else:
@@ -107,9 +107,9 @@ class Vertical(Strategy):
 
         # Add the long option contract
         if chain_index < 0:
-            _logger.warning(f'{__name__}: No option index found for {self.ticker} leg 1')
+            _logger.warning(f'No option index found for {self.ticker} leg 1')
         elif chain_index >= len(options):
-            _logger.warning(f'{__name__}: Insufficient options for {self.ticker} leg 1')
+            _logger.warning(f'Insufficient options for {self.ticker} leg 1')
         else:
             contract = options.iloc[chain_index]['contractSymbol']
             items.append((contract, options))
@@ -132,10 +132,10 @@ class Vertical(Strategy):
             pass
         elif chain_index < 0:
             items = []
-            _logger.warning(f'{__name__}: No option index found for {self.ticker} leg 2')
+            _logger.warning(f'No option index found for {self.ticker} leg 2')
         elif chain_index >= len(options):
             items = []
-            _logger.warning(f'{__name__}: Insufficient options for {self.ticker} leg 2')
+            _logger.warning(f'Insufficient options for {self.ticker} leg 2')
         else:
             contract = options.iloc[chain_index]['contractSymbol']
             items.append((contract, options))
@@ -166,9 +166,9 @@ class Vertical(Strategy):
             self.calculate_score()
             self.analysis.summarize()
 
-            _logger.info(f'{__name__}: {self.ticker}: g={self.analysis.max_gain:.2f}, l={self.analysis.max_loss:.2f} b={self.analysis.breakeven[0]:.2f}')
+            _logger.info(f'{self.ticker}: g={self.analysis.max_gain:.2f}, l={self.analysis.max_loss:.2f} b={self.analysis.breakeven[0]:.2f}')
         else:
-            _logger.warning(f'{__name__}: Unable to analyze strategy for {self.ticker}: {self.error}')
+            _logger.warning(f'Unable to analyze strategy for {self.ticker}: {self.error}')
 
         self.task_state = 'Done'
 

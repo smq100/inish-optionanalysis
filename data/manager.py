@@ -50,7 +50,7 @@ class Manager(Threaded):
                 if e is None:
                     exc = models.Exchange(abbreviation=exchange['abbreviation'], name=exchange['name'])
                     session.add(exc)
-                    _logger.info(f'{__name__}: Added exchange {exchange["abbreviation"]}')
+                    _logger.info(f'Added exchange {exchange["abbreviation"]}')
 
     def create_indexes(self) -> None:
         with self.session.begin() as session:
@@ -59,7 +59,7 @@ class Manager(Threaded):
                 if i is None:
                     ind = models.Index(abbreviation=index['abbreviation'], name=index['name'])
                     session.add(ind)
-                    _logger.info(f'{__name__}: Added index {index["abbreviation"]}')
+                    _logger.info(f'Added index {index["abbreviation"]}')
 
     @Threaded.threaded
     def populate_exchange(self, exchange: str) -> None:
@@ -94,9 +94,9 @@ class Manager(Threaded):
 
                     for future in futures.as_completed(self.task_futures):
                         running -= 1
-                        _logger.debug(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
+                        _logger.debug(f'Thread completed: {future.result()}. {running} threads remaining')
             else:
-                _logger.warning(f'{__name__}: No symbols for {exchange}')
+                _logger.warning(f'No symbols for {exchange}')
 
         self.task_state = 'Done'
 
@@ -118,15 +118,15 @@ class Manager(Threaded):
                     if company:
                         history = store.get_history(ticker, live=True)
                         if history is None:
-                            _logger.error(f'{__name__}: \'None\' object for {ticker} (1)')
+                            _logger.error(f'\'None\' object for {ticker} (1)')
                         elif history is not None:
                             process = True
                         else:
                             self.invalid_tickers.append(ticker)
-                            _logger.warning(f'{__name__}: History information for {ticker} not available. Not added to database')
+                            _logger.warning(f'History information for {ticker} not available. Not added to database')
                     else:
                         self.invalid_tickers.append(ticker)
-                        _logger.warning(f'{__name__}: Company information for {ticker} not available. Not added to database')
+                        _logger.warning(f'Company information for {ticker} not available. Not added to database')
 
                     if process:
                         try:
@@ -134,46 +134,46 @@ class Manager(Threaded):
                             exc.securities.append(models.Security(ticker))
                             session.commit()
 
-                            _logger.info(f'{__name__}: Added {ticker} to exchange {exchange}')
+                            _logger.info(f'Added {ticker} to exchange {exchange}')
 
                             self._add_live_history_to_ticker(ticker, history=history)
                             self._add_live_company_to_ticker(ticker, company=company)
                         except (ValueError, KeyError, IndexError) as e:
                             self.invalid_tickers.append(ticker)
-                            _logger.warning(f'{__name__}: Company info invalid for {ticker}: {str(e)}')
+                            _logger.warning(f'Company info invalid for {ticker}: {str(e)}')
                         except HTTPError as e:
                             self.retry += 1
-                            _logger.warning(f'{__name__}: HTTP Error for {ticker}. Retry: {self.retry}: {str(e)}')
+                            _logger.warning(f'HTTP Error for {ticker}. Retry: {self.retry}: {str(e)}')
                             if self.retry > retries:
                                 self.invalid_tickers.append(ticker)
                                 exit = True
-                                _logger.error(f'{__name__}: HTTP Error for {ticker}. Too many retries: {str(e)}')
+                                _logger.error(f'HTTP Error for {ticker}. Too many retries: {str(e)}')
                             else:
                                 time.sleep(1.0)
                         except RuntimeError as e:
                             self.retry += 1
-                            _logger.warning(f'{__name__}: Runtime Error for {ticker}. Retrying... {self.retry}: {str(e)}')
+                            _logger.warning(f'Runtime Error for {ticker}. Retrying... {self.retry}: {str(e)}')
                             if self.retry > retries:
                                 self.invalid_tickers.append(ticker)
                                 exit = True
-                                _logger.error(f'{__name__}: Runtime Error for {ticker}. Too many retries: {str(e)}')
+                                _logger.error(f'Runtime Error for {ticker}. Too many retries: {str(e)}')
                         except Exception as e:
                             self.retry += 1
-                            _logger.warning(f'{__name__}: Error for {ticker}. Retrying... {self.retry}: {str(e)}')
+                            _logger.warning(f'Error for {ticker}. Retrying... {self.retry}: {str(e)}')
                             if self.retry > retries:
                                 self.invalid_tickers.append(ticker)
                                 exit = True
-                                _logger.error(f'{__name__}: Error for {ticker}. Too many retries: {str(e)}')
+                                _logger.error(f'Error for {ticker}. Too many retries: {str(e)}')
                         else:
                             self.retry = 0
                             success = True
                 else:
-                    _logger.info(f'{__name__}: {ticker} already exists')
+                    _logger.info(f'{ticker} already exists')
 
                 if exit:
-                    _logger.error(f'{__name__}: Error adding ticker {ticker} to exchange')
+                    _logger.error(f'Error adding ticker {ticker} to exchange')
         else:
-            _logger.error(f'{__name__}: Exchange {exchange} does not exist')
+            _logger.error(f'Exchange {exchange} does not exist')
 
         return success
 
@@ -192,7 +192,7 @@ class Manager(Threaded):
                 if index_index >= 0:
                     ind = models.Index(abbreviation=index, name=d.INDEXES[index_index]['name'])
                     session.add(ind)
-                    _logger.info(f'{__name__}: Recreated index {index}')
+                    _logger.info(f'Recreated index {index}')
 
             valid = []
             tickers = store.get_index_tickers_master(index)
@@ -203,14 +203,14 @@ class Manager(Threaded):
 
             if len(valid) > 0:
                 self._add_securities_to_index(valid, index)
-                _logger.info(f'{__name__}: Populated index {index}')
+                _logger.info(f'Populated index {index}')
                 self.task_state = 'Done'
             elif not self.task_state:
                 self.task_state = 'No symbols'
-                _logger.warning(f'{__name__}: No symbols found for {index}')
+                _logger.warning(f'No symbols found for {index}')
         else:
             self.task_state = f'No index {index}'
-            _logger.warning(f'{__name__}: No valid index {index}')
+            _logger.warning(f'No valid index {index}')
 
     def update_company_ticker(self, ticker: str, replace=False) -> bool:
         updated = False
@@ -231,9 +231,9 @@ class Manager(Threaded):
 
                     updated = True
 
-                    _logger.info(f'{__name__}: Updated company information for {ticker}')
+                    _logger.info(f'Updated company information for {ticker}')
                 else:
-                    _logger.warning(f'{__name__}: No company information for {ticker}')
+                    _logger.warning(f'No company information for {ticker}')
 
         return updated
 
@@ -272,7 +272,7 @@ class Manager(Threaded):
 
                     for future in futures.as_completed(self.task_futures):
                         running -= 1
-                        _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
+                        _logger.info(f'Thread completed: {future.result()}. {running} threads remaining')
 
         self.task_state = 'Done'
 
@@ -285,33 +285,33 @@ class Manager(Threaded):
 
             history = store.get_history(ticker, inactive=inactive)
             if history is None:
-                _logger.error(f'{__name__}: \'None\' object for {ticker} (2)')
+                _logger.error(f'\'None\' object for {ticker} (2)')
             elif history.empty:
                 if self._add_live_history_to_ticker(ticker):
-                    _logger.info(f'{__name__}: Added full price history for {ticker}')
+                    _logger.info(f'Added full price history for {ticker}')
 
                     self._add_live_company_to_ticker(ticker)
                 else:
-                    _logger.warning(f'{__name__}: No price history for {ticker}')
+                    _logger.warning(f'No price history for {ticker}')
             else:
                 date_db = history.iloc[-1]['date']
                 if date_db is None:
                     date_db = today - dt.date(2000, 1, 1)
-                    _logger.warning(f'{__name__}: No price history for {ticker} in database')
+                    _logger.warning(f'No price history for {ticker} in database')
 
                 delta = (today - date_db).days
                 if delta > 0:
                     history = store.get_history(ticker, days=60, live=True)  # Change days value if severely out of data
                     if history is None:
-                        _logger.error(f'{__name__}: \'None\' object for {ticker} (3)')
+                        _logger.error(f'\'None\' object for {ticker} (3)')
                     elif history.empty:
-                        _logger.warning(f'{__name__}: Empty pricing dataframe for {ticker}')
+                        _logger.warning(f'Empty pricing dataframe for {ticker}')
                     else:
                         date_cloud = history.iloc[-1]['date'].to_pydatetime().date()
                         delta = (date_cloud - date_db).days
-                        _logger.info(f'{__name__}: Last {ticker} price in database: {date_db:%Y-%m-%d}')
-                        _logger.info(f'{__name__}: Last {ticker} price in cloud: {date_cloud:%Y-%m-%d}')
-                        _logger.info(f'{__name__}: {date_cloud:%Y-%m-%d} - {date_db:%Y-%m-%d} = {delta} days')
+                        _logger.info(f'Last {ticker} price in database: {date_db:%Y-%m-%d}')
+                        _logger.info(f'Last {ticker} price in cloud: {date_cloud:%Y-%m-%d}')
+                        _logger.info(f'{date_cloud:%Y-%m-%d} - {date_db:%Y-%m-%d} = {delta} days')
                         if delta > 0:
                             days = delta
                             history = history[-delta:]
@@ -336,14 +336,14 @@ class Manager(Threaded):
 
                                             t.pricing += [p]
 
-                            _logger.info(f'{__name__}: Updated {days} days pricing for {ticker} to {date_cloud:%Y-%m-%d}')
+                            _logger.info(f'Updated {days} days pricing for {ticker} to {date_cloud:%Y-%m-%d}')
                         else:
                             days = 0
-                            _logger.info(f'{__name__}: {ticker} already up to date with cloud data')
+                            _logger.info(f'{ticker} already up to date with cloud data')
                 else:
-                    _logger.info(f'{__name__}: {ticker} already up to date')
+                    _logger.info(f'{ticker} already up to date')
         else:
-            _logger.warning(f'{__name__}: Unknown ticker {ticker}')
+            _logger.warning(f'Unknown ticker {ticker}')
 
         return days
 
@@ -364,9 +364,9 @@ class Manager(Threaded):
                     time.sleep(0.05)
                     days = self.update_history_ticker(ticker)
                 except IntegrityError as e:
-                    _logger.error(f'{__name__}: IntegrityError exception occurred for {ticker} (1): {e.__cause__}')
+                    _logger.error(f'IntegrityError exception occurred for {ticker} (1): {e.__cause__}')
                 except Exception as e:
-                    _logger.error(f'{__name__}: Unknown exception occurred for {ticker} (1): {e}')
+                    _logger.error(f'Unknown exception occurred for {ticker} (1): {e}')
 
                 self.task_completed += 1
 
@@ -376,10 +376,10 @@ class Manager(Threaded):
                 elif days < 0:
                     self.invalid_tickers.append(ticker)
                     _write_tickers_log(self.invalid_tickers)
-                    _logger.warning(f'{__name__}: No data for {ticker}')
+                    _logger.warning(f'No data for {ticker}')
 
                 toc = time.perf_counter()
-                _logger.debug(f'{__name__}: {toc-tic:.2f}s to update {ticker}')
+                _logger.debug(f'{toc-tic:.2f}s to update {ticker}')
 
         if self.task_total > 0:
             self.task_state = 'None'
@@ -395,7 +395,7 @@ class Manager(Threaded):
 
                 for future in futures.as_completed(self.task_futures):
                     running -= 1
-                    _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
+                    _logger.info(f'Thread completed: {future.result()}. {running} threads remaining')
         if log:
             _write_tickers_log(self.invalid_tickers)
 
@@ -408,9 +408,9 @@ class Manager(Threaded):
             path = Path(d.SQLITE_FILE_PATH)
             if path.is_file():
                 path.unlink()
-                _logger.info(f'{__name__}: Deleted {d.SQLITE_FILE_PATH}')
+                _logger.info(f'Deleted {d.SQLITE_FILE_PATH}')
             else:
-                _logger.error(f'{__name__}: File does not exist: {d.SQLITE_FILE_PATH}')
+                _logger.error(f'File does not exist: {d.SQLITE_FILE_PATH}')
         else:
             recreate = False
 
@@ -426,11 +426,11 @@ class Manager(Threaded):
                 exc = session.query(models.Exchange).filter(models.Exchange.abbreviation == exchange.upper()).one_or_none()
                 if exc is not None:
                     session.delete(exc)
-                    _logger.info(f'{__name__}: Deleted exchange {exchange}')
+                    _logger.info(f'Deleted exchange {exchange}')
                 else:
-                    _logger.warning(f'{__name__}: Exchange {exchange} does not exist')
+                    _logger.warning(f'Exchange {exchange} does not exist')
         else:
-            _logger.warning(f'{__name__}: Exchange {exchange} does not exist')
+            _logger.warning(f'Exchange {exchange} does not exist')
         self.task_state = 'Done'
 
     def delete_index(self, index: str) -> None:
@@ -442,11 +442,11 @@ class Manager(Threaded):
 
                 if ind is not None:
                     session.delete(ind)
-                    _logger.info(f'{__name__}: Deleted index {index}')
+                    _logger.info(f'Deleted index {index}')
                 else:
-                    _logger.warning(f'{__name__}: Index {index} does not exist')
+                    _logger.warning(f'Index {index} does not exist')
         else:
-            _logger.warning(f'{__name__}: Index {index} does not exist')
+            _logger.warning(f'Index {index} does not exist')
 
     def delete_ticker(self, ticker: str) -> None:
         ticker = ticker.upper()
@@ -457,11 +457,11 @@ class Manager(Threaded):
                 if sec is not None:
                     session.delete(sec)
 
-                    _logger.info(f'{__name__}: Deleted ticker {ticker}')
+                    _logger.info(f'Deleted ticker {ticker}')
                 else:
-                    _logger.warning(f'{__name__}: Ticker {ticker} not in database')
+                    _logger.warning(f'Ticker {ticker} not in database')
         else:
-            _logger.warning(f'{__name__}: Ticker {ticker} does not exist')
+            _logger.warning(f'Ticker {ticker} does not exist')
 
     def change_active(self, tickers: list[str], active: bool) -> None:
         if tickers:
@@ -472,11 +472,11 @@ class Manager(Threaded):
                         sec = session.query(models.Security).filter(models.Security.ticker == ticker).one_or_none()
                         if sec is not None:
                             sec.active = active
-                            _logger.info(f'{__name__}: Set {ticker} active = {active}')
+                            _logger.info(f'Set {ticker} active = {active}')
                         else:
-                            _logger.warning(f'{__name__}: Ticker {ticker} not in database')
+                            _logger.warning(f'Ticker {ticker} not in database')
                 else:
-                    _logger.warning(f'{__name__}: Ticker {ticker} does not exist')
+                    _logger.warning(f'Ticker {ticker} does not exist')
 
     def is_active(self, ticker: str) -> bool:
         active = False
@@ -500,7 +500,7 @@ class Manager(Threaded):
                     count = session.query(tables[table]).count()
                     info.append({'table': table, 'count': count})
         else:
-            _logger.warning('{__name__}: No tables in database')
+            _logger.warning('No tables in database')
 
         return info
 
@@ -551,9 +551,9 @@ class Manager(Threaded):
 
                 found = [ticker[0] for ticker in t]
 
-            _logger.info(f'{__name__}: {len(found)} tickers in {exchange}')
+            _logger.info(f'{len(found)} tickers in {exchange}')
         else:
-            _logger.warning(f'{__name__}: {exchange} not valid')
+            _logger.warning(f'{exchange} not valid')
 
         return found
 
@@ -569,9 +569,9 @@ class Manager(Threaded):
 
                 found = [ticker[0] for ticker in t]
 
-            _logger.info(f'{__name__}: {len(found)} tickers in {index}')
+            _logger.info(f'{len(found)} tickers in {index}')
         else:
-            _logger.warning(f'{__name__}: {index} not valid')
+            _logger.warning(f'{index} not valid')
 
         return found
 
@@ -603,17 +603,17 @@ class Manager(Threaded):
                     try:
                         days = self.update_history_ticker(ticker, inactive=True)
                     except IntegrityError as e:
-                        _logger.error(f'{__name__}: IntegrityError exception occurred for {ticker} (2): {e.__cause__}')
+                        _logger.error(f'IntegrityError exception occurred for {ticker} (2): {e.__cause__}')
                     except Exception as e:
-                        _logger.error(f'{__name__}: Unknown exception occurred for {ticker} (2): {e}')
+                        _logger.error(f'Unknown exception occurred for {ticker} (2): {e}')
                     else:
                         if days > 0:
                             self.task_results.append(ticker)
                             self.task_success += 1
-                            _logger.info(f'{__name__}: Ticker {ticker} updated')
+                            _logger.info(f'Ticker {ticker} updated')
                         elif days < 0:
                             self.invalid_tickers.append(ticker)
-                            _logger.info(f'{__name__}: Ticker {ticker} not updated')
+                            _logger.info(f'Ticker {ticker} not updated')
 
                 self.task_completed += 1
 
@@ -636,7 +636,7 @@ class Manager(Threaded):
 
                 for future in futures.as_completed(self.task_futures):
                     running -= 1
-                    _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
+                    _logger.info(f'Thread completed: {future.result()}. {running} threads remaining')
         elif tickers:
             recheck(tickers)
 
@@ -648,7 +648,7 @@ class Manager(Threaded):
 
         if store.is_exchange(exchange):
             tickers = store.get_exchange_tickers_master(exchange)
-            _logger.info(f'{__name__}: {len(tickers)} total tickers in {exchange}')
+            _logger.info(f'{len(tickers)} total tickers in {exchange}')
 
             with self.session() as session:
                 e = session.query(models.Exchange.id).filter(models.Exchange.abbreviation == exchange).one()
@@ -657,9 +657,9 @@ class Manager(Threaded):
                     if t is None:
                         missing.append(sec)
 
-            _logger.info(f'{__name__}: {len(missing)} missing tickers in {exchange}')
+            _logger.info(f'{len(missing)} missing tickers in {exchange}')
         else:
-            _logger.warning(f'{__name__}: {exchange} not valid')
+            _logger.warning(f'{exchange} not valid')
 
         return missing
 
@@ -677,7 +677,7 @@ class Manager(Threaded):
         if tickers:
             inactive = [symbol.ticker for symbol in tickers]
 
-        _logger.info(f'{__name__}: {len(inactive)} inactive tickers in {exchange}')
+        _logger.info(f'{len(inactive)} inactive tickers in {exchange}')
 
         return inactive
 
@@ -693,7 +693,7 @@ class Manager(Threaded):
                 self.task_ticker = ticker
                 history = store.get_history(ticker, days=90)
                 if history is None:
-                    _logger.error(f'{__name__}: \'None\' object for {ticker} (4)')
+                    _logger.error(f'\'None\' object for {ticker} (4)')
                 elif not history.empty:
                     last = history.iloc[-1].date
                     past = dt.datetime.today() - dt.timedelta(days=days)
@@ -720,7 +720,7 @@ class Manager(Threaded):
 
                 for future in futures.as_completed(self.task_futures):
                     running -= 1
-                    _logger.info(f'{__name__}: Thread completed: {future.result()}. {running} threads remaining')
+                    _logger.info(f'Thread completed: {future.result()}. {running} threads remaining')
 
             if len(self.task_object) > 1:
                 last = sorted(self.task_object)[-1]
@@ -741,7 +741,7 @@ class Manager(Threaded):
         elif store.is_index(table):
             tickers = store.get_index_tickers(table, inactive=True)
         else:
-            _logger.warning(f'{__name__}: {table} is not valid exchange or index')
+            _logger.warning(f'{table} is not valid exchange or index')
 
         if tickers:
             with self.session() as session:
@@ -754,7 +754,7 @@ class Manager(Threaded):
                         elif c.name == '':
                             incomplete.append(ticker)
 
-        _logger.info(f'{__name__}: {len(incomplete)} incomplete companies in {table}')
+        _logger.info(f'{len(incomplete)} incomplete companies in {table}')
 
         return incomplete
 
@@ -780,15 +780,15 @@ class Manager(Threaded):
                     c.rating = company.get('rating', 3.0)
                     t.company = [c]
 
-                    _logger.info(f'{__name__}: Added company information for {ticker}')
+                    _logger.info(f'Added company information for {ticker}')
                 else:
-                    _logger.warning(f'{__name__}: No company info for {ticker}')
+                    _logger.warning(f'No company info for {ticker}')
         except IntegrityError as e:
             c = None
-            _logger.error(f'{__name__}: IntegrityError exception occurred for {ticker} (3): {e.__cause__}')
+            _logger.error(f'IntegrityError exception occurred for {ticker} (3): {e.__cause__}')
         except Exception as e:
             c = None
-            _logger.error(f'{__name__}: Unknown exception occurred for {ticker} (3): {e}')
+            _logger.error(f'Unknown exception occurred for {ticker} (3): {e}')
 
         return c is not None
 
@@ -804,7 +804,7 @@ class Manager(Threaded):
                         history = store.get_history(ticker, live=True)
 
                     if history is None:
-                        _logger.error(f'{__name__}: \'None\' object for {ticker} (1)')
+                        _logger.error(f'\'None\' object for {ticker} (1)')
                     if not history.empty:
                         for price in history.reset_index().itertuples():
                             if price.date:
@@ -820,16 +820,16 @@ class Manager(Threaded):
                             else:
                                 t.active = False
                         else:
-                            _logger.info(f'{__name__}: Added pricing information for {ticker}')
+                            _logger.info(f'Added pricing information for {ticker}')
                     else:
                         t.active = False
-                        _logger.info(f'{__name__}: No pricing information for {ticker}')
+                        _logger.info(f'No pricing information for {ticker}')
                 else:
-                    _logger.warning(f'{__name__}: {ticker} is not a valid ticker')
+                    _logger.warning(f'{ticker} is not a valid ticker')
         except IntegrityError as e:
-            _logger.error(f'{__name__}: IntegrityError exception occurred for {ticker} (4): {e.__cause__}')
+            _logger.error(f'IntegrityError exception occurred for {ticker} (4): {e.__cause__}')
         except Exception as e:
-            _logger.error(f'{__name__}: Unknown exception occurred for {ticker} (4): {e}')
+            _logger.error(f'Unknown exception occurred for {ticker} (4): {e}')
         else:
             added = True
 
@@ -854,7 +854,7 @@ class Manager(Threaded):
 
                 self.task_completed += 1
 
-                _logger.info(f'{__name__}: Added {t} to index {index}')
+                _logger.info(f'Added {t} to index {index}')
 
 
 def _write_tickers_log(tickers: list[str], filename: str = '') -> str:
@@ -880,9 +880,9 @@ def _read_tickers_log(filename: str) -> list[str]:
             tickers = [s.replace('\n', '') for s in tickers]
             tickers.sort()
         except:
-            _logger.error(f'{__name__}: File format error')
+            _logger.error('File format error')
     else:
-        _logger.error(f'{__name__}: File "{filename}" not found')
+        _logger.error(f'File "{filename}" not found')
 
     return tickers
 

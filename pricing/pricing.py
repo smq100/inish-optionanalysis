@@ -70,8 +70,8 @@ class Pricing(ABC):
         lhs = call_price - put_price
         rhs = self.spot_price - np.exp(-1 * self.risk_free_rate * self.time_to_maturity) * self.strike_price
 
-        _logger.info(f'{__name__}: Put-Call Parity LHS = {lhs}')
-        _logger.info(f'{__name__}: Put-Call Parity RHS = {rhs}',)
+        _logger.info(f'Put-Call Parity LHS = {lhs}')
+        _logger.info(f'Put-Call Parity RHS = {rhs}',)
 
         return bool(round(lhs) == round(rhs))
 
@@ -83,7 +83,7 @@ class Pricing(ABC):
             self.underlying_asset_data = store.get_history(self.ticker, days=365)
 
             if self.underlying_asset_data.empty:
-                s = f'{__name__}: Unable to get historical stock data for {self.ticker}'
+                s = f'Unable to get historical stock data for {self.ticker}'
                 _logger.error(s)
                 raise IOError(s)
 
@@ -93,20 +93,20 @@ class Pricing(ABC):
         '''
         self.risk_free_rate = store.get_treasury_rate()
 
-        _logger.info(f'{__name__}: Risk-free rate = {self.risk_free_rate:.4f}')
+        _logger.info(f'Risk-free rate = {self.risk_free_rate:.4f}')
 
     def calculate_time_to_maturity(self) -> None:
         '''
         Calculate TimeToMaturity in decimal Years.
         '''
         if self.expiry < dt.datetime.today():
-            s = f'{__name__}: Expiry/Maturity Date is in the past. Please check'
+            s = f'Expiry/Maturity Date is in the past. Please check'
             _logger.error(s)
             raise ValueError(s)
 
         self.time_to_maturity = (self.expiry - dt.datetime.today()).days / 365.0
 
-        _logger.info(f'{__name__}: Time to maturity = {self.time_to_maturity:.5f}')
+        _logger.info(f'Time to maturity = {self.time_to_maturity:.5f}')
 
     def calculate_volatility(self) -> None:
         '''
@@ -120,7 +120,7 @@ class Pricing(ABC):
         daily_std = np.std(self.underlying_asset_data['log_returns'])
         self.volatility = daily_std * np.sqrt(252.0)
 
-        _logger.info(f'{__name__}: Calculated volatility = {self.volatility:.4f}')
+        _logger.info(f'Calculated volatility = {self.volatility:.4f}')
 
     def calculate_spot_price(self) -> None:
         '''
@@ -129,7 +129,7 @@ class Pricing(ABC):
         self.calculate_underlying_asset_data()
         self.spot_price = self.underlying_asset_data['close'][-1]
 
-        _logger.info(f'{__name__}: Spot price = {self.spot_price:.2f}')
+        _logger.info(f'Spot price = {self.spot_price:.2f}')
 
     def calculate_greeks(self, spot_price=-1.0, time_to_maturity=-1.0, volatility=-1.0) -> None:
         self.calculate_delta(spot_price=spot_price, time_to_maturity=time_to_maturity, volatility=volatility)

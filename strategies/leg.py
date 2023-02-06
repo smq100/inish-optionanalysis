@@ -55,7 +55,7 @@ class Leg:
             else:
                 raise ValueError('Unknown pricing model')
 
-            _logger.info(f'{__name__}: Calculating price using {self.pricing_method.name}')
+            _logger.info(f'Calculating price using {self.pricing_method.name}')
 
             self.company.price = self.pricer.spot_price
             self.company.volatility = self.pricer.volatility
@@ -103,7 +103,7 @@ class Leg:
                     self.option.vega = self.pricer.vega_put
                     self.option.rho = self.pricer.rho_put
         else:
-            _logger.error(f'{__name__}: Validation error')
+            _logger.error('Validation error')
 
         return self.option.price_calc
 
@@ -185,7 +185,7 @@ class Leg:
                 value = value.iloc[::-1]
 
         else:
-            _logger.error(f'{__name__}: Cannot generate value table: {self.option.price_calc=}')
+            _logger.error(f'Cannot generate value table: {self.option.price_calc=}')
 
         return value
 

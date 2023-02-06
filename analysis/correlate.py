@@ -117,9 +117,9 @@ class Correlate(Threaded):
                 series = self.results[ticker].sort_values(ascending=False)
                 series = series.drop(ticker) # Drop own entry (corr = 1.0)
             else:
-                _logger.warning(f'{__name__}: Invalid ticker {ticker}')
+                _logger.warning(f'Invalid ticker {ticker}')
         else:
-            _logger.warning(f'{__name__}: Must first compute correlation')
+            _logger.warning('Must first compute correlation')
 
         df = pd.DataFrame({'ticker': series.index, 'value': series.values})
         df.index.name = ticker

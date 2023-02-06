@@ -39,7 +39,7 @@ class Chart(Threaded):
     def fetch_history(self):
         self.task_state = 'None'
 
-        _logger.info(f'{__name__}: Fetching history for {self.ticker}...')
+        _logger.info(f'Fetching history for {self.ticker}...')
 
         self.task_ticker = self.ticker
         self.history = store.get_history(self.ticker, days=self.days, live=self.live)
@@ -51,7 +51,7 @@ class Chart(Threaded):
 
     def plot_ohlc(self) -> tuple[plt.Figure, plt.Axes]:
         if self.history.empty:
-            _logger.info(f'{__name__}: Need history for {self.ticker}. Fetching...')
+            _logger.info(f'Need history for {self.ticker}. Fetching...')
             self.fetch_history()
 
         self.ax.secondary_yaxis('right')
@@ -94,7 +94,7 @@ class Chart(Threaded):
 
     def plot_history(self, close: bool = False) -> plt.Figure:
         if self.history.empty:
-            _logger.info(f'{__name__}: Need history for {self.ticker}. Fetching...')
+            _logger.info(f'Need history for {self.ticker}. Fetching...')
             self.fetch_history()
 
         self.ax.secondary_yaxis('right')

@@ -136,7 +136,7 @@ class SupportResistance(Threaded):
             self.lines = pd.DataFrame()
             self.stats = _Stats()
         else:
-            raise ValueError('{__name__}: Error initializing {__class__} with ticker {ticker}')
+            raise ValueError('Error initializing {__class__} with ticker {ticker}')
 
     def __str__(self):
         return f'Support and resistance analysis for {self.ticker} (${self.price:.2f})'
@@ -162,7 +162,7 @@ class SupportResistance(Threaded):
             lines = [item for sublist in lines for item in sublist]
 
             self.task_total = len(lines)
-            _logger.info(f'{__name__}: {self.task_total} total lines extracted')
+            _logger.info(f'{self.task_total} total lines extracted')
 
             # Create dataframe of lines then sort, round, and drop duplicates
             df = pd.DataFrame.from_records([vars(l) for l in lines])
@@ -172,7 +172,7 @@ class SupportResistance(Threaded):
             df = df.round(6)
             df = df.drop_duplicates(subset=['slope', 'intercept'])
             self.lines = df.reset_index(drop=True)
-            _logger.info(f'{__name__}: {len(self.lines)} rows created ({len(lines)-len(self.lines)} duplicates deleted)')
+            _logger.info(f'{len(self.lines)} rows created ({len(lines)-len(self.lines)} duplicates deleted)')
 
             self._calculate_stats()
 
@@ -217,9 +217,9 @@ class SupportResistance(Threaded):
         self.stats.slope = (pmax[0] + pmin[0]) / 2.0
         self.stats.intercept = (pmax[1] + pmin[1]) / 2.0
 
-        _logger.debug(f'{__name__}: res: m={self.stats.res_slope:.2f} b={self.stats.res_intercept:.2f}')
-        _logger.debug(f'{__name__}: sup: m={self.stats.sup_slope:.2f} b={self.stats.sup_intercept:.2f}')
-        _logger.debug(f'{__name__}: tnd: m={self.stats.slope:.2f} b={self.stats.intercept:.2f}')
+        _logger.debug(f'res: m={self.stats.res_slope:.2f} b={self.stats.res_intercept:.2f}')
+        _logger.debug(f'sup: m={self.stats.sup_slope:.2f} b={self.stats.sup_intercept:.2f}')
+        _logger.debug(f'tnd: m={self.stats.slope:.2f} b={self.stats.intercept:.2f}')
 
         for line in mintrend:
             newline = _Line()
@@ -326,7 +326,7 @@ class SupportResistance(Threaded):
         for line in lines:
             line.score = line._score.calculate()
 
-        _logger.info(f'{__name__}: {len(lines)} lines extracted using {method} and {extmethod}')
+        _logger.info(f'{len(lines)} lines extracted using {method} and {extmethod}')
 
         return lines
 
@@ -389,17 +389,17 @@ class SupportResistance(Threaded):
                 variance = np.average((values-weighted_mean)**2, weights=weights)
                 weighted_std = math.sqrt(variance)
             else:
-                _logger.info(f'{__name__}: Empty dataframe calculating stats')
+                _logger.info('Empty dataframe calculating stats')
 
             return weighted_mean, weighted_std, level
 
         # Resistance
         self.stats.res_weighted_mean, self.stats.res_weighted_std, self.stats.res_level = calculate(False)
-        _logger.info(f'{__name__}: Res: wmean={self.stats.res_weighted_mean:.2f}, wstd={self.stats.res_weighted_std:.2f}, level={self.stats.res_level}')
+        _logger.info(f'Res: wmean={self.stats.res_weighted_mean:.2f}, wstd={self.stats.res_weighted_std:.2f}, level={self.stats.res_level}')
 
         # Support
         self.stats.sup_weighted_mean, self.stats.sup_weighted_std, self.stats.sup_level = calculate(True)
-        _logger.info(f'{__name__}: Sup: wmean={self.stats.sup_weighted_mean:.2f}, wstd={self.stats.sup_weighted_std:.2f}, level={self.stats.sup_level}')
+        _logger.info(f'Sup: wmean={self.stats.sup_weighted_mean:.2f}, wstd={self.stats.sup_weighted_std:.2f}, level={self.stats.sup_level}')
 
     def plot(self, **kwargs) -> plt.Figure:
         show = kwargs.get('show', False)
@@ -617,7 +617,7 @@ class SupportResistance(Threaded):
         # Output file
         if filename:
             figure.savefig(filename, dpi=150)
-            _logger.info(f'{__name__}: Saved plot as {filename}')
+            _logger.info(f'Saved plot as {filename}')
 
         if show:
             plt.show()

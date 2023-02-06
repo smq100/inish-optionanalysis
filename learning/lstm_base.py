@@ -67,7 +67,7 @@ class LSTM_Base(ABC, Threaded):
         self.results: list[float]
 
     def _initialize(self):
-        _logger.debug(f'{__name__}:\n{self.history}')
+        _logger.debug(f'\n{self.history}')
 
         self.input_size = len(self.inputs)
         input_data = self.history[self.inputs].values
@@ -97,8 +97,8 @@ class LSTM_Base(ABC, Threaded):
         X = np.array(X)
         y = np.array(y)
 
-        _logger.debug(f'{__name__}: {X.shape=}')
-        _logger.debug(f'{__name__}: {y.shape=}')
+        _logger.debug(f'{X.shape=}')
+        _logger.debug(f'{y.shape=}')
 
         # Create testing, training, and validation arrays
         self.test_size = int(history_size * self.parameters.PCT_TRAINING.value)
@@ -115,11 +115,11 @@ class LSTM_Base(ABC, Threaded):
         self.X_valid = self.X_valid.reshape(self.X_valid.shape[0], self.lookback, self.input_size)
         self.X_test = self.X_test.reshape(self.X_test.shape[0], self.lookback, self.input_size)
 
-        _logger.debug(f'{__name__}: {self.X_train.shape=}')
-        _logger.debug(f'{__name__}: {self.X_valid.shape=}')
-        _logger.debug(f'{__name__}: {self.X_test.shape=}')
-        _logger.debug(f'{__name__}: {self.y_train.shape=}')
-        _logger.debug(f'{__name__}: {self.y_valid.shape=}')
+        _logger.debug(f'{self.X_train.shape=}')
+        _logger.debug(f'{self.X_valid.shape=}')
+        _logger.debug(f'{self.X_test.shape=}')
+        _logger.debug(f'{self.y_train.shape=}')
+        _logger.debug(f'{self.y_valid.shape=}')
 
     @Threaded.threaded
     def run(self):
@@ -174,8 +174,8 @@ class LSTM_Base(ABC, Threaded):
 
         self.results = self.regressor.evaluate(self.X_test, self.y_test, batch_size=self.parameters.BATCH_SIZE.value)
 
-        _logger.debug(f'{__name__}: Test MSE: {self.results[0]}')  # Mean Square Error
-        _logger.debug(f'{__name__}: Test MAE: {self.results[1]}')  # Mean Absolute Error
+        _logger.debug(f'Test MSE: {self.results[0]}')  # Mean Square Error
+        _logger.debug(f'Test MAE: {self.results[1]}')  # Mean Absolute Error
 
     @abc.abstractmethod
     def _predict(self):
@@ -189,10 +189,10 @@ class KerasCallback(Callback):
 
     def on_epoch_begin(self, epoch, logs=None):
         if logs:
-            _logger.debug(f'{__name__}: {logs}')
+            _logger.debug(f'{logs}')
 
     def on_epoch_end(self, epoch, logs=None):
         self.outer.task_success += 1
         self.outer.task_completed += 1
         if logs:
-            _logger.debug(f'{__name__}: {logs}')
+            _logger.debug(f'{logs}')

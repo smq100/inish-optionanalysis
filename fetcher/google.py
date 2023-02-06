@@ -36,11 +36,11 @@ class Google(Sheet):
                 sheet = client.open(self.sheet_name)
                 self.sheet = sheet.worksheet(self.tab_name)
             except gspread.exceptions.SpreadsheetNotFound:
-                _logger.error(f'{__name__}: Unable to open file {self.sheet_name}/{self.tab_name}')
+                _logger.error(f'Unable to open file {self.sheet_name}/{self.tab_name}')
             except Exception as e:
-                _logger.error(f'{__name__}: Error opening file {self.sheet_name}/{self.tab_name}: {e}')
+                _logger.error(f'Error opening file {self.sheet_name}/{self.tab_name}: {e}')
             else:
-                _logger.info(f'{__name__}: Opened file {self.sheet_name}/{self.tab_name}')
+                _logger.info(f'Opened file {self.sheet_name}/{self.tab_name}')
                 self.opened = True
 
         return self.opened

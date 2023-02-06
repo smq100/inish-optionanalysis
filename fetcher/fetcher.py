@@ -57,7 +57,7 @@ def validate_ticker(ticker: str) -> bool:
 
     # YFinance (or Pandas) throws exceptions with bad info (YFinance bug?)
     try:
-        _logger.info(f'{__name__}: Fetching Yahoo ticker information for {ticker}...')
+        _logger.info(f'Fetching Yahoo ticker information for {ticker}...')
         if yf.Ticker(ticker) is not None:
             valid = True
     except Exception:
@@ -76,7 +76,7 @@ def get_history_live(ticker: str, days: int = -1) -> pd.DataFrame:
         time.sleep(_THROTTLE_FETCH)
     _elapsed = time.perf_counter()
 
-    _logger.info(f'{__name__}: Fetching {ticker} history from {d.ACTIVE_HISTORYDATASOURCE}...')
+    _logger.info(f'Fetching {ticker} history from {d.ACTIVE_HISTORYDATASOURCE}...')
 
     if d.ACTIVE_HISTORYDATASOURCE == 'yfinance':
         history = _get_history_yfinance(ticker, days=days)
@@ -87,9 +87,9 @@ def get_history_live(ticker: str, days: int = -1) -> pd.DataFrame:
 
     if history is None:
         history = pd.DataFrame()
-        _logger.error(f'{__name__}: \'None\' object for {ticker} (2)')
+        _logger.error(f'\'None\' object for {ticker} (2)')
     elif history.empty:
-        _logger.info(f'{__name__}: Empty live history for {ticker}')
+        _logger.info(f'Empty live history for {ticker}')
 
     return history
 
@@ -114,7 +114,7 @@ def get_option_expiry(ticker: str) -> tuple[str]:
     else:
         raise ValueError('Invalid data source')
 
-    _logger.debug(f'{__name__}: Expiries: {expiry}')
+    _logger.debug(f'Expiries: {expiry}')
 
     return expiry
 
@@ -131,7 +131,7 @@ def get_option_chain(ticker: str, expiry: dt.datetime) -> pd.DataFrame:
     else:
         raise ValueError('Invalid data source')
 
-    _logger.debug(f'{__name__}: Chain:\n{chain}')
+    _logger.debug(f'Chain:\n{chain}')
 
     return chain
 
@@ -141,12 +141,12 @@ def get_ratings(ticker: str) -> list[int]:
         raise ConnectionError('No internet connection')
 
     if d.ACTIVE_OPTIONDATASOURCE == 'etrade':
-        _logger.warning(f'{__name__}: Option datasource is E*Trade but using YFinance to fetch ratings')
+        _logger.warning('Option datasource is E*Trade but using YFinance to fetch ratings')
 
     ratings = pd.DataFrame()
     results = []
     try:
-        _logger.info(f'{__name__}: Fetching Yahoo rating information for {ticker}...')
+        _logger.info(f'Fetching Yahoo rating information for {ticker}...')
         company = yf.Ticker(ticker)
         if company is not None:
             ratings = company.recommendations
@@ -162,18 +162,18 @@ def get_ratings(ticker: str) -> list[int]:
                 results = ratings.str.lower().tolist()
 
                 # Log any unhandled ranking so we can add it to the ratings list
-                [_logger.warning(f'{__name__}: Unhandled rating: {r} for {ticker}') for r in results if not r in f.RATINGS]
+                [_logger.warning(f'Unhandled rating: {r} for {ticker}') for r in results if not r in f.RATINGS]
 
                 # Use the known ratings and convert to their numeric values
                 results = [r for r in results if r in f.RATINGS]
                 results = [f.RATINGS[r] for r in results]
             else:
-                _logger.info(f'{__name__}: No ratings for {ticker}')
+                _logger.info(f'No ratings for {ticker}')
         else:
-            _logger.info(f'{__name__}: Unable to get ratings for {ticker}. No company info')
+            _logger.info(f'Unable to get ratings for {ticker}. No company info')
     except Exception as e:
         results = []
-        _logger.error(f'{__name__}: Unable to get ratings for {ticker}: {str(e)}')
+        _logger.error(f'Unable to get ratings for {ticker}: {str(e)}')
 
     return results
 
@@ -185,7 +185,7 @@ def get_treasury_rate(ticker: str) -> float:
     df = pd.DataFrame()
     df = qd.get(f'FRED/{ticker}')
     if df.empty:
-        _logger.error(f'{__name__}: Unable to get Treasury Rates from Quandl')
+        _logger.error('Unable to get Treasury Rates from Quandl')
         raise IOError('Unable to get Treasury Rate from Quandl')
 
     return df['Value'][0] / 100.0
@@ -199,10 +199,10 @@ def _get_yfinance_live(ticker: str) -> yf.Ticker:
 
     if ticker == _last_ticker:
         company = _last_company
-        _logger.info(f'{__name__}: Using cached company information for {ticker} from Yahoo')
+        _logger.info(f'Using cached company information for {ticker} from Yahoo')
     else:
         company = yf.Ticker(ticker)
-        _logger.info(f'{__name__}: Fetched live company information for {ticker} from Yahoo')
+        _logger.info(f'Fetched live company information for {ticker} from Yahoo')
 
     _last_company = company
     _last_ticker = ticker
@@ -218,7 +218,7 @@ def _get_history_yfinance(ticker: str, days: int = -1) -> pd.DataFrame:
     company = _get_yfinance_live(ticker)
 
     if company is None:
-        _logger.error(f'{__name__}: \'None\' object for {ticker} (1)')
+        _logger.error(f'\'None\' object for {ticker} (1)')
     else:
         if days < 0:
             days = 7300  # 20 years
@@ -234,14 +234,14 @@ def _get_history_yfinance(ticker: str, days: int = -1) -> pd.DataFrame:
 
                     if history is None:
                         history = pd.DataFrame()
-                        _logger.warning(f'{__name__}: {d.ACTIVE_HISTORYDATASOURCE} history for {ticker} is None ({retry+1})')
+                        _logger.warning(f'{d.ACTIVE_HISTORYDATASOURCE} history for {ticker} is None ({retry+1})')
                         time.sleep(_THROTTLE_ERROR)
                     elif history.empty:
-                        _logger.warning(f'{__name__}: {d.ACTIVE_HISTORYDATASOURCE} history for {ticker} is empty ({retry+1})')
+                        _logger.warning(f'{d.ACTIVE_HISTORYDATASOURCE} history for {ticker} is empty ({retry+1})')
                         time.sleep(_THROTTLE_ERROR)
                     elif history.shape[1] == 0:
                         history = pd.DataFrame()
-                        _logger.warning(f'{__name__}: {d.ACTIVE_HISTORYDATASOURCE} history for {ticker} has no columns ({retry+1})')
+                        _logger.warning(f'{d.ACTIVE_HISTORYDATASOURCE} history for {ticker} has no columns ({retry+1})')
                         time.sleep(_THROTTLE_ERROR)
                     else:
                         days = history.shape[0]
@@ -252,10 +252,10 @@ def _get_history_yfinance(ticker: str, days: int = -1) -> pd.DataFrame:
                         history = history.drop(['dividends', 'stock splits'], axis=1)
                         history = history.sort_values('date', ascending=True)
 
-                        _logger.info(f'{__name__}: {ticker} Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
+                        _logger.info(f'{ticker} Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
                         break
                 except Exception as e:
-                    _logger.error(f'{__name__}: Exception: {e}: During attempt {retry+1} to fetch history of {ticker} from {d.ACTIVE_HISTORYDATASOURCE}')
+                    _logger.error(f'Exception: {e}: During attempt {retry+1} to fetch history of {ticker} from {d.ACTIVE_HISTORYDATASOURCE}')
                     history = pd.DataFrame()
                     time.sleep(_THROTTLE_ERROR)
 
@@ -283,10 +283,10 @@ def _get_history_quandl(ticker: str, days: int = -1) -> pd.DataFrame:
 
                 if history is None:
                     history = pd.DataFrame()
-                    _logger.warning(f'{__name__}: {d.ACTIVE_HISTORYDATASOURCE} history for {ticker} is None ({retry+1})')
+                    _logger.warning(f'{d.ACTIVE_HISTORYDATASOURCE} history for {ticker} is None ({retry+1})')
                     time.sleep(_THROTTLE_ERROR)
                 elif history.empty:
-                    _logger.info(f'{__name__}: {d.ACTIVE_HISTORYDATASOURCE} history for {ticker} is empty ({retry+1})')
+                    _logger.info(f'{d.ACTIVE_HISTORYDATASOURCE} history for {ticker} is empty ({retry+1})')
                     time.sleep(_THROTTLE_ERROR)
                 else:
                     history = history.reset_index()
@@ -296,10 +296,10 @@ def _get_history_quandl(ticker: str, days: int = -1) -> pd.DataFrame:
                     history = history.drop(['none'], axis=1)
                     history = history.sort_values('date', ascending=True)
 
-                    _logger.info(f'{__name__}: Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
+                    _logger.info(f'Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
                     break
             except Exception as e:
-                _logger.error(f'{__name__}: Exception: {e}: Retry {retry} to fetch history of {ticker} from {d.ACTIVE_HISTORYDATASOURCE}')
+                _logger.error(f'Exception: {e}: Retry {retry} to fetch history of {ticker} from {d.ACTIVE_HISTORYDATASOURCE}')
                 history = pd.DataFrame()
                 time.sleep(_THROTTLE_ERROR)
 
@@ -314,7 +314,7 @@ def _get_option_expiry_yfinance(ticker: str) -> tuple[str]:
             expiry = company.options
             break
         else:
-            _logger.warning(f'{__name__}: Retry {retry} to fetch option expiry for {ticker} using yfinance')
+            _logger.warning(f'Retry {retry} to fetch option expiry for {ticker} using yfinance')
             time.sleep(_THROTTLE_ERROR)
 
     return expiry
@@ -356,7 +356,7 @@ def _get_option_chain_yfinance(ticker: str, expiry: dt.datetime) -> pd.DataFrame
 
             break
         else:
-            _logger.warning(f'{__name__}: Retry {retry} to fetch option chain for {ticker}')
+            _logger.warning(f'Retry {retry} to fetch option chain for {ticker}')
             time.sleep(_THROTTLE_ERROR)
 
     return chain

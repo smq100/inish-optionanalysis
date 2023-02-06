@@ -64,7 +64,7 @@ def analyze(strategies: list[strategy_type]) -> None:
             strategy_results = pd.concat([strategy_results, strategy], axis=0)
         else:
             strategy_errors.append(strategy.error)
-            _logger.warning(f'{__name__}: Error analyzing strategy: {strategy.error}')
+            _logger.warning(f'Error analyzing strategy: {strategy.error}')
 
         strategy_completed += 1
 
@@ -108,7 +108,7 @@ def analyze(strategies: list[strategy_type]) -> None:
                     item.set_score_screen(strategy.score_screen)
                     items.append(item)
         except Exception as e:
-            strategy_state = f'{__name__}: {items[-1].ticker}: {str(sys.exc_info()[1])}'
+            strategy_state = f'{items[-1].ticker}: {str(sys.exc_info()[1])}'
             items = []
         else:
             if len(items) > 0:
@@ -117,7 +117,7 @@ def analyze(strategies: list[strategy_type]) -> None:
                     strategy_futures = [executor.submit(process, item) for item in items if not item.error]
 
                     for future in futures.as_completed(strategy_futures):
-                        _logger.info(f'{__name__}: Thread completed: {future.result()}')
+                        _logger.info(f'Thread completed: {future.result()}')
 
                 if not strategy_results.empty:
                     strategy_results = strategy_results.sort_values('score_total', ascending=False)

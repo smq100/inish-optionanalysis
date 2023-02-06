@@ -89,12 +89,12 @@ class Option:
                 self.volatility_implied = contract['impliedVolatility']
                 self.itm = contract['inTheMoney']
 
-                _logger.info(f'{__name__}: Loaded contract {contract_name}')
+                _logger.info(f'Loaded contract {contract_name}')
 
                 if self.price_last > 0.0:
                     diff = self.price_calc / self.price_last
                     if diff > 1.25 or diff < 0.75:
-                        _logger.info(f'{__name__}: The calculated price is significantly different than the last traded price')
+                        _logger.info('The calculated price is significantly different than the last traded price')
 
                 ret = True
 
@@ -116,9 +116,9 @@ class Option:
             if not self.chain.empty:
                 contract = self.chain.loc[self.chain['contractSymbol'] == contract_name].iloc[0]
             else:
-                _logger.info(f'{__name__}: No contract available')
+                _logger.info('No contract available')
         except Exception as e:
-            _logger.warning(f'{__name__}: {contract_name} {str(e)}')
+            _logger.warning(f'{contract_name} {str(e)}')
 
         return contract
 
