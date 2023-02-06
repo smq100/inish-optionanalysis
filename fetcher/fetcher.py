@@ -101,6 +101,8 @@ def get_company_live(ticker: str) -> dict:
     if c is not None:
         company = c.info
 
+    print(company)
+
     return company
 
 def get_option_expiry(ticker: str) -> tuple[str]:
