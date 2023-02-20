@@ -1,3 +1,8 @@
+THROTTLE_FETCH = 0.05  # Min secs between calls to fetch pricing
+THROTTLE_ERROR = 1.00  # Min secs between calls after error
+RETRIES = 2            # Number of fetch retries after error
+
+
 RATINGS = {
     'strongsell': 5,
     'sell': 5,

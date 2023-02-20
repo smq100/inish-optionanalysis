@@ -3,12 +3,12 @@ from pathlib import Path
 
 
 # Price data sources
-VALID_HISTORYDATASOURCES = ('yfinance', 'quandl')
-ACTIVE_HISTORYDATASOURCE = VALID_HISTORYDATASOURCES[0]
+VALID_HISTORYDATASOURCES = ('marketdata', 'yfinance', 'quandl')
+ACTIVE_HISTORYDATASOURCE = VALID_HISTORYDATASOURCES[1]
 
 # Option data sources
-VALID_OPTIONDATASOURCES = ('yfinance', 'etrade')
-ACTIVE_OPTIONDATASOURCE = VALID_OPTIONDATASOURCES[0]
+VALID_OPTIONDATASOURCES = ('marketdata', 'yfinance', 'etrade')
+ACTIVE_OPTIONDATASOURCE = VALID_OPTIONDATASOURCES[1]
 
 # Databases
 VALID_DBS = ('live', 'Postgres', 'SQLite')

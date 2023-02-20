@@ -10,7 +10,7 @@ from fetcher.google import Sheet
 from fetcher.google import Google
 from fetcher.excel import Excel
 from data import models as models
-from utils import ui, logger
+from utils import logger
 
 
 _logger = logger.get_logger()
@@ -351,7 +351,7 @@ def get_company(ticker: str, live: bool = False, extra: bool = False) -> dict:
                 results['url'] = company.get('website', '')[:195]
                 results['sector'] = company.get('sector', '')[:195]
                 results['industry'] = company.get('industry', '')[:195]
-                results['marketcap'] = company.get('marketCap', 0)
+                results['marketcap'] = company.get('market_cap', 0)
                 results['beta'] = company.get('beta', 0.0)
                 results['rating'] = sum(ratings) / float(len(ratings)) if len(ratings) > 0 else 3.0
 

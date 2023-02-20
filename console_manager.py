@@ -172,7 +172,6 @@ class Interface:
                     print(f'Market Cap:\t{company["marketcap"]:,}')
                     print(f'Beta:\t\t{company["beta"]:.2f}')
                     print(f'Rating:\t\t{company["rating"]:.2f}')
-
                     print(f'Sector:\t\t{company["sector"]}')
                     print(f'Industry:\t{company["industry"]}')
                     print(f'URL:\t\t{company["url"]}')
