@@ -18,6 +18,7 @@ RETRIES = 2            # Number of fetch retries after error
 
 
 _logger = logger.get_logger()
+
 _last_company: pd.DataFrame = pd.DataFrame()
 _last_ticker: str = ''
 
@@ -68,7 +69,7 @@ def get_history(ticker: str, days: int = -1) -> pd.DataFrame:
 
             for retry in range(RETRIES):
                 try:
-                    kwargs = {'debug': False}
+                    kwargs = {'debug': False} # Silence annoying yfinance messages
                     history = company.history(start=start, end=end, interval='1d', timeout=2.0, back_adjust=True, **kwargs)
 
                     if history is None:
@@ -144,6 +145,45 @@ def get_option_chain(ticker: str, expiry: dt.datetime) -> pd.DataFrame:
             time.sleep(THROTTLE_ERROR)
 
     return chain
+
+
+def get_ratings(ticker: str) -> list[int]:
+    if d.ACTIVE_OPTIONDATASOURCE == 'etrade':
+        _logger.warning('Option datasource is E*Trade but using YFinance to fetch ratings')
+
+    ratings = pd.DataFrame()
+    results = []
+    try:
+        _logger.info(f'Fetching Yahoo rating information for {ticker}...')
+        company = yf.Ticker(ticker)
+        if company is not None:
+            ratings = company.recommendations
+            if ratings is not None and not ratings.empty:
+                # Clean up and normalize text
+                ratings = ratings.reset_index()
+                ratings = ratings.sort_values('Date', ascending=True)
+                ratings = ratings.tail(10)
+                ratings = ratings['To Grade'].replace(' ', '', regex=True)
+                ratings = ratings.replace('-', '', regex=True)
+                ratings = ratings.replace('_', '', regex=True)
+
+                results = ratings.str.lower().tolist()
+
+                # Log any unhandled ranking so we can add it to the ratings list
+                [_logger.warning(f'Unhandled rating: {r} for {ticker}') for r in results if not r in d.RATINGS]
+
+                # Use the known ratings and convert to their numeric values
+                results = [r for r in results if r in d.RATINGS]
+                results = [d.RATINGS[r] for r in results]
+            else:
+                _logger.info(f'No ratings for {ticker}')
+        else:
+            _logger.info(f'Unable to get ratings for {ticker}. No company info')
+    except Exception as e:
+        results = []
+        _logger.error(f'Unable to get ratings for {ticker}: {str(e)}')
+
+    return results
 
 
 if __name__ == '__main__':

@@ -41,10 +41,12 @@ def get_history_live(ticker: str, days: int = -1) -> pd.DataFrame:
     if not _connected:
         raise ConnectionError('No internet connection')
 
-    # Throttle requests to help avoid being cut off by data provider
     global _elapsed
+
+    # Throttle requests to help avoid being cut off by data provider
     while (time.perf_counter() - _elapsed) < THROTTLE_FETCH:
         time.sleep(THROTTLE_FETCH)
+
     _elapsed = time.perf_counter()
 
     _logger.info(f'Fetching {ticker} history from {d.ACTIVE_HISTORYDATASOURCE}...')
@@ -115,42 +117,7 @@ def get_ratings(ticker: str) -> list[int]:
     if not _connected:
         raise ConnectionError('No internet connection')
 
-    if d.ACTIVE_OPTIONDATASOURCE == 'etrade':
-        _logger.warning('Option datasource is E*Trade but using YFinance to fetch ratings')
-
-    ratings = pd.DataFrame()
-    results = []
-    try:
-        _logger.info(f'Fetching Yahoo rating information for {ticker}...')
-        company = yf.Ticker(ticker)
-        if company is not None:
-            ratings = company.recommendations
-            if ratings is not None and not ratings.empty:
-                # Clean up and normalize text
-                ratings = ratings.reset_index()
-                ratings = ratings.sort_values('Date', ascending=True)
-                ratings = ratings.tail(10)
-                ratings = ratings['To Grade'].replace(' ', '', regex=True)
-                ratings = ratings.replace('-', '', regex=True)
-                ratings = ratings.replace('_', '', regex=True)
-
-                results = ratings.str.lower().tolist()
-
-                # Log any unhandled ranking so we can add it to the ratings list
-                [_logger.warning(f'Unhandled rating: {r} for {ticker}') for r in results if not r in d.RATINGS]
-
-                # Use the known ratings and convert to their numeric values
-                results = [r for r in results if r in d.RATINGS]
-                results = [d.RATINGS[r] for r in results]
-            else:
-                _logger.info(f'No ratings for {ticker}')
-        else:
-            _logger.info(f'Unable to get ratings for {ticker}. No company info')
-    except Exception as e:
-        results = []
-        _logger.error(f'Unable to get ratings for {ticker}: {str(e)}')
-
-    return results
+    return yf.get_ratings(ticker)
 
 
 def get_treasury_rate(ticker: str) -> float:
@@ -164,8 +131,8 @@ if __name__ == '__main__':
     import sys
 
     if len(sys.argv) > 1:
-        c = yf.get_history(sys.argv[1], 20)
+        c = get_history_live(sys.argv[1], days=20)
     else:
-        c = yf.get_history('AAPL', 20)
+        c = get_history_live('AAPL', days=20)
 
     print(c)

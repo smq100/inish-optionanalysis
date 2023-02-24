@@ -1,30 +1,77 @@
-# Add API KEY to the Token Header or import from a .py file
-# Get A Series of Historical Option Quotes from the API
+'''
+Marketdata: https://docs.marketdata.app/api
+'''
 
-# Example usage:
-# get_options_quote_from('IBM', '2023-02-10', 'C', '140', '2023-01-01')
 
-from datetime import datetime
-import requests
-import configparser
-import json
 from pathlib import Path
+import configparser
+import datetime as dt
+import requests
+import json
 
 import pandas as pd
 import numpy as np
 
+from utils import logger
+
+
+_logger = logger.get_logger()
 
 
 # Credentials
-CREDENTIALS = Path(__file__).resolve().parent  / 'marketdata.ini'
+CREDENTIALS = Path(__file__).resolve().parent / 'marketdata.ini'
 config = configparser.ConfigParser()
 config.read(CREDENTIALS)
 api_key = config['DEFAULT']['APIKEY']
 HEADER = {'Authorization': f'Token {api_key}'}
 
 
-def build_option_symbol(symbol, expiry_date, option_type, strike_price):
+def get_history(ticker: int, days: int, resolution: str = 'D', index=False) -> pd.DataFrame:
+    """
+    :Date Format: ('2023-01-15')
+    :Minutely Resolutions: (minutely, 1, 3, 5, 15, 30, 45, ...)
+    :Hourly Resolutions: (hourly, H, 1H, 2H, ...)
+    :Daily Resolutions: (daily, D, 1D, 2D, ...)
+    :Weekly Resolutions: (weekly, W, 1W, 2W, ...)
+    :Monthly Resolutions: (monthly, M, 1M, 2M, ...)
+    :Yearly Resolutions:(yearly, Y, 1Y, 2Y, ...)
+    """
 
+    if days < 0:
+        days = 1000
+
+    start = dt.datetime.today() - dt.timedelta(days=days)
+
+    if index:
+        url = 'https://api.marketdata.app/v1/indices/candles/'
+    else:
+        url = 'https://api.marketdata.app/v1/stocks/candles/'
+
+    path = f'{resolution}/{ticker}/?countback={days}&dateformat=unix'
+    final_url = url + path
+    response = requests.get(final_url, headers=HEADER)
+    code = response.status_code
+
+    history = pd.DataFrame()
+    if code == 200:
+        response_json = json.loads(response.text)
+        df = pd.DataFrame(response_json)
+
+        # Clean some things up and make colums consistent with Postgres column names
+        columns = {'c': 'close', 'h': 'high', 'l': 'low', 'o': 'open', 'v': 'volume', 't': 'date'}
+        df = df.drop(['s'], axis=1)
+        df['t'] = pd.to_datetime(df['t'], unit='s')
+        df = df.rename(columns=columns)
+        history = df.reindex(columns=['date', 'open', 'high', 'low', 'close', 'volume'])
+
+        _logger.info(f'{ticker} Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
+    else:
+        _logger.info(f'{ticker} Error fetching live history of {ticker}. Code = {code}')
+
+    return history
+
+
+def build_option_symbol(symbol, expiry_date, option_type, strike_price):
     """
     Get Live quotes of an option from a beginning date.
 
@@ -35,12 +82,13 @@ def build_option_symbol(symbol, expiry_date, option_type, strike_price):
     strike_price  : Strike price of the option
 
     """
-    expiry_date = datetime.strptime(expiry_date, '%Y-%m-%d')
+    expiry_date = dt.datetime.strptime(expiry_date, '%Y-%m-%d')
     expiry_date = expiry_date.strftime('%y%m%d')
     strike_price = '{:0>8}'.format(int(strike_price) * 1000)
     option_symbol = f'{symbol}{expiry_date}{option_type}{strike_price}'
 
     return option_symbol
+
 
 def get_option_chain_live(symbol):
     """
@@ -58,6 +106,7 @@ def get_option_chain_live(symbol):
 
     return chain_expr.text
 
+
 def get_options_chain_from(symbol, from_date):
     """
     get_options_chain_expr('AAPL', '2023-02-17')
@@ -65,7 +114,7 @@ def get_options_chain_from(symbol, from_date):
     from_date    :'2023-02-17'
     """
 
-    #https://api.marketdata.app/v1/options/chain/AAPL/?date=2020-01-06&dateformat=timestamp
+    # https://api.marketdata.app/v1/options/chain/AAPL/?date=2020-01-06&dateformat=timestamp
 
     url = 'https://api.marketdata.app/v1/options/chain/'
 
@@ -101,6 +150,7 @@ def get_options_chain_expr(symbol, expiry_date):
 
     return chain_expr.text
 
+
 def get_options_chain_weekly(symbol):
     """
     get_options_chain_weekly('SPX')
@@ -109,8 +159,7 @@ def get_options_chain_weekly(symbol):
     """
     # https://api.marketdata.app/v1/options/chain/AAPL/?monthly=false&dateformat=timestamp
 
-    url = 'https://api.marketdata.app/v1/options/chain/'  #AAPL/?monthly=true&dateformat=timestamp
-
+    url = 'https://api.marketdata.app/v1/options/chain/'  # AAPL/?monthly=true&dateformat=timestamp
 
     headers = {'Authorization': api_key.API_KEY}
 
@@ -120,6 +169,7 @@ def get_options_chain_weekly(symbol):
     chain_expr = requests.get(final_url, headers=headers)
     return chain_expr.text
 
+
 def get_options_chain_monthly(symbol):
     """
     get_options_chain_monthly('SPX')
@@ -127,8 +177,7 @@ def get_options_chain_monthly(symbol):
     """
     # https://api.marketdata.app/v1/options/chain/AAPL/?monthly=true&dateformat=timestamp
 
-    url = 'https://api.marketdata.app/v1/options/chain/'  #AAPL/?monthly=true&dateformat=timestam
-
+    url = 'https://api.marketdata.app/v1/options/chain/'  # AAPL/?monthly=true&dateformat=timestam
 
     headers = {'Authorization': api_key.API_KEY}
 
@@ -138,6 +187,7 @@ def get_options_chain_monthly(symbol):
     chain_expr = requests.get(final_url, headers=headers)
     return chain_expr.text
 
+
 def get_options_chain_year(symbol, year):
     """
     get_options_chain_year('IBM', '2022')
@@ -146,7 +196,7 @@ def get_options_chain_year(symbol, year):
     """
     # https://api.marketdata.app/v1/options/chain/AAPL/?year=2022&dateformat=timestamp
 
-    url = 'https://api.marketdata.app/v1/options/chain/'  #AAPL/?monthly=true&dateformat=timestamp
+    url = 'https://api.marketdata.app/v1/options/chain/'  # AAPL/?monthly=true&dateformat=timestamp
 
     headers = {'Authorization': api_key.API_KEY}
 
@@ -156,6 +206,7 @@ def get_options_chain_year(symbol, year):
     chain_expr = requests.get(final_url, headers=headers)
     return chain_expr.text
 
+
 def get_options_chain_strike(symbol, strike):
     """
     get_options_chain_strike('IBM', '150')
@@ -164,7 +215,7 @@ def get_options_chain_strike(symbol, strike):
     """
     # https://api.marketdata.app/v1/options/chain/AAPL/?strike=150&dateformat=timestamp
 
-    url = 'https://api.marketdata.app/v1/options/chain/'  #AAPL/?monthly=true&dateformat=timest
+    url = 'https://api.marketdata.app/v1/options/chain/'  # AAPL/?monthly=true&dateformat=timest
 
     headers = {'Authorization': api_key.API_KEY}
 
@@ -173,6 +224,7 @@ def get_options_chain_strike(symbol, strike):
     final_url = url + path
     chain_expr = requests.get(final_url, headers=headers)
     return chain_expr.text
+
 
 def get_hist_quotes_from_to(symbol_list, from_date, to_date):
     """
@@ -209,25 +261,26 @@ def get_hist_quotes_from_to(symbol_list, from_date, to_date):
 
         # Create a new DataFrame with the data and a column for the symbol
         symbol_df = pd.DataFrame({'updated': data.get('updated', np.nan),
-                         'symbol': symbol,
-                         'bid': data.get('bid', np.nan),
-                         'bidSize': data.get('bidSize', np.nan),
-                         'mid': data.get('mid', np.nan),
-                         'ask': data.get('ask',np.nan),
-                         'askSize': data.get('askSize', np.nan),
-                         'last': data.get('last', np.nan),
-                         'openInterest': data.get('openInterest', np.nan),
-                         'volume': data.get('volume', np.nan),
-                         'inTheMoney': data.get('inTheMoney', np.nan),
-                         'intrinsicValue': data.get('intrinsicValue', np.nan),
-                         'extrinsicValue': data.get('extrinsicValue', np.nan),
-                         'underlyingPrice': data.get('underlyingPrice', np.nan)})
+                                  'symbol': symbol,
+                                  'bid': data.get('bid', np.nan),
+                                  'bidSize': data.get('bidSize', np.nan),
+                                  'mid': data.get('mid', np.nan),
+                                  'ask': data.get('ask', np.nan),
+                                  'askSize': data.get('askSize', np.nan),
+                                  'last': data.get('last', np.nan),
+                                  'openInterest': data.get('openInterest', np.nan),
+                                  'volume': data.get('volume', np.nan),
+                                  'inTheMoney': data.get('inTheMoney', np.nan),
+                                  'intrinsicValue': data.get('intrinsicValue', np.nan),
+                                  'extrinsicValue': data.get('extrinsicValue', np.nan),
+                                  'underlyingPrice': data.get('underlyingPrice', np.nan)})
 
         # Add a new column to symbol_df with the id and date values concatenated
         symbol_df['id'] = symbol + '_' + symbol_df['updated'].astype(str)
         # Use the new column as the index when concatenating with df
         df = pd.concat([df, symbol_df.set_index('id')], ignore_index=False, sort=False, axis=0)
     return df
+
 
 def get_hist_quotes_from(symbol_list, from_date):
     """
@@ -263,19 +316,19 @@ def get_hist_quotes_from(symbol_list, from_date):
 
         # Create a new DataFrame with the data and a column for the symbol
         symbol_df = pd.DataFrame({'updated': data.get('updated', np.nan),
-                         'symbol': symbol,
-                         'bid': data.get('bid', np.nan),
-                         'bidSize': data.get('bidSize', np.nan),
-                         'mid': data.get('mid', np.nan),
-                         'ask': data.get('ask',np.nan),
-                         'askSize': data.get('askSize', np.nan),
-                         'last': data.get('last', np.nan),
-                         'openInterest': data.get('openInterest', np.nan),
-                         'volume': data.get('volume', np.nan),
-                         'inTheMoney': data.get('inTheMoney', np.nan),
-                         'intrinsicValue': data.get('intrinsicValue', np.nan),
-                         'extrinsicValue': data.get('extrinsicValue', np.nan),
-                         'underlyingPrice': data.get('underlyingPrice', np.nan)})
+                                  'symbol': symbol,
+                                  'bid': data.get('bid', np.nan),
+                                  'bidSize': data.get('bidSize', np.nan),
+                                  'mid': data.get('mid', np.nan),
+                                  'ask': data.get('ask', np.nan),
+                                  'askSize': data.get('askSize', np.nan),
+                                  'last': data.get('last', np.nan),
+                                  'openInterest': data.get('openInterest', np.nan),
+                                  'volume': data.get('volume', np.nan),
+                                  'inTheMoney': data.get('inTheMoney', np.nan),
+                                  'intrinsicValue': data.get('intrinsicValue', np.nan),
+                                  'extrinsicValue': data.get('extrinsicValue', np.nan),
+                                  'underlyingPrice': data.get('underlyingPrice', np.nan)})
 
         # Add a new column to symbol_df with the id and date values concatenated
         symbol_df['id'] = symbol + '_' + symbol_df['updated'].astype(str)
@@ -296,7 +349,7 @@ def get_options_quote_live(symbol, expiry_date, option_type, strike_price):
     Returns:
         JSON response from the API.
     """
-    expiry_date = datetime.strptime(expiry_date, '%Y-%m-%d')
+    expiry_date = dt.datetime.strptime(expiry_date, '%Y-%m-%d')
     expiry_date = expiry_date.strftime('%y%m%d')
     strike_price = '{:0>8}'.format(int(strike_price) * 1000)
     option_symbol = f'{symbol}{expiry_date}{option_type}{strike_price}'
@@ -311,101 +364,7 @@ def get_options_quote_live(symbol, expiry_date, option_type, strike_price):
     chain_response = requests.get(final_url, headers=headers)
     return chain_response.text
 
-    #print(final_url)
-
-def get_candles_from_to(switch, symbol, from_date, to_date, res):
-    """
-    :get_candles('s', 'MSFT', '2023-02-03', '2023-02-04', 'D')
-    :switch     : 's', stocks | 'i', indices
-    :Date Format: ('2023-01-15')
-    :Minutely Resolutions: (minutely, 1, 3, 5, 15, 30, 45, ...)
-    :Hourly Resolutions: (hourly, H, 1H, 2H, ...)
-    :Daily Resolutions: (daily, D, 1D, 2D, ...)
-    :Weekly Resolutions: (weekly, W, 1W, 2W, ...)
-    :Monthly Resolutions: (monthly, M, 1M, 2M, ...)
-    :Yearly Resolutions:(yearly, Y, 1Y, 2Y, ...)
-    """
-
-    def url_switch(switch):
-        if switch == 's':
-            url = 'https://api.marketdata.app/v1/stocks/candles/'
-        elif switch == 'i':
-            url = 'https://api.marketdata.app/v1/indices/candles/'
-        else:
-            return "Invalid switch parameter"
-        return url
-
-    # https://api.marketdata.app/v1/stocks/candles/D/AAPL?from=2020-01-01&to=2020-12-31
-
-    url = url_switch(switch)
-
-    headers = {'Authorization': api_key.API_KEY}
-
-    path = f'{res}/{symbol}/?from={from_date}&to={to_date}&dateformat=timestamp'
-
-    final_url = url + path
-    candles = requests.get(final_url, headers=headers)
-    candles = candles.text
-    candles_pd = json.loads(candles)
-    candles_hist = pd.DataFrame(candles_pd)
-    candles_hist['symbol'] = symbol
-
-    # rename the columns
-    columns = {
-        'c': 'close',
-        'h': 'high',
-        'l': 'low',
-        'o': 'open',
-        'v': 'volume',
-        't': 'date'
-    }
-    candles_hist.rename(columns=columns, inplace=True)
-    candles_hist.drop(['s'], axis=1, inplace=True)
-    candles_hist = candles_hist.reindex(columns=['symbol','date', 'close', 'high', 'low', 'open', 'volume'])
-    return candles_hist
-
-
-def get_history(symbol, days, resolution='D', index=False):
-    """
-    :get_candles('s', 'MSFT', '2023-02-03', 'D')
-    :switch     : 's', stocks | 'i', indices
-    :Date Format: ('2023-01-15')
-    :Minutely Resolutions: (minutely, 1, 3, 5, 15, 30, 45, ...)
-    :Hourly Resolutions: (hourly, H, 1H, 2H, ...)
-    :Daily Resolutions: (daily, D, 1D, 2D, ...)
-    :Weekly Resolutions: (weekly, W, 1W, 2W, ...)
-    :Monthly Resolutions: (monthly, M, 1M, 2M, ...)
-    :Yearly Resolutions:(yearly, Y, 1Y, 2Y, ...)
-    """
-
-    if days < 0: days = 1000
-
-    if index:
-        url = 'https://api.marketdata.app/v1/indices/candles/'
-    else:
-        url = 'https://api.marketdata.app/v1/stocks/candles/'
-
-    path = f'{resolution}/{symbol}/?countback={days}&dateformat=timestamp'
-    final_url = url + path
-    candles = requests.get(final_url, headers=HEADER)
-    candles = candles.text
-    candles_pd = json.loads(candles)
-    candles_hist = pd.DataFrame(candles_pd)
-    candles_hist['symbol'] = symbol
-
-    # rename the columns
-    columns = {
-        'c': 'close',
-        'h': 'high',
-        'l': 'low',
-        'o': 'open',
-        'v': 'volume',
-        't': 'date'
-    }
-    candles_hist.rename(columns=columns, inplace=True)
-    candles_hist.drop(['s'], axis=1, inplace=True)
-    candles_hist = candles_hist.reindex(columns=['symbol','date', 'close', 'high', 'low', 'open', 'volume'])
-    return candles_hist
+    # print(final_url)
 
 
 if __name__ == '__main__':
