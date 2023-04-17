@@ -75,7 +75,7 @@ def get_company_live(ticker: str) -> dict:
     c = yf.get_company(ticker)
     if c is not None:
         company = c.info
-        company['market_cap'] = c.fast_info.get('market_cap', 0)
+        company['market_cap'] = c.info.get('market_cap', 0)
 
     return company
 

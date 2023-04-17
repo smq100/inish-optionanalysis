@@ -148,7 +148,7 @@ def get_filenames(name: str, type: str, type_only: bool = False) -> list[str]:
     type = type.lower()
 
     files = []
-    path = Path(CACHE_BASEPATH)Í
+    path = Path(CACHE_BASEPATH)
     items = [item for item in path.glob(f'*.{CACHE_SUFFIX}') if item.is_file()]
     for item in items:
         head, sep, tail = item.name.partition('.')

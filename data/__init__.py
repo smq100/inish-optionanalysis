@@ -4,7 +4,7 @@ from pathlib import Path
 
 # Price data sources
 VALID_HISTORYDATASOURCES = ('marketdata', 'yfinance', 'quandl')
-ACTIVE_HISTORYDATASOURCE = VALID_HISTORYDATASOURCES[0]
+ACTIVE_HISTORYDATASOURCE = VALID_HISTORYDATASOURCES[1]
 
 # Option data sources
 VALID_OPTIONDATASOURCES = ('marketdata', 'yfinance', 'etrade')
