@@ -79,7 +79,7 @@ class _Line:
     age: float = 0.0
     proximity: float = 0.0
     score: float = 0.0
-    _score: _Score = _Score()
+    _score: _Score = field(default_factory=_Score)
 
     def __str__(self):
         dates = [point['date'] for point in self.points]

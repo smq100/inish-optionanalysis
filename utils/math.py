@@ -9,7 +9,10 @@ import strategies as s
 from strategies.analysis import calculate_sentiment
 
 
-TERMINAL_SIZE = os.get_terminal_size()
+try:
+    TERMINAL_SIZE = os.get_terminal_size()
+except:
+    TERMINAL_SIZE = 30
 
 VALUETABLE_ROWS = 50
 VALUETABLE_COLS = 9

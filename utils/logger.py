@@ -5,8 +5,11 @@ from logging import Logger
 LOG_DIR = './log'
 
 
-def get_logger(level: int = None, logfile: str = '') -> Logger:
-    logger = logging.getLogger('analysis')
+def get_logger(level: int = None, logger: str = '', logfile: str = '') -> Logger:
+    if logger:
+        logger = logging.getLogger(logger)
+    else:
+        logger = logging.getLogger('analysis')
 
     if level is None:
         logger.info(f'Returning existing logger')

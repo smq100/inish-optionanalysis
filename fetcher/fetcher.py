@@ -5,6 +5,7 @@ import datetime as dt
 import pandas as pd
 
 import data as d
+import fetcher as f
 from fetcher import source_yfinance as yf
 from fetcher import source_marketdata as md
 from fetcher import source_etrade as et
@@ -117,7 +118,11 @@ def get_ratings(ticker: str) -> list[int]:
     if not _connected:
         raise ConnectionError('No internet connection')
 
-    return yf.get_ratings(ticker)
+    ratings = yf.get_ratings(ticker)
+    if not ratings:
+        ratings = [3.0]
+
+    return ratings
 
 
 def get_treasury_rate(ticker: str) -> float:
@@ -131,8 +136,8 @@ if __name__ == '__main__':
     import sys
 
     if len(sys.argv) > 1:
-        c = get_history_live(sys.argv[1], days=20)
+        c = get_company_live(sys.argv[1])
     else:
-        c = get_history_live('AAPL', days=20)
+        c = get_company_live('AAPL')
 
     print(c)

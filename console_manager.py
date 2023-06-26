@@ -15,7 +15,11 @@ from utils import ui, logger
 CSV_BASEPATH = './output'
 
 
-logger.get_logger(logging.ERROR, logfile='')
+logger.get_logger(logging.DEBUG, logfile='')
+
+# Silence yfinance debug messages
+logger_yf = logging.getLogger('yfinance')
+logger_yf.setLevel(logging.CRITICAL)
 
 
 class Interface:
@@ -25,9 +29,13 @@ class Interface:
         self.quick = quick
         self.stop = False
         self.commands: list[dict] = []
+        self.manager: manager.Manager = manager.Manager()
         self.exit = False
+        self.task: threading.Thread
 
-        if store.is_database_connected():
+        if not store.is_database_connected():
+            ui.print_error('No databases available')
+        else:
             if ticker:
                 if store.is_ticker(ticker.upper()):
                     self.ticker = ticker.upper()
@@ -47,16 +55,23 @@ class Interface:
                     exit = True
                     ui.print_error(f'Invalid ticker specifed: {update}')
 
-            self.exchanges: list[str] = store.get_exchanges()
-            self.indexes: list[str] = store.get_indexes()
-            self.manager: manager.Manager = manager.Manager()
-            self.task: threading.Thread
-
             if not store.is_live_connection():
                 ui.print_error('No Internet connection')
 
+            info = self.manager.get_database_info()
+            build = False
+            if info:
+                self.exchanges: list[str] = store.get_exchanges()
+                self.indexes: list[str] = store.get_indexes()
+            else:
+                build = True
+
             if exit:
                 pass
+            elif build:
+                answer = ui.input_text('Database tables do not exist. Would you like to reset the database?').upper()
+                if answer[0] == 'Y':
+                    self.m_reset_database()
             elif ticker:
                 self.exit = True
                 self.main_menu(selection=2)
@@ -65,15 +80,13 @@ class Interface:
                 self.main_menu(selection=5)
             else:
                 self.main_menu()
-        else:
-            ui.print_error('No databases available')
 
     def main_menu(self, selection: int = 0) -> None:
         self.commands = [
             {'menu': 'Database Information', 'function': self.m_show_database_information, 'params': '', 'condition': '', 'value': ''},
             {'menu': 'Ticker Information', 'function': self.m_show_ticker_information, 'params': 'self.ticker', 'condition': 'True', 'value': 'd.ACTIVE_DB.lower()'},
             {'menu': 'Ticker Information', 'function': self.m_show_ticker_information, 'params': 'self.ticker, live=True', 'condition': 'True', 'value': 'd.ACTIVE_HISTORYDATASOURCE.lower()'},
-            {'menu': 'Ticker Information (previous)', 'function': self.m_show_ticker_information, 'params': 'self.ticker, prompt=True', 'condition': 'True', 'value': ''},
+            # {'menu': 'Ticker Information (previous)', 'function': self.m_show_ticker_information, 'params': 'self.ticker, prompt=True', 'condition': 'True', 'value': ''},
             {'menu': 'Update History', 'function': self.m_update_history, 'params': '', 'condition': '', 'value': ''},
             {'menu': 'Update Company', 'function': self.m_update_company, 'params': '', 'condition': '', 'value': ''},
             {'menu': 'Check Integrity', 'function': self.m_check_integrity, 'params': '', 'condition': '', 'value': ''},
@@ -144,7 +157,7 @@ class Interface:
             ticker = ui.input_text('Enter ticker').upper()
 
         if ticker:
-            if store.is_ticker(ticker, inactive=True):
+            if store.is_ticker(ticker, inactive=True) or live:
                 if prompt:
                     end = ui.input_integer('Enter number of days', 0, 100)
                 else:
@@ -159,15 +172,15 @@ class Interface:
 
                     print(f'Name:\t\t{company["name"]}')
 
-                    if not live:
-                        print(f'Exchange:\t{company["exchange"]}')
-                    else:
+                    if live:
                         print(f'Exchange:\t{store.get_ticker_exchange(ticker)}')
-
-                    if not live:
-                        print(f'Indexes:\t{company["indexes"]}')
                     else:
+                        print(f'Exchange:\t{company["exchange"]}')
+
+                    if live:
                         print(f'Indexes:\t{store.get_ticker_index(ticker)}')
+                    else:
+                        print(f'Indexes:\t{company["indexes"]}')
 
                     print(f'Market Cap:\t{company["marketcap"]:,}')
                     print(f'Beta:\t\t{company["beta"]:.2f}')
@@ -183,7 +196,9 @@ class Interface:
                     ui.print_warning(f'{ticker} has no company information')
 
                 history = store.get_history(ticker, days=100, end=end, live=live)
-                if history is None or history.empty:
+                if history is None:
+                    ui.print_error(f'{ticker} has no price history')
+                if history.empty:
                     ui.print_error(f'{ticker} has no price history')
                 else:
                     history = history.round(2)

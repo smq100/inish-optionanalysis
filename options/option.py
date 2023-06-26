@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import datetime as dt
 import re
 import collections
@@ -38,7 +38,7 @@ class Option:
     rho: float = 0.0
 
     # Fetched online
-    chain: pd.DataFrame = pd.DataFrame()
+    chain: pd.DataFrame = field(default_factory=pd.DataFrame)
     contract: str = ''
     last_trade_date: str = ''
     price_last: float = 0.0

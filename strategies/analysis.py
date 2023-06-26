@@ -22,9 +22,9 @@ class Analysis:
     score_screen: float = -1.0
     score_total: float = -1.0
     breakeven: list[float] = field(default_factory=list)
-    profit_table: pd.DataFrame = pd.DataFrame()
-    analysis: pd.DataFrame = pd.DataFrame()
-    strategy: pd.DataFrame = pd.DataFrame()
+    profit_table: pd.DataFrame = field(default_factory=pd.DataFrame)
+    analysis: pd.DataFrame = field(default_factory=pd.DataFrame)
+    strategy: pd.DataFrame = field(default_factory=pd.DataFrame)
 
     def __post_init__(self):
         self.sort_index = self.score_total

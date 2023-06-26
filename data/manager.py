@@ -36,7 +36,7 @@ class Manager(Threaded):
             self.session = sessionmaker(bind=self.engine)
 
             # No multithreading for SQLite
-            self._concurrency = 1 if d.ACTIVE_DB == 'SQLite' else 10
+            self._concurrency = 1 if (d.ACTIVE_DB == 'SQLite' or d.DEBUG_DB) else 10
         else:
             raise ValueError('No database specified')
 
@@ -75,16 +75,20 @@ class Manager(Threaded):
                 self.task_completed += 1
 
         if store.is_exchange(exchange):
-            tickers = list(store.get_exchange_tickers_master(exchange))
+            tickers = store.get_exchange_tickers_master(exchange)
             self.invalid_tickers = []
             self.retry = 0
 
-            if len(tickers) > 10:
+            if tickers:
                 self.task_total = len(tickers)
                 self.task_state = 'None'
 
                 with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
-                    if self._concurrency > 1:
+                    if d.DEBUG_DB:
+                        random.shuffle(tickers)
+                        tickers = tickers[:3]
+                        self.task_futures = [executor.submit(add, tickers)]
+                    elif self._concurrency > 1:
                         random.shuffle(tickers)
                         lists = np.array_split(tickers, self._concurrency)
                         lists = [item.tolist() for item in lists if item.size > 0]
@@ -97,14 +101,16 @@ class Manager(Threaded):
                         _logger.debug(f'Thread completed: {future.result()}. {running} threads remaining')
             else:
                 _logger.warning(f'No symbols for {exchange}')
+        else:
+            _logger.warning(f'\'{exchange}\' is not a valid exchange')
 
         self.task_state = 'Done'
 
     def add_ticker_to_exchange(self, ticker: str, exchange: str) -> bool:
         exchange = exchange.upper()
         exit = False
+        retries = 2
         process = False
-        retries = 5
         success = False
 
         if store.is_exchange(exchange):
@@ -119,14 +125,14 @@ class Manager(Threaded):
                         history = store.get_history(ticker, live=True)
                         if history is None:
                             _logger.error(f'\'None\' object for {ticker} (1)')
-                        elif history is not None:
-                            process = True
-                        else:
+                        elif history.empty:
                             self.invalid_tickers.append(ticker)
-                            _logger.warning(f'History information for {ticker} not available. Not added to database')
+                            _logger.warning(f'History for {ticker} not available. Not added to database. Marked invalid')
+                        else:
+                            process = True
                     else:
                         self.invalid_tickers.append(ticker)
-                        _logger.warning(f'Company information for {ticker} not available. Not added to database')
+                        _logger.warning(f'Company for {ticker} not available. Not added to database. Marked invalid')
 
                     if process:
                         try:
@@ -364,9 +370,9 @@ class Manager(Threaded):
                     time.sleep(0.05)
                     days = self.update_history_ticker(ticker)
                 except IntegrityError as e:
-                    _logger.error(f'IntegrityError exception occurred for {ticker} (1): {e.__cause__}')
+                    _logger.error(f'IntegrityError exception occurred for {ticker}: {e.__cause__}')
                 except Exception as e:
-                    _logger.error(f'Unknown exception occurred for {ticker} (1): {e}')
+                    _logger.error(f'Unknown exception occurred for {ticker}: {e}')
 
                 self.task_completed += 1
 
@@ -603,9 +609,9 @@ class Manager(Threaded):
                     try:
                         days = self.update_history_ticker(ticker, inactive=True)
                     except IntegrityError as e:
-                        _logger.error(f'IntegrityError exception occurred for {ticker} (2): {e.__cause__}')
+                        _logger.error(f'IntegrityError exception occurred for {ticker}: {e.__cause__}')
                     except Exception as e:
-                        _logger.error(f'Unknown exception occurred for {ticker} (2): {e}')
+                        _logger.error(f'Unknown exception occurred for {ticker}: {e}')
                     else:
                         if days > 0:
                             self.task_results.append(ticker)
@@ -785,10 +791,10 @@ class Manager(Threaded):
                     _logger.warning(f'No company info for {ticker}')
         except IntegrityError as e:
             c = None
-            _logger.error(f'IntegrityError exception occurred for {ticker} (3): {e.__cause__}')
+            _logger.error(f'IntegrityError exception occurred for {ticker}: {e.__cause__}')
         except Exception as e:
             c = None
-            _logger.error(f'Unknown exception occurred for {ticker} (3): {e}')
+            _logger.error(f'Unknown exception occurred for {ticker}: {e}')
 
         return c is not None
 
@@ -827,9 +833,9 @@ class Manager(Threaded):
                 else:
                     _logger.warning(f'{ticker} is not a valid ticker')
         except IntegrityError as e:
-            _logger.error(f'IntegrityError exception occurred for {ticker} (4): {e.__cause__}')
+            _logger.error(f'IntegrityError exception occurred for {ticker}: {e.__cause__}')
         except Exception as e:
-            _logger.error(f'Unknown exception occurred for {ticker} (4): {e}')
+            _logger.error(f'Unknown exception occurred for {ticker}: {e}')
         else:
             added = True
 
@@ -888,9 +894,14 @@ def _read_tickers_log(filename: str) -> list[str]:
 
 
 if __name__ == '__main__':
-    # import logging
-    # logger.get_logger(logging.DEBUG)
+    import sys
+    import logging
 
-    manager = Manager()
-    l = manager.identify_inactive_tickers('EVERY')
-    print(len(l))
+    logger.get_logger(logging.DEBUG)
+
+    m = Manager()
+
+    if len(sys.argv) > 1:
+        c = m.add_ticker_to_exchange(sys.argv[1], 'NASDAQ')
+    else:
+        c = m.add_ticker_to_exchange('AAPL', 'NASDAQ')

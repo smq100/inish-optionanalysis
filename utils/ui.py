@@ -7,8 +7,11 @@ from colorama import Fore, Style
 from utils import math as m
 from data import store as store
 
+try:
+    TERMINAL_SIZE = os.get_terminal_size()
+except:
+    TERMINAL_SIZE = 30
 
-TERMINAL_SIZE = os.get_terminal_size()
 DATE_FORMAT_YMD = '%Y-%m-%d'
 DATE_FORMAT_MDY = '%m-%d-%Y'
 TABULATE_FORMAT = 'simple'

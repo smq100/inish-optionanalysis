@@ -19,13 +19,11 @@ _logger = logger.get_logger()
 _master_exchanges: dict = {
     d.EXCHANGES[0]['abbreviation']: set(),
     d.EXCHANGES[1]['abbreviation']: set(),
-    d.EXCHANGES[2]['abbreviation']: set()
 }
 
 _master_indexes: dict = {
     d.INDEXES[0]['abbreviation']: set(),
-    d.INDEXES[1]['abbreviation']: set()
-    # d.INDEXES[2]['abbreviation']: set()
+    d.INDEXES[1]['abbreviation']: set(),
 }
 
 if d.ACTIVE_DB == 'Postgres':
@@ -232,8 +230,6 @@ def get_ticker_exchange(ticker: str) -> str:
         exchange = 'NASDAQ'
     elif ticker.upper() in get_exchange_tickers_master('NYSE'):
         exchange = 'NYSE'
-    elif ticker.upper() in get_exchange_tickers_master('AMEX'):
-        exchange = 'AMEX'
     else:
         exchange = ''
 
@@ -291,9 +287,9 @@ def get_history(ticker: str, days: int = -1, end: int = 0, live: bool = False, i
             history = pd.DataFrame()
             _logger.error(f'\'None\' object for {ticker} (1)')
         elif history.empty:
-            _logger.info(f'Unable to fetch live price history for {ticker} from {d.ACTIVE_HISTORYDATASOURCE}')
+            _logger.info(f'Unable to fetch price history for {ticker} from {d.ACTIVE_HISTORYDATASOURCE}')
         else:
-            _logger.debug(f'Fetched {len(history)} days of live price history for {ticker}')
+            _logger.debug(f'Fetched {len(history)} days of price history for {ticker}')
 
         if end > 0:
             _logger.info('\'end\' value ignored for live queries')
@@ -343,8 +339,6 @@ def get_company(ticker: str, live: bool = False, extra: bool = False) -> dict:
         if company:
             try:
                 ratings = fetcher.get_ratings(ticker)
-                if not ratings:
-                    ratings = [3.0]
 
                 results['name'] = company.get('shortName', '')[:95]
                 results['description'] = company.get('longBusinessSummary', '')[:4995]
@@ -470,7 +464,7 @@ def get_exchange_tickers_master(exchange: str, type: str = 'google') -> list[str
 
             if table.open(exchange):
                 symbols = table.get_column(1)
-                _master_exchanges[exchange] = set(symbols)
+                _master_exchanges[exchange] = list(set(symbols))
             else:
                 _logger.warning(f'Unable to open exchange spreadsheet {exchange}')
     else:
@@ -520,9 +514,11 @@ def get_treasury_rate(ticker: str = 'DTB3') -> float:
 
 
 if __name__ == '__main__':
-    # import sys
-    # from logging import DEBUG
-    # _logger = logger.get_logger(DEBUG)
+    import sys
 
-    t = get_exchange_tickers('NASDAQ', inactive = False)
-    print(len(t))
+    if len(sys.argv) > 1:
+        c = get_company(sys.argv[1], live=True)
+    else:
+        c = get_company('AAPL', live=True)
+
+    print(c)
