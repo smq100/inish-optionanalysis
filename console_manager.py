@@ -15,11 +15,10 @@ from utils import ui, logger
 CSV_BASEPATH = './output'
 
 
-logger.get_logger(logging.DEBUG, logfile='')
+logger.get_logger(logging.ERROR, logfile='')
 
 # Silence yfinance debug messages
-logger_yf = logging.getLogger('yfinance')
-logger_yf.setLevel(logging.CRITICAL)
+logging.getLogger('yfinance').setLevel(logging.CRITICAL)
 
 
 class Interface:

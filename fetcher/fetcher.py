@@ -50,8 +50,6 @@ def get_history_live(ticker: str, days: int = -1) -> pd.DataFrame:
 
     _elapsed = time.perf_counter()
 
-    _logger.info(f'Fetching {ticker} history from {d.ACTIVE_HISTORYDATASOURCE}...')
-
     if d.ACTIVE_HISTORYDATASOURCE == 'yfinance':
         history = yf.get_history(ticker, days=days)
     elif d.ACTIVE_HISTORYDATASOURCE == 'marketdata':
@@ -63,9 +61,11 @@ def get_history_live(ticker: str, days: int = -1) -> pd.DataFrame:
 
     if history is None:
         history = pd.DataFrame()
-        _logger.error(f'\'None\' object for {ticker} (2)')
+        _logger.error(f'\'None\' object for {ticker}')
     elif history.empty:
         _logger.info(f'Empty live history for {ticker}')
+    else:
+        _logger.info(f'Fetched {ticker} history from {d.ACTIVE_HISTORYDATASOURCE}')
 
     return history
 

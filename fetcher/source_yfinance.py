@@ -30,7 +30,6 @@ def validate_ticker(ticker: str) -> bool:
 
     # YFinance (or Pandas) throws exceptions with bad info (YFinance bug?)
     try:
-        _logger.info(f'Fetching Yahoo ticker information for {ticker}...')
         if yf.Ticker(ticker) is not None:
             valid = True
     except Exception:
@@ -51,7 +50,7 @@ def get_company(ticker: str) -> yf.Ticker:
         except Exception as e:
             _logger.error(f'yfinance exception creating Ticker: {e}: {ticker}')
         else:
-            _logger.info(f'Fetched live company information for {ticker} from Yahoo')
+            _logger.info(f'Fetched company information for {ticker} from Yahoo')
 
     _last_company = company
     _last_ticker = ticker
@@ -60,11 +59,11 @@ def get_company(ticker: str) -> yf.Ticker:
 
 
 def get_history(ticker: str, days: int = -1) -> pd.DataFrame:
-    history: pd.DataFrame = pd.DataFrame()
+    history = pd.DataFrame()
     company = get_company(ticker)
 
     if company is None:
-        _logger.error(f'\'None\' object for {ticker} (1)')
+        _logger.error(f'\'None\' object for {ticker}')
     else:
         if days < 0:
             days = 7300  # 20 years
@@ -100,7 +99,7 @@ def get_history(ticker: str, days: int = -1) -> pd.DataFrame:
                         _logger.info(f'{ticker} Fetched {days} days of live history of {ticker} starting {start:%Y-%m-%d}')
                         break
                 except Exception as e:
-                    _logger.error(f'Exception: {e}: During attempt {retry+1} to fetch history of {ticker} from {d.ACTIVE_HISTORYDATASOURCE}')
+                    _logger.error(f'Error during attempt {retry+1} to fetch history of {ticker} from {d.ACTIVE_HISTORYDATASOURCE}: {e}')
                     history = pd.DataFrame()
                     time.sleep(THROTTLE_ERROR)
 
@@ -161,7 +160,6 @@ def get_ratings(ticker: str) -> list[int]:
             _logger.warning('Option datasource is E*Trade but using YFinance to fetch ratings')
 
         try:
-            _logger.info(f'Fetching Yahoo rating information for {ticker}...')
             company = yf.Ticker(ticker)
             if company is not None:
                 ratings = company.recommendations
@@ -189,6 +187,8 @@ def get_ratings(ticker: str) -> list[int]:
         except Exception as e:
             results = []
             _logger.error(f'Unable to get ratings for {ticker}: {str(e)}')
+        else:
+            _logger.info(f'Fetched Yahoo rating information for {ticker}')
 
     return results
 

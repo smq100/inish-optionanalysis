@@ -19,7 +19,7 @@ def get_logger(level: int = None, logger: str = '', logfile: str = '') -> Logger
         logger.propagate = False  # Prevent logging from propagating to the root logger
 
         # Console handler
-        cformat = logging.Formatter('%(levelname)s - %(module)s/%(lineno)d - %(message)s')
+        cformat = logging.Formatter('%(levelname)s - %(module)s/%(lineno)d: %(message)s')
         ch = logging.StreamHandler()
         ch.setFormatter(cformat)
         ch.setLevel(level)
@@ -27,7 +27,7 @@ def get_logger(level: int = None, logger: str = '', logfile: str = '') -> Logger
 
         # File handler
         if logfile:
-            fformat = logging.Formatter('%(asctime)s: %(levelname)s - %(module)s/%(lineno)d - %(message)s', datefmt='%H:%M:%S')
+            fformat = logging.Formatter('%(asctime)s: %(levelname)s - %(module)s/%(lineno)d: %(message)s', datefmt='%H:%M:%S')
             fh = logging.FileHandler(f'{LOG_DIR}/{logfile}.log', 'w+')
             fh.setFormatter(fformat)
             fh.setLevel(logging.DEBUG)

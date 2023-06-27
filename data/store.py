@@ -285,7 +285,7 @@ def get_history(ticker: str, days: int = -1, end: int = 0, live: bool = False, i
         history = fetcher.get_history_live(ticker, days)
         if history is None:
             history = pd.DataFrame()
-            _logger.error(f'\'None\' object for {ticker} (1)')
+            _logger.error(f'\'None\' object for {ticker}')
         elif history.empty:
             _logger.info(f'Unable to fetch price history for {ticker} from {d.ACTIVE_HISTORYDATASOURCE}')
         else:
@@ -314,7 +314,7 @@ def get_history(ticker: str, days: int = -1, end: int = 0, live: bool = False, i
                     history = pd.read_sql(q.statement, _engine)
                     if history is None:
                         history = pd.DataFrame()
-                        _logger.error(f'\'None\' object for {ticker} (2)')
+                        _logger.error(f'\'None\' object for {ticker}')
                     elif history.empty:
                         _logger.info(f'Empty history found for {ticker}')
                     else:

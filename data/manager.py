@@ -124,15 +124,15 @@ class Manager(Threaded):
                     if company:
                         history = store.get_history(ticker, live=True)
                         if history is None:
-                            _logger.error(f'\'None\' object for {ticker} (1)')
+                            _logger.error(f'\'None\' object for {ticker}')
                         elif history.empty:
                             self.invalid_tickers.append(ticker)
-                            _logger.warning(f'History for {ticker} not available. Not added to database. Marked invalid')
+                            _logger.warning(f'History for {ticker} not available. Not added to database')
                         else:
                             process = True
                     else:
                         self.invalid_tickers.append(ticker)
-                        _logger.warning(f'Company for {ticker} not available. Not added to database. Marked invalid')
+                        _logger.warning(f'Company for {ticker} not available. Not added to database')
 
                     if process:
                         try:
@@ -149,7 +149,7 @@ class Manager(Threaded):
                             _logger.warning(f'Company info invalid for {ticker}: {str(e)}')
                         except HTTPError as e:
                             self.retry += 1
-                            _logger.warning(f'HTTP Error for {ticker}. Retry: {self.retry}: {str(e)}')
+                            _logger.warning(f'HTTP Error for {ticker}. Retrying {self.retry}...: {str(e)}')
                             if self.retry > retries:
                                 self.invalid_tickers.append(ticker)
                                 exit = True
@@ -158,14 +158,14 @@ class Manager(Threaded):
                                 time.sleep(1.0)
                         except RuntimeError as e:
                             self.retry += 1
-                            _logger.warning(f'Runtime Error for {ticker}. Retrying... {self.retry}: {str(e)}')
+                            _logger.warning(f'Runtime Error for {ticker}. Retrying {self.retry}...: {str(e)}')
                             if self.retry > retries:
                                 self.invalid_tickers.append(ticker)
                                 exit = True
                                 _logger.error(f'Runtime Error for {ticker}. Too many retries: {str(e)}')
                         except Exception as e:
                             self.retry += 1
-                            _logger.warning(f'Error for {ticker}. Retrying... {self.retry}: {str(e)}')
+                            _logger.warning(f'Error for {ticker}. Retrying {self.retry}...: {str(e)}')
                             if self.retry > retries:
                                 self.invalid_tickers.append(ticker)
                                 exit = True
@@ -174,7 +174,7 @@ class Manager(Threaded):
                             self.retry = 0
                             success = True
                 else:
-                    _logger.info(f'{ticker} already exists')
+                    _logger.info(f'{ticker} already exists. Skipped')
 
                 if exit:
                     _logger.error(f'Error adding ticker {ticker} to exchange')
@@ -291,7 +291,7 @@ class Manager(Threaded):
 
             history = store.get_history(ticker, inactive=inactive)
             if history is None:
-                _logger.error(f'\'None\' object for {ticker} (2)')
+                _logger.error(f'\'None\' object for {ticker}')
             elif history.empty:
                 if self._add_live_history_to_ticker(ticker):
                     _logger.info(f'Added full price history for {ticker}')
@@ -309,7 +309,7 @@ class Manager(Threaded):
                 if delta > 0:
                     history = store.get_history(ticker, days=60, live=True)  # Change days value if severely out of data
                     if history is None:
-                        _logger.error(f'\'None\' object for {ticker} (3)')
+                        _logger.error(f'\'None\' object for {ticker}')
                     elif history.empty:
                         _logger.warning(f'Empty pricing dataframe for {ticker}')
                     else:
@@ -699,7 +699,7 @@ class Manager(Threaded):
                 self.task_ticker = ticker
                 history = store.get_history(ticker, days=90)
                 if history is None:
-                    _logger.error(f'\'None\' object for {ticker} (4)')
+                    _logger.error(f'\'None\' object for {ticker}')
                 elif not history.empty:
                     last = history.iloc[-1].date
                     past = dt.datetime.today() - dt.timedelta(days=days)
@@ -810,7 +810,7 @@ class Manager(Threaded):
                         history = store.get_history(ticker, live=True)
 
                     if history is None:
-                        _logger.error(f'\'None\' object for {ticker} (1)')
+                        _logger.error(f'\'None\' object for {ticker}')
                     if not history.empty:
                         for price in history.reset_index().itertuples():
                             if price.date:
