@@ -1,8 +1,8 @@
 import time
 import random
 import datetime as dt
-from pathlib import Path
 from concurrent import futures
+from pathlib import Path
 from urllib.error import HTTPError
 
 from sqlalchemy import create_engine, inspect, and_, or_
@@ -18,9 +18,6 @@ from data import models as models
 from utils import ui, logger
 
 _logger = logger.get_logger()
-
-LOG_DIR = './log'
-LOG_SUFFIX = 'log'
 
 
 class Manager(Threaded):
@@ -62,7 +59,7 @@ class Manager(Threaded):
                     _logger.info(f'Added index {index["abbreviation"]}')
 
     @Threaded.threaded
-    def populate_exchange(self, exchange: str) -> None:
+    def populate_exchange(self, exchange: str, log: bool = True) -> None:
         exchange = exchange.upper()
         running = self._concurrency
 
@@ -84,12 +81,11 @@ class Manager(Threaded):
                 self.task_state = 'None'
 
                 with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
+                    random.shuffle(tickers)
                     if d.DEBUG_DB:
-                        random.shuffle(tickers)
-                        tickers = tickers[:3]
+                        tickers = tickers[:10]
                         self.task_futures = [executor.submit(add, tickers)]
                     elif self._concurrency > 1:
-                        random.shuffle(tickers)
                         lists = np.array_split(tickers, self._concurrency)
                         lists = [item.tolist() for item in lists if item.size > 0]
                         self.task_futures = [executor.submit(add, item) for item in lists]
@@ -104,6 +100,9 @@ class Manager(Threaded):
         else:
             _logger.warning(f'\'{exchange}\' is not a valid exchange')
 
+        if log:
+            ui.write_tickers_log(self.invalid_tickers)
+
         self.task_state = 'Done'
 
     def add_ticker_to_exchange(self, ticker: str, exchange: str) -> bool:
@@ -116,14 +115,15 @@ class Manager(Threaded):
         if store.is_exchange(exchange):
             with self.session() as session:
                 exc = session.query(models.Exchange).filter(models.Exchange.abbreviation == exchange).one()
-                sec = session.query(models.Security).filter(models.Security.ticker == ticker).one_or_none()
+                tic = session.query(models.Security).filter(models.Security.ticker == ticker).one_or_none()
 
-                if sec is None:
+                if tic is None:
                     process = False
                     company = store.get_company(ticker, live=True)
                     if company:
                         history = store.get_history(ticker, live=True)
                         if history is None:
+                            self.invalid_tickers.append(ticker)
                             _logger.error(f'\'None\' object for {ticker}')
                         elif history.empty:
                             self.invalid_tickers.append(ticker)
@@ -381,8 +381,10 @@ class Manager(Threaded):
                     self.task_counter += days
                 elif days < 0:
                     self.invalid_tickers.append(ticker)
-                    _write_tickers_log(self.invalid_tickers)
                     _logger.warning(f'No data for {ticker}')
+
+                    if log:
+                        ui.write_tickers_log(self.invalid_tickers)
 
                 toc = time.perf_counter()
                 _logger.debug(f'{toc-tic:.2f}s to update {ticker}')
@@ -403,7 +405,7 @@ class Manager(Threaded):
                     running -= 1
                     _logger.info(f'Thread completed: {future.result()}. {running} threads remaining')
         if log:
-            _write_tickers_log(self.invalid_tickers)
+            ui.write_tickers_log(self.invalid_tickers)
 
         self.task_state = 'Done'
 
@@ -585,16 +587,16 @@ class Manager(Threaded):
         errors = []
         files = []
 
-        path = Path(LOG_DIR)
-        items = [item for item in path.glob(f'*.{LOG_SUFFIX}') if item.is_file()]
+        path = Path(ui.LOG_DIR)
+        items = [item for item in path.glob(f'*.{ui.LOG_SUFFIX}') if item.is_file()]
         for item in items:
             head, sep, tail = item.name.partition('.')
             if head[:2] == '20':
-                files.append(f'{LOG_DIR}/{item.name}')
+                files.append(f'{ui.LOG_DIR}/{item.name}')
 
         if files:
             files.sort()
-            errors = _read_tickers_log(files[-1])
+            errors = ui.read_tickers_log(files[-1])
 
         return errors
 
@@ -861,36 +863,6 @@ class Manager(Threaded):
                 self.task_completed += 1
 
                 _logger.info(f'Added {t} to index {index}')
-
-
-def _write_tickers_log(tickers: list[str], filename: str = '') -> str:
-    if tickers:
-        date_time = dt.datetime.now().strftime(ui.DATE_FORMAT_YMD)
-        filename = f'{LOG_DIR}/{date_time}.{LOG_SUFFIX}'
-
-        with open(filename, 'w') as f:
-            for ticker in tickers:
-                f.write(ticker + '\n')
-
-    return filename
-
-
-def _read_tickers_log(filename: str) -> list[str]:
-    tickers = ['error']
-    path = Path(filename)
-    if path.is_file():
-        try:
-            with open(path) as f:
-                tickers = f.readlines()
-
-            tickers = [s.replace('\n', '') for s in tickers]
-            tickers.sort()
-        except:
-            _logger.error('File format error')
-    else:
-        _logger.error(f'File "{filename}" not found')
-
-    return tickers
 
 
 if __name__ == '__main__':

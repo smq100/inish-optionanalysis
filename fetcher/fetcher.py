@@ -5,7 +5,6 @@ import datetime as dt
 import pandas as pd
 
 import data as d
-import fetcher as f
 from fetcher import source_yfinance as yf
 from fetcher import source_marketdata as md
 from fetcher import source_etrade as et
@@ -73,9 +72,13 @@ def get_history_live(ticker: str, days: int = -1) -> pd.DataFrame:
 def get_company_live(ticker: str) -> dict:
     company = {}
 
-    c = yf.get_company(ticker)
-    if c is not None:
-        company = c.info
+    try:
+        c = yf.get_company(ticker)
+        if c is not None:
+            company = c.info
+    except Exception as e:
+        _logger.warning(f'Yfinance exception for ticker {ticker}: {e}')
+    else:
         company['market_cap'] = c.info.get('market_cap', 0)
 
     return company
@@ -136,8 +139,8 @@ if __name__ == '__main__':
     import sys
 
     if len(sys.argv) > 1:
-        c = get_company_live(sys.argv[1])
+        c = get_history_live(sys.argv[1])
     else:
-        c = get_company_live('AAPL')
+        c = get_history_live('AAPL')
 
     print(c)

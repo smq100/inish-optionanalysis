@@ -1,11 +1,15 @@
 import os
 import time
+import datetime as dt
+from pathlib import Path
 from dataclasses import dataclass, asdict
 
 from colorama import Fore, Style
 
 from utils import math as m
+from utils import logger
 from data import store as store
+
 
 try:
     TERMINAL_SIZE = os.get_terminal_size()
@@ -18,6 +22,12 @@ TABULATE_FORMAT = 'simple'
 CHART_STYLE = 'seaborn-v0_8-bright'
 CHART_SIZE = (17, 10)
 PROGRESS_SLEEP = 0.20
+
+LOG_DIR = './log'
+LOG_SUFFIX = 'log'
+
+
+_logger = logger.get_logger()
 
 
 class RangeValue:
@@ -264,12 +274,46 @@ def input_float_range(message: str, middle: float, percent: float) -> float:
     return input_float(message, min_, max_)
 
 
+def write_tickers_log(tickers: list[str], filename: str = '') -> str:
+    if tickers:
+        date_time = dt.datetime.now().strftime(DATE_FORMAT_YMD)
+
+        if filename:
+            filename = f'{LOG_DIR}/{filename}.{LOG_SUFFIX}'
+        else:
+            filename = f'{LOG_DIR}/{date_time}.{LOG_SUFFIX}'
+
+        with open(filename, 'w') as f:
+            for ticker in tickers:
+                f.write(ticker + '\n')
+
+    return filename
+
+
+def read_tickers_log(filename: str) -> list[str]:
+    tickers = ['error']
+    path = Path(filename)
+    if path.is_file():
+        try:
+            with open(path) as f:
+                tickers = f.readlines()
+
+            tickers = [s.replace('\n', '') for s in tickers]
+            tickers.sort()
+        except:
+            _logger.error('File format error')
+    else:
+        _logger.error(f'File "{filename}" not found')
+
+    return tickers
+
+
+
 # Globals for progress bar
 _completed = 0
 _position = 0
 _forward = True
 _start = 0.0
-
 
 def progress_bar(iteration, total: int, prefix: str = 'Working', suffix: str = '', ticker: str = '',
                  length: int = 50, fill='█', success: int = -1, tasks: int = 0, reset: bool = False) -> None:

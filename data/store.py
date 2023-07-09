@@ -357,6 +357,8 @@ def get_company(ticker: str, live: bool = False, extra: bool = False) -> dict:
             except Exception as e:
                 results = {}
                 _logger.error(f'Exception for ticker {ticker}: {str(e)}')
+        else:
+            _logger.warning(f'No company information for {ticker}')
     else:
         with _session() as session:
             symbol = session.query(models.Security).filter(models.Security.ticker == ticker).one_or_none()
