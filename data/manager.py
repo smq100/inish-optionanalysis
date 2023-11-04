@@ -20,6 +20,8 @@ from utils import ui, logger
 _logger = logger.get_logger()
 
 
+RETRIES = 2
+
 class Manager(Threaded):
     def __init__(self):
         super().__init__()
@@ -32,8 +34,13 @@ class Manager(Threaded):
             self.engine = create_engine(d.ACTIVE_URI, echo=False)
             self.session = sessionmaker(bind=self.engine)
 
-            # No multithreading for SQLite
-            self._concurrency = 1 if (d.ACTIVE_DB == 'SQLite' or d.DEBUG_DB) else 10
+            if d.ACTIVE_DB == 'SQLite':
+                # No multithreading for SQLite
+                self._concurrency = 1
+            elif d.DEBUG_DB:
+                self._concurrency = 3
+            else:
+                self._concurrency = 10
         else:
             raise ValueError('No database specified')
 
@@ -82,10 +89,9 @@ class Manager(Threaded):
 
                 with futures.ThreadPoolExecutor(max_workers=self._concurrency) as executor:
                     random.shuffle(tickers)
-                    if d.DEBUG_DB:
-                        tickers = tickers[:10]
-                        self.task_futures = [executor.submit(add, tickers)]
-                    elif self._concurrency > 1:
+                    if self._concurrency > 1:
+                        if d.DEBUG_DB:
+                            tickers = tickers[::100]
                         lists = np.array_split(tickers, self._concurrency)
                         lists = [item.tolist() for item in lists if item.size > 0]
                         self.task_futures = [executor.submit(add, item) for item in lists]
@@ -107,8 +113,6 @@ class Manager(Threaded):
 
     def add_ticker_to_exchange(self, ticker: str, exchange: str) -> bool:
         exchange = exchange.upper()
-        exit = False
-        retries = 2
         process = False
         success = False
 
@@ -124,7 +128,7 @@ class Manager(Threaded):
                         history = store.get_history(ticker, live=True)
                         if history is None:
                             self.invalid_tickers.append(ticker)
-                            _logger.error(f'\'None\' object for {ticker}')
+                            _logger.error(f'\'None\' history object for {ticker}. Not added to database')
                         elif history.empty:
                             self.invalid_tickers.append(ticker)
                             _logger.warning(f'History for {ticker} not available. Not added to database')
@@ -140,8 +144,6 @@ class Manager(Threaded):
                             exc.securities.append(models.Security(ticker))
                             session.commit()
 
-                            _logger.info(f'Added {ticker} to exchange {exchange}')
-
                             self._add_live_history_to_ticker(ticker, history=history)
                             self._add_live_company_to_ticker(ticker, company=company)
                         except (ValueError, KeyError, IndexError) as e:
@@ -150,34 +152,26 @@ class Manager(Threaded):
                         except HTTPError as e:
                             self.retry += 1
                             _logger.warning(f'HTTP Error for {ticker}. Retrying {self.retry}...: {str(e)}')
-                            if self.retry > retries:
+                            if self.retry > RETRIES:
                                 self.invalid_tickers.append(ticker)
-                                exit = True
-                                _logger.error(f'HTTP Error for {ticker}. Too many retries: {str(e)}')
+                                _logger.error(f'HTTP Error for {ticker}: {str(e)}')
                             else:
                                 time.sleep(1.0)
                         except RuntimeError as e:
-                            self.retry += 1
-                            _logger.warning(f'Runtime Error for {ticker}. Retrying {self.retry}...: {str(e)}')
-                            if self.retry > retries:
-                                self.invalid_tickers.append(ticker)
-                                exit = True
-                                _logger.error(f'Runtime Error for {ticker}. Too many retries: {str(e)}')
+                            _logger.warning(f'Runtime Error for {ticker}: {str(e)}')
+                            self.invalid_tickers.append(ticker)
+                            _logger.error(f'Runtime Error for {ticker}: {str(e)}')
                         except Exception as e:
-                            self.retry += 1
-                            _logger.warning(f'Error for {ticker}. Retrying {self.retry}...: {str(e)}')
-                            if self.retry > retries:
-                                self.invalid_tickers.append(ticker)
-                                exit = True
-                                _logger.error(f'Error for {ticker}. Too many retries: {str(e)}')
+                            _logger.warning(f'Error for {ticker}: {str(e)}')
+                            self.invalid_tickers.append(ticker)
+                            _logger.error(f'Error for {ticker}: {str(e)}')
                         else:
                             self.retry = 0
                             success = True
+                            _logger.info(f'Added {ticker} to exchange {exchange}')
                 else:
+                    success = True
                     _logger.info(f'{ticker} already exists. Skipped')
-
-                if exit:
-                    _logger.error(f'Error adding ticker {ticker} to exchange')
         else:
             _logger.error(f'Exchange {exchange} does not exist')
 

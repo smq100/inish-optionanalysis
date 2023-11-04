@@ -6,6 +6,7 @@ import time
 
 import numpy as np
 from pandas.tseries.holiday import USFederalHolidayCalendar
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Cursor
 from tabulate import tabulate
@@ -159,7 +160,9 @@ class Interface:
             ui.print_error(f'Must first run calculation', post_creturn=1)
 
     def m_show_plot(self, cursor: bool = False) -> None:
-        if len(self.gap.results) > 0:
+        if self.gap is None:
+            ui.print_error(f'Please run an analysis', post_creturn=1)
+        elif len(self.gap.results) > 0:
             if len(self.tickers) > 1:
                 ticker = ui.input_text('Enter ticker')
                 index = self._get_index(ticker)
@@ -174,8 +177,7 @@ class Interface:
                 figure, ax = chart.plot_ohlc()
                 length = len(chart.history)
 
-                c = [result.index for result in self.gap.results[index].itertuples() if result.unfilled > 0.0]
-                cmap = plt.cm.get_cmap('tab20', len(c))
+                cmap = matplotlib.colormaps['tab20']
 
                 i = 0
                 starts = []

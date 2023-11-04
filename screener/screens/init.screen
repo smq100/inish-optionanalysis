@@ -66,10 +66,10 @@
       }
    },
    {
-      "note":"MCap > 5B",
+      "note":"MCap > 5B (not used)",
       "weight": -1.0,
       "base":{
-         "technical":"mcap",
+         "technical":"true",
          "length":0,
          "start":-1,
          "stop":0,
